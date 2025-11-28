@@ -184,19 +184,24 @@ export default function Index() {
               </Card>
 
               {/* Follow-up Questions */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-muted-foreground">Related questions:</span>
-                {result.followups.map((fu, idx) => (
-                  <Button 
-                    key={idx} 
-                    variant="outline" 
-                    size="sm"
-                    className="gap-2"
-                  >
-                    {fu}
-                    <ChevronRight className="h-3 w-3" />
-                  </Button>
-                ))}
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-medium text-muted-foreground">Next questions to explore:</span>
+                <div className="flex gap-2">
+                  {result.nextQuestions.map((question, idx) => (
+                    <Button 
+                      key={idx} 
+                      variant="outline" 
+                      size="sm"
+                      className="text-left h-auto py-2 px-3 whitespace-normal"
+                      onClick={() => {
+                        setQuery(question);
+                        handleAsk();
+                      }}
+                    >
+                      {question}
+                    </Button>
+                  ))}
+                </div>
               </div>
 
               {/* Sources */}
