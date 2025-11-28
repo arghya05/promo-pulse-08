@@ -88,25 +88,40 @@ export default function Index() {
                 <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
                   WHAT HAPPENED
                 </h2>
-                <p className="text-base leading-relaxed text-foreground">
-                  {result.whatHappened}
-                </p>
+                <div className="space-y-4">
+                  {result.whatHappened.map((point, idx) => (
+                    <div key={idx} className="flex gap-3">
+                      <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
+                      <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
+                    </div>
+                  ))}
+                </div>
               </Card>
 
               {/* Why It Happened Section */}
               <Card className="p-6">
                 <h2 className="text-lg font-bold mb-4">WHY IT HAPPENED</h2>
-                <p className="text-base leading-relaxed text-foreground">
-                  {result.why}
-                </p>
+                <div className="space-y-4">
+                  {result.why.map((point, idx) => (
+                    <div key={idx} className="flex gap-3">
+                      <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-chart-3 flex-shrink-0" />
+                      <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
+                    </div>
+                  ))}
+                </div>
               </Card>
 
               {/* Recommendation Section */}
               <Card className="p-6">
                 <h2 className="text-lg font-bold mb-4">RECOMMENDATION</h2>
-                <p className="text-base leading-relaxed text-foreground">
-                  {result.whatToDo}
-                </p>
+                <div className="space-y-4">
+                  {result.whatToDo.map((point, idx) => (
+                    <div key={idx} className="flex gap-3">
+                      <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-status-good flex-shrink-0" />
+                      <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
+                    </div>
+                  ))}
+                </div>
               </Card>
 
               {/* Data Insights Section */}
