@@ -1,0 +1,126 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { question } = await req.json();
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured');
+    }
+
+    console.log('Processing question:', question);
+
+    const systemPrompt = `You are a promotion analytics AI assistant. Analyze user questions about promotions and return structured insights.
+
+Your response MUST be a valid JSON object with this exact structure:
+{
+  "whatHappened": ["bullet point 1", "bullet point 2", "bullet point 3"],
+  "why": ["reason 1", "reason 2", "reason 3"],
+  "whatToDo": ["recommendation 1", "recommendation 2"],
+  "kpis": {
+    "liftPct": number (between -50 and 150),
+    "roi": number (between -2 and 5),
+    "incrementalMargin": number (in dollars, between -500000 and 2000000),
+    "spend": number (in dollars, between 50000 and 800000)
+  },
+  "chartData": [
+    {"name": "Category A", "roi": number, "margin": number},
+    {"name": "Category B", "roi": number, "margin": number}
+  ],
+  "nextQuestions": ["question 1", "question 2"],
+  "sources": "string describing data sources"
+}
+
+Guidelines:
+- Each bullet point should be 1-2 sentences, business-focused with specific metrics
+- Use concrete numbers and percentages
+- Avoid markdown formatting (no asterisks or bold)
+- Make insights actionable and tied to retail/promotion domain
+- Ensure all numeric values are realistic for retail promotions
+- Chart data should have 3-6 categories with realistic ROI and margin values`;
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Analyze this promotion question and provide detailed insights: ${question}` }
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('AI API error:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'AI credits exhausted. Please add credits to continue.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      throw new Error(`AI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('AI response received');
+
+    let analysisResult;
+    try {
+      const content = data.choices[0].message.content;
+      console.log('Raw AI content:', content);
+      
+      // Try to extract JSON from markdown code blocks if present
+      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      const jsonString = jsonMatch ? jsonMatch[1] : content;
+      
+      analysisResult = JSON.parse(jsonString);
+      console.log('Parsed analysis result:', analysisResult);
+    } catch (parseError) {
+      console.error('Error parsing AI response:', parseError);
+      throw new Error('Failed to parse AI response as JSON');
+    }
+
+    return new Response(
+      JSON.stringify(analysisResult),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('Error in analyze-question function:', error);
+    return new Response(
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  }
+});

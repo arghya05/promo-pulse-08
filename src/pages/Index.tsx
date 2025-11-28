@@ -8,28 +8,61 @@ import { questionLibrary, popularQuestionIds } from "@/lib/data/questions";
 import { executeQuestion, getKPIStatus } from "@/lib/analytics";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import type { AnalyticsResult } from "@/lib/analytics";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function Index() {
+  const { toast } = useToast();
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<AnalyticsResult | null>(null);
   const [showRisksOnly, setShowRisksOnly] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleAsk = () => {
-    if (!query.trim()) return;
-    const question = questionLibrary.find(q => 
-      q.question.toLowerCase().includes(query.toLowerCase()) ||
-      query.toLowerCase().includes(q.question.toLowerCase().split(' ')[0])
-    ) || questionLibrary[0];
-    const analyticsResult = executeQuestion(question);
-    setResult(analyticsResult);
+  const handleAsk = async (questionText?: string) => {
+    const questionToAsk = questionText || query;
+    if (!questionToAsk.trim()) return;
+    
+    if (questionText) {
+      setQuery(questionText);
+    }
+    
+    setIsLoading(true);
+    setResult(null);
+    
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-question`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ question: questionToAsk }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze question');
+      }
+
+      const analyticsResult = await response.json();
+      setResult(analyticsResult);
+    } catch (error) {
+      console.error('Error analyzing question:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to analyze question",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleQuestionClick = (questionId: number) => {
+  const handleQuestionClick = async (questionId: number) => {
     const question = questionLibrary.find(q => q.id === questionId);
     if (question) {
-      setQuery(question.question);
-      const analyticsResult = executeQuestion(question);
-      setResult(analyticsResult);
+      await handleAsk(question.question);
     }
   };
 
@@ -67,11 +100,12 @@ export default function Index() {
               className="pl-12 pr-24 h-14 text-base rounded-lg border-border"
             />
             <Button 
-              onClick={handleAsk}
+              onClick={() => handleAsk()}
               className="absolute right-2 top-1/2 -translate-y-1/2 px-6"
               size="sm"
+              disabled={isLoading}
             >
-              Ask
+              {isLoading ? "Analyzing..." : "Ask"}
             </Button>
           </div>
         </div>
@@ -193,10 +227,7 @@ export default function Index() {
                       variant="outline" 
                       size="sm"
                       className="text-left h-auto py-2 px-3 whitespace-normal"
-                      onClick={() => {
-                        setQuery(question);
-                        handleAsk();
-                      }}
+                      onClick={() => handleAsk(question)}
                     >
                       {question}
                     </Button>
