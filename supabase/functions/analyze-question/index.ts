@@ -60,13 +60,21 @@ Your response MUST be a valid JSON object with this exact structure:
   ]
 }
 
+CRITICAL CHART DATA RULES:
+- chartData MUST contain the EXACT items being asked about
+- If user asks "top 5 promotions", return 5 items in chartData with promotion names
+- If user asks "optimal discount depth", return different discount levels (e.g., "10% Discount", "15% Discount", "20% Discount")
+- If user asks about specific products/categories, return those specific items
+- Each chartData item MUST have: "name" (descriptive label), "roi" (realistic ROI value), "margin" (dollar amount)
+- Return 3-6 items in chartData that directly answer the question
+- The "name" field should be clear and business-friendly (e.g., "Spring Refresh Promo", "Soda-12pk (10% Disc)")
+
 Guidelines:
 - Each bullet point should be 1-2 sentences, business-focused with specific metrics
 - Use concrete numbers and percentages
 - Avoid markdown formatting (no asterisks or bold)
 - Make insights actionable and tied to retail/promotion domain
 - Ensure all numeric values are realistic for retail promotions
-- Chart data should have 3-6 categories with realistic ROI and margin values
 
 PREDICTIVE ANALYTICS:
 - Generate 3 forward-looking forecasts based on historical patterns
