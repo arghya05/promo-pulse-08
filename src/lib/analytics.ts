@@ -24,6 +24,20 @@ export interface AnalyticsResult {
   sources: string;
   chartData: any[];
   nextQuestions: string[];
+  predictions?: {
+    forecast: string[];
+    confidence: number;
+    timeframe: string;
+  };
+  causalDrivers?: {
+    driver: string;
+    impact: string;
+    correlation: number;
+  }[];
+  mlInsights?: {
+    pattern: string;
+    significance: string;
+  }[];
 }
 
 export function executeQuestion(question: Question, filters?: any): AnalyticsResult {
