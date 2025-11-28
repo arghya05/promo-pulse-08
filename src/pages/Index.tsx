@@ -11,6 +11,7 @@ import type { AnalyticsResult } from "@/lib/analytics";
 import { useToast } from "@/components/ui/use-toast";
 import DrillDownPanel from "@/components/DrillDownPanel";
 import PredictiveInsights from "@/components/PredictiveInsights";
+import VoiceRecorder from "@/components/VoiceRecorder";
 
 export default function Index() {
   const { toast } = useToast();
@@ -94,23 +95,32 @@ export default function Index() {
           </div>
           
           {/* Search Bar */}
-          <div className="relative max-w-3xl">
-            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAsk()}
-              placeholder="Ask about promo ROI, optimal discount, halo effects, calendar..."
-              className="pl-12 pr-24 h-14 text-base rounded-lg border-border"
-            />
-            <Button 
-              onClick={() => handleAsk()}
-              className="absolute right-2 top-1/2 -translate-y-1/2 px-6"
-              size="sm"
+          <div className="relative max-w-3xl flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAsk()}
+                placeholder="Ask about promo ROI, optimal discount, halo effects, calendar..."
+                className="pl-12 pr-24 h-14 text-base rounded-lg border-border"
+              />
+              <Button 
+                onClick={() => handleAsk()}
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-6"
+                size="sm"
+                disabled={isLoading}
+              >
+                {isLoading ? "Analyzing..." : "Ask"}
+              </Button>
+            </div>
+            <VoiceRecorder 
+              onTranscript={(text) => {
+                setQuery(text);
+                handleAsk(text);
+              }}
               disabled={isLoading}
-            >
-              {isLoading ? "Analyzing..." : "Ask"}
-            </Button>
+            />
           </div>
         </div>
       </header>
