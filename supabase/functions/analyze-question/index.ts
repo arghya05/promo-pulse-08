@@ -22,22 +22,74 @@ serve(async (req) => {
 
     console.log('Processing question:', question);
 
-    // Query actual data from database for context
+    // Query ALL actual data from database for rich context
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const [storesResult, promotionsResult, transactionsResult] = await Promise.all([
-      supabaseClient.from('stores').select('count'),
-      supabaseClient.from('promotions').select('*').order('created_at', { ascending: false }).limit(50),
-      supabaseClient.from('transactions').select('*, promotions(promotion_name)').order('transaction_date', { ascending: false }).limit(1000),
+    const [storesResult, promotionsResult, transactionsResult, customersResult, thirdPartyResult] = await Promise.all([
+      supabaseClient.from('stores').select('*'),
+      supabaseClient.from('promotions').select('*').order('created_at', { ascending: false }),
+      supabaseClient.from('transactions').select('*, stores(store_name, region), promotions(promotion_name, promotion_type)').order('transaction_date', { ascending: false }),
+      supabaseClient.from('customers').select('*'),
+      supabaseClient.from('third_party_data').select('*').order('data_date', { ascending: false }).limit(100)
     ]);
 
     const hasData = (transactionsResult.data?.length || 0) > 0;
-    const dataContextMessage = hasData 
-      ? `\n\nREAL DATA CONTEXT:\n- ${storesResult.data?.[0]?.count || 0} stores in database\n- ${promotionsResult.data?.length || 0} recent promotions\n- ${transactionsResult.data?.length || 0} recent transactions\n\nUse this actual data to inform your analysis when possible.`
-      : '\n\nNote: No real data available yet. Generate realistic simulated insights.';
+    
+    let dataContextMessage = '';
+    if (hasData) {
+      // Build rich data context with actual data
+      dataContextMessage = `\n\n=== REAL DATABASE CONTEXT - USE THIS ACTUAL DATA FOR ANALYSIS ===\n\n`;
+      
+      // Stores data
+      dataContextMessage += `STORES (${storesResult.data?.length || 0} total):\n`;
+      storesResult.data?.forEach(store => {
+        dataContextMessage += `- ${store.store_name} (${store.store_code}): ${store.region} region, ${store.store_type} type, Location: ${store.location}\n`;
+      });
+      
+      // Promotions data
+      dataContextMessage += `\n\nPROMOTIONS (${promotionsResult.data?.length || 0} total):\n`;
+      promotionsResult.data?.forEach(promo => {
+        dataContextMessage += `- ${promo.promotion_name}: Type=${promo.promotion_type}, Period=${promo.start_date} to ${promo.end_date}, `;
+        dataContextMessage += `Discount=${promo.discount_percent ? promo.discount_percent + '%' : '$' + promo.discount_amount}, `;
+        dataContextMessage += `Category=${promo.product_category || 'All'}, Status=${promo.status}, Total Spend=$${promo.total_spend}\n`;
+      });
+      
+      // Transactions summary
+      dataContextMessage += `\n\nTRANSACTIONS (${transactionsResult.data?.length || 0} total):\n`;
+      const transactionsByPromo = transactionsResult.data?.reduce((acc: any, txn: any) => {
+        const promoName = txn.promotions?.promotion_name || 'No Promotion';
+        if (!acc[promoName]) acc[promoName] = { count: 0, totalAmount: 0, totalDiscount: 0 };
+        acc[promoName].count++;
+        acc[promoName].totalAmount += parseFloat(txn.total_amount || 0);
+        acc[promoName].totalDiscount += parseFloat(txn.discount_amount || 0);
+        return acc;
+      }, {});
+      Object.entries(transactionsByPromo || {}).forEach(([promo, stats]: [string, any]) => {
+        dataContextMessage += `- ${promo}: ${stats.count} transactions, Total=$${stats.totalAmount.toFixed(2)}, Discounts=$${stats.totalDiscount.toFixed(2)}\n`;
+      });
+      
+      // Customers data
+      dataContextMessage += `\n\nCUSTOMERS (${customersResult.data?.length || 0} total):\n`;
+      customersResult.data?.forEach(customer => {
+        dataContextMessage += `- ${customer.customer_name} (${customer.customer_code}): ${customer.segment} segment, ${customer.loyalty_tier} tier, LTV=$${customer.total_lifetime_value}\n`;
+      });
+      
+      // Third-party data
+      dataContextMessage += `\n\nTHIRD-PARTY DATA (${thirdPartyResult.data?.length || 0} insights):\n`;
+      thirdPartyResult.data?.forEach(data => {
+        dataContextMessage += `- ${data.data_source} (${data.data_type}): ${data.metric_name}=${data.metric_value} on ${data.data_date}`;
+        if (data.product_category) dataContextMessage += `, Category: ${data.product_category}`;
+        if (data.metadata) dataContextMessage += `, Details: ${JSON.stringify(data.metadata)}`;
+        dataContextMessage += `\n`;
+      });
+      
+      dataContextMessage += `\n\n=== CRITICAL: Analyze the ACTUAL DATA above. Generate insights based on real numbers, not simulated data. ===\n`;
+    } else {
+      dataContextMessage = '\n\nNote: No real data available yet. Generate realistic simulated insights.';
+    }
 
     const systemPrompt = `You are an advanced promotion analytics AI assistant with predictive modeling and causal analysis capabilities. Analyze user questions about promotions and return structured insights with ML-driven predictions.${dataContextMessage}
 
