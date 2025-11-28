@@ -14,6 +14,93 @@ export type Database = {
   }
   public: {
     Tables: {
+      competitor_data: {
+        Row: {
+          competitor_name: string
+          created_at: string | null
+          id: string
+          market_share_percent: number | null
+          notes: string | null
+          observation_date: string
+          pricing_index: number | null
+          product_category: string
+          promotion_intensity: string | null
+        }
+        Insert: {
+          competitor_name: string
+          created_at?: string | null
+          id?: string
+          market_share_percent?: number | null
+          notes?: string | null
+          observation_date: string
+          pricing_index?: number | null
+          product_category: string
+          promotion_intensity?: string | null
+        }
+        Update: {
+          competitor_name?: string
+          created_at?: string | null
+          id?: string
+          market_share_percent?: number | null
+          notes?: string | null
+          observation_date?: string
+          pricing_index?: number | null
+          product_category?: string
+          promotion_intensity?: string | null
+        }
+        Relationships: []
+      }
+      customer_journey: {
+        Row: {
+          action_taken: string | null
+          channel: string | null
+          converted: boolean | null
+          created_at: string | null
+          customer_id: string | null
+          id: string
+          promotion_id: string | null
+          touchpoint_date: string
+          touchpoint_type: string
+        }
+        Insert: {
+          action_taken?: string | null
+          channel?: string | null
+          converted?: boolean | null
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          promotion_id?: string | null
+          touchpoint_date: string
+          touchpoint_type: string
+        }
+        Update: {
+          action_taken?: string | null
+          channel?: string | null
+          converted?: boolean | null
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          promotion_id?: string | null
+          touchpoint_date?: string
+          touchpoint_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_journey_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_journey_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           created_at: string | null
@@ -49,6 +136,145 @@ export type Database = {
           phone?: string | null
           segment?: string | null
           total_lifetime_value?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      inventory_levels: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_restocked: string | null
+          product_sku: string
+          reorder_point: number | null
+          stock_level: number
+          stockout_risk: string | null
+          store_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_restocked?: string | null
+          product_sku: string
+          reorder_point?: number | null
+          stock_level: number
+          stockout_risk?: string | null
+          store_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_restocked?: string | null
+          product_sku?: string
+          reorder_point?: number | null
+          stock_level?: number
+          stockout_risk?: string | null
+          store_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_levels_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_channels: {
+        Row: {
+          channel_name: string
+          channel_type: string
+          clicks: number | null
+          conversions: number | null
+          created_at: string | null
+          engagement_rate: number | null
+          id: string
+          impressions: number | null
+          promotion_id: string | null
+          reach: number | null
+          spend_amount: number
+        }
+        Insert: {
+          channel_name: string
+          channel_type: string
+          clicks?: number | null
+          conversions?: number | null
+          created_at?: string | null
+          engagement_rate?: number | null
+          id?: string
+          impressions?: number | null
+          promotion_id?: string | null
+          reach?: number | null
+          spend_amount: number
+        }
+        Update: {
+          channel_name?: string
+          channel_type?: string
+          clicks?: number | null
+          conversions?: number | null
+          created_at?: string | null
+          engagement_rate?: number | null
+          id?: string
+          impressions?: number | null
+          promotion_id?: string | null
+          reach?: number | null
+          spend_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_channels_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          base_price: number
+          brand: string | null
+          category: string
+          cost: number
+          created_at: string | null
+          id: string
+          margin_percent: number | null
+          price_elasticity: number | null
+          product_name: string
+          product_sku: string
+          seasonality_factor: string | null
+          subcategory: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          base_price: number
+          brand?: string | null
+          category: string
+          cost: number
+          created_at?: string | null
+          id?: string
+          margin_percent?: number | null
+          price_elasticity?: number | null
+          product_name: string
+          product_sku: string
+          seasonality_factor?: string | null
+          subcategory?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          base_price?: number
+          brand?: string | null
+          category?: string
+          cost?: number
+          created_at?: string | null
+          id?: string
+          margin_percent?: number | null
+          price_elasticity?: number | null
+          product_name?: string
+          product_sku?: string
+          seasonality_factor?: string | null
+          subcategory?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -100,6 +326,53 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      store_performance: {
+        Row: {
+          avg_basket_size: number | null
+          conversion_rate: number | null
+          created_at: string | null
+          foot_traffic: number | null
+          id: string
+          metric_date: string
+          staff_count: number | null
+          store_id: string | null
+          total_sales: number | null
+          weather_condition: string | null
+        }
+        Insert: {
+          avg_basket_size?: number | null
+          conversion_rate?: number | null
+          created_at?: string | null
+          foot_traffic?: number | null
+          id?: string
+          metric_date: string
+          staff_count?: number | null
+          store_id?: string | null
+          total_sales?: number | null
+          weather_condition?: string | null
+        }
+        Update: {
+          avg_basket_size?: number | null
+          conversion_rate?: number | null
+          created_at?: string | null
+          foot_traffic?: number | null
+          id?: string
+          metric_date?: string
+          staff_count?: number | null
+          store_id?: string | null
+          total_sales?: number | null
+          weather_condition?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_performance_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stores: {
         Row: {
