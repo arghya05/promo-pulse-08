@@ -212,13 +212,15 @@ export default function Index() {
 
                 {/* Chart */}
                 <div className="h-96 bg-card border border-border rounded-lg p-6">
-                  <div className="mb-4 text-sm text-muted-foreground">
-                    💡 Click on any bar to see detailed breakdown
+                  <div className="mb-4 text-sm text-muted-foreground flex items-center gap-2">
+                    <span className="text-base">💡</span>
+                    <span>Click on any bar to see detailed breakdown</span>
                   </div>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart 
                       data={result.chartData}
                       onMouseLeave={() => setActiveBarIndex(null)}
+                      margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis 
@@ -226,9 +228,12 @@ export default function Index() {
                         tick={{ fill: "hsl(var(--foreground))", fontSize: 12 }}
                         angle={-15}
                         textAnchor="end"
-                        height={60}
+                        height={80}
                       />
-                      <YAxis tick={{ fill: "hsl(var(--foreground))", fontSize: 12 }} />
+                      <YAxis 
+                        tick={{ fill: "hsl(var(--foreground))", fontSize: 12 }}
+                        tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
+                      />
                       <Tooltip 
                         contentStyle={{ 
                           backgroundColor: "hsl(var(--card))", 
@@ -236,30 +241,19 @@ export default function Index() {
                           borderRadius: "6px"
                         }}
                         cursor={{ fill: "hsl(var(--primary) / 0.1)" }}
+                        formatter={(value: number) => [`$${value.toLocaleString()}`, "Margin"]}
                       />
-                      <Legend wrapperStyle={{ paddingTop: "20px" }} />
-                      <Bar 
-                        dataKey="roi" 
-                        fill="hsl(var(--chart-1))" 
-                        name="ROI" 
-                        radius={[4, 4, 0, 0]}
-                        onClick={(data) => setDrillDownData(data)}
-                        onMouseEnter={(_, index) => setActiveBarIndex(index)}
-                        cursor="pointer"
-                      >
-                        {result.chartData.map((entry, index) => (
-                          <Cell 
-                            key={`cell-${index}`}
-                            fill={activeBarIndex === index ? "hsl(var(--primary))" : "hsl(var(--chart-1))"}
-                            opacity={activeBarIndex === null || activeBarIndex === index ? 1 : 0.6}
-                          />
-                        ))}
-                      </Bar>
+                      <Legend 
+                        wrapperStyle={{ paddingTop: "20px" }}
+                        payload={[
+                          { value: 'Margin (US$)', type: 'rect', color: 'hsl(var(--status-good))' }
+                        ]}
+                      />
                       <Bar 
                         dataKey="margin" 
-                        fill="hsl(var(--chart-2))" 
+                        fill="hsl(var(--status-good))" 
                         name="Margin (US$)" 
-                        radius={[4, 4, 0, 0]}
+                        radius={[8, 8, 0, 0]}
                         onClick={(data) => setDrillDownData(data)}
                         onMouseEnter={(_, index) => setActiveBarIndex(index)}
                         cursor="pointer"
@@ -267,7 +261,7 @@ export default function Index() {
                         {result.chartData.map((entry, index) => (
                           <Cell 
                             key={`cell-${index}`}
-                            fill={activeBarIndex === index ? "hsl(var(--chart-3))" : "hsl(var(--chart-2))"}
+                            fill={activeBarIndex === index ? "hsl(var(--primary))" : "hsl(var(--status-good))"}
                             opacity={activeBarIndex === null || activeBarIndex === index ? 1 : 0.6}
                           />
                         ))}
