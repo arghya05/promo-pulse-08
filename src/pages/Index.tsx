@@ -134,17 +134,19 @@ export default function Index() {
                 disabled={isLoading}
               />
             </div>
-          /* Answer View */
-          <div className="grid grid-cols-12 gap-8">
-            {/* Main Content */}
-            <div className="col-span-8 space-y-6">
-              {/* What Happened Section */}
-              <Card className="p-6">
-                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  WHAT HAPPENED
-                </h2>
-                <div className="space-y-4">
-                  {result.whatHappened.map((point, idx) => (
+
+            {result ? (
+              /* Answer View */
+              <div className="grid grid-cols-12 gap-8">
+                {/* Main Content */}
+                <div className="col-span-8 space-y-6">
+                  {/* What Happened Section */}
+                  <Card className="p-6">
+                    <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                      WHAT HAPPENED
+                    </h2>
+                    <div className="space-y-4">
+                      {result.whatHappened.map((point, idx) => (
                     <div key={idx} className="flex gap-3">
                       <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
                       <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
@@ -358,6 +360,7 @@ export default function Index() {
               </div>
             </div>
           </div>
+          )}
           </TabsContent>
 
           <TabsContent value="data">
