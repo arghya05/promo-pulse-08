@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { questionLibrary, popularQuestionIds } from "@/lib/data/questions";
 import { executeQuestion, getKPIStatus } from "@/lib/analytics";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from "recharts";
@@ -12,6 +13,7 @@ import { useToast } from "@/components/ui/use-toast";
 import DrillDownPanel from "@/components/DrillDownPanel";
 import PredictiveInsights from "@/components/PredictiveInsights";
 import VoiceRecorder from "@/components/VoiceRecorder";
+import DataManagement from "@/components/DataManagement";
 
 export default function Index() {
   const { toast } = useToast();
@@ -93,40 +95,45 @@ export default function Index() {
               {showRisksOnly ? "Show all" : "Show anomalies only"}
             </Button>
           </div>
-          
-          {/* Search Bar */}
-          <div className="relative max-w-3xl flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAsk()}
-                placeholder="Ask about promo ROI, optimal discount, halo effects, calendar..."
-                className="pl-12 pr-24 h-14 text-base rounded-lg border-border"
-              />
-              <Button 
-                onClick={() => handleAsk()}
-                className="absolute right-2 top-1/2 -translate-y-1/2 px-6"
-                size="sm"
-                disabled={isLoading}
-              >
-                {isLoading ? "Analyzing..." : "Ask"}
-              </Button>
-            </div>
-            <VoiceRecorder 
-              onTranscript={(text) => {
-                setQuery(text);
-                handleAsk(text);
-              }}
-              disabled={isLoading}
-            />
-          </div>
         </div>
       </header>
 
       <div className="max-w-[1600px] mx-auto px-8 py-8">
-        {result ? (
+        <Tabs defaultValue="insights" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-8">
+            <TabsTrigger value="insights">Insights & Analytics</TabsTrigger>
+            <TabsTrigger value="data">Data Management</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="insights">
+            {/* Search Bar */}
+            <div className="relative max-w-3xl flex gap-2 mb-8">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAsk()}
+                  placeholder="Ask about promo ROI, optimal discount, halo effects, calendar..."
+                  className="pl-12 pr-24 h-14 text-base rounded-lg border-border"
+                />
+                <Button 
+                  onClick={() => handleAsk()}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 px-6"
+                  size="sm"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Analyzing..." : "Ask"}
+                </Button>
+              </div>
+              <VoiceRecorder 
+                onTranscript={(text) => {
+                  setQuery(text);
+                  handleAsk(text);
+                }}
+                disabled={isLoading}
+              />
+            </div>
           /* Answer View */
           <div className="grid grid-cols-12 gap-8">
             {/* Main Content */}
@@ -351,7 +358,12 @@ export default function Index() {
               </div>
             </div>
           </div>
-        )}
+          </TabsContent>
+
+          <TabsContent value="data">
+            <DataManagement />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Drill Down Panel */}

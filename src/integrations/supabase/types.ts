@@ -14,7 +14,222 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      customers: {
+        Row: {
+          created_at: string | null
+          customer_code: string
+          customer_name: string | null
+          email: string | null
+          id: string
+          loyalty_tier: string | null
+          phone: string | null
+          segment: string | null
+          total_lifetime_value: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_code: string
+          customer_name?: string | null
+          email?: string | null
+          id?: string
+          loyalty_tier?: string | null
+          phone?: string | null
+          segment?: string | null
+          total_lifetime_value?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_code?: string
+          customer_name?: string | null
+          email?: string | null
+          id?: string
+          loyalty_tier?: string | null
+          phone?: string | null
+          segment?: string | null
+          total_lifetime_value?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      promotions: {
+        Row: {
+          created_at: string | null
+          discount_amount: number | null
+          discount_percent: number | null
+          end_date: string
+          id: string
+          product_category: string | null
+          product_sku: string | null
+          promotion_name: string
+          promotion_type: string
+          start_date: string
+          status: string | null
+          total_spend: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          discount_amount?: number | null
+          discount_percent?: number | null
+          end_date: string
+          id?: string
+          product_category?: string | null
+          product_sku?: string | null
+          promotion_name: string
+          promotion_type: string
+          start_date: string
+          status?: string | null
+          total_spend?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          discount_amount?: number | null
+          discount_percent?: number | null
+          end_date?: string
+          id?: string
+          product_category?: string | null
+          product_sku?: string | null
+          promotion_name?: string
+          promotion_type?: string
+          start_date?: string
+          status?: string | null
+          total_spend?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      stores: {
+        Row: {
+          created_at: string | null
+          id: string
+          location: string | null
+          region: string | null
+          store_code: string
+          store_name: string
+          store_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          region?: string | null
+          store_code: string
+          store_name: string
+          store_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          region?: string | null
+          store_code?: string
+          store_name?: string
+          store_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      third_party_data: {
+        Row: {
+          created_at: string | null
+          data_date: string
+          data_source: string
+          data_type: string
+          id: string
+          metadata: Json | null
+          metric_name: string
+          metric_value: number | null
+          product_category: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data_date: string
+          data_source: string
+          data_type: string
+          id?: string
+          metadata?: Json | null
+          metric_name: string
+          metric_value?: number | null
+          product_category?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data_date?: string
+          data_source?: string
+          data_type?: string
+          id?: string
+          metadata?: Json | null
+          metric_name?: string
+          metric_value?: number | null
+          product_category?: string | null
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          discount_amount: number | null
+          id: string
+          product_name: string | null
+          product_sku: string
+          promotion_id: string | null
+          quantity: number
+          store_id: string | null
+          total_amount: number
+          transaction_date: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          discount_amount?: number | null
+          id?: string
+          product_name?: string | null
+          product_sku: string
+          promotion_id?: string | null
+          quantity: number
+          store_id?: string | null
+          total_amount: number
+          transaction_date: string
+          unit_price: number
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          discount_amount?: number | null
+          id?: string
+          product_name?: string | null
+          product_sku?: string
+          promotion_id?: string | null
+          quantity?: number
+          store_id?: string | null
+          total_amount?: number
+          transaction_date?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

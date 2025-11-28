@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,7 +22,24 @@ serve(async (req) => {
 
     console.log('Processing question:', question);
 
-    const systemPrompt = `You are an advanced promotion analytics AI assistant with predictive modeling and causal analysis capabilities. Analyze user questions about promotions and return structured insights with ML-driven predictions.
+    // Query actual data from database for context
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const [storesResult, promotionsResult, transactionsResult] = await Promise.all([
+      supabaseClient.from('stores').select('count'),
+      supabaseClient.from('promotions').select('*').order('created_at', { ascending: false }).limit(50),
+      supabaseClient.from('transactions').select('*, promotions(promotion_name)').order('transaction_date', { ascending: false }).limit(1000),
+    ]);
+
+    const hasData = (transactionsResult.data?.length || 0) > 0;
+    const dataContextMessage = hasData 
+      ? `\n\nREAL DATA CONTEXT:\n- ${storesResult.data?.[0]?.count || 0} stores in database\n- ${promotionsResult.data?.length || 0} recent promotions\n- ${transactionsResult.data?.length || 0} recent transactions\n\nUse this actual data to inform your analysis when possible.`
+      : '\n\nNote: No real data available yet. Generate realistic simulated insights.';
+
+    const systemPrompt = `You are an advanced promotion analytics AI assistant with predictive modeling and causal analysis capabilities. Analyze user questions about promotions and return structured insights with ML-driven predictions.${dataContextMessage}
 
 Your response MUST be a valid JSON object with this exact structure:
 {
