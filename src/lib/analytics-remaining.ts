@@ -58,7 +58,10 @@ export function categoryROI(filters?: any): AnalyticsResult {
     },
     sources: `SKU=Snacks Category (${Object.keys(brandData).length} brands) | Region=All | Weeks=1-26`,
     chartData,
-    followups: ["Brand drill-down", "Compare Beverages"]
+    nextQuestions: [
+      `What is the brand-level ROI breakdown within the Snacks category, and which brands should we prioritize?`,
+      `How does Snacks category promotional performance compare to Beverages in terms of ROI and margin efficiency?`
+    ]
   };
 }
 
@@ -108,7 +111,10 @@ export function promoCalendar(filters?: any): AnalyticsResult {
     },
     sources: `SKU=${northPromos.length} planned events | Region=North | Stores=${northStores.length} | Weeks=Next 8`,
     chartData,
-    followups: ["Flag low-ROI", "Re-allocate spend"]
+    nextQuestions: [
+      `Which specific promotions in the North region calendar have ROI below 1.2 and should be flagged for revision?`,
+      `How should we reallocate the US$${(totalSpend * 0.15).toFixed(0)} from underperforming promotions to higher-ROI categories?`
+    ]
   };
 }
 
@@ -180,7 +186,10 @@ export function displayVsFeature(filters?: any): AnalyticsResult {
     },
     sources: `SKU=Beverages (${beverageProducts.length} SKUs) | Region=All | Weeks=1-26`,
     chartData,
-    followups: ["By store", "By brand"]
+    nextQuestions: [
+      `How does ${best.mechanic} performance vary by individual store location and traffic patterns?`,
+      `What is the brand-level breakdown of ${best.mechanic} effectiveness within the Beverages category?`
+    ]
   };
 }
 
@@ -237,7 +246,10 @@ export function bestMechanic(filters?: any): AnalyticsResult {
     },
     sources: `SKU=Dairy (${dairyProducts.length} SKUs) | Region=All | Weeks=1-26`,
     chartData,
-    followups: ["By brand", "By store cluster"]
+    nextQuestions: [
+      `What is the brand-specific performance of ${best.mechanic} promotions within the Dairy category?`,
+      `How do store clusters (by affluence index and size) respond differently to ${best.mechanic} in Dairy?`
+    ]
   };
 }
 
@@ -279,7 +291,10 @@ export function couponRedemption(filters?: any): AnalyticsResult {
     },
     sources: `SKU=${funnels.length} Coupon Campaigns | Digital 65% / Paper 35% | Weeks=1-26`,
     chartData,
-    followups: ["Leak step", "Fix suggestions"]
+    nextQuestions: [
+      `At which specific step in the coupon funnel are we losing the most potential redemptions?`,
+      `What targeting improvements can increase viewed-to-clipped conversion by 15 percentage points?`
+    ]
   };
 }
 
@@ -335,6 +350,9 @@ export function scalablePromos(filters?: any): AnalyticsResult {
     },
     sources: `SKU=${scalable.length} high-ROI events | Avg Funding=${avgFunding.toFixed(0)}% | Weeks=1-26`,
     chartData,
-    followups: ["6-week plan", "Risk check"]
+    nextQuestions: [
+      `What is the detailed 6-week promotional calendar for scaling these ${scalable.length} high-ROI promotions?`,
+      `What are the top 5 risks (stockout, vendor capacity, cannibalization) in scaling these promotions?`
+    ]
   };
 }
