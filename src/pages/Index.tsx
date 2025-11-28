@@ -6,9 +6,10 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { questionLibrary, popularQuestionIds } from "@/lib/data/questions";
 import { executeQuestion, getKPIStatus } from "@/lib/analytics";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from "recharts";
 import type { AnalyticsResult } from "@/lib/analytics";
 import { useToast } from "@/components/ui/use-toast";
+import DrillDownPanel from "@/components/DrillDownPanel";
 
 export default function Index() {
   const { toast } = useToast();
@@ -16,6 +17,8 @@ export default function Index() {
   const [result, setResult] = useState<AnalyticsResult | null>(null);
   const [showRisksOnly, setShowRisksOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [drillDownData, setDrillDownData] = useState<{ name: string; roi: number; margin: number } | null>(null);
+  const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
 
   const handleAsk = async (questionText?: string) => {
     const questionToAsk = questionText || query;
@@ -191,8 +194,14 @@ export default function Index() {
 
                 {/* Chart */}
                 <div className="h-96 bg-card border border-border rounded-lg p-6">
+                  <div className="mb-4 text-sm text-muted-foreground">
+                    💡 Click on any bar to see detailed breakdown
+                  </div>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={result.chartData}>
+                    <BarChart 
+                      data={result.chartData}
+                      onMouseLeave={() => setActiveBarIndex(null)}
+                    >
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis 
                         dataKey="name" 
@@ -207,11 +216,44 @@ export default function Index() {
                           backgroundColor: "hsl(var(--card))", 
                           border: "1px solid hsl(var(--border))",
                           borderRadius: "6px"
-                        }} 
+                        }}
+                        cursor={{ fill: "hsl(var(--primary) / 0.1)" }}
                       />
                       <Legend wrapperStyle={{ paddingTop: "20px" }} />
-                      <Bar dataKey="roi" fill="hsl(var(--chart-1))" name="ROI" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="margin" fill="hsl(var(--chart-2))" name="Margin (US$)" radius={[4, 4, 0, 0]} />
+                      <Bar 
+                        dataKey="roi" 
+                        fill="hsl(var(--chart-1))" 
+                        name="ROI" 
+                        radius={[4, 4, 0, 0]}
+                        onClick={(data) => setDrillDownData(data)}
+                        onMouseEnter={(_, index) => setActiveBarIndex(index)}
+                        cursor="pointer"
+                      >
+                        {result.chartData.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`}
+                            fill={activeBarIndex === index ? "hsl(var(--primary))" : "hsl(var(--chart-1))"}
+                            opacity={activeBarIndex === null || activeBarIndex === index ? 1 : 0.6}
+                          />
+                        ))}
+                      </Bar>
+                      <Bar 
+                        dataKey="margin" 
+                        fill="hsl(var(--chart-2))" 
+                        name="Margin (US$)" 
+                        radius={[4, 4, 0, 0]}
+                        onClick={(data) => setDrillDownData(data)}
+                        onMouseEnter={(_, index) => setActiveBarIndex(index)}
+                        cursor="pointer"
+                      >
+                        {result.chartData.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`}
+                            fill={activeBarIndex === index ? "hsl(var(--chart-3))" : "hsl(var(--chart-2))"}
+                            opacity={activeBarIndex === null || activeBarIndex === index ? 1 : 0.6}
+                          />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -299,6 +341,14 @@ export default function Index() {
           </div>
         )}
       </div>
+
+      {/* Drill Down Panel */}
+      {drillDownData && (
+        <DrillDownPanel 
+          data={drillDownData} 
+          onClose={() => setDrillDownData(null)} 
+        />
+      )}
     </div>
   );
 }
