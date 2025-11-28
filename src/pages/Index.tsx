@@ -10,6 +10,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import type { AnalyticsResult } from "@/lib/analytics";
 import { useToast } from "@/components/ui/use-toast";
 import DrillDownPanel from "@/components/DrillDownPanel";
+import PredictiveInsights from "@/components/PredictiveInsights";
 
 export default function Index() {
   const { toast } = useToast();
@@ -160,6 +161,13 @@ export default function Index() {
                   ))}
                 </div>
               </Card>
+
+              {/* Predictive & ML Insights */}
+              <PredictiveInsights 
+                predictions={result.predictions}
+                causalDrivers={result.causalDrivers}
+                mlInsights={result.mlInsights}
+              />
 
               {/* Data Insights Section */}
               <Card className="p-6">

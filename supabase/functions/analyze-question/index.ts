@@ -21,7 +21,7 @@ serve(async (req) => {
 
     console.log('Processing question:', question);
 
-    const systemPrompt = `You are a promotion analytics AI assistant. Analyze user questions about promotions and return structured insights.
+    const systemPrompt = `You are an advanced promotion analytics AI assistant with predictive modeling and causal analysis capabilities. Analyze user questions about promotions and return structured insights with ML-driven predictions.
 
 Your response MUST be a valid JSON object with this exact structure:
 {
@@ -39,7 +39,25 @@ Your response MUST be a valid JSON object with this exact structure:
     {"name": "Category B", "roi": number, "margin": number}
   ],
   "nextQuestions": ["question 1", "question 2"],
-  "sources": "string describing data sources"
+  "sources": "string describing data sources",
+  "predictions": {
+    "forecast": ["prediction 1", "prediction 2", "prediction 3"],
+    "confidence": number (between 0.6 and 0.95, representing confidence level),
+    "timeframe": "string like 'Next 4 weeks' or 'Q2 2024'"
+  },
+  "causalDrivers": [
+    {
+      "driver": "string describing the factor (e.g., 'Price Elasticity', 'Seasonal Demand')",
+      "impact": "string describing the effect with numbers",
+      "correlation": number (between -1 and 1)
+    }
+  ],
+  "mlInsights": [
+    {
+      "pattern": "string describing detected pattern",
+      "significance": "string explaining why this matters with business context"
+    }
+  ]
 }
 
 Guidelines:
@@ -48,7 +66,24 @@ Guidelines:
 - Avoid markdown formatting (no asterisks or bold)
 - Make insights actionable and tied to retail/promotion domain
 - Ensure all numeric values are realistic for retail promotions
-- Chart data should have 3-6 categories with realistic ROI and margin values`;
+- Chart data should have 3-6 categories with realistic ROI and margin values
+
+PREDICTIVE ANALYTICS:
+- Generate 3 forward-looking forecasts based on historical patterns
+- Include confidence scores (higher for stable patterns, lower for volatile ones)
+- Specify realistic timeframes (weeks, months, quarters)
+- Base predictions on the data trends you see
+
+CAUSAL DRIVERS:
+- Identify 3-4 key factors driving the observed results
+- Quantify impact with specific percentages or dollar amounts
+- Use correlation values: >0.7 strong positive, 0.3-0.7 moderate, <0.3 weak
+- Include both positive and negative correlations when relevant
+
+ML INSIGHTS:
+- Detect 2-3 meaningful patterns in the data (seasonality, customer segments, channel performance)
+- Explain business significance (why each pattern matters for decisions)
+- Connect patterns to actionable opportunities`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
