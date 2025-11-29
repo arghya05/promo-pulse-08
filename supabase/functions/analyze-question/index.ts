@@ -28,12 +28,30 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const [storesResult, promotionsResult, transactionsResult, customersResult, thirdPartyResult] = await Promise.all([
+    const [
+      storesResult, 
+      promotionsResult, 
+      transactionsResult, 
+      customersResult, 
+      thirdPartyResult,
+      productsResult,
+      marketingChannelsResult,
+      competitorDataResult,
+      storePerformanceResult,
+      customerJourneyResult,
+      inventoryLevelsResult
+    ] = await Promise.all([
       supabaseClient.from('stores').select('*'),
       supabaseClient.from('promotions').select('*').order('created_at', { ascending: false }),
       supabaseClient.from('transactions').select('*, stores(store_name, region), promotions(promotion_name, promotion_type)').order('transaction_date', { ascending: false }),
       supabaseClient.from('customers').select('*'),
-      supabaseClient.from('third_party_data').select('*').order('data_date', { ascending: false }).limit(100)
+      supabaseClient.from('third_party_data').select('*').order('data_date', { ascending: false }).limit(100),
+      supabaseClient.from('products').select('*'),
+      supabaseClient.from('marketing_channels').select('*, promotions(promotion_name)'),
+      supabaseClient.from('competitor_data').select('*').order('observation_date', { ascending: false }),
+      supabaseClient.from('store_performance').select('*, stores(store_name)').order('metric_date', { ascending: false }),
+      supabaseClient.from('customer_journey').select('*, customers(customer_name), promotions(promotion_name)').order('touchpoint_date', { ascending: false }),
+      supabaseClient.from('inventory_levels').select('*, stores(store_name)').order('created_at', { ascending: false })
     ]);
 
     const hasData = (transactionsResult.data?.length || 0) > 0;
@@ -86,7 +104,68 @@ serve(async (req) => {
         dataContextMessage += `\n`;
       });
       
-      dataContextMessage += `\n\n=== CRITICAL: Analyze the ACTUAL DATA above. Generate insights based on real numbers, not simulated data. ===\n`;
+      // Products catalog
+      dataContextMessage += `\n\nPRODUCTS CATALOG (${productsResult.data?.length || 0} products):\n`;
+      productsResult.data?.forEach(product => {
+        dataContextMessage += `- ${product.product_name} (${product.product_sku}): ${product.category}/${product.subcategory}, `;
+        dataContextMessage += `Brand=${product.brand}, Price=$${product.base_price}, Cost=$${product.cost}, `;
+        dataContextMessage += `Margin=${product.margin_percent}%, Elasticity=${product.price_elasticity}, Seasonality=${product.seasonality_factor}\n`;
+      });
+      
+      // Marketing channels
+      dataContextMessage += `\n\nMARKETING CHANNELS (${marketingChannelsResult.data?.length || 0} campaigns):\n`;
+      marketingChannelsResult.data?.forEach(channel => {
+        dataContextMessage += `- ${channel.channel_name} (${channel.channel_type}): Spend=$${channel.spend_amount}, `;
+        if (channel.impressions) dataContextMessage += `Impressions=${channel.impressions}, `;
+        if (channel.clicks) dataContextMessage += `Clicks=${channel.clicks}, `;
+        if (channel.conversions) dataContextMessage += `Conversions=${channel.conversions}, `;
+        if (channel.engagement_rate) dataContextMessage += `Engagement=${channel.engagement_rate}%`;
+        if (channel.promotions) dataContextMessage += `, Promo=${channel.promotions.promotion_name}`;
+        dataContextMessage += `\n`;
+      });
+      
+      // Competitor intelligence
+      dataContextMessage += `\n\nCOMPETITOR INTELLIGENCE (${competitorDataResult.data?.length || 0} observations):\n`;
+      competitorDataResult.data?.forEach(comp => {
+        dataContextMessage += `- ${comp.competitor_name} (${comp.product_category}): Pricing Index=${comp.pricing_index}, `;
+        dataContextMessage += `Promo Intensity=${comp.promotion_intensity}, Market Share=${comp.market_share_percent}%, `;
+        dataContextMessage += `Date=${comp.observation_date}, Notes: ${comp.notes}\n`;
+      });
+      
+      // Store performance
+      dataContextMessage += `\n\nSTORE PERFORMANCE (${storePerformanceResult.data?.length || 0} metrics):\n`;
+      storePerformanceResult.data?.forEach(perf => {
+        dataContextMessage += `- ${perf.stores?.store_name} on ${perf.metric_date}: Traffic=${perf.foot_traffic}, `;
+        dataContextMessage += `Avg Basket=$${perf.avg_basket_size}, Conversion=${perf.conversion_rate}%, `;
+        dataContextMessage += `Sales=$${perf.total_sales}, Staff=${perf.staff_count}, Weather=${perf.weather_condition}\n`;
+      });
+      
+      // Customer journey
+      dataContextMessage += `\n\nCUSTOMER JOURNEY (${customerJourneyResult.data?.length || 0} touchpoints):\n`;
+      const journeyByCustomer = customerJourneyResult.data?.reduce((acc: any, touch: any) => {
+        const custName = touch.customers?.customer_name || 'Unknown';
+        if (!acc[custName]) acc[custName] = [];
+        acc[custName].push({
+          type: touch.touchpoint_type,
+          channel: touch.channel,
+          date: touch.touchpoint_date,
+          converted: touch.converted
+        });
+        return acc;
+      }, {});
+      Object.entries(journeyByCustomer || {}).slice(0, 3).forEach(([customer, touches]: [string, any]) => {
+        dataContextMessage += `- ${customer}: ${touches.length} touchpoints, `;
+        dataContextMessage += `Converted: ${touches.some((t: any) => t.converted) ? 'Yes' : 'No'}\n`;
+      });
+      
+      // Inventory levels
+      dataContextMessage += `\n\nINVENTORY LEVELS (${inventoryLevelsResult.data?.length || 0} items tracked):\n`;
+      inventoryLevelsResult.data?.forEach(inv => {
+        dataContextMessage += `- ${inv.stores?.store_name} - ${inv.product_sku}: Stock=${inv.stock_level}, `;
+        dataContextMessage += `Reorder Point=${inv.reorder_point}, Risk=${inv.stockout_risk}, Last Restocked=${inv.last_restocked}\n`;
+      });
+      
+      dataContextMessage += `\n\n=== CRITICAL: You now have 360-degree data visibility. Analyze ALL data sources above to generate comprehensive, data-driven insights. Consider product margins, marketing channel efficiency, competitive positioning, store performance, customer journeys, and inventory constraints in your analysis. ===\n`;
     } else {
       dataContextMessage = '\n\nNote: No real data available yet. Generate realistic simulated insights.';
     }
