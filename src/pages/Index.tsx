@@ -14,6 +14,7 @@ import DrillDownPanel from "@/components/DrillDownPanel";
 import PredictiveInsights from "@/components/PredictiveInsights";
 import VoiceRecorder from "@/components/VoiceRecorder";
 import DataManagement from "@/components/DataManagement";
+import { RecommendationsEngine } from "@/components/RecommendationsEngine";
 
 export default function Index() {
   const { toast } = useToast();
@@ -100,9 +101,10 @@ export default function Index() {
 
       <div className="max-w-[1600px] mx-auto px-8 py-8">
         <Tabs defaultValue="insights" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
+          <TabsList className="grid w-full grid-cols-3 mb-8">
             <TabsTrigger value="insights">Insights & Analytics</TabsTrigger>
             <TabsTrigger value="data">Data Management</TabsTrigger>
+            <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
           </TabsList>
 
           <TabsContent value="insights">
@@ -365,6 +367,10 @@ export default function Index() {
 
           <TabsContent value="data">
             <DataManagement />
+          </TabsContent>
+
+          <TabsContent value="recommendations">
+            <RecommendationsEngine />
           </TabsContent>
         </Tabs>
       </div>
