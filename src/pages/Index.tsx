@@ -15,6 +15,7 @@ import PredictiveInsights from "@/components/PredictiveInsights";
 import VoiceRecorder from "@/components/VoiceRecorder";
 import DataManagement from "@/components/DataManagement";
 import { RecommendationsEngine } from "@/components/RecommendationsEngine";
+import MultiLevelDrillDown from "@/components/MultiLevelDrillDown";
 
 export default function Index() {
   const { toast } = useToast();
@@ -23,6 +24,7 @@ export default function Index() {
   const [showRisksOnly, setShowRisksOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [drillDownData, setDrillDownData] = useState<{ name: string; roi: number; margin: number } | null>(null);
+  const [useMultiLevel, setUseMultiLevel] = useState(true);
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
 
   const handleAsk = async (questionText?: string) => {
@@ -376,7 +378,13 @@ export default function Index() {
       </div>
 
       {/* Drill Down Panel */}
-      {drillDownData && (
+      {drillDownData && useMultiLevel && (
+        <MultiLevelDrillDown 
+          initialData={drillDownData} 
+          onClose={() => setDrillDownData(null)} 
+        />
+      )}
+      {drillDownData && !useMultiLevel && (
         <DrillDownPanel 
           data={drillDownData} 
           onClose={() => setDrillDownData(null)} 
