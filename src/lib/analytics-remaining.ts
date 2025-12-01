@@ -36,6 +36,7 @@ export function categoryROI(filters?: any): AnalyticsResult {
   }));
 
   return {
+    drillPath: ["category", "brand", "sku", "store", "week"],
     whatHappened: [
       `Snacks category portfolio delivered **US$${totalMargin.toFixed(0)}** incremental margin across **${snacksLifts.length}** promotional events, achieving category-wide ROI of **${avgROI.toFixed(2)}** on **US$${totalSpend.toFixed(0)}** investment representing **${((totalSpend / 4000000) * 100).toFixed(1)}%** of total promotional budget.`,
       `Average unit lift of **${avgLift.toFixed(1)}%** above baseline driven by **${Object.keys(brandData).length}** active brands, with top brand achieving **US$${Object.values(brandData).sort((a, b) => b.margin - a.margin)[0].margin.toFixed(0)}** margin and ROI of **${Object.values(brandData).sort((a, b) => b.roi - a.roi)[0].roi.toFixed(2)}**.`
@@ -89,6 +90,7 @@ export function promoCalendar(filters?: any): AnalyticsResult {
   });
 
   return {
+    drillPath: ["promotion", "store", "week", "day"],
     whatHappened: [
       `North region promotional calendar shows **${northPromos.length}** planned events over next 8 weeks, projecting **US$${totalMargin.toFixed(0)}** total incremental margin with blended ROI of **${avgROI.toFixed(2)}** on **US$${totalSpend.toFixed(0)}** planned spend.`,
       `Predicted average lift of **${(northLifts.reduce((s, l) => s + l.incremental_units, 0) / 150 / northLifts.length).toFixed(1)}%** above baseline across **${northStores.length}** North region stores (${northStores.map(s => s.name).join(", ")}), with **${northLifts.filter(l => l.roi >= 1.5).length}** promotions meeting ROI ≥1.5 target threshold for scalable investment.`
@@ -164,6 +166,7 @@ export function displayVsFeature(filters?: any): AnalyticsResult {
   const alternate = chartData.filter(c => c.mechanic !== best.mechanic).sort((a, b) => b.roi - a.roi)[0];
 
   return {
+    drillPath: ["activation_type", "category", "brand", "store"],
     whatHappened: [
       `Merchandising activation analysis across **${beverageLifts.length}** Beverage promotions shows **${best.mechanic}** achieving ROI of **${best.roi.toFixed(2)}** with **US$${best.margin.toFixed(0)}** aggregate margin across **${best.count}** events, outperforming next-best alternative by **${((best.roi / alternate.roi - 1) * 100).toFixed(0)}%**.`,
       `Activation investment of **US$${best.cost}** per promotion for **${best.mechanic.toLowerCase()}** generates incremental lift justifying merchandising spend through traffic conversion and basket attachment, with **US$${(best.margin / best.count).toFixed(0)}** average margin per event versus **US$${(alternate.margin / alternate.count).toFixed(0)}** for ${alternate.mechanic.toLowerCase()}.`
@@ -224,6 +227,7 @@ export function bestMechanic(filters?: any): AnalyticsResult {
   const worst = chartData.reduce((worst, curr) => curr.roi < worst.roi ? curr : worst);
 
   return {
+    drillPath: ["mechanic_type", "category", "brand", "sku", "store"],
     whatHappened: [
       `Promotional mechanic comparison across **${dairyLifts.length}** Dairy category events reveals **${best.mechanic}** as optimal structure, achieving **${best.roi.toFixed(2)}** ROI with **US$${best.margin.toFixed(0)}** aggregate margin across **${best.count}** promotions.`,
       `Performance spread shows **${best.mechanic}** outperforming weakest mechanic (${worst.mechanic}) by **${((best.roi / worst.roi - 1) * 100).toFixed(0)}%**, representing **US$${(best.margin - worst.margin).toFixed(0)}** margin differential and **${((best.roi - worst.roi) * worst.margin).toFixed(0)}** ROI-adjusted value difference.`
@@ -269,6 +273,7 @@ export function couponRedemption(filters?: any): AnalyticsResult {
   ];
 
   return {
+    drillPath: ["funnel_stage", "promotion", "customer_segment", "store"],
     whatHappened: [
       `Digital coupon funnel analysis across **${funnels.length}** promotional events shows **${totalIssued.toLocaleString()}** coupons issued converting to **${totalRedeemed.toLocaleString()}** redemptions (**${(avgRedemptionRate * 100).toFixed(1)}%** overall rate), generating **US$${(totalRedeemed * 2.5).toFixed(0)}** in incremental margin.`,
       `Funnel leakage occurs at two critical stages: **${totalIssued - totalViewed}** drop-off from issued to viewed (−**${(100 - chartData[1].rate).toFixed(0)}** percentage points) and **${totalClipped - totalRedeemed}** from clipped to redeemed (−**${(chartData[2].rate - chartData[3].rate).toFixed(0)}** points), representing **US$${((totalIssued - totalRedeemed) * 2.5).toFixed(0)}** in unrealized margin opportunity.`
@@ -328,6 +333,7 @@ export function scalablePromos(filters?: any): AnalyticsResult {
   });
 
   return {
+    drillPath: ["promotion", "category", "brand", "store", "region"],
     whatHappened: [
       `Portfolio screening identified **${scalable.length}** high-performance promotions achieving ROI ≥**2.0** threshold with vendor co-investment >30%, collectively generating **US$${totalMargin.toFixed(0)}** margin on **US$${totalSpend.toFixed(0)}** spend for blended ROI of **${avgROI.toFixed(2)}**.`,
       `Top performer ${chartData[0].name} (${chartData[0].category}) delivered **${chartData[0].roi.toFixed(2)}** ROI with **${chartData[0].funding}%** vendor funding, demonstrating scalability model where high partnership investment enables aggressive promotion without margin destruction—**US$${chartData[0].margin.toFixed(0)}** margin per event represents **${(chartData[0].margin / totalMargin * 100).toFixed(0)}%** of portfolio contribution.`

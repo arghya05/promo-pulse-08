@@ -24,6 +24,7 @@ export interface AnalyticsResult {
   sources: string;
   chartData: any[];
   nextQuestions: string[];
+  drillPath?: string[]; // Dynamic drill-down hierarchy
   predictions?: {
     forecast: string[];
     confidence: number;
@@ -95,6 +96,7 @@ function topPromosByROI(filters?: any): AnalyticsResult {
   });
 
   return {
+    drillPath: ["promotion", "category", "brand", "sku", "store", "week"],
     whatHappened: [
       `Top 5 promotions generated US$${totalMargin.toFixed(0)} in combined incremental margin over a 26-week period, representing ${((totalMargin / 4000000) * 100).toFixed(2)}% of total annual revenue (US$4M). Average ROI of ${avgROI.toFixed(2)} indicates every dollar spent returned US$${avgROI.toFixed(2)} in margin.`,
       `Leading performer ${topProduct.name} in ${topProduct.category} achieved ${(topPromo.incremental_units / 150 * 100).toFixed(1)}% unit lift at ${topStore.name} (${topStore.region} region), driving US$${topPromo.incremental_margin.toFixed(0)} margin on US$${topPromo.spend.toFixed(0)} spend with ROI of ${topPromo.roi.toFixed(2)}.`,
@@ -162,6 +164,7 @@ function lostMoneyPromos(filters?: any): AnalyticsResult {
   });
 
   return {
+    drillPath: ["category", "brand", "sku", "store", "region"],
     whatHappened: [
       `Portfolio analysis identified ${losers.length} underperforming promotions that collectively destroyed US$${totalLoss.toFixed(0)} in value over 26 weeks, representing ${((totalLoss / totalSpend) * 100).toFixed(1)}% of promotional spend with negative return. Average ROI of ${avgROI.toFixed(2)} means every promotional dollar generated only US$${avgROI.toFixed(2)} in margin.`,
       `Worst offender ${worstProduct.name} (${worstProduct.category}) achieved ROI of ${worstPromo.roi.toFixed(2)} with US$${worstPromo.spend.toFixed(0)} spend returning only US$${worstPromo.incremental_margin.toFixed(0)} margin, resulting in US$${(worstPromo.spend - worstPromo.incremental_margin).toFixed(0)} net loss per promotion event.`,
@@ -221,6 +224,7 @@ function optimalDepth(filters?: any): AnalyticsResult {
   const optimal = chartData.reduce((best, curr) => curr.margin > best.margin ? curr : best);
 
   return {
+    drillPath: ["depth", "store", "week", "customer_segment"],
     whatHappened: [
       `Grid search optimization across 8 discount depths (5-40%) for ${product.name} identifies optimal promotional depth at ${optimal.depth}%, generating US$${optimal.margin.toFixed(0)} incremental margin per store per week with ${optimal.units.toFixed(0)} incremental units and ROI of ${optimal.roi.toFixed(2)}.`,
       `Current promotional strategy at various depths shows margin curve peaks at ${optimal.depth}% before elasticity diminishing returns erode profitability—depths beyond ${optimal.depth + 5}% increase spend by US$${((chartData.find(d => d.depth === optimal.depth + 5)?.spend || optimal.spend) - optimal.spend).toFixed(0)} while margin gains flatten to only US$${((chartData.find(d => d.depth === optimal.depth + 5)?.margin || optimal.margin) - optimal.margin).toFixed(0)} incremental.`,
