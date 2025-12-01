@@ -50,17 +50,17 @@ export default function DataManagement() {
         customerJourneyData,
         inventoryLevelsData
       ] = await Promise.all([
-        supabase.from('stores').select('*').limit(500),
-        supabase.from('promotions').select('*').limit(500),
-        supabase.from('transactions').select('*').limit(500),
-        supabase.from('customers').select('*').limit(500),
-        supabase.from('third_party_data').select('*').limit(500),
-        supabase.from('products').select('*').limit(500),
-        supabase.from('marketing_channels').select('*').limit(500),
-        supabase.from('competitor_data').select('*').limit(500),
-        supabase.from('store_performance').select('*').limit(500),
-        supabase.from('customer_journey').select('*').limit(500),
-        supabase.from('inventory_levels').select('*').limit(500),
+        supabase.from('stores').select('*').limit(2000),
+        supabase.from('promotions').select('*').limit(2000),
+        supabase.from('transactions').select('*').limit(2000),
+        supabase.from('customers').select('*').limit(2000),
+        supabase.from('third_party_data').select('*').limit(2000),
+        supabase.from('products').select('*').limit(2000),
+        supabase.from('marketing_channels').select('*').limit(2000),
+        supabase.from('competitor_data').select('*').limit(2000),
+        supabase.from('store_performance').select('*').limit(2000),
+        supabase.from('customer_journey').select('*').limit(2000),
+        supabase.from('inventory_levels').select('*').limit(2000),
       ]);
 
       setStores(storesData.data || []);
