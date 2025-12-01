@@ -187,6 +187,7 @@ Your response MUST be a valid JSON object with this exact structure:
     {"name": "Category A", "roi": number, "margin": number},
     {"name": "Category B", "roi": number, "margin": number}
   ],
+  "drillPath": ["level1", "level2", "level3", ...],
   "nextQuestions": ["question 1", "question 2"],
   "sources": "string describing data sources",
   "predictions": {
@@ -208,6 +209,20 @@ Your response MUST be a valid JSON object with this exact structure:
     }
   ]
 }
+
+CRITICAL DRILL PATH RULES:
+- drillPath defines the hierarchical breakdown sequence for drill-down analysis
+- Choose appropriate levels based on question context:
+  * For promotion performance: ["promotion", "category", "brand", "sku", "store", "week"]
+  * For category analysis: ["category", "brand", "sku", "store", "week"]
+  * For discount optimization: ["depth", "store", "week", "customer_segment"]
+  * For store analysis: ["store", "region", "category", "brand", "week"]
+  * For calendar/timing: ["promotion", "store", "week", "day"]
+  * For mechanics comparison: ["mechanic_type", "category", "brand", "sku", "store"]
+  * For funnel analysis: ["funnel_stage", "promotion", "customer_segment", "store"]
+- Available drill levels: promotion, category, brand, sku, store, week, day, depth, region, customer_segment, mechanic_type, activation_type, funnel_stage
+- Return 4-6 drill levels that best match the analysis context
+- Order from broadest to most granular
 
 CRITICAL CHART DATA RULES:
 - chartData MUST contain the EXACT items being asked about

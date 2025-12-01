@@ -380,7 +380,8 @@ export default function Index() {
       {/* Drill Down Panel */}
       {drillDownData && useMultiLevel && (
         <MultiLevelDrillDown 
-          initialData={drillDownData} 
+          initialData={drillDownData}
+          drillPath={result?.drillPath}
           onClose={() => setDrillDownData(null)} 
         />
       )}

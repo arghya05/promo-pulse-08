@@ -14,68 +14,93 @@ import {
 } from "@/components/ui/table";
 
 interface DrillLevel {
-  type: "promotion" | "category" | "brand" | "sku" | "store" | "week";
+  type: string;
   name: string;
   data: any;
 }
 
 interface MultiLevelDrillDownProps {
   initialData: { name: string; roi: number; margin: number };
+  drillPath?: string[];
   onClose: () => void;
 }
 
-export default function MultiLevelDrillDown({ initialData, onClose }: MultiLevelDrillDownProps) {
+export default function MultiLevelDrillDown({ initialData, drillPath: configuredPath, onClose }: MultiLevelDrillDownProps) {
+  const drillSequence = configuredPath || ["promotion", "category", "brand", "sku", "store", "week"];
+  
   const [drillPath, setDrillPath] = useState<DrillLevel[]>([
-    { type: "promotion", name: initialData.name, data: initialData }
+    { type: drillSequence[0], name: initialData.name, data: initialData }
   ]);
 
   const currentLevel = drillPath[drillPath.length - 1];
 
-  // Generate drill-down data based on level
+  // Generate drill-down data based on level with dynamic mappings
   const generateDrillData = (level: DrillLevel) => {
     const baseRoi = level.data.roi || 2.5;
     const baseMargin = level.data.margin || 50000;
     
-    switch (level.type) {
-      case "promotion":
-        return [
-          { name: "Beverages", roi: baseRoi * 1.2, margin: baseMargin * 0.35, sales: baseMargin * 1.8, units: 15000 },
-          { name: "Snacks", roi: baseRoi * 1.1, margin: baseMargin * 0.28, sales: baseMargin * 1.5, units: 12000 },
-          { name: "Dairy", roi: baseRoi * 0.9, margin: baseMargin * 0.22, sales: baseMargin * 1.2, units: 8000 },
-          { name: "Frozen", roi: baseRoi * 0.8, margin: baseMargin * 0.15, sales: baseMargin * 0.9, units: 5000 },
-        ];
-      case "category":
-        return [
-          { name: "Coca-Cola", roi: baseRoi * 1.15, margin: baseMargin * 0.35, sales: baseMargin * 1.7, units: 8000 },
-          { name: "PepsiCo", roi: baseRoi * 1.05, margin: baseMargin * 0.30, sales: baseMargin * 1.5, units: 7000 },
-          { name: "Dr Pepper", roi: baseRoi * 0.95, margin: baseMargin * 0.20, sales: baseMargin * 1.2, units: 4500 },
-          { name: "Private Label", roi: baseRoi * 0.85, margin: baseMargin * 0.15, sales: baseMargin * 1.0, units: 3000 },
-        ];
-      case "brand":
-        return [
-          { name: "Coke-12pk", roi: baseRoi * 1.2, margin: baseMargin * 0.40, sales: baseMargin * 1.8, units: 5000 },
-          { name: "Coke-2L", roi: baseRoi * 1.0, margin: baseMargin * 0.30, sales: baseMargin * 1.4, units: 3500 },
-          { name: "Diet Coke-12pk", roi: baseRoi * 0.9, margin: baseMargin * 0.20, sales: baseMargin * 1.1, units: 2500 },
-          { name: "Coke Zero-2L", roi: baseRoi * 0.8, margin: baseMargin * 0.10, sales: baseMargin * 0.8, units: 1500 },
-        ];
-      case "sku":
-        return [
-          { name: "Store North-001", roi: baseRoi * 1.3, margin: baseMargin * 0.25, sales: baseMargin * 1.6, units: 1500 },
-          { name: "Store North-002", roi: baseRoi * 1.1, margin: baseMargin * 0.22, sales: baseMargin * 1.4, units: 1300 },
-          { name: "Store South-001", roi: baseRoi * 1.0, margin: baseMargin * 0.20, sales: baseMargin * 1.2, units: 1200 },
-          { name: "Store South-002", roi: baseRoi * 0.9, margin: baseMargin * 0.18, sales: baseMargin * 1.0, units: 1000 },
-          { name: "Store East-001", roi: baseRoi * 0.85, margin: baseMargin * 0.15, sales: baseMargin * 0.9, units: 800 },
-        ];
-      case "store":
-        return [
-          { name: "Week 1", roi: baseRoi * 0.8, margin: baseMargin * 0.18, sales: baseMargin * 0.9, units: 250 },
-          { name: "Week 2", roi: baseRoi * 1.1, margin: baseMargin * 0.28, sales: baseMargin * 1.3, units: 420 },
-          { name: "Week 3", roi: baseRoi * 1.3, margin: baseMargin * 0.32, sales: baseMargin * 1.5, units: 480 },
-          { name: "Week 4", roi: baseRoi * 1.0, margin: baseMargin * 0.22, sales: baseMargin * 1.1, units: 350 },
-        ];
-      default:
-        return [];
-    }
+    // Mapping for different drill types with realistic breakdown
+    const dataGenerators: Record<string, () => any[]> = {
+      promotion: () => [
+        { name: "Beverages", roi: baseRoi * 1.2, margin: baseMargin * 0.35, sales: baseMargin * 1.8, units: 15000 },
+        { name: "Snacks", roi: baseRoi * 1.1, margin: baseMargin * 0.28, sales: baseMargin * 1.5, units: 12000 },
+        { name: "Dairy", roi: baseRoi * 0.9, margin: baseMargin * 0.22, sales: baseMargin * 1.2, units: 8000 },
+        { name: "Frozen", roi: baseRoi * 0.8, margin: baseMargin * 0.15, sales: baseMargin * 0.9, units: 5000 },
+      ],
+      category: () => [
+        { name: "Coca-Cola", roi: baseRoi * 1.15, margin: baseMargin * 0.35, sales: baseMargin * 1.7, units: 8000 },
+        { name: "PepsiCo", roi: baseRoi * 1.05, margin: baseMargin * 0.30, sales: baseMargin * 1.5, units: 7000 },
+        { name: "Dr Pepper", roi: baseRoi * 0.95, margin: baseMargin * 0.20, sales: baseMargin * 1.2, units: 4500 },
+        { name: "Private Label", roi: baseRoi * 0.85, margin: baseMargin * 0.15, sales: baseMargin * 1.0, units: 3000 },
+      ],
+      brand: () => [
+        { name: "Coke-12pk", roi: baseRoi * 1.2, margin: baseMargin * 0.40, sales: baseMargin * 1.8, units: 5000 },
+        { name: "Coke-2L", roi: baseRoi * 1.0, margin: baseMargin * 0.30, sales: baseMargin * 1.4, units: 3500 },
+        { name: "Diet Coke-12pk", roi: baseRoi * 0.9, margin: baseMargin * 0.20, sales: baseMargin * 1.1, units: 2500 },
+        { name: "Coke Zero-2L", roi: baseRoi * 0.8, margin: baseMargin * 0.10, sales: baseMargin * 0.8, units: 1500 },
+      ],
+      sku: () => [
+        { name: "Store North-001", roi: baseRoi * 1.3, margin: baseMargin * 0.25, sales: baseMargin * 1.6, units: 1500 },
+        { name: "Store North-002", roi: baseRoi * 1.1, margin: baseMargin * 0.22, sales: baseMargin * 1.4, units: 1300 },
+        { name: "Store South-001", roi: baseRoi * 1.0, margin: baseMargin * 0.20, sales: baseMargin * 1.2, units: 1200 },
+        { name: "Store South-002", roi: baseRoi * 0.9, margin: baseMargin * 0.18, sales: baseMargin * 1.0, units: 1000 },
+        { name: "Store East-001", roi: baseRoi * 0.85, margin: baseMargin * 0.15, sales: baseMargin * 0.9, units: 800 },
+      ],
+      store: () => [
+        { name: "Week 1", roi: baseRoi * 0.8, margin: baseMargin * 0.18, sales: baseMargin * 0.9, units: 250 },
+        { name: "Week 2", roi: baseRoi * 1.1, margin: baseMargin * 0.28, sales: baseMargin * 1.3, units: 420 },
+        { name: "Week 3", roi: baseRoi * 1.3, margin: baseMargin * 0.32, sales: baseMargin * 1.5, units: 480 },
+        { name: "Week 4", roi: baseRoi * 1.0, margin: baseMargin * 0.22, sales: baseMargin * 1.1, units: 350 },
+      ],
+      week: () => [
+        { name: "Mon-Tue", roi: baseRoi * 0.7, margin: baseMargin * 0.15, sales: baseMargin * 0.8, units: 80 },
+        { name: "Wed-Thu", roi: baseRoi * 1.0, margin: baseMargin * 0.25, sales: baseMargin * 1.1, units: 120 },
+        { name: "Fri-Sat", roi: baseRoi * 1.4, margin: baseMargin * 0.35, sales: baseMargin * 1.6, units: 180 },
+        { name: "Sunday", roi: baseRoi * 1.2, margin: baseMargin * 0.25, sales: baseMargin * 1.3, units: 140 },
+      ],
+      depth: () => [
+        { name: "10% Discount", roi: baseRoi * 1.4, margin: baseMargin * 1.2, sales: baseMargin * 1.8, units: 12000 },
+        { name: "15% Discount", roi: baseRoi * 1.25, margin: baseMargin * 1.0, sales: baseMargin * 1.6, units: 14000 },
+        { name: "20% Discount", roi: baseRoi, margin: baseMargin, sales: baseMargin * 1.4, units: 16000 },
+        { name: "25% Discount", roi: baseRoi * 0.85, margin: baseMargin * 0.8, sales: baseMargin * 1.2, units: 17500 },
+        { name: "30% Discount", roi: baseRoi * 0.7, margin: baseMargin * 0.6, sales: baseMargin * 1.0, units: 18500 },
+      ],
+      region: () => [
+        { name: "North Region", roi: baseRoi * 1.3, margin: baseMargin * 0.35, sales: baseMargin * 1.7, units: 8000 },
+        { name: "South Region", roi: baseRoi * 1.1, margin: baseMargin * 0.30, sales: baseMargin * 1.5, units: 7500 },
+        { name: "East Region", roi: baseRoi * 0.9, margin: baseMargin * 0.20, sales: baseMargin * 1.1, units: 5000 },
+        { name: "West Region", roi: baseRoi * 0.85, margin: baseMargin * 0.15, sales: baseMargin * 0.9, units: 4500 },
+      ],
+      customer_segment: () => [
+        { name: "High-Value Shoppers", roi: baseRoi * 1.5, margin: baseMargin * 0.40, sales: baseMargin * 2.0, units: 5000 },
+        { name: "Regular Customers", roi: baseRoi, margin: baseMargin * 0.35, sales: baseMargin * 1.4, units: 8000 },
+        { name: "Occasional Buyers", roi: baseRoi * 0.8, margin: baseMargin * 0.15, sales: baseMargin * 0.9, units: 4000 },
+        { name: "New Customers", roi: baseRoi * 0.6, margin: baseMargin * 0.10, sales: baseMargin * 0.7, units: 2000 },
+      ],
+    };
+    
+    const generator = dataGenerators[level.type];
+    return generator ? generator() : [];
   };
 
   const drillDown = (item: any) => {
@@ -85,10 +110,9 @@ export default function MultiLevelDrillDown({ initialData, onClose }: MultiLevel
     }
   };
 
-  const getNextLevel = (currentType: string): DrillLevel["type"] | null => {
-    const sequence: DrillLevel["type"][] = ["promotion", "category", "brand", "sku", "store", "week"];
-    const currentIndex = sequence.indexOf(currentType as DrillLevel["type"]);
-    return currentIndex < sequence.length - 1 ? sequence[currentIndex + 1] : null;
+  const getNextLevel = (currentType: string): string | null => {
+    const currentIndex = drillSequence.indexOf(currentType);
+    return currentIndex < drillSequence.length - 1 ? drillSequence[currentIndex + 1] : null;
   };
 
   const navigateToLevel = (index: number) => {
@@ -96,18 +120,21 @@ export default function MultiLevelDrillDown({ initialData, onClose }: MultiLevel
   };
 
   const drillData = generateDrillData(currentLevel);
-  const canDrillDeeper = currentLevel.type !== "week";
+  const canDrillDeeper = getNextLevel(currentLevel.type) !== null;
 
   const getLevelIcon = (type: string) => {
-    switch (type) {
-      case "promotion": return <BarChart3 className="h-4 w-4" />;
-      case "category": return <Package className="h-4 w-4" />;
-      case "brand": return <TrendingUp className="h-4 w-4" />;
-      case "sku": return <Package className="h-4 w-4" />;
-      case "store": return <Store className="h-4 w-4" />;
-      case "week": return <Calendar className="h-4 w-4" />;
-      default: return <BarChart3 className="h-4 w-4" />;
-    }
+    const iconMap: Record<string, JSX.Element> = {
+      promotion: <BarChart3 className="h-4 w-4" />,
+      category: <Package className="h-4 w-4" />,
+      brand: <TrendingUp className="h-4 w-4" />,
+      sku: <Package className="h-4 w-4" />,
+      store: <Store className="h-4 w-4" />,
+      week: <Calendar className="h-4 w-4" />,
+      depth: <DollarSign className="h-4 w-4" />,
+      region: <Store className="h-4 w-4" />,
+      customer_segment: <TrendingUp className="h-4 w-4" />,
+    };
+    return iconMap[type] || <BarChart3 className="h-4 w-4" />;
   };
 
   const getLevelLabel = (type: string) => {
@@ -136,7 +163,7 @@ export default function MultiLevelDrillDown({ initialData, onClose }: MultiLevel
               ))}
             </div>
             <p className="text-sm text-muted-foreground">
-              Level {drillPath.length} of 6 • {getLevelLabel(currentLevel.type)} Analysis
+              Level {drillPath.length} of {drillSequence.length} • {getLevelLabel(currentLevel.type)} Analysis
               {canDrillDeeper && " • Click any row to drill deeper"}
             </p>
           </div>
