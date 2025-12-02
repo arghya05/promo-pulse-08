@@ -192,8 +192,20 @@ You can answer ANY question about:
 - Temporal patterns (daily, weekly, seasonal)
 - Discount optimization and pricing strategies
 - Promotional mechanics comparison (BOGO, percent off, dollar off, coupons)
-- Future forecasting and predictive analytics
+- **Future forecasting and predictive analytics (sales forecasts, demand projections, trend analysis)**
+- **Time-series analysis with historical trends and future predictions**
 - Risk assessment and underperforming campaigns
+
+FORECASTING & TREND ANALYSIS REQUIREMENTS:
+When user asks forecasting questions (keywords: "forecast", "predict", "future", "next", "trend", "projection", "will"):
+1. Analyze historical data patterns from transactions and promotions
+2. Calculate trend lines using time-series data (week-over-week, month-over-month)
+3. Generate chartData with time periods (weeks/months) showing both historical and forecasted values
+4. Include confidence intervals in predictions
+5. Set drillPath to time-based hierarchy: ["month", "week", "day", "category", "store"]
+6. In predictions section, provide specific numerical forecasts with timeframes
+7. Identify seasonal patterns and cyclical trends from historical data
+8. Chart should show clear visual trend line from past into future
 
 ${dataContextMessage}
 
@@ -245,7 +257,9 @@ CRITICAL DRILL PATH RULES:
   * For calendar/timing: ["promotion", "store", "week", "day"]
   * For mechanics comparison: ["mechanic_type", "category", "brand", "sku", "store"]
   * For funnel analysis: ["funnel_stage", "promotion", "customer_segment", "store"]
-- Available drill levels: promotion, category, brand, sku, store, week, day, depth, region, customer_segment, mechanic_type, activation_type, funnel_stage
+  * **For forecasting/trend analysis: ["month", "week", "day", "category", "store", "product"]**
+  * **For time-series predictions: ["quarter", "month", "week", "category", "brand", "sku"]**
+- Available drill levels: promotion, category, brand, sku, store, week, day, month, quarter, year, depth, region, customer_segment, mechanic_type, activation_type, funnel_stage
 - Return 4-6 drill levels that best match the analysis context
 - Order from broadest to most granular
 
@@ -254,9 +268,14 @@ CRITICAL CHART DATA RULES:
 - If user asks "top 5 promotions", return 5 items in chartData with promotion names
 - If user asks "optimal discount depth", return different discount levels (e.g., "10% Discount", "15% Discount", "20% Discount")
 - If user asks about specific products/categories, return those specific items
+- **For forecasting questions, chartData should show time periods (e.g., "Week 1", "Week 2", "Week 3 (forecast)", "Week 4 (forecast)")**
+- **Include both historical data points and forecasted future points in the same chart**
+- **Use "(forecast)" or "(projected)" suffix to distinguish predicted values from actual historical data**
 - Each chartData item MUST have: "name" (descriptive label), "roi" (realistic ROI value), "margin" (dollar amount)
-- Return 3-6 items in chartData that directly answer the question
-- The "name" field should be clear and business-friendly (e.g., "Spring Refresh Promo", "Soda-12pk (10% Disc)")
+- For trend charts, add "trend" field with values like "up", "down", or "stable"
+- Return 5-8 items in chartData for forecasting to show clear trends
+- Return 3-6 items in chartData for other analysis types that directly answer the question
+- The "name" field should be clear and business-friendly (e.g., "Spring Refresh Promo", "Week 12 (Feb)", "Q2 2024 (forecast)")
 
 ANSWER QUALITY STANDARDS:
 - Each bullet point must reference SPECIFIC data points from the database (actual promotion names, product names, store names, dollar amounts)

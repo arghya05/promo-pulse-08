@@ -97,6 +97,36 @@ export default function MultiLevelDrillDown({ initialData, drillPath: configured
         { name: "Occasional Buyers", roi: baseRoi * 0.8, margin: baseMargin * 0.15, sales: baseMargin * 0.9, units: 4000 },
         { name: "New Customers", roi: baseRoi * 0.6, margin: baseMargin * 0.10, sales: baseMargin * 0.7, units: 2000 },
       ],
+      // Time-based drill levels for forecasting
+      month: () => [
+        { name: "January", roi: baseRoi * 0.9, margin: baseMargin * 0.22, sales: baseMargin * 1.1, units: 18000, trend: "stable" },
+        { name: "February", roi: baseRoi * 1.1, margin: baseMargin * 0.26, sales: baseMargin * 1.3, units: 22000, trend: "up" },
+        { name: "March", roi: baseRoi * 1.3, margin: baseMargin * 0.30, sales: baseMargin * 1.5, units: 28000, trend: "up" },
+        { name: "April (forecast)", roi: baseRoi * 1.4, margin: baseMargin * 0.32, sales: baseMargin * 1.6, units: 30000, trend: "up" },
+        { name: "May (forecast)", roi: baseRoi * 1.5, margin: baseMargin * 0.35, sales: baseMargin * 1.7, units: 32000, trend: "up" },
+        { name: "June (forecast)", roi: baseRoi * 1.45, margin: baseMargin * 0.33, sales: baseMargin * 1.65, units: 31000, trend: "stable" },
+      ],
+      quarter: () => [
+        { name: "Q1 2024", roi: baseRoi * 1.1, margin: baseMargin * 0.28, sales: baseMargin * 1.4, units: 68000, trend: "stable" },
+        { name: "Q2 2024", roi: baseRoi * 1.3, margin: baseMargin * 0.32, sales: baseMargin * 1.6, units: 85000, trend: "up" },
+        { name: "Q3 2024 (forecast)", roi: baseRoi * 1.5, margin: baseMargin * 0.36, sales: baseMargin * 1.8, units: 95000, trend: "up" },
+        { name: "Q4 2024 (forecast)", roi: baseRoi * 1.7, margin: baseMargin * 0.40, sales: baseMargin * 2.0, units: 110000, trend: "up" },
+      ],
+      day: () => [
+        { name: "Monday", roi: baseRoi * 0.7, margin: baseMargin * 0.15, sales: baseMargin * 0.8, units: 800, trend: "stable" },
+        { name: "Tuesday", roi: baseRoi * 0.8, margin: baseMargin * 0.18, sales: baseMargin * 0.9, units: 950, trend: "stable" },
+        { name: "Wednesday", roi: baseRoi * 1.0, margin: baseMargin * 0.23, sales: baseMargin * 1.1, units: 1200, trend: "up" },
+        { name: "Thursday", roi: baseRoi * 1.1, margin: baseMargin * 0.25, sales: baseMargin * 1.2, units: 1350, trend: "up" },
+        { name: "Friday", roi: baseRoi * 1.4, margin: baseMargin * 0.32, sales: baseMargin * 1.5, units: 1800, trend: "up" },
+        { name: "Saturday", roi: baseRoi * 1.5, margin: baseMargin * 0.35, sales: baseMargin * 1.7, units: 2000, trend: "up" },
+        { name: "Sunday", roi: baseRoi * 1.2, margin: baseMargin * 0.27, sales: baseMargin * 1.3, units: 1500, trend: "stable" },
+      ],
+      year: () => [
+        { name: "2022", roi: baseRoi * 0.9, margin: baseMargin * 0.80, sales: baseMargin * 4.5, units: 250000, trend: "stable" },
+        { name: "2023", roi: baseRoi * 1.1, margin: baseMargin * 1.0, sales: baseMargin * 5.2, units: 310000, trend: "up" },
+        { name: "2024", roi: baseRoi * 1.3, margin: baseMargin * 1.15, sales: baseMargin * 5.8, units: 358000, trend: "up" },
+        { name: "2025 (forecast)", roi: baseRoi * 1.5, margin: baseMargin * 1.30, sales: baseMargin * 6.5, units: 410000, trend: "up" },
+      ],
     };
     
     const generator = dataGenerators[level.type];
@@ -130,6 +160,10 @@ export default function MultiLevelDrillDown({ initialData, drillPath: configured
       sku: <Package className="h-4 w-4" />,
       store: <Store className="h-4 w-4" />,
       week: <Calendar className="h-4 w-4" />,
+      day: <Calendar className="h-4 w-4" />,
+      month: <Calendar className="h-4 w-4" />,
+      quarter: <Calendar className="h-4 w-4" />,
+      year: <Calendar className="h-4 w-4" />,
       depth: <DollarSign className="h-4 w-4" />,
       region: <Store className="h-4 w-4" />,
       customer_segment: <TrendingUp className="h-4 w-4" />,
@@ -224,6 +258,9 @@ export default function MultiLevelDrillDown({ initialData, drillPath: configured
                 <TableHead className="text-right">Margin</TableHead>
                 <TableHead className="text-right">Sales</TableHead>
                 <TableHead className="text-right">Units</TableHead>
+                {['month', 'quarter', 'week', 'day', 'year'].includes(currentLevel.type) && (
+                  <TableHead className="text-right">Trend</TableHead>
+                )}
                 <TableHead className="text-right">Contribution %</TableHead>
               </TableRow>
             </TableHeader>
@@ -232,6 +269,7 @@ export default function MultiLevelDrillDown({ initialData, drillPath: configured
                 const totalMargin = drillData.reduce((sum, d) => sum + d.margin, 0);
                 const contribution = (item.margin / totalMargin) * 100;
                 const roiStatus = item.roi >= 1.5 ? "good" : item.roi >= 1 ? "warning" : "bad";
+                const isForecast = item.name.includes("forecast") || item.name.includes("projected");
                 
                 return (
                   <TableRow
@@ -243,6 +281,11 @@ export default function MultiLevelDrillDown({ initialData, drillPath: configured
                       <div className="flex items-center gap-2">
                         {canDrillDeeper && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                         {item.name}
+                        {isForecast && (
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            Predicted
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
@@ -261,6 +304,26 @@ export default function MultiLevelDrillDown({ initialData, drillPath: configured
                     <TableCell className="text-right">
                       {item.units.toLocaleString()}
                     </TableCell>
+                    {['month', 'quarter', 'week', 'day', 'year'].includes(currentLevel.type) && (
+                      <TableCell className="text-right">
+                        {item.trend === "up" && (
+                          <Badge variant="default" className="gap-1">
+                            <TrendingUp className="h-3 w-3" />
+                            Up
+                          </Badge>
+                        )}
+                        {item.trend === "down" && (
+                          <Badge variant="destructive" className="gap-1">
+                            ↓ Down
+                          </Badge>
+                        )}
+                        {item.trend === "stable" && (
+                          <Badge variant="secondary" className="gap-1">
+                            → Stable
+                          </Badge>
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell className="text-right">
                       <span className="text-sm font-medium">{contribution.toFixed(1)}%</span>
                     </TableCell>
