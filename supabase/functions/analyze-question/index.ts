@@ -313,9 +313,21 @@ Remember: Your credibility depends on precision. Every number, every name, every
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Analyze this promotion question and provide detailed insights: ${question}` }
+          { role: 'user', content: `QUESTION: "${question}"
+
+CRITICAL INSTRUCTIONS:
+1. Answer ONLY this specific question - do not add unrelated information
+2. If the question asks about specific promotions/products/stores, reference those EXACT items from the database
+3. If the question asks for "top N" items, return exactly N items with their real names and metrics
+4. If the question asks "why", provide root cause analysis using actual data patterns
+5. If the question asks "how to optimize", provide actionable recommendations based on data insights
+6. Use ONLY the database context provided above - calculate all metrics from raw data
+7. Stay focused on the question scope - don't expand to unrelated topics
+8. Ensure every statement is backed by specific data points from the database
+
+Now analyze and provide a precise, data-driven answer to the question above.` }
         ],
-        temperature: 0.7,
+        temperature: 0.3,
       }),
     });
 
