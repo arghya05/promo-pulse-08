@@ -248,18 +248,19 @@ Your response MUST be a valid JSON object with this exact structure:
 }
 
 CRITICAL DRILL PATH RULES:
-- drillPath defines the hierarchical breakdown sequence for drill-down analysis
-- Choose appropriate levels based on question context:
-  * For promotion performance: ["promotion", "category", "brand", "sku", "store", "week"]
-  * For category analysis: ["category", "brand", "sku", "store", "week"]
-  * For discount optimization: ["depth", "store", "week", "customer_segment"]
-  * For store analysis: ["store", "region", "category", "brand", "week"]
-  * For calendar/timing: ["promotion", "store", "week", "day"]
-  * For mechanics comparison: ["mechanic_type", "category", "brand", "sku", "store"]
-  * For funnel analysis: ["funnel_stage", "promotion", "customer_segment", "store"]
-  * **For forecasting/trend analysis: ["month", "week", "day", "category", "store", "product"]**
-  * **For time-series predictions: ["quarter", "month", "week", "category", "brand", "sku"]**
-- Available drill levels: promotion, category, brand, sku, store, week, day, month, quarter, year, depth, region, customer_segment, mechanic_type, activation_type, funnel_stage
+- drillPath defines dynamic hierarchical breakdown - ALWAYS start from higher aggregation levels and drill to granular details
+- Choose paths that match the question focus and start broad then narrow:
+  * For ROI/performance questions: ["category", "brand", "sku", "store", "region"]
+  * For depth optimization: ["category", "depth", "sku", "store"]
+  * For regional analysis: ["region", "store", "category", "brand", "sku"]
+  * For customer analysis: ["customer_segment", "category", "brand", "sku", "store"]
+  * For forecasting/trend: ["category", "brand", "sku", "month", "week", "day"]
+  * For inventory questions: ["category", "sku", "store", "region"]
+  * For competitive analysis: ["category", "brand", "sku", "region"]
+  * For timing analysis: ["month", "week", "day", "category", "store"]
+- CRITICAL: Start with category/region/segment (aggregated), then drill to sku/store/day (granular)
+- Available drill levels: category, brand, sku, store, region, customer_segment, depth, month, week, day, quarter, year
+- The drill-down will use REAL DATA from all 11 database sources for each level
 - Return 4-6 drill levels that best match the analysis context
 - Order from broadest to most granular
 
@@ -388,6 +389,133 @@ Now analyze and provide a precise, data-driven answer to the question above.` }
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
       throw new Error('Failed to parse AI response as JSON');
+    }
+
+    // Enrich with real drill-down data from all data sources
+    if (analysisResult.drillPath && analysisResult.drillPath.length > 0) {
+      console.log('Enriching drill-down with real data from all sources...');
+      
+      try {
+        // Fetch all data needed for drill-down enrichment
+        const [productsRes, storesRes, txRes, customersRes] = await Promise.all([
+          supabaseClient.from('products').select('*').order('category'),
+          supabaseClient.from('stores').select('*, store_performance(*)').order('store_code'),
+          supabaseClient.from('transactions').select(`
+            product_sku,
+            store_id,
+            customer_id,
+            quantity,
+            unit_price,
+            total_amount,
+            discount_amount,
+            promotion_id,
+            transaction_date
+          `).order('transaction_date', { ascending: false }).limit(5000),
+          supabaseClient.from('customers').select('*').order('segment')
+        ]);
+
+        const enrichedLevels: any[] = [];
+        
+        // Process each drill level
+        for (const level of analysisResult.drillPath) {
+          let levelData = null;
+          
+          switch (level) {
+            case 'category':
+              levelData = productsRes.data?.reduce((acc: any[], p: any) => {
+                if (!acc.find(x => x.category === p.category)) {
+                  acc.push({
+                    category: p.category,
+                    base_price: p.base_price,
+                    cost: p.cost,
+                    margin_percent: p.margin_percent
+                  });
+                }
+                return acc;
+              }, []);
+              break;
+              
+            case 'brand':
+              levelData = productsRes.data?.filter((p: any) => p.brand).reduce((acc: any[], p: any) => {
+                if (!acc.find(x => x.brand === p.brand)) {
+                  acc.push({
+                    brand: p.brand,
+                    category: p.category,
+                    base_price: p.base_price,
+                    cost: p.cost,
+                    margin_percent: p.margin_percent
+                  });
+                }
+                return acc;
+              }, []);
+              break;
+              
+            case 'sku':
+              levelData = productsRes.data?.map((p: any) => ({
+                product_sku: p.product_sku,
+                product_name: p.product_name,
+                brand: p.brand,
+                category: p.category,
+                base_price: p.base_price,
+                cost: p.cost,
+                margin_percent: p.margin_percent,
+                price_elasticity: p.price_elasticity
+              }));
+              break;
+              
+            case 'store':
+              levelData = storesRes.data?.map((s: any) => ({
+                store_code: s.store_code,
+                store_name: s.store_name,
+                region: s.region,
+                store_type: s.store_type,
+                store_performance: s.store_performance
+              }));
+              break;
+              
+            case 'region':
+              levelData = storesRes.data?.reduce((acc: any[], s: any) => {
+                if (s.region && !acc.find(x => x.region === s.region)) {
+                  acc.push({ region: s.region });
+                }
+                return acc;
+              }, []);
+              break;
+              
+            case 'customer_segment':
+              levelData = customersRes.data?.reduce((acc: any[], c: any) => {
+                if (c.segment && !acc.find(x => x.segment === c.segment)) {
+                  acc.push({
+                    segment: c.segment,
+                    loyalty_tier: c.loyalty_tier,
+                    total_lifetime_value: c.total_lifetime_value
+                  });
+                }
+                return acc;
+              }, []);
+              break;
+          }
+          
+          if (levelData && levelData.length > 0) {
+            enrichedLevels.push({ level, data: levelData });
+          }
+        }
+        
+        // Attach enriched data and transactions to the response
+        analysisResult.enrichedData = {
+          path: analysisResult.drillPath,
+          enrichedLevels,
+          transactions: txRes.data || [],
+          products: productsRes.data || [],
+          stores: storesRes.data || [],
+          customers: customersRes.data || []
+        };
+        
+        console.log(`Enriched ${enrichedLevels.length} drill levels with real data`);
+      } catch (enrichError) {
+        console.error('Error enriching drill-down data:', enrichError);
+        // Continue without enriched data - will fall back to mock data
+      }
     }
 
     return new Response(

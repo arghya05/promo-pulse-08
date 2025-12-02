@@ -25,6 +25,14 @@ export interface AnalyticsResult {
   chartData: any[];
   nextQuestions: string[];
   drillPath?: string[]; // Dynamic drill-down hierarchy
+  enrichedData?: {
+    path: string[];
+    enrichedLevels: any[];
+    transactions: any[];
+    products?: any[];
+    stores?: any[];
+    customers?: any[];
+  };
   predictions?: {
     forecast: string[];
     confidence: number;

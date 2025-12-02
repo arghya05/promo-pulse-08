@@ -382,6 +382,7 @@ export default function Index() {
         <MultiLevelDrillDown 
           initialData={drillDownData}
           drillPath={result?.drillPath}
+          enrichedData={result?.enrichedData}
           onClose={() => setDrillDownData(null)} 
         />
       )}

@@ -22,24 +22,185 @@ interface DrillLevel {
 interface MultiLevelDrillDownProps {
   initialData: { name: string; roi: number; margin: number };
   drillPath?: string[];
+  enrichedData?: any;
   onClose: () => void;
 }
 
-export default function MultiLevelDrillDown({ initialData, drillPath: configuredPath, onClose }: MultiLevelDrillDownProps) {
-  const drillSequence = configuredPath || ["promotion", "category", "brand", "sku", "store", "week"];
+export default function MultiLevelDrillDown({ initialData, drillPath: configuredPath, enrichedData, onClose }: MultiLevelDrillDownProps) {
+  const drillSequence = configuredPath || ["category", "brand", "sku", "store", "region"];
   
   const [drillPath, setDrillPath] = useState<DrillLevel[]>([
     { type: drillSequence[0], name: initialData.name, data: initialData }
   ]);
 
   const currentLevel = drillPath[drillPath.length - 1];
+  
+  // Helper to calculate metrics from transaction data
+  const calculateMetricsFromTransactions = (transactions: any[], filterFn: (tx: any) => boolean) => {
+    const filtered = transactions.filter(filterFn);
+    const totalRevenue = filtered.reduce((sum, tx) => sum + (tx.total_amount || 0), 0);
+    const totalDiscount = filtered.reduce((sum, tx) => sum + (tx.discount_amount || 0), 0);
+    const totalUnits = filtered.reduce((sum, tx) => sum + (tx.quantity || 0), 0);
+    const margin = totalRevenue - totalDiscount;
+    const roi = totalDiscount > 0 ? margin / totalDiscount : 0;
+    
+    return {
+      revenue: totalRevenue,
+      margin,
+      roi,
+      units: totalUnits,
+      transactionCount: filtered.length
+    };
+  };
 
-  // Generate drill-down data based on level with dynamic mappings
+  // Generate drill-down data based on level using enriched real data
   const generateDrillData = (level: DrillLevel) => {
     const baseRoi = level.data.roi || 2.5;
     const baseMargin = level.data.margin || 50000;
     
-    // Mapping for different drill types with realistic breakdown
+    // Try to use enriched real data first
+    if (enrichedData?.enrichedLevels && enrichedData?.transactions) {
+      const nextLevelType = getNextLevel(level.type);
+      if (!nextLevelType) return [];
+      
+      const levelData = enrichedData.enrichedLevels.find((l: any) => l.level === nextLevelType);
+      const transactions = enrichedData.transactions || [];
+      
+      if (levelData?.data && transactions.length > 0) {
+        // Generate drill data from real database records
+        const aggregated = new Map();
+        
+        switch (nextLevelType) {
+          case 'category':
+            levelData.data.forEach((item: any) => {
+              if (!aggregated.has(item.category)) {
+                const metrics = calculateMetricsFromTransactions(
+                  transactions,
+                  (tx: any) => tx.products?.category === item.category
+                );
+                aggregated.set(item.category, {
+                  name: item.category,
+                  roi: metrics.roi,
+                  margin: metrics.margin,
+                  sales: metrics.revenue,
+                  units: metrics.units,
+                  avgPrice: item.base_price,
+                  marginPercent: item.margin_percent
+                });
+              }
+            });
+            break;
+            
+          case 'brand':
+            levelData.data.forEach((item: any) => {
+              if (item.brand && !aggregated.has(item.brand)) {
+                const metrics = calculateMetricsFromTransactions(
+                  transactions,
+                  (tx: any) => tx.products?.brand === item.brand
+                );
+                aggregated.set(item.brand, {
+                  name: item.brand,
+                  roi: metrics.roi,
+                  margin: metrics.margin,
+                  sales: metrics.revenue,
+                  units: metrics.units,
+                  category: item.category
+                });
+              }
+            });
+            break;
+            
+          case 'sku':
+            levelData.data.forEach((item: any) => {
+              const metrics = calculateMetricsFromTransactions(
+                transactions,
+                (tx: any) => tx.product_sku === item.product_sku
+              );
+              aggregated.set(item.product_sku, {
+                name: `${item.product_name} (${item.product_sku})`,
+                roi: metrics.roi,
+                margin: metrics.margin,
+                sales: metrics.revenue,
+                units: metrics.units,
+                brand: item.brand,
+                category: item.category,
+                elasticity: item.price_elasticity
+              });
+            });
+            break;
+            
+          case 'store':
+            levelData.data.forEach((item: any) => {
+              const metrics = calculateMetricsFromTransactions(
+                transactions,
+                (tx: any) => tx.store_id === item.store_code
+              );
+              const perfData = item.store_performance?.[0] || {};
+              aggregated.set(item.store_code, {
+                name: `${item.store_name} (${item.store_code})`,
+                roi: metrics.roi,
+                margin: metrics.margin,
+                sales: metrics.revenue,
+                units: metrics.units,
+                region: item.region,
+                storeType: item.store_type,
+                conversionRate: perfData.conversion_rate,
+                avgBasket: perfData.avg_basket_size
+              });
+            });
+            break;
+            
+          case 'region':
+            levelData.data.forEach((item: any) => {
+              if (item.region && !aggregated.has(item.region)) {
+                const metrics = calculateMetricsFromTransactions(
+                  transactions,
+                  (tx: any) => tx.stores?.region === item.region
+                );
+                aggregated.set(item.region, {
+                  name: item.region,
+                  roi: metrics.roi,
+                  margin: metrics.margin,
+                  sales: metrics.revenue,
+                  units: metrics.units
+                });
+              }
+            });
+            break;
+            
+          case 'customer_segment':
+            levelData.data.forEach((item: any) => {
+              if (item.segment && !aggregated.has(item.segment)) {
+                const metrics = calculateMetricsFromTransactions(
+                  transactions,
+                  (tx: any) => tx.customers?.segment === item.segment
+                );
+                aggregated.set(item.segment, {
+                  name: item.segment,
+                  roi: metrics.roi,
+                  margin: metrics.margin,
+                  sales: metrics.revenue,
+                  units: metrics.units,
+                  avgLTV: item.total_lifetime_value,
+                  loyaltyTier: item.loyalty_tier
+                });
+              }
+            });
+            break;
+        }
+        
+        const result = Array.from(aggregated.values())
+          .filter(item => item.margin > 0) // Only show items with actual data
+          .sort((a, b) => b.margin - a.margin)
+          .slice(0, 20); // Top 20 items
+        
+        if (result.length > 0) {
+          return result;
+        }
+      }
+    }
+    
+    // Fallback to mock data generators if no enriched data available
     const dataGenerators: Record<string, () => any[]> = {
       promotion: () => [
         { name: "Beverages", roi: baseRoi * 1.2, margin: baseMargin * 0.35, sales: baseMargin * 1.8, units: 15000 },
