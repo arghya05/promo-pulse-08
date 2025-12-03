@@ -75,6 +75,193 @@ serve(async (req) => {
         dataContextMessage += `Category=${promo.product_category || 'All'}, Status=${promo.status}, Total Spend=$${promo.total_spend}\n`;
       });
       
+      // === PRE-COMPUTED PROMOTION ANALYTICS ===
+      dataContextMessage += `\n\n=== PRE-COMPUTED PROMOTION ANALYTICS ===\n`;
+      
+      // Performance by Discount Depth
+      const discountDepthAnalysis: Record<string, { count: number; revenue: number; discount: number; units: number; promoSpend: number }> = {};
+      promotionsResult.data?.forEach((promo: any) => {
+        const depth = promo.discount_percent 
+          ? `${promo.discount_percent}%` 
+          : promo.discount_amount 
+            ? `$${promo.discount_amount}` 
+            : 'Unknown';
+        
+        if (!discountDepthAnalysis[depth]) {
+          discountDepthAnalysis[depth] = { count: 0, revenue: 0, discount: 0, units: 0, promoSpend: 0 };
+        }
+        discountDepthAnalysis[depth].count++;
+        discountDepthAnalysis[depth].promoSpend += parseFloat(promo.total_spend || 0);
+        
+        // Aggregate transactions for this promotion
+        const promoTxns = transactionsResult.data?.filter((t: any) => t.promotion_id === promo.id) || [];
+        promoTxns.forEach((txn: any) => {
+          discountDepthAnalysis[depth].revenue += parseFloat(txn.total_amount || 0);
+          discountDepthAnalysis[depth].discount += parseFloat(txn.discount_amount || 0);
+          discountDepthAnalysis[depth].units += parseInt(txn.quantity || 0);
+        });
+      });
+      
+      dataContextMessage += `\nPERFORMANCE BY DISCOUNT DEPTH:\n`;
+      Object.entries(discountDepthAnalysis).forEach(([depth, stats]) => {
+        const margin = stats.revenue - stats.discount - stats.promoSpend;
+        const roi = stats.promoSpend > 0 ? margin / stats.promoSpend : 0;
+        const avgBasket = stats.count > 0 ? stats.revenue / stats.count : 0;
+        dataContextMessage += `- ${depth} Discount: ${stats.count} promotions, Revenue=$${stats.revenue.toFixed(2)}, Margin=$${margin.toFixed(2)}, ROI=${roi.toFixed(2)}, Units=${stats.units}, Avg Revenue/Promo=$${avgBasket.toFixed(2)}\n`;
+      });
+      
+      // Performance by Promotion Type
+      const promoTypeAnalysis: Record<string, { count: number; revenue: number; discount: number; units: number; promoSpend: number }> = {};
+      promotionsResult.data?.forEach((promo: any) => {
+        const type = promo.promotion_type || 'Unknown';
+        
+        if (!promoTypeAnalysis[type]) {
+          promoTypeAnalysis[type] = { count: 0, revenue: 0, discount: 0, units: 0, promoSpend: 0 };
+        }
+        promoTypeAnalysis[type].count++;
+        promoTypeAnalysis[type].promoSpend += parseFloat(promo.total_spend || 0);
+        
+        const promoTxns = transactionsResult.data?.filter((t: any) => t.promotion_id === promo.id) || [];
+        promoTxns.forEach((txn: any) => {
+          promoTypeAnalysis[type].revenue += parseFloat(txn.total_amount || 0);
+          promoTypeAnalysis[type].discount += parseFloat(txn.discount_amount || 0);
+          promoTypeAnalysis[type].units += parseInt(txn.quantity || 0);
+        });
+      });
+      
+      dataContextMessage += `\nPERFORMANCE BY PROMOTION TYPE:\n`;
+      Object.entries(promoTypeAnalysis).forEach(([type, stats]) => {
+        const margin = stats.revenue - stats.discount - stats.promoSpend;
+        const roi = stats.promoSpend > 0 ? margin / stats.promoSpend : 0;
+        dataContextMessage += `- ${type}: ${stats.count} promotions, Revenue=$${stats.revenue.toFixed(2)}, Margin=$${margin.toFixed(2)}, ROI=${roi.toFixed(2)}, Units=${stats.units}\n`;
+      });
+      
+      // Performance by Category
+      const categoryAnalysis: Record<string, { txnCount: number; revenue: number; discount: number; units: number; cost: number }> = {};
+      transactionsResult.data?.forEach((txn: any) => {
+        const product = productsResult.data?.find((p: any) => p.product_sku === txn.product_sku);
+        const category = product?.category || 'Unknown';
+        
+        if (!categoryAnalysis[category]) {
+          categoryAnalysis[category] = { txnCount: 0, revenue: 0, discount: 0, units: 0, cost: 0 };
+        }
+        categoryAnalysis[category].txnCount++;
+        categoryAnalysis[category].revenue += parseFloat(txn.total_amount || 0);
+        categoryAnalysis[category].discount += parseFloat(txn.discount_amount || 0);
+        categoryAnalysis[category].units += parseInt(txn.quantity || 0);
+        categoryAnalysis[category].cost += (product?.cost || 0) * parseInt(txn.quantity || 0);
+      });
+      
+      dataContextMessage += `\nPERFORMANCE BY CATEGORY:\n`;
+      Object.entries(categoryAnalysis).forEach(([category, stats]) => {
+        const margin = stats.revenue - stats.cost - stats.discount;
+        const roi = stats.discount > 0 ? margin / stats.discount : 0;
+        const marginPct = stats.revenue > 0 ? (margin / stats.revenue * 100) : 0;
+        dataContextMessage += `- ${category}: ${stats.txnCount} transactions, Revenue=$${stats.revenue.toFixed(2)}, Margin=$${margin.toFixed(2)} (${marginPct.toFixed(1)}%), ROI=${roi.toFixed(2)}, Units=${stats.units}\n`;
+      });
+      
+      // Performance by Store/Region
+      const regionAnalysis: Record<string, { txnCount: number; revenue: number; discount: number; units: number }> = {};
+      transactionsResult.data?.forEach((txn: any) => {
+        const store = storesResult.data?.find((s: any) => s.id === txn.store_id);
+        const region = store?.region || 'Unknown';
+        
+        if (!regionAnalysis[region]) {
+          regionAnalysis[region] = { txnCount: 0, revenue: 0, discount: 0, units: 0 };
+        }
+        regionAnalysis[region].txnCount++;
+        regionAnalysis[region].revenue += parseFloat(txn.total_amount || 0);
+        regionAnalysis[region].discount += parseFloat(txn.discount_amount || 0);
+        regionAnalysis[region].units += parseInt(txn.quantity || 0);
+      });
+      
+      dataContextMessage += `\nPERFORMANCE BY REGION:\n`;
+      Object.entries(regionAnalysis).forEach(([region, stats]) => {
+        const margin = stats.revenue - stats.discount;
+        const roi = stats.discount > 0 ? margin / stats.discount : 0;
+        dataContextMessage += `- ${region}: ${stats.txnCount} transactions, Revenue=$${stats.revenue.toFixed(2)}, Margin=$${margin.toFixed(2)}, ROI=${roi.toFixed(2)}, Units=${stats.units}\n`;
+      });
+      
+      // Performance by Customer Segment
+      const segmentAnalysis: Record<string, { txnCount: number; revenue: number; discount: number; units: number; avgLTV: number; custCount: number }> = {};
+      transactionsResult.data?.forEach((txn: any) => {
+        const customer = customersResult.data?.find((c: any) => c.id === txn.customer_id);
+        const segment = customer?.segment || 'Unknown';
+        
+        if (!segmentAnalysis[segment]) {
+          segmentAnalysis[segment] = { txnCount: 0, revenue: 0, discount: 0, units: 0, avgLTV: 0, custCount: 0 };
+        }
+        segmentAnalysis[segment].txnCount++;
+        segmentAnalysis[segment].revenue += parseFloat(txn.total_amount || 0);
+        segmentAnalysis[segment].discount += parseFloat(txn.discount_amount || 0);
+        segmentAnalysis[segment].units += parseInt(txn.quantity || 0);
+        if (customer?.total_lifetime_value) {
+          segmentAnalysis[segment].avgLTV += parseFloat(customer.total_lifetime_value);
+          segmentAnalysis[segment].custCount++;
+        }
+      });
+      
+      dataContextMessage += `\nPERFORMANCE BY CUSTOMER SEGMENT:\n`;
+      Object.entries(segmentAnalysis).forEach(([segment, stats]) => {
+        const margin = stats.revenue - stats.discount;
+        const roi = stats.discount > 0 ? margin / stats.discount : 0;
+        const avgLTV = stats.custCount > 0 ? stats.avgLTV / stats.custCount : 0;
+        dataContextMessage += `- ${segment}: ${stats.txnCount} transactions, Revenue=$${stats.revenue.toFixed(2)}, Margin=$${margin.toFixed(2)}, ROI=${roi.toFixed(2)}, Avg LTV=$${avgLTV.toFixed(2)}\n`;
+      });
+      
+      // Time-based Analysis (for forecasting)
+      const timeAnalysis: Record<string, { txnCount: number; revenue: number; discount: number; units: number }> = {};
+      transactionsResult.data?.forEach((txn: any) => {
+        const date = new Date(txn.transaction_date);
+        const monthKey = date.toLocaleString('default', { month: 'short', year: 'numeric' });
+        
+        if (!timeAnalysis[monthKey]) {
+          timeAnalysis[monthKey] = { txnCount: 0, revenue: 0, discount: 0, units: 0 };
+        }
+        timeAnalysis[monthKey].txnCount++;
+        timeAnalysis[monthKey].revenue += parseFloat(txn.total_amount || 0);
+        timeAnalysis[monthKey].discount += parseFloat(txn.discount_amount || 0);
+        timeAnalysis[monthKey].units += parseInt(txn.quantity || 0);
+      });
+      
+      dataContextMessage += `\nPERFORMANCE BY MONTH (for trend/forecasting):\n`;
+      Object.entries(timeAnalysis).forEach(([month, stats]) => {
+        const margin = stats.revenue - stats.discount;
+        const roi = stats.discount > 0 ? margin / stats.discount : 0;
+        dataContextMessage += `- ${month}: ${stats.txnCount} transactions, Revenue=$${stats.revenue.toFixed(2)}, Margin=$${margin.toFixed(2)}, ROI=${roi.toFixed(2)}, Units=${stats.units}\n`;
+      });
+      
+      // Individual Promotion Performance (Top performers)
+      dataContextMessage += `\nINDIVIDUAL PROMOTION PERFORMANCE:\n`;
+      const promoPerformance = promotionsResult.data?.map((promo: any) => {
+        const promoTxns = transactionsResult.data?.filter((t: any) => t.promotion_id === promo.id) || [];
+        const revenue = promoTxns.reduce((sum: number, t: any) => sum + parseFloat(t.total_amount || 0), 0);
+        const discount = promoTxns.reduce((sum: number, t: any) => sum + parseFloat(t.discount_amount || 0), 0);
+        const units = promoTxns.reduce((sum: number, t: any) => sum + parseInt(t.quantity || 0), 0);
+        const spend = parseFloat(promo.total_spend || 0);
+        const margin = revenue - discount - spend;
+        const roi = spend > 0 ? margin / spend : 0;
+        
+        return {
+          name: promo.promotion_name,
+          type: promo.promotion_type,
+          discount: promo.discount_percent ? `${promo.discount_percent}%` : `$${promo.discount_amount}`,
+          category: promo.product_category,
+          revenue,
+          margin,
+          roi,
+          units,
+          spend,
+          txnCount: promoTxns.length
+        };
+      }).sort((a: any, b: any) => b.roi - a.roi);
+      
+      promoPerformance?.slice(0, 15).forEach((promo: any) => {
+        dataContextMessage += `- ${promo.name} (${promo.type}, ${promo.discount}): ROI=${promo.roi.toFixed(2)}, Revenue=$${promo.revenue.toFixed(2)}, Margin=$${promo.margin.toFixed(2)}, Units=${promo.units}, Spend=$${promo.spend.toFixed(2)}\n`;
+      });
+      
+      // === END PRE-COMPUTED ANALYTICS ===
+      
       // Transactions summary
       dataContextMessage += `\n\nTRANSACTIONS (${transactionsResult.data?.length || 0} total):\n`;
       const transactionsByPromo = transactionsResult.data?.reduce((acc: any, txn: any) => {
@@ -165,7 +352,7 @@ serve(async (req) => {
         dataContextMessage += `Reorder Point=${inv.reorder_point}, Risk=${inv.stockout_risk}, Last Restocked=${inv.last_restocked}\n`;
       });
       
-      dataContextMessage += `\n\n=== CRITICAL: You now have 360-degree data visibility. Analyze ALL data sources above to generate comprehensive, data-driven insights. Consider product margins, marketing channel efficiency, competitive positioning, store performance, customer journeys, and inventory constraints in your analysis. ===\n`;
+      dataContextMessage += `\n\n=== CRITICAL: You now have 360-degree data visibility with PRE-COMPUTED ANALYTICS. Use the aggregated metrics above (by discount depth, promotion type, category, region, segment, month) to answer questions directly. For "optimal discount depth" questions, reference the PERFORMANCE BY DISCOUNT DEPTH section. ===\n`;
     } else {
       dataContextMessage = '\n\nNote: No real data available yet. Generate realistic simulated insights.';
     }
