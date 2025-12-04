@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { questionLibrary, popularQuestionIds } from "@/lib/data/questions";
+import { questionLibrary } from "@/lib/data/questions";
 import { executeQuestion, getKPIStatus } from "@/lib/analytics";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from "recharts";
 import type { AnalyticsResult } from "@/lib/analytics";
@@ -97,14 +97,45 @@ export default function Index() {
     }
   };
 
-  const handleQuestionClick = async (questionId: number) => {
-    const question = questionLibrary.find(q => q.id === questionId);
-    if (question) {
-      await handleAsk(question.question);
-    }
+  const handleQuestionClick = async (question: string) => {
+    await handleAsk(question);
   };
 
-  const popularQuestions = questionLibrary.filter(q => popularQuestionIds.includes(q.id));
+  // Persona-specific popular questions
+  const personaQuestions = {
+    executive: [
+      { id: 'e1', question: "Executive scorecard: overall portfolio ROI across consumables & non-consumables?", tag: "SCORECARD" },
+      { id: 'e2', question: "Cross-category performance: which division (grocery vs home care) is driving growth?", tag: "PORTFOLIO" },
+      { id: 'e3', question: "Strategic opportunity: where should we reallocate promo spend across all categories?", tag: "STRATEGY" },
+      { id: 'e4', question: "Risk assessment: top 5 underperforming campaigns across entire business?", tag: "RISK" },
+      { id: 'e5', question: "Market share trends: how are promotions impacting overall competitive position?", tag: "MARKET" },
+      { id: 'e6', question: "Forecast: projected ROI and margin for Q2 across consumables and non-consumables?", tag: "FORECAST" },
+      { id: 'e7', question: "Cost efficiency: vendor funding optimization opportunities across all vendors?", tag: "EFFICIENCY" },
+      { id: 'e8', question: "Customer insights: which segments respond best to promotions overall?", tag: "CUSTOMER" },
+    ],
+    consumables: [
+      { id: 'c1', question: "Top 5 grocery promotions by ROI last month?", tag: "ROI" },
+      { id: 'c2', question: "Which Dairy promotions lost money (ROI < 1)?", tag: "RISK" },
+      { id: 'c3', question: "Optimal discount depth for Beverages to maximize margin?", tag: "OPTIMIZATION" },
+      { id: 'c4', question: "Best mechanic (BOGO/price-off/coupon) for Snacks category?", tag: "MECHANICS" },
+      { id: 'c5', question: "Halo effects: which Frozen promos drive cross-category sales?", tag: "HALO" },
+      { id: 'c6', question: "Coupon redemption rates for Pantry promotions last month?", tag: "COUPON" },
+      { id: 'c7', question: "Produce promo calendar for next month with predicted lift?", tag: "CALENDAR" },
+      { id: 'c8', question: "Bakery vendor funding ROI: which vendors deliver best returns?", tag: "VENDOR" },
+    ],
+    non_consumables: [
+      { id: 'n1', question: "Top 5 Personal Care promotions by ROI last month?", tag: "ROI" },
+      { id: 'n2', question: "Which Home Care promotions underperformed (ROI < 1)?", tag: "RISK" },
+      { id: 'n3', question: "Optimal discount depth for Soap products to maximize margin?", tag: "OPTIMIZATION" },
+      { id: 'n4', question: "Best mechanic (BOGO/price-off/bundle) for Cleaning products?", tag: "MECHANICS" },
+      { id: 'n5', question: "Cross-sell: which Personal Care promos drive Household purchases?", tag: "CROSS-SELL" },
+      { id: 'n6', question: "Hair Care vs Oral Care: which subcategory has better promo ROI?", tag: "COMPARISON" },
+      { id: 'n7', question: "Cooking Oil promotions: seasonal trends and optimal timing?", tag: "SEASONAL" },
+      { id: 'n8', question: "Paper Products inventory impact from recent promotions?", tag: "INVENTORY" },
+    ],
+  };
+
+  const currentQuestions = personaQuestions[persona];
 
   return (
     <div className="min-h-screen bg-background">
@@ -380,12 +411,14 @@ export default function Index() {
             {/* Right Sidebar */}
             <div className="col-span-4 space-y-6">
               <Card className="p-5">
-                <h3 className="font-semibold mb-4 text-sm uppercase tracking-wide text-muted-foreground">Popular Questions</h3>
+                <h3 className="font-semibold mb-4 text-sm uppercase tracking-wide text-muted-foreground">
+                  {persona === 'executive' ? 'Strategic Questions' : `${personaConfig[persona].label.split(' - ')[1]} Questions`}
+                </h3>
                 <div className="space-y-2">
-                  {popularQuestions.slice(0, 6).map(q => (
+                  {currentQuestions.slice(0, 6).map(q => (
                     <button
                       key={q.id}
-                      onClick={() => handleQuestionClick(q.id)}
+                      onClick={() => handleQuestionClick(q.question)}
                       className="w-full text-left text-sm p-3 rounded-md hover:bg-accent transition-colors border border-transparent hover:border-border"
                     >
                       {q.question}
@@ -408,20 +441,22 @@ export default function Index() {
             </div>
 
             <div className="mb-8">
-              <h3 className="text-xl font-semibold mb-6">Popular Questions</h3>
+              <h3 className="text-xl font-semibold mb-6">
+                {persona === 'executive' ? 'Strategic Questions' : `${personaConfig[persona].label.split(' - ')[1]} Questions`}
+              </h3>
               <div className="grid grid-cols-2 gap-4">
-                {popularQuestions.map(q => (
+                {currentQuestions.map(q => (
                   <Card 
                     key={q.id}
                     className="p-5 cursor-pointer hover:shadow-lg transition-all hover:border-primary/50"
-                    onClick={() => handleQuestionClick(q.id)}
+                    onClick={() => handleQuestionClick(q.question)}
                   >
                     <div className="flex items-start gap-3">
                       <div className="bg-primary/10 p-2 rounded-lg">
                         <TrendingUp className="h-5 w-5 text-primary" />
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-semibold mb-2">{q.tags[0].replace('_', ' ').toUpperCase()}</h4>
+                        <h4 className="font-semibold mb-2">{q.tag}</h4>
                         <p className="text-sm text-muted-foreground leading-relaxed">
                           {q.question}
                         </p>
