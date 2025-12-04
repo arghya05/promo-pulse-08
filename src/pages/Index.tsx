@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Search, TrendingUp, AlertTriangle, CheckCircle2, ChevronRight } from "lucide-react";
+import { Search, TrendingUp, AlertTriangle, CheckCircle2, ChevronRight, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { questionLibrary, popularQuestionIds } from "@/lib/data/questions";
 import { executeQuestion, getKPIStatus } from "@/lib/analytics";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from "recharts";
@@ -17,6 +18,29 @@ import DataManagement from "@/components/DataManagement";
 import { RecommendationsEngine } from "@/components/RecommendationsEngine";
 import IntelligentDrillDown from "@/components/IntelligentDrillDown";
 
+type Persona = 'executive' | 'consumables' | 'non_consumables';
+
+const personaConfig = {
+  executive: {
+    label: 'Executive',
+    description: 'Strategic insights across all categories',
+    icon: '👔',
+    categories: null, // All categories
+  },
+  consumables: {
+    label: 'Category Manager - Consumables',
+    description: 'Tactical analysis for grocery & consumables',
+    icon: '🥛',
+    categories: ['Dairy', 'Beverages', 'Snacks', 'Produce', 'Frozen', 'Bakery', 'Pantry'],
+  },
+  non_consumables: {
+    label: 'Category Manager - Non-Consumables',
+    description: 'Tactical analysis for personal & home care',
+    icon: '🧴',
+    categories: ['Personal Care', 'Home Care', 'Household'],
+  },
+};
+
 export default function Index() {
   const { toast } = useToast();
   const [query, setQuery] = useState("");
@@ -25,6 +49,7 @@ export default function Index() {
   const [isLoading, setIsLoading] = useState(false);
   const [drillDownData, setDrillDownData] = useState<{ name: string; roi: number; margin: number } | null>(null);
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
+  const [persona, setPersona] = useState<Persona>('executive');
 
   const handleAsk = async (questionText?: string) => {
     const questionToAsk = questionText || query;
@@ -45,7 +70,11 @@ export default function Index() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ question: questionToAsk }),
+          body: JSON.stringify({ 
+            question: questionToAsk,
+            persona: persona,
+            categories: personaConfig[persona].categories
+          }),
         }
       );
 
@@ -109,33 +138,73 @@ export default function Index() {
           </TabsList>
 
           <TabsContent value="insights">
-            {/* Search Bar */}
-            <div className="relative max-w-3xl flex gap-2 mb-8">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAsk()}
-                  placeholder="Ask about promo ROI, optimal discount, halo effects, calendar..."
-                  className="pl-12 pr-24 h-14 text-base rounded-lg border-border"
-                />
-                <Button 
-                  onClick={() => handleAsk()}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 px-6"
-                  size="sm"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Analyzing..." : "Ask"}
-                </Button>
+            {/* Persona Selector & Search Bar */}
+            <div className="mb-8 space-y-4">
+              {/* Persona Selector */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  <span>Viewing as:</span>
+                </div>
+                <Select value={persona} onValueChange={(value: Persona) => setPersona(value)}>
+                  <SelectTrigger className="w-[320px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(personaConfig).map(([key, config]) => (
+                      <SelectItem key={key} value={key}>
+                        <div className="flex items-center gap-2">
+                          <span>{config.icon}</span>
+                          <div>
+                            <div className="font-medium">{config.label}</div>
+                            <div className="text-xs text-muted-foreground">{config.description}</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Badge variant="outline" className="ml-2">
+                  {personaConfig[persona].categories 
+                    ? `${personaConfig[persona].categories.length} categories` 
+                    : 'All categories'}
+                </Badge>
               </div>
-              <VoiceRecorder 
-                onTranscript={(text) => {
-                  setQuery(text);
-                  handleAsk(text);
-                }}
-                disabled={isLoading}
-              />
+
+              {/* Search Bar */}
+              <div className="relative max-w-3xl flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAsk()}
+                    placeholder={
+                      persona === 'executive' 
+                        ? "Ask strategic questions about overall portfolio, cross-category trends..."
+                        : persona === 'consumables'
+                        ? "Ask about grocery ROI, dairy promotions, beverage trends..."
+                        : "Ask about personal care ROI, home care promotions, soap trends..."
+                    }
+                    className="pl-12 pr-24 h-14 text-base rounded-lg border-border"
+                  />
+                  <Button 
+                    onClick={() => handleAsk()}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 px-6"
+                    size="sm"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Analyzing..." : "Ask"}
+                  </Button>
+                </div>
+                <VoiceRecorder 
+                  onTranscript={(text) => {
+                    setQuery(text);
+                    handleAsk(text);
+                  }}
+                  disabled={isLoading}
+                />
+              </div>
             </div>
 
             {result ? (
