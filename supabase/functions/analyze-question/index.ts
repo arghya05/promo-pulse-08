@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { question } = await req.json();
+    const { question, persona = 'executive', categories = null } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     if (!LOVABLE_API_KEY) {
@@ -21,6 +21,8 @@ serve(async (req) => {
     }
 
     console.log('Processing question:', question);
+    console.log('Persona:', persona);
+    console.log('Categories filter:', categories);
 
     // Query ALL actual data from database for rich context
     const supabaseClient = createClient(
@@ -357,7 +359,43 @@ serve(async (req) => {
       dataContextMessage = '\n\nNote: No real data available yet. Generate realistic simulated insights.';
     }
 
+    // Build persona-specific context
+    const personaContext = persona === 'executive' 
+      ? `PERSONA: EXECUTIVE (Strategic Leadership View)
+You are providing insights for C-level executives. Focus on:
+- Strategic portfolio-wide performance across ALL categories (consumables AND non-consumables)
+- High-level KPIs, trends, and cross-category opportunities
+- Competitive positioning and market share implications
+- Long-term growth opportunities and risk mitigation
+- Resource allocation recommendations across business units
+- Language should be strategic and business-outcome focused`
+      : persona === 'consumables'
+      ? `PERSONA: CATEGORY MANAGER - CONSUMABLES (Tactical Grocery Analysis)
+You are providing insights for a Category Manager responsible for grocery/consumables.
+IMPORTANT: Only analyze categories: Dairy, Beverages, Snacks, Produce, Frozen, Bakery, Pantry
+Focus on:
+- SKU-level performance and tactical optimization
+- Promotional mechanics effectiveness (BOGO, depth, timing)
+- Vendor funding negotiations and trade spend ROI
+- Competitive pricing against grocery peers
+- Shelf space and assortment optimization
+- Weekly/seasonal planning for consumable categories
+- Language should be tactical and execution-focused`
+      : `PERSONA: CATEGORY MANAGER - NON-CONSUMABLES (Tactical Personal/Home Care Analysis)
+You are providing insights for a Category Manager responsible for non-consumables.
+IMPORTANT: Only analyze categories: Personal Care, Home Care, Household
+Focus on:
+- Non-consumable SKU performance (soaps, oils, cleaning products, personal care)
+- Higher-margin item optimization strategies
+- Cross-selling opportunities within personal care and home care
+- Seasonal trends for cleaning and personal care products
+- Brand performance in non-consumable aisles
+- Promotional strategies specific to non-grocery items
+- Language should be tactical and execution-focused`;
+
     const systemPrompt = `You are an advanced promotion analytics AI assistant specialized in retail promotion intelligence. Your PRIMARY DIRECTIVE is to provide 100% relevant, data-driven answers grounded in the actual database context provided below.
+
+${personaContext}
 
 CRITICAL RELEVANCE REQUIREMENTS:
 1. ALWAYS analyze the actual data provided in the DATABASE CONTEXT section
@@ -366,6 +404,7 @@ CRITICAL RELEVANCE REQUIREMENTS:
 4. Calculate metrics (ROI, margin, lift) directly from transaction data, promotion spend, and product costs
 5. Cross-reference multiple data sources (transactions + promotions + products + stores) for comprehensive analysis
 6. If insufficient data exists for a specific question, acknowledge this and work with available related data
+${categories ? `7. FILTER YOUR ANALYSIS TO ONLY INCLUDE THESE CATEGORIES: ${categories.join(', ')}` : ''}
 
 UNIVERSAL QUESTION HANDLING:
 You can answer ANY question about:
