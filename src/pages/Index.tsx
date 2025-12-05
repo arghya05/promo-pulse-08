@@ -170,72 +170,100 @@ export default function Index() {
 
           <TabsContent value="insights">
             {/* Persona Selector & Search Bar */}
-            <div className="mb-8 space-y-4">
-              {/* Persona Selector */}
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <User className="h-4 w-4" />
-                  <span>Viewing as:</span>
-                </div>
-                <Select value={persona} onValueChange={(value: Persona) => setPersona(value)}>
-                  <SelectTrigger className="w-[320px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(personaConfig).map(([key, config]) => (
-                      <SelectItem key={key} value={key}>
-                        <div className="flex items-center gap-2">
-                          <span>{config.icon}</span>
-                          <div>
-                            <div className="font-medium">{config.label}</div>
-                            <div className="text-xs text-muted-foreground">{config.description}</div>
+            <div className="mb-8 space-y-6">
+              {/* Persona Selector Row */}
+              <Card className="p-4 bg-card/50 backdrop-blur-sm border-border/50">
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground min-w-fit">
+                    <User className="h-4 w-4" />
+                    <span>Viewing as:</span>
+                  </div>
+                  
+                  <Select value={persona} onValueChange={(value: Persona) => setPersona(value)}>
+                    <SelectTrigger className="w-[380px] h-12 bg-background border-border shadow-sm hover:bg-accent/50 transition-colors">
+                      <SelectValue>
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg">{personaConfig[persona].icon}</span>
+                          <div className="text-left">
+                            <div className="font-semibold text-foreground">{personaConfig[persona].label}</div>
+                            <div className="text-xs text-muted-foreground">{personaConfig[persona].description}</div>
                           </div>
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Badge variant="outline" className="ml-2">
-                  {personaConfig[persona].categories 
-                    ? `${personaConfig[persona].categories.length} categories` 
-                    : 'All categories'}
-                </Badge>
-              </div>
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border shadow-lg">
+                      {Object.entries(personaConfig).map(([key, config]) => (
+                        <SelectItem 
+                          key={key} 
+                          value={key}
+                          className="py-3 px-3 cursor-pointer hover:bg-accent focus:bg-accent"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg">{config.icon}</span>
+                            <div>
+                              <div className="font-semibold text-foreground">{config.label}</div>
+                              <div className="text-xs text-muted-foreground">{config.description}</div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Badge 
+                    variant="secondary" 
+                    className="px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary border-0"
+                  >
+                    {personaConfig[persona].categories 
+                      ? `${personaConfig[persona].categories.length} categories` 
+                      : 'All categories'}
+                  </Badge>
+                </div>
+              </Card>
 
               {/* Search Bar */}
-              <div className="relative max-w-3xl flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleAsk()}
-                    placeholder={
-                      persona === 'executive' 
-                        ? "Ask strategic questions about overall portfolio, cross-category trends..."
-                        : persona === 'consumables'
-                        ? "Ask about grocery ROI, dairy promotions, beverage trends..."
-                        : "Ask about personal care ROI, home care promotions, soap trends..."
-                    }
-                    className="pl-12 pr-24 h-14 text-base rounded-lg border-border"
-                  />
-                  <Button 
-                    onClick={() => handleAsk()}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 px-6"
-                    size="sm"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Analyzing..." : "Ask"}
-                  </Button>
+              <Card className="p-2 bg-card border-border shadow-sm">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground/70" />
+                    <Input
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAsk()}
+                      placeholder={
+                        persona === 'executive' 
+                          ? "Ask strategic questions about overall portfolio, cross-category trends..."
+                          : persona === 'consumables'
+                          ? "Ask about grocery ROI, dairy promotions, beverage trends..."
+                          : "Ask about personal care ROI, home care promotions, soap trends..."
+                      }
+                      className="pl-12 pr-4 h-12 text-base bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center gap-2 pr-1">
+                    <VoiceRecorder 
+                      onTranscript={(text) => {
+                        setQuery(text);
+                        handleAsk(text);
+                      }}
+                      disabled={isLoading}
+                    />
+                    <Button 
+                      onClick={() => handleAsk()}
+                      className="px-6 h-10 font-medium shadow-sm"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center gap-2">
+                          <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                          Analyzing...
+                        </span>
+                      ) : "Ask"}
+                    </Button>
+                  </div>
                 </div>
-                <VoiceRecorder 
-                  onTranscript={(text) => {
-                    setQuery(text);
-                    handleAsk(text);
-                  }}
-                  disabled={isLoading}
-                />
-              </div>
+              </Card>
             </div>
 
             {result ? (
