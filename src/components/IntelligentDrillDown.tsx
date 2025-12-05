@@ -216,6 +216,21 @@ export default function IntelligentDrillDown({
     setLoading(false);
   };
 
+  // Define category mappings for Consumables vs Non-Consumables
+  const CONSUMABLE_CATEGORIES = ['Dairy', 'Beverages', 'Snacks', 'Produce', 'Frozen', 'Bakery', 'Pantry'];
+  const NON_CONSUMABLE_CATEGORIES = ['Personal Care', 'Home Care', 'Household'];
+
+  // Get the category type filter from initial data name
+  const getCategoryTypeFilter = (): string[] | null => {
+    const name = initialData.name?.toLowerCase();
+    if (name?.includes('non-consumable') || name?.includes('non consumable')) {
+      return NON_CONSUMABLE_CATEGORIES;
+    } else if (name?.includes('consumable')) {
+      return CONSUMABLE_CATEGORIES;
+    }
+    return null;
+  };
+
   const fetchProductData = async (level: string, filters: Record<string, any>): Promise<DrillDataItem[]> => {
     const { data: products } = await supabase.from("products").select("*");
     const { data: transactions } = await supabase.from("transactions").select("*");
@@ -223,9 +238,13 @@ export default function IntelligentDrillDown({
     if (!products || !transactions) return [];
 
     const aggregated = new Map<string, DrillDataItem>();
+    const categoryTypeFilter = getCategoryTypeFilter();
 
     products.forEach(product => {
-      // Apply filters
+      // Apply category type filter first (Consumables vs Non-Consumables)
+      if (categoryTypeFilter && !categoryTypeFilter.includes(product.category)) return;
+      
+      // Apply drill-down filters
       if (filters.category && product.category !== filters.category) return;
       if (filters.subcategory && product.subcategory !== filters.subcategory) return;
       if (filters.brand && product.brand !== filters.brand) return;
@@ -506,8 +525,12 @@ export default function IntelligentDrillDown({
     if (!promotions || !transactions) return [];
 
     const aggregated = new Map<string, DrillDataItem>();
+    const categoryTypeFilter = getCategoryTypeFilter();
 
     promotions.forEach(promo => {
+      // Apply category type filter (Consumables vs Non-Consumables)
+      if (categoryTypeFilter && promo.product_category && !categoryTypeFilter.includes(promo.product_category)) return;
+      
       if (filters.promotion_type && promo.promotion_type !== filters.promotion_type) return;
 
       let key: string;
