@@ -51,6 +51,16 @@ export default function Index() {
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
   const [persona, setPersona] = useState<Persona>('executive');
 
+  // Format large numbers to fit in KPI cards
+  const formatKPIValue = (value: number) => {
+    const absValue = Math.abs(value);
+    const sign = value < 0 ? '-' : '';
+    if (absValue >= 1000000000) return `${sign}$${(absValue / 1000000000).toFixed(1)}B`;
+    if (absValue >= 1000000) return `${sign}$${(absValue / 1000000).toFixed(1)}M`;
+    if (absValue >= 1000) return `${sign}$${(absValue / 1000).toFixed(0)}K`;
+    return `${sign}$${absValue.toFixed(0)}`;
+  };
+
   const handleAsk = async (questionText?: string) => {
     const questionToAsk = questionText || query;
     if (!questionToAsk.trim()) return;
@@ -327,26 +337,30 @@ export default function Index() {
                 </h2>
                 
                 {/* KPI Pills */}
-                <div className="grid grid-cols-4 gap-4 mb-6">
-                  <div className="bg-secondary/50 rounded-lg p-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-secondary/50 rounded-lg p-4 overflow-hidden">
                     <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">Lift %</div>
-                    <div className={`text-3xl font-bold ${getKPIStatus("liftPct", result.kpis.liftPct) === "good" ? "text-status-good" : getKPIStatus("liftPct", result.kpis.liftPct) === "warning" ? "text-status-warning" : "text-status-bad"}`}>
+                    <div className={`text-xl sm:text-2xl lg:text-3xl font-bold tabular-nums truncate ${getKPIStatus("liftPct", result.kpis.liftPct) === "good" ? "text-status-good" : getKPIStatus("liftPct", result.kpis.liftPct) === "warning" ? "text-status-warning" : "text-status-bad"}`}>
                       {result.kpis.liftPct.toFixed(1)}%
                     </div>
                   </div>
-                  <div className="bg-secondary/50 rounded-lg p-4">
+                  <div className="bg-secondary/50 rounded-lg p-4 overflow-hidden">
                     <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">ROI</div>
-                    <div className={`text-3xl font-bold ${getKPIStatus("roi", result.kpis.roi) === "good" ? "text-status-good" : getKPIStatus("roi", result.kpis.roi) === "warning" ? "text-status-warning" : "text-status-bad"}`}>
+                    <div className={`text-xl sm:text-2xl lg:text-3xl font-bold tabular-nums truncate ${getKPIStatus("roi", result.kpis.roi) === "good" ? "text-status-good" : getKPIStatus("roi", result.kpis.roi) === "warning" ? "text-status-warning" : "text-status-bad"}`}>
                       {result.kpis.roi.toFixed(2)}
                     </div>
                   </div>
-                  <div className="bg-secondary/50 rounded-lg p-4">
-                    <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">Incremental Margin</div>
-                    <div className="text-3xl font-bold text-foreground">US${Math.round(result.kpis.incrementalMargin).toLocaleString()}</div>
+                  <div className="bg-secondary/50 rounded-lg p-4 overflow-hidden">
+                    <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wide whitespace-nowrap">Incremental Margin</div>
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground tabular-nums truncate" title={`US$${Math.round(result.kpis.incrementalMargin).toLocaleString()}`}>
+                      {formatKPIValue(result.kpis.incrementalMargin)}
+                    </div>
                   </div>
-                  <div className="bg-secondary/50 rounded-lg p-4">
+                  <div className="bg-secondary/50 rounded-lg p-4 overflow-hidden">
                     <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">Spend</div>
-                    <div className="text-3xl font-bold text-foreground">US${Math.round(result.kpis.spend).toLocaleString()}</div>
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground tabular-nums truncate" title={`US$${Math.round(result.kpis.spend).toLocaleString()}`}>
+                      {formatKPIValue(result.kpis.spend)}
+                    </div>
                   </div>
                 </div>
 
