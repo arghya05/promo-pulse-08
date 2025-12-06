@@ -807,17 +807,22 @@ export default function IntelligentDrillDown({
             </div>
             
             {/* Breadcrumb Navigation */}
-            <div className="flex items-center gap-1 flex-wrap mb-3">
+            <div className="flex items-center gap-1.5 flex-wrap mb-3">
               {drillPath.map((level, index) => (
-                <div key={index} className="flex items-center gap-1">
-                  {index > 0 && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                <div key={index} className="flex items-center gap-1.5">
+                  {index > 0 && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />}
                   <Button
-                    variant={index === drillPath.length - 1 ? "default" : "ghost"}
+                    variant={index === drillPath.length - 1 ? "default" : "outline"}
                     size="sm"
                     onClick={() => navigateToLevel(index)}
-                    className="gap-1 h-7 px-2 text-xs"
+                    className={`gap-1.5 h-8 px-3 text-xs font-medium transition-all ${
+                      index === drillPath.length - 1 
+                        ? "bg-primary text-primary-foreground shadow-md ring-2 ring-primary/30" 
+                        : "hover:bg-accent hover:border-primary/50"
+                    }`}
                   >
-                    {level.name}
+                    {index === 0 && <Filter className="h-3 w-3" />}
+                    <span className="max-w-[150px] truncate">{level.name}</span>
                   </Button>
                 </div>
               ))}
@@ -869,13 +874,13 @@ export default function IntelligentDrillDown({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[300px]">Name</TableHead>
-                        <TableHead className="text-right">ROI</TableHead>
-                        <TableHead className="text-right">Margin</TableHead>
-                        <TableHead className="text-right">Sales</TableHead>
-                        <TableHead className="text-right">Units</TableHead>
-                        {dim.id === "time" && <TableHead className="text-center">Trend</TableHead>}
-                        {canDrillDeeper && <TableHead className="text-center w-20">Drill</TableHead>}
+                        <TableHead className="w-[280px] min-w-[200px]">Name</TableHead>
+                        <TableHead className="text-right w-[100px] min-w-[80px]">ROI</TableHead>
+                        <TableHead className="text-right w-[120px] min-w-[100px]">Margin</TableHead>
+                        <TableHead className="text-right w-[120px] min-w-[100px]">Sales</TableHead>
+                        <TableHead className="text-right w-[100px] min-w-[80px]">Units</TableHead>
+                        {dim.id === "time" && <TableHead className="text-center w-[80px]">Trend</TableHead>}
+                        {canDrillDeeper && <TableHead className="text-center w-[60px]">Drill</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -885,26 +890,26 @@ export default function IntelligentDrillDown({
                           className={canDrillDeeper ? "cursor-pointer hover:bg-muted/50" : ""}
                           onClick={() => canDrillDeeper && drillInto(item)}
                         >
-                          <TableCell>
+                          <TableCell className="max-w-[280px]">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium">{item.name}</span>
+                              <span className="font-medium truncate max-w-[180px]" title={item.name}>{item.name}</span>
                               {item.subItems && item.subItems > 1 && (
-                                <Badge variant="outline" className="text-xs">
-                                  {item.subItems} items
+                                <Badge variant="outline" className="text-xs flex-shrink-0">
+                                  {item.subItems}
                                 </Badge>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className={`text-right font-mono ${getROIColor(item.roi)}`}>
+                          <TableCell className={`text-right font-mono text-sm tabular-nums ${getROIColor(item.roi)}`}>
                             {item.roi.toFixed(2)}x
                           </TableCell>
-                          <TableCell className="text-right font-mono">
+                          <TableCell className="text-right font-mono text-sm tabular-nums whitespace-nowrap">
                             {formatCurrency(item.margin)}
                           </TableCell>
-                          <TableCell className="text-right font-mono">
+                          <TableCell className="text-right font-mono text-sm tabular-nums whitespace-nowrap">
                             {formatCurrency(item.sales)}
                           </TableCell>
-                          <TableCell className="text-right font-mono">
+                          <TableCell className="text-right font-mono text-sm tabular-nums whitespace-nowrap">
                             {formatNumber(item.units)}
                           </TableCell>
                           {dim.id === "time" && (
