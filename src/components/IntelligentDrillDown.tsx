@@ -219,17 +219,44 @@ export default function IntelligentDrillDown({
   // Define category mappings for Consumables vs Non-Consumables
   const CONSUMABLE_CATEGORIES = ['Dairy', 'Beverages', 'Snacks', 'Produce', 'Frozen', 'Bakery', 'Pantry'];
   const NON_CONSUMABLE_CATEGORIES = ['Personal Care', 'Home Care', 'Household'];
+  const ALL_CATEGORIES = [...CONSUMABLE_CATEGORIES, ...NON_CONSUMABLE_CATEGORIES];
 
-  // Get the category type filter from initial data name
-  const getCategoryTypeFilter = (): string[] | null => {
-    const name = initialData.name?.toLowerCase();
-    if (name?.includes('non-consumable') || name?.includes('non consumable')) {
-      return NON_CONSUMABLE_CATEGORIES;
-    } else if (name?.includes('consumable')) {
-      return CONSUMABLE_CATEGORIES;
+  // Get the initial filter based on what bar was clicked
+  const getInitialFilter = (): { type: 'category_group' | 'category' | 'brand' | 'region' | 'store' | 'promo_type' | 'other'; value: string; categories?: string[] } | null => {
+    const name = initialData.name;
+    if (!name) return null;
+    
+    const nameLower = name.toLowerCase();
+    
+    // Check for consumable/non-consumable group clicks
+    if (nameLower.includes('non-consumable') || nameLower.includes('non consumable')) {
+      return { type: 'category_group', value: 'Non-Consumables', categories: NON_CONSUMABLE_CATEGORIES };
+    } else if (nameLower === 'consumables' || nameLower.includes('consumable')) {
+      return { type: 'category_group', value: 'Consumables', categories: CONSUMABLE_CATEGORIES };
     }
-    return null;
+    
+    // Check if clicked item is a specific category
+    if (ALL_CATEGORIES.includes(name)) {
+      return { type: 'category', value: name };
+    }
+    
+    // Check for regions
+    const regions = ['Northeast', 'Southeast', 'Midwest', 'Southwest', 'West'];
+    if (regions.includes(name)) {
+      return { type: 'region', value: name };
+    }
+    
+    // Check for promotion types
+    const promoTypes = ['BOGO', 'Price Off', 'Bundle', 'Loyalty', 'Coupon', 'Flash Sale', 'Clearance'];
+    if (promoTypes.some(pt => name.toLowerCase().includes(pt.toLowerCase()))) {
+      return { type: 'promo_type', value: name };
+    }
+    
+    // Default - treat as a specific item filter
+    return { type: 'other', value: name };
   };
+  
+  const initialFilter = getInitialFilter();
 
   const fetchProductData = async (level: string, filters: Record<string, any>): Promise<DrillDataItem[]> => {
     const { data: products } = await supabase.from("products").select("*");
@@ -238,11 +265,24 @@ export default function IntelligentDrillDown({
     if (!products || !transactions) return [];
 
     const aggregated = new Map<string, DrillDataItem>();
-    const categoryTypeFilter = getCategoryTypeFilter();
 
     products.forEach(product => {
-      // Apply category type filter first (Consumables vs Non-Consumables)
-      if (categoryTypeFilter && !categoryTypeFilter.includes(product.category)) return;
+      // Apply initial filter based on clicked bar
+      if (initialFilter) {
+        if (initialFilter.type === 'category_group' && initialFilter.categories) {
+          if (!initialFilter.categories.includes(product.category)) return;
+        } else if (initialFilter.type === 'category') {
+          if (product.category !== initialFilter.value) return;
+        } else if (initialFilter.type === 'other') {
+          // Check if the name matches category, brand, subcategory, or product name
+          const matchesAny = 
+            product.category === initialFilter.value ||
+            product.subcategory === initialFilter.value ||
+            product.brand === initialFilter.value ||
+            product.product_name === initialFilter.value;
+          if (!matchesAny) return;
+        }
+      }
       
       // Apply drill-down filters
       if (filters.category && product.category !== filters.category) return;
@@ -312,6 +352,17 @@ export default function IntelligentDrillDown({
     const aggregated = new Map<string, DrillDataItem>();
 
     customers.forEach(customer => {
+      // Apply initial filter for customer segment if clicked
+      if (initialFilter) {
+        if (initialFilter.type === 'other') {
+          const matchesAny = 
+            customer.segment === initialFilter.value ||
+            customer.loyalty_tier === initialFilter.value ||
+            customer.customer_name === initialFilter.value;
+          if (!matchesAny) return;
+        }
+      }
+      
       if (filters.segment && customer.segment !== filters.segment) return;
       if (filters.loyalty_tier && customer.loyalty_tier !== filters.loyalty_tier) return;
 
@@ -373,6 +424,20 @@ export default function IntelligentDrillDown({
     const aggregated = new Map<string, DrillDataItem>();
 
     stores.forEach(store => {
+      // Apply initial filter for region if clicked
+      if (initialFilter) {
+        if (initialFilter.type === 'region') {
+          if (store.region !== initialFilter.value) return;
+        } else if (initialFilter.type === 'other') {
+          const matchesAny = 
+            store.region === initialFilter.value ||
+            store.store_type === initialFilter.value ||
+            store.store_name === initialFilter.value ||
+            store.store_code === initialFilter.value;
+          if (!matchesAny) return;
+        }
+      }
+      
       if (filters.region && store.region !== filters.region) return;
       if (filters.store_type && store.store_type !== filters.store_type) return;
 
@@ -525,11 +590,24 @@ export default function IntelligentDrillDown({
     if (!promotions || !transactions) return [];
 
     const aggregated = new Map<string, DrillDataItem>();
-    const categoryTypeFilter = getCategoryTypeFilter();
 
     promotions.forEach(promo => {
-      // Apply category type filter (Consumables vs Non-Consumables)
-      if (categoryTypeFilter && promo.product_category && !categoryTypeFilter.includes(promo.product_category)) return;
+      // Apply initial filter based on clicked bar
+      if (initialFilter) {
+        if (initialFilter.type === 'category_group' && initialFilter.categories) {
+          if (promo.product_category && !initialFilter.categories.includes(promo.product_category)) return;
+        } else if (initialFilter.type === 'category') {
+          if (promo.product_category !== initialFilter.value) return;
+        } else if (initialFilter.type === 'promo_type') {
+          if (promo.promotion_type !== initialFilter.value) return;
+        } else if (initialFilter.type === 'other') {
+          const matchesAny = 
+            promo.product_category === initialFilter.value ||
+            promo.promotion_name === initialFilter.value ||
+            promo.promotion_type === initialFilter.value;
+          if (!matchesAny) return;
+        }
+      }
       
       if (filters.promotion_type && promo.promotion_type !== filters.promotion_type) return;
 
@@ -746,6 +824,8 @@ export default function IntelligentDrillDown({
             </div>
 
             <p className="text-sm text-muted-foreground">
+              <span className="text-primary font-medium">Filtered by: {initialData.name}</span>
+              {" • "}
               {currentDimension?.description || "Select a dimension to explore"}
               {canDrillDeeper && " • Click any row to drill deeper"}
             </p>
