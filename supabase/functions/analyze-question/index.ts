@@ -397,14 +397,33 @@ Focus on:
 
 ${personaContext}
 
-CRITICAL RELEVANCE REQUIREMENTS:
-1. ALWAYS analyze the actual data provided in the DATABASE CONTEXT section
-2. NEVER provide generic or hypothetical answers - use specific numbers from the real data
-3. If the user asks about specific promotions, products, stores, or metrics, reference the EXACT items from the database
-4. Calculate metrics (ROI, margin, lift) directly from transaction data, promotion spend, and product costs
-5. Cross-reference multiple data sources (transactions + promotions + products + stores) for comprehensive analysis
-6. If insufficient data exists for a specific question, acknowledge this and work with available related data
-${categories ? `7. FILTER YOUR ANALYSIS TO ONLY INCLUDE THESE CATEGORIES: ${categories.join(', ')}` : ''}
+CRITICAL RELEVANCE REQUIREMENTS - ANSWER MUST BE 100% LINKED TO QUESTION:
+1. READ THE QUESTION CAREFULLY - identify exactly what is being asked (promotion name, category, metric, time period, etc.)
+2. EXTRACT KEY ENTITIES from the question and MATCH them EXACTLY to database records
+3. NEVER provide generic or hypothetical answers - use ONLY specific numbers from the real data
+4. If the user asks about specific promotions, products, stores, or metrics, reference the EXACT items from the database
+5. Calculate metrics (ROI, margin, lift) directly from transaction data, promotion spend, and product costs
+6. Cross-reference multiple data sources (transactions + promotions + products + stores) for comprehensive analysis
+7. If insufficient data exists for a specific question, acknowledge this and work with available related data
+${categories ? `8. FILTER YOUR ANALYSIS TO ONLY INCLUDE THESE CATEGORIES: ${categories.join(', ')}` : ''}
+
+PRE-FLIGHT VALIDATION (DO THIS BEFORE GENERATING ANSWER):
+1. Parse the question to identify: 
+   - What entity type is being asked about? (promotion, category, product, store, region, time period)
+   - What metric is being requested? (ROI, margin, sales, lift, spend, units)
+   - What filter/scope is specified? (top N, specific name, time range, category filter)
+   - What analysis type? (comparison, trend, optimization, ranking, forecasting)
+2. Locate the EXACT matching data in the database context
+3. Calculate the requested metrics DIRECTLY from raw data
+4. Verify your answer addresses the SPECIFIC question asked
+
+QUESTION-TO-DATA MAPPING EXAMPLES:
+- "Top 5 promotions by ROI" → Find 5 promotions with highest (Margin-Spend)/Spend from INDIVIDUAL PROMOTION PERFORMANCE
+- "Which Dairy promotions lost money" → Filter promotions where product_category='Dairy' AND ROI < 0 or margin < 0
+- "Optimal discount depth for Beverages" → Analyze PERFORMANCE BY DISCOUNT DEPTH filtered to Beverages category
+- "Best promotion mechanic for Snacks" → Compare PERFORMANCE BY PROMOTION TYPE filtered to Snacks category
+- "Store performance comparison" → Use PERFORMANCE BY REGION data
+- "Customer segment analysis" → Use PERFORMANCE BY CUSTOMER SEGMENT data
 
 UNIVERSAL QUESTION HANDLING:
 You can answer ANY question about:
@@ -418,8 +437,8 @@ You can answer ANY question about:
 - Temporal patterns (daily, weekly, seasonal)
 - Discount optimization and pricing strategies
 - Promotional mechanics comparison (BOGO, percent off, dollar off, coupons)
-- **Future forecasting and predictive analytics (sales forecasts, demand projections, trend analysis)**
-- **Time-series analysis with historical trends and future predictions**
+- Future forecasting and predictive analytics (sales forecasts, demand projections, trend analysis)
+- Time-series analysis with historical trends and future predictions
 - Risk assessment and underperforming campaigns
 
 FORECASTING & TREND ANALYSIS REQUIREMENTS:
@@ -441,10 +460,10 @@ Your response MUST be a valid JSON object with this exact structure:
   "why": ["reason 1", "reason 2", "reason 3"],
   "whatToDo": ["recommendation 1", "recommendation 2"],
   "kpis": {
-    "liftPct": number (between -50 and 150),
-    "roi": number (between -2 and 5),
-    "incrementalMargin": number (in dollars, between -500000 and 2000000),
-    "spend": number (in dollars, between 50000 and 800000)
+    "liftPct": number (calculated from actual data),
+    "roi": number (calculated as (margin - spend) / spend from actual data),
+    "incrementalMargin": number (sum of margins from relevant transactions),
+    "spend": number (sum of total_spend from relevant promotions)
   },
   "chartData": [
     {"name": "Category A", "roi": number, "margin": number},
@@ -455,23 +474,29 @@ Your response MUST be a valid JSON object with this exact structure:
   "sources": "string describing data sources",
   "predictions": {
     "forecast": ["prediction 1", "prediction 2", "prediction 3"],
-    "confidence": number (between 0.6 and 0.95, representing confidence level),
+    "confidence": number (between 0.6 and 0.95),
     "timeframe": "string like 'Next 4 weeks' or 'Q2 2024'"
   },
   "causalDrivers": [
     {
-      "driver": "string describing the factor (e.g., 'Price Elasticity', 'Seasonal Demand')",
-      "impact": "string describing the effect with numbers",
+      "driver": "string describing the factor",
+      "impact": "string describing the effect with numbers from actual data",
       "correlation": number (between -1 and 1)
     }
   ],
   "mlInsights": [
     {
-      "pattern": "string describing detected pattern",
-      "significance": "string explaining why this matters with business context"
+      "pattern": "string describing detected pattern from actual data",
+      "significance": "string explaining why this matters"
     }
   ]
 }
+
+CRITICAL KPI CALCULATION RULES (USE ACTUAL DATA):
+- liftPct: Calculate as ((promoted_revenue - baseline_revenue) / baseline_revenue) * 100 from transactions
+- roi: Calculate as (total_margin - total_spend) / total_spend from promotions and transactions
+- incrementalMargin: Sum of (revenue - cost - discount) for relevant transactions
+- spend: Sum of total_spend from relevant promotions in the database
 
 CRITICAL DRILL PATH RULES:
 - drillPath defines dynamic hierarchical breakdown - ALWAYS start from higher aggregation levels and drill to granular details
@@ -491,63 +516,34 @@ CRITICAL DRILL PATH RULES:
 - Order from broadest to most granular
 
 CRITICAL CHART DATA RULES:
-- chartData MUST contain the EXACT items being asked about
-- If user asks "top 5 promotions", return 5 items in chartData with promotion names
-- If user asks "optimal discount depth", return different discount levels (e.g., "10% Discount", "15% Discount", "20% Discount")
-- If user asks about specific products/categories, return those specific items
-- **For forecasting questions, chartData should show time periods (e.g., "Week 1", "Week 2", "Week 3 (forecast)", "Week 4 (forecast)")**
-- **Include both historical data points and forecasted future points in the same chart**
-- **Use "(forecast)" or "(projected)" suffix to distinguish predicted values from actual historical data**
-- Each chartData item MUST have: "name" (descriptive label), "roi" (realistic ROI value), "margin" (dollar amount)
-- For trend charts, add "trend" field with values like "up", "down", or "stable"
+- chartData MUST contain the EXACT items being asked about with REAL metrics from the database
+- If user asks "top 5 promotions", return 5 promotions from INDIVIDUAL PROMOTION PERFORMANCE with their ACTUAL names, ROI, and margin
+- If user asks "optimal discount depth", return different discount levels from PERFORMANCE BY DISCOUNT DEPTH with their ACTUAL metrics
+- If user asks about specific products/categories, return those specific items from PERFORMANCE BY CATEGORY
+- For forecasting questions, chartData should show time periods from PERFORMANCE BY MONTH
+- Each chartData item MUST have: "name" (EXACT name from database), "roi" (CALCULATED value), "margin" (ACTUAL dollar amount)
 - Return 5-8 items in chartData for forecasting to show clear trends
 - Return 3-6 items in chartData for other analysis types that directly answer the question
-- The "name" field should be clear and business-friendly (e.g., "Spring Refresh Promo", "Week 12 (Feb)", "Q2 2024 (forecast)")
 
-ANSWER QUALITY STANDARDS:
-- Each bullet point must reference SPECIFIC data points from the database (actual promotion names, product names, store names, dollar amounts)
-- Include at least 3-5 concrete numbers in every answer (percentages, dollar values, counts, ratios)
-- Calculate ROI as: (Incremental Margin - Spend) / Spend
-- Calculate Incremental Margin from transaction data: (promoted transactions revenue - baseline revenue - product costs)
-- Avoid vague statements like "many promotions" or "some stores" - use exact counts and names
+ANSWER ACCURACY STANDARDS:
+- EVERY bullet point must cite SPECIFIC promotion names, product names, store names, and dollar amounts from the database
+- ALL numbers must be CALCULATED or EXTRACTED directly from the database context - never estimated or made up
+- ROI = (Incremental Margin - Spend) / Spend - calculate this EXACTLY from the data
+- Incremental Margin = Revenue - Product Cost - Discounts (from transaction data)
+- AVOID vague statements like "many promotions" or "some stores" - use EXACT counts and ACTUAL names
 - Avoid markdown formatting (no asterisks, bold, or special characters)
 - Make insights immediately actionable with specific next steps
-- Ensure all numeric values match the scale of actual data (don't invent unrealistic numbers)
-- If asked about specific items not in the database, analyze similar items and note the substitution
+- If asked about items not in the database, state this clearly and analyze available related items
 
-DATA ANALYSIS METHODOLOGY:
-1. Identify relevant data sources from the 11 tables provided
-2. Aggregate and calculate metrics directly from raw data
-3. Compare across dimensions (time, geography, product, customer segments)
-4. Identify outliers, trends, and anomalies
-5. Correlate multiple factors (e.g., weather + foot traffic + sales)
-6. Ground all predictions in historical patterns from the data
+FINAL VALIDATION CHECKLIST (VERIFY BEFORE RETURNING):
+1. Does your answer DIRECTLY address the SPECIFIC question asked? (not a general overview)
+2. Are ALL promotion names, product names, store names in your answer EXACT matches from the database?
+3. Are ALL dollar amounts and percentages CALCULATED from actual database values (not estimated)?
+4. Does chartData contain items that DIRECTLY answer the question with REAL metrics?
+5. Are KPI values derived from ACTUAL database calculations?
+6. Would a user comparing your answer to the database find 100% accuracy?
 
-PREDICTIVE ANALYTICS:
-- Generate 3 forward-looking forecasts based on historical patterns
-- Include confidence scores (higher for stable patterns, lower for volatile ones)
-- Specify realistic timeframes (weeks, months, quarters)
-- Base predictions on the data trends you see
-
-CAUSAL DRIVERS:
-- Identify 3-4 key factors driving the observed results
-- Quantify impact with specific percentages or dollar amounts
-- Use correlation values: >0.7 strong positive, 0.3-0.7 moderate, <0.3 weak
-- Include both positive and negative correlations when relevant
-
-ML INSIGHTS:
-- Detect 2-3 meaningful patterns in the data (seasonality, customer segments, channel performance)
-- Explain business significance (why each pattern matters for decisions)
-- Connect patterns to actionable opportunities
-
-BEFORE RETURNING YOUR RESPONSE:
-1. Verify that you've referenced ACTUAL data from the database context (check promotion names, dollar amounts, dates)
-2. Confirm that all metrics are calculated from real data, not estimated
-3. Ensure chartData contains the SPECIFIC items the user asked about
-4. Validate that drillPath matches the analysis type
-5. Double-check that nextQuestions are directly relevant to the current answer and drive deeper insights
-
-Remember: Your credibility depends on precision. Every number, every name, every insight must be traceable to the database context provided.`;
+Remember: Your credibility depends on 100% precision. Every number, every name, every insight must be DIRECTLY traceable to the database context provided. Generic or approximate answers are unacceptable.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -561,17 +557,28 @@ Remember: Your credibility depends on precision. Every number, every name, every
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `QUESTION: "${question}"
 
-CRITICAL INSTRUCTIONS:
-1. Answer ONLY this specific question - do not add unrelated information
-2. If the question asks about specific promotions/products/stores, reference those EXACT items from the database
-3. If the question asks for "top N" items, return exactly N items with their real names and metrics
-4. If the question asks "why", provide root cause analysis using actual data patterns
-5. If the question asks "how to optimize", provide actionable recommendations based on data insights
-6. Use ONLY the database context provided above - calculate all metrics from raw data
-7. Stay focused on the question scope - don't expand to unrelated topics
-8. Ensure every statement is backed by specific data points from the database
+MANDATORY PRE-ANALYSIS STEPS:
+1. PARSE THE QUESTION: What specific entity is being asked about? (promotion name, category, product, store, time period, metric)
+2. LOCATE IN DATABASE: Find the EXACT matching records in the database context above
+3. CALCULATE METRICS: Compute ROI, margin, spend, etc. DIRECTLY from the raw data for those specific records
+4. VERIFY SCOPE: Ensure your answer stays within the scope of what was asked - no tangential information
 
-Now analyze and provide a precise, data-driven answer to the question above.` }
+RESPONSE REQUIREMENTS:
+1. Answer ONLY this specific question - do not add unrelated information
+2. Every promotion, product, or store name you mention MUST appear EXACTLY in the database context
+3. Every number (ROI, margin, spend, units) MUST be calculated from actual database values
+4. If the question asks for "top N" items, return exactly N items with their REAL names and ACTUAL metrics
+5. If the question asks "why", trace root causes to specific data patterns
+6. If the question asks "how to optimize", base recommendations on comparative data analysis
+7. chartData must contain items that DIRECTLY answer the question with REAL metrics from the database
+8. KPIs must be aggregated from the actual relevant records
+
+ACCURACY CHECK - Before responding, verify:
+- Can you point to the exact database records supporting each claim?
+- Are all dollar amounts and percentages calculated (not estimated)?
+- Does your chartData contain ACTUAL items from the database?
+
+Now analyze and provide a 100% accurate, data-driven answer to the question above.` }
         ],
         temperature: 0.3,
       }),
