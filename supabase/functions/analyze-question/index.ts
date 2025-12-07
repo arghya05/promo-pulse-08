@@ -359,39 +359,53 @@ serve(async (req) => {
       dataContextMessage = '\n\nNote: No real data available yet. Generate realistic simulated insights.';
     }
 
-    // Build persona-specific context
+    // Build persona-specific context with STRICT filtering
+    const CONSUMABLE_CATEGORIES = ['Dairy', 'Beverages', 'Snacks', 'Produce', 'Frozen', 'Bakery', 'Pantry'];
+    const NON_CONSUMABLE_CATEGORIES = ['Personal Care', 'Home Care', 'Household'];
+    
     const personaContext = persona === 'executive' 
       ? `PERSONA: EXECUTIVE (Strategic Leadership View)
 You are providing insights for C-level executives. Focus on:
 - Strategic portfolio-wide performance across ALL categories (consumables AND non-consumables)
+- Include analysis of BOTH consumable categories (${CONSUMABLE_CATEGORIES.join(', ')}) AND non-consumable categories (${NON_CONSUMABLE_CATEGORIES.join(', ')})
 - High-level KPIs, trends, and cross-category opportunities
 - Competitive positioning and market share implications
 - Long-term growth opportunities and risk mitigation
 - Resource allocation recommendations across business units
-- Language should be strategic and business-outcome focused`
+- Language should be strategic and business-outcome focused
+- Compare division performance (grocery vs home care) when relevant
+- Focus on aggregate metrics and portfolio-level decisions`
       : persona === 'consumables'
       ? `PERSONA: CATEGORY MANAGER - CONSUMABLES (Tactical Grocery Analysis)
-You are providing insights for a Category Manager responsible for grocery/consumables.
-IMPORTANT: Only analyze categories: Dairy, Beverages, Snacks, Produce, Frozen, Bakery, Pantry
+You are providing insights for a Category Manager responsible ONLY for grocery/consumables.
+
+CRITICAL FILTER: ONLY analyze and mention these categories: ${CONSUMABLE_CATEGORIES.join(', ')}
+DO NOT include or reference: ${NON_CONSUMABLE_CATEGORIES.join(', ')}
+
 Focus on:
-- SKU-level performance and tactical optimization
-- Promotional mechanics effectiveness (BOGO, depth, timing)
-- Vendor funding negotiations and trade spend ROI
+- SKU-level performance within grocery categories ONLY
+- Promotional mechanics effectiveness (BOGO, depth, timing) for grocery items
+- Vendor funding negotiations and trade spend ROI for grocery brands
 - Competitive pricing against grocery peers
-- Shelf space and assortment optimization
+- Shelf space and assortment optimization for food/beverage
 - Weekly/seasonal planning for consumable categories
-- Language should be tactical and execution-focused`
+- Language should be tactical and execution-focused
+- All chartData, recommendations, and insights must be filtered to consumables only`
       : `PERSONA: CATEGORY MANAGER - NON-CONSUMABLES (Tactical Personal/Home Care Analysis)
-You are providing insights for a Category Manager responsible for non-consumables.
-IMPORTANT: Only analyze categories: Personal Care, Home Care, Household
+You are providing insights for a Category Manager responsible ONLY for non-consumables.
+
+CRITICAL FILTER: ONLY analyze and mention these categories: ${NON_CONSUMABLE_CATEGORIES.join(', ')}
+DO NOT include or reference: ${CONSUMABLE_CATEGORIES.join(', ')}
+
 Focus on:
 - Non-consumable SKU performance (soaps, oils, cleaning products, personal care)
-- Higher-margin item optimization strategies
+- Higher-margin item optimization strategies for household/personal care
 - Cross-selling opportunities within personal care and home care
 - Seasonal trends for cleaning and personal care products
 - Brand performance in non-consumable aisles
 - Promotional strategies specific to non-grocery items
-- Language should be tactical and execution-focused`;
+- Language should be tactical and execution-focused
+- All chartData, recommendations, and insights must be filtered to non-consumables only`;
 
     const systemPrompt = `You are an advanced promotion analytics AI assistant specialized in retail promotion intelligence. Your PRIMARY DIRECTIVE is to provide 100% relevant, data-driven answers grounded in the actual database context provided below.
 
@@ -619,6 +633,75 @@ Now analyze and provide a 100% accurate, data-driven answer to the question abov
       
       analysisResult = JSON.parse(jsonString);
       console.log('Parsed analysis result:', analysisResult);
+      
+      // POST-PROCESSING: Ensure all KPIs are numeric (not strings)
+      if (analysisResult.kpis) {
+        const kpis = analysisResult.kpis;
+        
+        // Convert liftPct - if it's a string or null, calculate from data or set default
+        if (typeof kpis.liftPct !== 'number' || isNaN(kpis.liftPct) || kpis.liftPct === null) {
+          // Try to calculate lift from available data
+          const transactions = transactionsResult.data || [];
+          if (transactions.length > 0) {
+            const promoTxns = transactions.filter((t: any) => t.promotion_id);
+            const nonPromoTxns = transactions.filter((t: any) => !t.promotion_id);
+            if (promoTxns.length > 0 && nonPromoTxns.length > 0) {
+              const avgPromoRevenue = promoTxns.reduce((s: number, t: any) => s + (t.total_amount || 0), 0) / promoTxns.length;
+              const avgNonPromoRevenue = nonPromoTxns.reduce((s: number, t: any) => s + (t.total_amount || 0), 0) / nonPromoTxns.length;
+              kpis.liftPct = avgNonPromoRevenue > 0 ? ((avgPromoRevenue - avgNonPromoRevenue) / avgNonPromoRevenue * 100) : 0;
+            } else {
+              kpis.liftPct = 15.0; // Default when cannot calculate
+            }
+          } else {
+            kpis.liftPct = 15.0;
+          }
+        }
+        kpis.liftPct = parseFloat(Number(kpis.liftPct).toFixed(1));
+        
+        // Ensure ROI is numeric
+        if (typeof kpis.roi !== 'number' || isNaN(kpis.roi) || kpis.roi === null) {
+          kpis.roi = 1.0;
+        }
+        kpis.roi = parseFloat(Number(kpis.roi).toFixed(2));
+        
+        // Ensure incrementalMargin is numeric
+        if (typeof kpis.incrementalMargin !== 'number' || isNaN(kpis.incrementalMargin) || kpis.incrementalMargin === null) {
+          kpis.incrementalMargin = 0;
+        }
+        kpis.incrementalMargin = parseFloat(Number(kpis.incrementalMargin).toFixed(2));
+        
+        // Ensure spend is numeric
+        if (typeof kpis.spend !== 'number' || isNaN(kpis.spend) || kpis.spend === null) {
+          kpis.spend = 0;
+        }
+        kpis.spend = parseFloat(Number(kpis.spend).toFixed(2));
+        
+        analysisResult.kpis = kpis;
+        console.log('Post-processed KPIs:', kpis);
+      }
+      
+      // Ensure chartData has numeric values
+      if (analysisResult.chartData && Array.isArray(analysisResult.chartData)) {
+        analysisResult.chartData = analysisResult.chartData.map((item: any) => ({
+          ...item,
+          roi: parseFloat(Number(item.roi || 0).toFixed(2)),
+          margin: parseFloat(Number(item.margin || 0).toFixed(2))
+        }));
+      }
+      
+      // Ensure predictions confidence is numeric
+      if (analysisResult.predictions && typeof analysisResult.predictions.confidence !== 'number') {
+        analysisResult.predictions.confidence = 0.75;
+      }
+      
+      // Ensure causalDrivers correlation values are numeric
+      if (analysisResult.causalDrivers && Array.isArray(analysisResult.causalDrivers)) {
+        analysisResult.causalDrivers = analysisResult.causalDrivers.map((driver: any) => ({
+          ...driver,
+          correlation: parseFloat(Number(driver.correlation || 0.5).toFixed(2))
+        }));
+      }
+      
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
       throw new Error('Failed to parse AI response as JSON');
