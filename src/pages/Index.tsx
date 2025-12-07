@@ -52,7 +52,8 @@ export default function Index() {
   const [persona, setPersona] = useState<Persona>('executive');
 
   // Format large numbers to fit in KPI cards
-  const formatKPIValue = (value: number) => {
+  const formatKPIValue = (value: number | null | undefined) => {
+    if (value === null || value === undefined || isNaN(value)) return '$0';
     const absValue = Math.abs(value);
     const sign = value < 0 ? '-' : '';
     if (absValue >= 1000000000) return `${sign}$${(absValue / 1000000000).toFixed(1)}B`;
