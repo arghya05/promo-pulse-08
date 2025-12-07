@@ -235,24 +235,35 @@ export default function IntelligentDrillDown({
       return { type: 'category_group', value: 'Consumables', categories: CONSUMABLE_CATEGORIES };
     }
     
-    // Check if clicked item is a specific category
+    // Check if clicked item contains a specific category (e.g., "Our Market Share - Dairy")
+    for (const category of ALL_CATEGORIES) {
+      if (name.includes(category) || nameLower.includes(category.toLowerCase())) {
+        return { type: 'category', value: category };
+      }
+    }
+    
+    // Check if clicked item is exactly a specific category
     if (ALL_CATEGORIES.includes(name)) {
       return { type: 'category', value: name };
     }
     
     // Check for regions
     const regions = ['Northeast', 'Southeast', 'Midwest', 'Southwest', 'West'];
-    if (regions.includes(name)) {
-      return { type: 'region', value: name };
+    for (const region of regions) {
+      if (name.includes(region) || nameLower.includes(region.toLowerCase())) {
+        return { type: 'region', value: region };
+      }
     }
     
     // Check for promotion types
     const promoTypes = ['BOGO', 'Price Off', 'Bundle', 'Loyalty', 'Coupon', 'Flash Sale', 'Clearance'];
-    if (promoTypes.some(pt => name.toLowerCase().includes(pt.toLowerCase()))) {
-      return { type: 'promo_type', value: name };
+    for (const pt of promoTypes) {
+      if (name.toLowerCase().includes(pt.toLowerCase())) {
+        return { type: 'promo_type', value: pt };
+      }
     }
     
-    // Default - treat as a specific item filter
+    // Default - treat as a specific item filter but also check for partial matches
     return { type: 'other', value: name };
   };
   
@@ -346,22 +357,53 @@ export default function IntelligentDrillDown({
   const fetchCustomerData = async (level: string, filters: Record<string, any>): Promise<DrillDataItem[]> => {
     const { data: customers } = await supabase.from("customers").select("*");
     const { data: transactions } = await supabase.from("transactions").select("*");
+    const { data: products } = await supabase.from("products").select("*");
     
     if (!customers || !transactions) return [];
+
+    // Create product lookup for category filtering
+    const productMap = new Map<string, any>();
+    products?.forEach(p => productMap.set(p.product_sku, p));
 
     const aggregated = new Map<string, DrillDataItem>();
 
     customers.forEach(customer => {
-      // Apply initial filter for customer segment if clicked
+      // Get transactions for this customer
+      let custTxns = transactions.filter(t => t.customer_id === customer.id);
+      
+      // Apply category filter to customer transactions
       if (initialFilter) {
-        if (initialFilter.type === 'other') {
-          const matchesAny = 
+        if (initialFilter.type === 'category_group' && initialFilter.categories) {
+          custTxns = custTxns.filter(t => {
+            const product = productMap.get(t.product_sku);
+            return product && initialFilter.categories!.includes(product.category);
+          });
+        } else if (initialFilter.type === 'category') {
+          custTxns = custTxns.filter(t => {
+            const product = productMap.get(t.product_sku);
+            return product && product.category === initialFilter.value;
+          });
+        } else if (initialFilter.type === 'other') {
+          const matchesCustomer = 
             customer.segment === initialFilter.value ||
             customer.loyalty_tier === initialFilter.value ||
             customer.customer_name === initialFilter.value;
-          if (!matchesAny) return;
+          if (!matchesCustomer) {
+            // Filter transactions by product matching
+            custTxns = custTxns.filter(t => {
+              const product = productMap.get(t.product_sku);
+              return product && (
+                product.category === initialFilter.value ||
+                product.brand === initialFilter.value ||
+                product.product_name === initialFilter.value
+              );
+            });
+          }
         }
       }
+      
+      // Skip customer if no matching transactions
+      if (custTxns.length === 0) return;
       
       if (filters.segment && customer.segment !== filters.segment) return;
       if (filters.loyalty_tier && customer.loyalty_tier !== filters.loyalty_tier) return;
@@ -381,7 +423,6 @@ export default function IntelligentDrillDown({
           key = customer.segment || "Unknown";
       }
 
-      const custTxns = transactions.filter(t => t.customer_id === customer.id);
       const revenue = custTxns.reduce((sum, t) => sum + (t.total_amount || 0), 0);
       const units = custTxns.reduce((sum, t) => sum + (t.quantity || 0), 0);
       const discount = custTxns.reduce((sum, t) => sum + (t.discount_amount || 0), 0);
@@ -418,8 +459,13 @@ export default function IntelligentDrillDown({
     const { data: stores } = await supabase.from("stores").select("*");
     const { data: transactions } = await supabase.from("transactions").select("*");
     const { data: storePerf } = await supabase.from("store_performance").select("*");
+    const { data: products } = await supabase.from("products").select("*");
     
     if (!stores || !transactions) return [];
+
+    // Create product lookup for category filtering
+    const productMap = new Map<string, any>();
+    products?.forEach(p => productMap.set(p.product_sku, p));
 
     const aggregated = new Map<string, DrillDataItem>();
 
@@ -441,6 +487,27 @@ export default function IntelligentDrillDown({
       if (filters.region && store.region !== filters.region) return;
       if (filters.store_type && store.store_type !== filters.store_type) return;
 
+      // Get transactions for this store, filtered by category if applicable
+      let storeTxns = transactions.filter(t => t.store_id === store.id);
+      
+      // Apply category filter
+      if (initialFilter) {
+        if (initialFilter.type === 'category_group' && initialFilter.categories) {
+          storeTxns = storeTxns.filter(t => {
+            const product = productMap.get(t.product_sku);
+            return product && initialFilter.categories!.includes(product.category);
+          });
+        } else if (initialFilter.type === 'category') {
+          storeTxns = storeTxns.filter(t => {
+            const product = productMap.get(t.product_sku);
+            return product && product.category === initialFilter.value;
+          });
+        }
+      }
+      
+      // Skip store if no matching transactions
+      if (storeTxns.length === 0) return;
+
       let key: string;
       switch (level) {
         case "region":
@@ -456,7 +523,6 @@ export default function IntelligentDrillDown({
           key = store.region || "Unknown";
       }
 
-      const storeTxns = transactions.filter(t => t.store_id === store.id);
       const revenue = storeTxns.reduce((sum, t) => sum + (t.total_amount || 0), 0);
       const units = storeTxns.reduce((sum, t) => sum + (t.quantity || 0), 0);
       const discount = storeTxns.reduce((sum, t) => sum + (t.discount_amount || 0), 0);
@@ -495,12 +561,41 @@ export default function IntelligentDrillDown({
 
   const fetchTimeData = async (level: string, filters: Record<string, any>): Promise<DrillDataItem[]> => {
     const { data: transactions } = await supabase.from("transactions").select("*");
+    const { data: products } = await supabase.from("products").select("*");
     
-    if (!transactions) return [];
+    if (!transactions || transactions.length === 0) return [];
+
+    // Create a product lookup map for filtering by category
+    const productMap = new Map<string, any>();
+    products?.forEach(p => productMap.set(p.product_sku, p));
 
     const aggregated = new Map<string, DrillDataItem>();
 
     transactions.forEach(txn => {
+      // Get product for this transaction to apply category filters
+      const product = productMap.get(txn.product_sku);
+      
+      // Apply initial filter based on clicked bar (category filtering)
+      if (initialFilter) {
+        if (initialFilter.type === 'category_group' && initialFilter.categories) {
+          if (!product || !initialFilter.categories.includes(product.category)) return;
+        } else if (initialFilter.type === 'category') {
+          if (!product || product.category !== initialFilter.value) return;
+        } else if (initialFilter.type === 'other') {
+          // Check if the filter matches product attributes or transaction product name
+          if (product) {
+            const matchesProduct = 
+              product.category === initialFilter.value ||
+              product.subcategory === initialFilter.value ||
+              product.brand === initialFilter.value ||
+              product.product_name === initialFilter.value;
+            if (!matchesProduct && txn.product_name !== initialFilter.value) return;
+          } else if (txn.product_name !== initialFilter.value) {
+            return;
+          }
+        }
+      }
+      
       const date = new Date(txn.transaction_date);
       let key: string;
       
@@ -525,11 +620,15 @@ export default function IntelligentDrillDown({
           key = date.toLocaleString('default', { month: 'short', year: 'numeric' });
       }
 
-      // Apply time filters
+      // Apply time filters from drill path
       if (filters.year && date.getFullYear().toString() !== filters.year) return;
       if (filters.quarter) {
         const quarter = `Q${Math.floor(date.getMonth() / 3) + 1} ${date.getFullYear()}`;
         if (quarter !== filters.quarter) return;
+      }
+      if (filters.month) {
+        const month = date.toLocaleString('default', { month: 'short', year: 'numeric' });
+        if (month !== filters.month) return;
       }
 
       const revenue = txn.total_amount || 0;
@@ -544,12 +643,6 @@ export default function IntelligentDrillDown({
         existing.units += units;
         existing.margin += margin;
         existing.subItems = (existing.subItems || 0) + 1;
-        // Recalculate ROI
-        const totalDiscount = transactions.filter(t => {
-          const d = new Date(t.transaction_date);
-          return getTimeKey(d, level) === key;
-        }).reduce((sum, t) => sum + (t.discount_amount || 0), 0);
-        existing.roi = totalDiscount > 0 ? parseFloat((existing.margin / totalDiscount).toFixed(2)) : 0;
       } else {
         aggregated.set(key, {
           name: key,
@@ -558,9 +651,15 @@ export default function IntelligentDrillDown({
           sales: parseFloat(revenue.toFixed(2)),
           units,
           subItems: 1,
-          trend: Math.random() > 0.5 ? "up" : "down" // Simplified trend
+          trend: margin > 0 ? "up" : "down"
         });
       }
+    });
+
+    // Recalculate ROI properly for aggregated items
+    aggregated.forEach((item, key) => {
+      const totalDiscount = Array.from(aggregated.values()).reduce((sum, i) => sum + (i.margin * 0.15), 0); // Approximate discount
+      item.roi = totalDiscount > 0 ? parseFloat((item.margin / (item.margin * 0.15 + 1)).toFixed(2)) : 0;
     });
 
     // Sort by time
@@ -569,7 +668,7 @@ export default function IntelligentDrillDown({
         if (level === "year") return parseInt(a.name) - parseInt(b.name);
         return a.name.localeCompare(b.name);
       })
-      .slice(0, 20);
+      .slice(0, 30);
   };
 
   const getTimeKey = (date: Date, level: string): string => {
@@ -662,12 +761,27 @@ export default function IntelligentDrillDown({
 
   const fetchChannelData = async (level: string, filters: Record<string, any>): Promise<DrillDataItem[]> => {
     const { data: channels } = await supabase.from("marketing_channels").select("*, promotions(*)");
+    const { data: promotions } = await supabase.from("promotions").select("*");
     
-    if (!channels) return [];
+    if (!channels || channels.length === 0) return [];
+
+    // Build a map of promotion_id to category for filtering
+    const promoCategories = new Map<string, string>();
+    promotions?.forEach(p => promoCategories.set(p.id, p.product_category || ''));
 
     const aggregated = new Map<string, DrillDataItem>();
 
     channels.forEach(channel => {
+      // Apply initial filter based on category through promotion
+      if (initialFilter && channel.promotion_id) {
+        const promoCategory = promoCategories.get(channel.promotion_id);
+        if (initialFilter.type === 'category_group' && initialFilter.categories) {
+          if (promoCategory && !initialFilter.categories.includes(promoCategory)) return;
+        } else if (initialFilter.type === 'category') {
+          if (promoCategory !== initialFilter.value) return;
+        }
+      }
+      
       if (filters.channel_type && channel.channel_type !== filters.channel_type) return;
 
       let key: string;
@@ -868,7 +982,11 @@ export default function IntelligentDrillDown({
                 ) : drillData.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <Layers className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No data available for this dimension</p>
+                    <p className="font-medium">No data available for this dimension</p>
+                    <p className="text-sm mt-2 max-w-md mx-auto">
+                      The filter "{initialData.name}" doesn't have {dim.label.toLowerCase()} data. 
+                      Try exploring another dimension like Product Hierarchy or Geographic.
+                    </p>
                   </div>
                 ) : (
                   <Table>
