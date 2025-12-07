@@ -341,26 +341,26 @@ export default function Index() {
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                   <div className="bg-secondary/50 rounded-lg p-4 overflow-hidden">
                     <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">Lift %</div>
-                    <div className={`text-xl sm:text-2xl lg:text-3xl font-bold tabular-nums truncate ${getKPIStatus("liftPct", result.kpis.liftPct) === "good" ? "text-status-good" : getKPIStatus("liftPct", result.kpis.liftPct) === "warning" ? "text-status-warning" : "text-status-bad"}`}>
-                      {result.kpis.liftPct.toFixed(1)}%
+                    <div className={`text-xl sm:text-2xl lg:text-3xl font-bold tabular-nums truncate ${getKPIStatus("liftPct", result.kpis?.liftPct ?? 0) === "good" ? "text-status-good" : getKPIStatus("liftPct", result.kpis?.liftPct ?? 0) === "warning" ? "text-status-warning" : "text-status-bad"}`}>
+                      {(result.kpis?.liftPct ?? 0).toFixed(1)}%
                     </div>
                   </div>
                   <div className="bg-secondary/50 rounded-lg p-4 overflow-hidden">
                     <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">ROI</div>
-                    <div className={`text-xl sm:text-2xl lg:text-3xl font-bold tabular-nums truncate ${getKPIStatus("roi", result.kpis.roi) === "good" ? "text-status-good" : getKPIStatus("roi", result.kpis.roi) === "warning" ? "text-status-warning" : "text-status-bad"}`}>
-                      {result.kpis.roi.toFixed(2)}
+                    <div className={`text-xl sm:text-2xl lg:text-3xl font-bold tabular-nums truncate ${getKPIStatus("roi", result.kpis?.roi ?? 0) === "good" ? "text-status-good" : getKPIStatus("roi", result.kpis?.roi ?? 0) === "warning" ? "text-status-warning" : "text-status-bad"}`}>
+                      {(result.kpis?.roi ?? 0).toFixed(2)}
                     </div>
                   </div>
                   <div className="bg-secondary/50 rounded-lg p-4 overflow-hidden">
                     <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wide whitespace-nowrap">Incremental Margin</div>
-                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground tabular-nums truncate" title={`US$${Math.round(result.kpis.incrementalMargin).toLocaleString()}`}>
-                      {formatKPIValue(result.kpis.incrementalMargin)}
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground tabular-nums truncate" title={`US$${Math.round(result.kpis?.incrementalMargin ?? 0).toLocaleString()}`}>
+                      {formatKPIValue(result.kpis?.incrementalMargin)}
                     </div>
                   </div>
                   <div className="bg-secondary/50 rounded-lg p-4 overflow-hidden">
                     <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">Spend</div>
-                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground tabular-nums truncate" title={`US$${Math.round(result.kpis.spend).toLocaleString()}`}>
-                      {formatKPIValue(result.kpis.spend)}
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground tabular-nums truncate" title={`US$${Math.round(result.kpis?.spend ?? 0).toLocaleString()}`}>
+                      {formatKPIValue(result.kpis?.spend)}
                     </div>
                   </div>
                 </div>
