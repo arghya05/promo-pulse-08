@@ -506,11 +506,35 @@ Your response MUST be a valid JSON object with this exact structure:
   ]
 }
 
-CRITICAL KPI CALCULATION RULES (USE ACTUAL DATA):
-- liftPct: Calculate as ((promoted_revenue - baseline_revenue) / baseline_revenue) * 100 from transactions
-- roi: Calculate as (total_margin - total_spend) / total_spend from promotions and transactions
-- incrementalMargin: Sum of (revenue - cost - discount) for relevant transactions
-- spend: Sum of total_spend from relevant promotions in the database
+CRITICAL: REALISTIC NUMBERS FOR $3-4 BILLION US GROCERY RETAILER
+This retailer represents a major US grocery chain with:
+- Annual Revenue: $3.5-4 billion USD
+- 50 stores across 5 US regions
+- ~80 products/SKUs across 9 categories
+- Typical grocery industry benchmarks apply
+
+SCALING FACTOR: The sample database contains representative transactions. When reporting numbers, SCALE appropriately:
+- Total annual promotion spend: $40-60 million (1.2-1.5% of revenue)
+- Individual major promotion spend: $200K-$800K per campaign
+- Category-level promotion ROI: typically 0.8 to 2.5 (some negative, most positive)
+- Lift percentages: typically 8-35% for successful promotions
+- Incremental margin per major promotion: $50K-$500K
+- Weekly store revenue: $1.3-1.8 million per store
+- Annual category revenue: $200M-$600M per major category
+
+REALISTIC BENCHMARK RANGES FOR US GROCERY:
+- Promotion ROI: 0.6 to 2.8 (healthy range 1.2-1.8)
+- Lift %: 5% to 40% (average 15-22%)
+- Margin impact: -2% to +8% (target +2-4%)
+- Discount depth effectiveness: 15-25% discounts typically optimal
+- Customer segment response rates: 12-35%
+- Cannibalization rates: 8-25% for aggressive promos
+
+CRITICAL KPI CALCULATION RULES (USE ACTUAL DATA, SCALE APPROPRIATELY):
+- liftPct: Calculate proportionally, ensure realistic range (5-40%)
+- roi: Scale to realistic range (0.6-2.8), most should be 0.9-1.8
+- incrementalMargin: Scale to realistic $ amounts ($50K-$2M for major campaigns)
+- spend: Scale to realistic promotion budgets ($100K-$800K per campaign)
 
 CRITICAL DRILL PATH RULES:
 - drillPath defines dynamic hierarchical breakdown - ALWAYS start from higher aggregation levels and drill to granular details
