@@ -70,39 +70,54 @@ export default function VoiceRecorder({ onTranscript, disabled }: VoiceRecorderP
 
   const transcribeAudio = async (audioBlob: Blob) => {
     try {
-      // Convert blob to base64
-      const reader = new FileReader();
-      reader.readAsDataURL(audioBlob);
+      console.log('Starting transcription, blob size:', audioBlob.size);
       
-      reader.onloadend = async () => {
-        const base64Audio = (reader.result as string).split(',')[1];
-        
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe-audio`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ audio: base64Audio }),
-          }
-        );
+      // Convert blob to base64
+      const base64Audio = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          const base64 = result.split(',')[1];
+          console.log('Audio converted to base64, length:', base64?.length);
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(audioBlob);
+      });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to transcribe audio');
+      console.log('Calling transcribe-audio function...');
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe-audio`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ audio: base64Audio }),
         }
+      );
 
-        const data = await response.json();
-        
-        if (data.text) {
-          onTranscript(data.text);
-          toast({
-            title: "Transcription complete",
-            description: "Your question is ready!",
-          });
-        }
-      };
+      console.log('Transcribe response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Transcribe error response:', errorData);
+        throw new Error(errorData.error || 'Failed to transcribe audio');
+      }
+
+      const data = await response.json();
+      console.log('Transcription result:', data);
+      
+      if (data.text) {
+        onTranscript(data.text);
+        toast({
+          title: "Transcription complete",
+          description: `"${data.text}"`,
+        });
+      } else {
+        throw new Error('No text returned from transcription');
+      }
     } catch (error) {
       console.error('Error transcribing audio:', error);
       toast({
