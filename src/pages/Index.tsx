@@ -365,63 +365,122 @@ export default function Index() {
                   </div>
                 </div>
 
-                {/* Chart */}
+                {/* Chart - Dynamic based on data keys */}
                 <div className="h-96 bg-card border border-border rounded-lg p-6">
                   <div className="mb-4 text-sm text-muted-foreground flex items-center gap-2">
                     <span className="text-base">💡</span>
                     <span>Click on any bar to see detailed breakdown</span>
                   </div>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      data={result.chartData}
-                      onMouseLeave={() => setActiveBarIndex(null)}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis 
-                        dataKey="name" 
-                        tick={{ fill: "hsl(var(--foreground))", fontSize: 12 }}
-                        angle={-15}
-                        textAnchor="end"
-                        height={80}
-                      />
-                      <YAxis 
-                        tick={{ fill: "hsl(var(--foreground))", fontSize: 12 }}
-                        tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
-                      />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: "hsl(var(--card))", 
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "6px"
-                        }}
-                        cursor={{ fill: "hsl(var(--primary) / 0.1)" }}
-                        formatter={(value: number) => [`$${value.toLocaleString()}`, "Margin"]}
-                      />
-                      <Legend 
-                        wrapperStyle={{ paddingTop: "20px" }}
-                        payload={[
-                          { value: 'Margin (US$)', type: 'rect', color: 'hsl(var(--status-good))' }
-                        ]}
-                      />
-                      <Bar 
-                        dataKey="margin" 
-                        fill="hsl(var(--status-good))" 
-                        name="Margin (US$)" 
-                        radius={[8, 8, 0, 0]}
-                        onClick={(data) => setDrillDownData(data)}
-                        onMouseEnter={(_, index) => setActiveBarIndex(index)}
-                        cursor="pointer"
-                      >
-                        {result.chartData.map((entry, index) => (
-                          <Cell 
-                            key={`cell-${index}`}
-                            fill={activeBarIndex === index ? "hsl(var(--primary))" : "hsl(var(--status-good))"}
-                            opacity={activeBarIndex === null || activeBarIndex === index ? 1 : 0.6}
+                    {(() => {
+                      // Dynamically detect chart data keys
+                      const chartData = result.chartData || [];
+                      if (chartData.length === 0) {
+                        return (
+                          <div className="flex items-center justify-center h-full text-muted-foreground">
+                            No chart data available
+                          </div>
+                        );
+                      }
+                      
+                      const sampleItem = chartData[0] || {};
+                      const numericKeys = Object.keys(sampleItem).filter(
+                        key => key !== 'name' && typeof sampleItem[key] === 'number'
+                      );
+                      
+                      // Determine which key to use for the primary bar
+                      const primaryKey = numericKeys.find(k => ['margin', 'roi', 'revenue', 'value', 'market_share', 'sales', 'lift', 'units'].includes(k)) || numericKeys[0] || 'margin';
+                      const secondaryKey = numericKeys.find(k => k !== primaryKey && ['competitor_avg_share', 'roi', 'margin', 'baseline', 'benchmark'].includes(k));
+                      
+                      // Format label for display
+                      const formatLabel = (key: string) => key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                      
+                      // Determine if values need $ formatting (margin, revenue, spend, etc.)
+                      const needsDollarFormat = ['margin', 'revenue', 'spend', 'sales', 'value', 'incrementalMargin'].includes(primaryKey);
+                      const needsPercentFormat = ['roi', 'market_share', 'competitor_avg_share', 'lift', 'liftPct'].includes(primaryKey);
+                      
+                      const formatYAxis = (value: number) => {
+                        if (needsDollarFormat) {
+                          if (Math.abs(value) >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+                          if (Math.abs(value) >= 1000) return `$${(value / 1000).toFixed(0)}K`;
+                          return `$${value.toFixed(0)}`;
+                        }
+                        if (needsPercentFormat) return `${value.toFixed(1)}%`;
+                        return value.toLocaleString();
+                      };
+                      
+                      const formatTooltip = (value: number) => {
+                        if (needsDollarFormat) return `$${value.toLocaleString()}`;
+                        if (needsPercentFormat) return `${value.toFixed(2)}%`;
+                        return value.toLocaleString();
+                      };
+                      
+                      return (
+                        <BarChart 
+                          data={chartData}
+                          onMouseLeave={() => setActiveBarIndex(null)}
+                          margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis 
+                            dataKey="name" 
+                            tick={{ fill: "hsl(var(--foreground))", fontSize: 12 }}
+                            angle={-15}
+                            textAnchor="end"
+                            height={80}
                           />
-                        ))}
-                      </Bar>
-                    </BarChart>
+                          <YAxis 
+                            tick={{ fill: "hsl(var(--foreground))", fontSize: 12 }}
+                            tickFormatter={formatYAxis}
+                          />
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: "hsl(var(--card))", 
+                              border: "1px solid hsl(var(--border))",
+                              borderRadius: "6px"
+                            }}
+                            cursor={{ fill: "hsl(var(--primary) / 0.1)" }}
+                            formatter={(value: number, name: string) => [formatTooltip(value), formatLabel(name)]}
+                          />
+                          <Legend 
+                            wrapperStyle={{ paddingTop: "20px" }}
+                          />
+                          <Bar 
+                            dataKey={primaryKey} 
+                            fill="hsl(var(--status-good))" 
+                            name={formatLabel(primaryKey)} 
+                            radius={[8, 8, 0, 0]}
+                            onClick={(data) => setDrillDownData({ ...data, name: data.name, roi: data.roi || 0, margin: data.margin || data[primaryKey] || 0 })}
+                            onMouseEnter={(_, index) => setActiveBarIndex(index)}
+                            cursor="pointer"
+                          >
+                            {chartData.map((entry, index) => (
+                              <Cell 
+                                key={`cell-${index}`}
+                                fill={activeBarIndex === index ? "hsl(var(--primary))" : "hsl(var(--status-good))"}
+                                opacity={activeBarIndex === null || activeBarIndex === index ? 1 : 0.6}
+                              />
+                            ))}
+                          </Bar>
+                          {secondaryKey && (
+                            <Bar 
+                              dataKey={secondaryKey} 
+                              fill="hsl(var(--chart-3))" 
+                              name={formatLabel(secondaryKey)} 
+                              radius={[8, 8, 0, 0]}
+                            >
+                              {chartData.map((entry, index) => (
+                                <Cell 
+                                  key={`cell-secondary-${index}`}
+                                  fill="hsl(var(--chart-3))"
+                                  opacity={activeBarIndex === null || activeBarIndex === index ? 0.8 : 0.4}
+                                />
+                              ))}
+                            </Bar>
+                          )}
+                        </BarChart>
+                      );
+                    })()}
                   </ResponsiveContainer>
                 </div>
               </Card>

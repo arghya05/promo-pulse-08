@@ -584,32 +584,38 @@ CRITICAL KPI CALCULATION RULES (USE ACTUAL DATA, SCALE APPROPRIATELY):
 - incrementalMargin: Scale to realistic $ amounts ($50K-$2M for major campaigns)
 - spend: Scale to realistic promotion budgets ($100K-$800K per campaign)
 
-CRITICAL DRILL PATH RULES:
-- drillPath defines dynamic hierarchical breakdown - ALWAYS start from higher aggregation levels and drill to granular details
-- Choose paths that match the question focus and start broad then narrow:
+CRITICAL DRILL PATH RULES (MANDATORY - NEVER SKIP):
+- drillPath array MUST NEVER be empty - always provide at least 4-6 levels
+- DEFAULT drillPath if unsure: ["category", "brand", "sku", "store", "region"]
+- drillPath defines dynamic hierarchical breakdown - start from higher aggregation levels
+- Choose paths that match the question focus:
   * For ROI/performance questions: ["category", "brand", "sku", "store", "region"]
   * For depth optimization: ["category", "depth", "sku", "store"]
   * For regional analysis: ["region", "store", "category", "brand", "sku"]
   * For customer analysis: ["customer_segment", "category", "brand", "sku", "store"]
-  * For forecasting/trend: ["category", "brand", "sku", "month", "week", "day"]
+  * For forecasting/trend: ["month", "quarter", "week", "category", "brand", "sku"]
   * For inventory questions: ["category", "sku", "store", "region"]
-  * For competitive analysis: ["category", "brand", "sku", "region"]
+  * For competitive analysis: ["category", "brand", "sku", "region", "store"]
   * For timing analysis: ["month", "week", "day", "category", "store"]
+  * For market share questions: ["category", "region", "store", "brand", "sku"]
 - CRITICAL: Start with category/region/segment (aggregated), then drill to sku/store/day (granular)
 - Available drill levels: category, brand, sku, store, region, customer_segment, depth, month, week, day, quarter, year
 - The drill-down will use REAL DATA from all 11 database sources for each level
-- Return 4-6 drill levels that best match the analysis context
+- ALWAYS return 4-6 drill levels - never an empty array
 - Order from broadest to most granular
 
-CRITICAL CHART DATA RULES:
-- chartData MUST contain the EXACT items being asked about with REAL metrics from the database
-- If user asks "top 5 promotions", return 5 promotions from INDIVIDUAL PROMOTION PERFORMANCE with their ACTUAL names, ROI, and margin
-- If user asks "optimal discount depth", return different discount levels from PERFORMANCE BY DISCOUNT DEPTH with their ACTUAL metrics
-- If user asks about specific products/categories, return those specific items from PERFORMANCE BY CATEGORY
-- For forecasting questions, chartData should show time periods from PERFORMANCE BY MONTH
-- Each chartData item MUST have: "name" (EXACT name from database), "roi" (CALCULATED value), "margin" (ACTUAL dollar amount)
-- Return 5-8 items in chartData for forecasting to show clear trends
-- Return 3-6 items in chartData for other analysis types that directly answer the question
+CRITICAL CHART DATA RULES (MANDATORY - NEVER SKIP):
+- chartData array MUST NEVER be empty - always provide at least 3-6 data points
+- Every chartData item MUST have a "name" field (string) and at least one numeric field
+- STANDARD FORMAT: {"name": "Item Name", "value": number, "margin": number, "roi": number}
+- For comparison questions: include "value" or "margin" as primary metric with actual $ amounts
+- For market share questions: use {"name": "Category", "market_share": number, "competitor_avg_share": number}
+- For trend/forecast questions: use {"name": "Jan 2024", "value": number, "forecast": number}
+- ALWAYS scale values to realistic amounts - margins should be $50K-$2M, not $0
+- If user asks "top 5 promotions", return 5 promotions with their ACTUAL names, ROI, and margin values
+- If user asks "optimal discount depth", return discount levels with their ACTUAL performance metrics
+- chartData values MUST be non-zero realistic numbers from the pre-computed analytics sections
+- Return 5-8 items for trends, 3-6 items for comparisons - NEVER return empty arrays
 
 ANSWER ACCURACY STANDARDS:
 - EVERY bullet point must cite SPECIFIC promotion names, product names, store names, and dollar amounts from the database
@@ -752,13 +758,54 @@ Now analyze and provide a 100% accurate, data-driven answer to the question abov
         console.log('Post-processed KPIs:', kpis);
       }
       
-      // Ensure chartData has numeric values
-      if (analysisResult.chartData && Array.isArray(analysisResult.chartData)) {
-        analysisResult.chartData = analysisResult.chartData.map((item: any) => ({
-          ...item,
-          roi: parseFloat(Number(item.roi || 0).toFixed(2)),
-          margin: parseFloat(Number(item.margin || 0).toFixed(2))
+      // Ensure chartData is never empty and has proper numeric values
+      if (!analysisResult.chartData || !Array.isArray(analysisResult.chartData) || analysisResult.chartData.length === 0) {
+        // Generate fallback chartData from pre-computed analytics
+        const categoryAnalysis: any = {};
+        transactionsResult.data?.forEach((txn: any) => {
+          const product = productsResult.data?.find((p: any) => p.product_sku === txn.product_sku);
+          const category = product?.category || 'Other';
+          if (!categoryAnalysis[category]) {
+            categoryAnalysis[category] = { revenue: 0, cost: 0, discount: 0 };
+          }
+          categoryAnalysis[category].revenue += parseFloat(txn.total_amount || 0);
+          categoryAnalysis[category].discount += parseFloat(txn.discount_amount || 0);
+          categoryAnalysis[category].cost += (product?.cost || 0) * parseInt(txn.quantity || 0);
+        });
+        
+        analysisResult.chartData = Object.entries(categoryAnalysis).slice(0, 6).map(([name, stats]: [string, any]) => ({
+          name,
+          margin: Math.round(stats.revenue - stats.cost - stats.discount),
+          roi: stats.discount > 0 ? parseFloat(((stats.revenue - stats.cost - stats.discount) / stats.discount).toFixed(2)) : 1.5,
+          value: Math.round(stats.revenue)
         }));
+        console.log('Generated fallback chartData:', analysisResult.chartData);
+      } else {
+        // Ensure all numeric fields are properly formatted
+        analysisResult.chartData = analysisResult.chartData.map((item: any) => {
+          const numericFields: any = {};
+          Object.keys(item).forEach(key => {
+            if (key === 'name') {
+              numericFields[key] = item[key];
+            } else if (typeof item[key] === 'number' || !isNaN(parseFloat(item[key]))) {
+              numericFields[key] = parseFloat(Number(item[key] || 0).toFixed(2));
+            }
+          });
+          // Ensure at least margin and roi exist
+          if (numericFields.margin === undefined && numericFields.value !== undefined) {
+            numericFields.margin = numericFields.value;
+          }
+          if (numericFields.roi === undefined) {
+            numericFields.roi = 1.0;
+          }
+          return numericFields;
+        });
+      }
+      
+      // Ensure drillPath is never empty
+      if (!analysisResult.drillPath || !Array.isArray(analysisResult.drillPath) || analysisResult.drillPath.length === 0) {
+        analysisResult.drillPath = ['category', 'brand', 'sku', 'store', 'region'];
+        console.log('Applied default drillPath');
       }
       
       // Ensure predictions confidence is numeric
