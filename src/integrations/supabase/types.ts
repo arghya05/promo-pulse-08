@@ -327,6 +327,42 @@ export type Database = {
         }
         Relationships: []
       }
+      question_cache: {
+        Row: {
+          created_at: string
+          expires_at: string
+          hit_count: number | null
+          id: string
+          persona: string
+          question: string
+          question_hash: string
+          response: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          hit_count?: number | null
+          id?: string
+          persona: string
+          question: string
+          question_hash: string
+          response: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          hit_count?: number | null
+          id?: string
+          persona?: string
+          question?: string
+          question_hash?: string
+          response?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       store_performance: {
         Row: {
           avg_basket_size: number | null

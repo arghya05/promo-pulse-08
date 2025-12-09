@@ -7,6 +7,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper to create a consistent hash for cache key
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(36);
+}
+
+// Normalize question for cache matching
+function normalizeQuestion(q: string): string {
+  return q.toLowerCase().trim().replace(/[?!.,]/g, '').replace(/\s+/g, ' ');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -29,6 +45,38 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // === CACHE CHECK ===
+    const normalizedQuestion = normalizeQuestion(question);
+    const questionHash = simpleHash(normalizedQuestion + '|' + persona);
+    
+    console.log('Checking cache for hash:', questionHash);
+    
+    const { data: cachedResult } = await supabaseClient
+      .from('question_cache')
+      .select('*')
+      .eq('persona', persona)
+      .eq('question_hash', questionHash)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+    
+    if (cachedResult) {
+      console.log('Cache HIT! Returning cached response');
+      
+      // Update hit count async (don't wait)
+      supabaseClient
+        .from('question_cache')
+        .update({ hit_count: (cachedResult.hit_count || 0) + 1 })
+        .eq('id', cachedResult.id)
+        .then(() => console.log('Cache hit count updated'));
+      
+      return new Response(
+        JSON.stringify(cachedResult.response),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' } }
+      );
+    }
+    
+    console.log('Cache MISS, proceeding with AI analysis');
 
     const [
       storesResult, 
@@ -858,9 +906,33 @@ Now analyze and provide a 100% accurate, data-driven answer to the question abov
       }
     }
 
+    // === CACHE WRITE ===
+    // Store successful response in cache for future requests
+    try {
+      const { error: cacheError } = await supabaseClient
+        .from('question_cache')
+        .upsert({
+          persona,
+          question: question.substring(0, 500), // Limit question length
+          question_hash: questionHash,
+          response: analysisResult,
+          hit_count: 0,
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
+        }, { onConflict: 'persona,question_hash' });
+      
+      if (cacheError) {
+        console.error('Failed to cache response:', cacheError);
+      } else {
+        console.log('Response cached successfully for hash:', questionHash);
+      }
+    } catch (cacheWriteError) {
+      console.error('Cache write error:', cacheWriteError);
+      // Continue - caching failure shouldn't break the response
+    }
+
     return new Response(
       JSON.stringify(analysisResult),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' } }
     );
 
   } catch (error) {
