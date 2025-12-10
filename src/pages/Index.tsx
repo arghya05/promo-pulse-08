@@ -62,6 +62,9 @@ export default function Index() {
     return `${sign}$${absValue.toFixed(0)}`;
   };
 
+  const [cacheHit, setCacheHit] = useState(false);
+  const [responseTime, setResponseTime] = useState<number | null>(null);
+
   const handleAsk = async (questionText?: string) => {
     const questionToAsk = questionText || query;
     if (!questionToAsk.trim()) return;
@@ -72,6 +75,10 @@ export default function Index() {
     
     setIsLoading(true);
     setResult(null);
+    setCacheHit(false);
+    setResponseTime(null);
+    
+    const startTime = Date.now();
     
     try {
       const response = await fetch(
@@ -89,6 +96,13 @@ export default function Index() {
         }
       );
 
+      const elapsed = Date.now() - startTime;
+      setResponseTime(elapsed);
+
+      // Check cache header
+      const cacheHeader = response.headers.get('X-Cache');
+      setCacheHit(cacheHeader === 'HIT');
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to analyze question');
@@ -96,6 +110,14 @@ export default function Index() {
 
       const analyticsResult = await response.json();
       setResult(analyticsResult);
+      
+      if (cacheHeader === 'HIT') {
+        toast({
+          title: "Instant Answer",
+          description: `Response from cache (${elapsed}ms)`,
+          duration: 2000,
+        });
+      }
     } catch (error) {
       console.error('Error analyzing question:', error);
       toast({
@@ -282,6 +304,21 @@ export default function Index() {
               <div className="grid grid-cols-12 gap-8">
                 {/* Main Content */}
                 <div className="col-span-8 space-y-6">
+                  {/* Cache/Response Status */}
+                  {responseTime !== null && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      {cacheHit ? (
+                        <Badge variant="secondary" className="bg-status-good/10 text-status-good border-0">
+                          ⚡ Cached ({responseTime}ms)
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">
+                          Analyzed ({(responseTime / 1000).toFixed(1)}s)
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                  
                   {/* What Happened Section */}
                   <Card className="p-6">
                     <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
