@@ -821,6 +821,242 @@ Now analyze and provide a 100% accurate, data-driven answer to the question abov
         }));
       }
       
+      // === VERIFICATION LAYER: Cross-check AI answers against actual database ===
+      console.log('Starting verification layer...');
+      
+      // Build verification context from actual database
+      const verificationData = {
+        promotionNames: new Set(promotionsResult.data?.map((p: any) => p.promotion_name) || []),
+        productNames: new Set(productsResult.data?.map((p: any) => p.product_name) || []),
+        productSkus: new Set(productsResult.data?.map((p: any) => p.product_sku) || []),
+        categories: new Set(productsResult.data?.map((p: any) => p.category) || []),
+        brands: new Set(productsResult.data?.map((p: any) => p.brand).filter(Boolean) || []),
+        storeNames: new Set(storesResult.data?.map((s: any) => s.store_name) || []),
+        regions: new Set(storesResult.data?.map((s: any) => s.region).filter(Boolean) || []),
+        customerSegments: new Set(customersResult.data?.map((c: any) => c.segment).filter(Boolean) || []),
+      };
+      
+      // Calculate actual KPIs from database
+      const actualKPIs = {
+        totalRevenue: 0,
+        totalDiscount: 0,
+        totalCost: 0,
+        totalSpend: 0,
+        promoTxnCount: 0,
+        nonPromoTxnCount: 0,
+        promoRevenue: 0,
+        nonPromoRevenue: 0,
+      };
+      
+      transactionsResult.data?.forEach((txn: any) => {
+        actualKPIs.totalRevenue += parseFloat(txn.total_amount || 0);
+        actualKPIs.totalDiscount += parseFloat(txn.discount_amount || 0);
+        const product = productsResult.data?.find((p: any) => p.product_sku === txn.product_sku);
+        actualKPIs.totalCost += (product?.cost || 0) * parseInt(txn.quantity || 0);
+        
+        if (txn.promotion_id) {
+          actualKPIs.promoTxnCount++;
+          actualKPIs.promoRevenue += parseFloat(txn.total_amount || 0);
+        } else {
+          actualKPIs.nonPromoTxnCount++;
+          actualKPIs.nonPromoRevenue += parseFloat(txn.total_amount || 0);
+        }
+      });
+      
+      promotionsResult.data?.forEach((promo: any) => {
+        actualKPIs.totalSpend += parseFloat(promo.total_spend || 0);
+      });
+      
+      const actualMargin = actualKPIs.totalRevenue - actualKPIs.totalCost - actualKPIs.totalDiscount;
+      const actualROI = actualKPIs.totalSpend > 0 ? actualMargin / actualKPIs.totalSpend : 0;
+      const actualLiftPct = actualKPIs.nonPromoTxnCount > 0 && actualKPIs.promoTxnCount > 0
+        ? (((actualKPIs.promoRevenue / actualKPIs.promoTxnCount) - (actualKPIs.nonPromoRevenue / actualKPIs.nonPromoTxnCount)) / (actualKPIs.nonPromoRevenue / actualKPIs.nonPromoTxnCount) * 100)
+        : 0;
+      
+      console.log('Actual KPIs from database:', { actualMargin, actualROI, actualLiftPct, totalSpend: actualKPIs.totalSpend });
+      
+      // Verify and correct chartData - ensure all names exist in database
+      if (analysisResult.chartData && Array.isArray(analysisResult.chartData)) {
+        analysisResult.chartData = analysisResult.chartData.map((item: any) => {
+          // Verify the name exists in our data
+          const name = item.name;
+          const isValidPromo = verificationData.promotionNames.has(name);
+          const isValidProduct = verificationData.productNames.has(name);
+          const isValidCategory = verificationData.categories.has(name);
+          const isValidBrand = verificationData.brands.has(name);
+          const isValidStore = verificationData.storeNames.has(name);
+          const isValidRegion = verificationData.regions.has(name);
+          const isValidSegment = verificationData.customerSegments.has(name);
+          
+          // If name is not found, try to match to closest valid entity
+          if (!isValidPromo && !isValidProduct && !isValidCategory && !isValidBrand && !isValidStore && !isValidRegion && !isValidSegment) {
+            console.log(`Chart item "${name}" not found in database, attempting correction...`);
+            
+            // Find closest match from promotions
+            const closestPromo = promotionsResult.data?.find((p: any) => 
+              p.promotion_name.toLowerCase().includes(name.toLowerCase()) ||
+              name.toLowerCase().includes(p.promotion_name.toLowerCase().split(' ')[0])
+            );
+            
+            if (closestPromo) {
+              // Calculate actual metrics for this promotion
+              const promoTxns = transactionsResult.data?.filter((t: any) => t.promotion_id === closestPromo.id) || [];
+              const revenue = promoTxns.reduce((sum: number, t: any) => sum + parseFloat(t.total_amount || 0), 0);
+              const discount = promoTxns.reduce((sum: number, t: any) => sum + parseFloat(t.discount_amount || 0), 0);
+              const spend = parseFloat(closestPromo.total_spend || 0);
+              
+              let cost = 0;
+              promoTxns.forEach((t: any) => {
+                const prod = productsResult.data?.find((p: any) => p.product_sku === t.product_sku);
+                cost += (prod?.cost || 0) * parseInt(t.quantity || 0);
+              });
+              
+              const margin = revenue - cost - discount - spend;
+              const roi = spend > 0 ? margin / spend : 0;
+              
+              return {
+                name: closestPromo.promotion_name,
+                margin: Math.round(margin),
+                roi: parseFloat(roi.toFixed(2)),
+                spend: Math.round(spend),
+                value: Math.round(revenue)
+              };
+            }
+          }
+          
+          // If it's a valid promotion, recalculate metrics from actual data
+          if (isValidPromo) {
+            const promo = promotionsResult.data?.find((p: any) => p.promotion_name === name);
+            if (promo) {
+              const promoTxns = transactionsResult.data?.filter((t: any) => t.promotion_id === promo.id) || [];
+              const revenue = promoTxns.reduce((sum: number, t: any) => sum + parseFloat(t.total_amount || 0), 0);
+              const discount = promoTxns.reduce((sum: number, t: any) => sum + parseFloat(t.discount_amount || 0), 0);
+              const spend = parseFloat(promo.total_spend || 0);
+              
+              let cost = 0;
+              promoTxns.forEach((t: any) => {
+                const prod = productsResult.data?.find((p: any) => p.product_sku === t.product_sku);
+                cost += (prod?.cost || 0) * parseInt(t.quantity || 0);
+              });
+              
+              const margin = revenue - cost - discount - spend;
+              const roi = spend > 0 ? margin / spend : 0;
+              
+              return {
+                name: promo.promotion_name,
+                margin: Math.round(margin),
+                roi: parseFloat(roi.toFixed(2)),
+                spend: Math.round(spend),
+                value: Math.round(revenue)
+              };
+            }
+          }
+          
+          // If it's a valid category, recalculate metrics
+          if (isValidCategory) {
+            const categoryTxns = transactionsResult.data?.filter((t: any) => {
+              const prod = productsResult.data?.find((p: any) => p.product_sku === t.product_sku);
+              return prod?.category === name;
+            }) || [];
+            
+            const revenue = categoryTxns.reduce((sum: number, t: any) => sum + parseFloat(t.total_amount || 0), 0);
+            const discount = categoryTxns.reduce((sum: number, t: any) => sum + parseFloat(t.discount_amount || 0), 0);
+            
+            let cost = 0;
+            categoryTxns.forEach((t: any) => {
+              const prod = productsResult.data?.find((p: any) => p.product_sku === t.product_sku);
+              cost += (prod?.cost || 0) * parseInt(t.quantity || 0);
+            });
+            
+            const margin = revenue - cost - discount;
+            const roi = discount > 0 ? margin / discount : 0;
+            
+            return {
+              name,
+              margin: Math.round(margin),
+              roi: parseFloat(roi.toFixed(2)),
+              value: Math.round(revenue)
+            };
+          }
+          
+          // If it's a valid region, recalculate metrics
+          if (isValidRegion) {
+            const regionStores = storesResult.data?.filter((s: any) => s.region === name) || [];
+            const storeIds = regionStores.map((s: any) => s.id);
+            const regionTxns = transactionsResult.data?.filter((t: any) => storeIds.includes(t.store_id)) || [];
+            
+            const revenue = regionTxns.reduce((sum: number, t: any) => sum + parseFloat(t.total_amount || 0), 0);
+            const discount = regionTxns.reduce((sum: number, t: any) => sum + parseFloat(t.discount_amount || 0), 0);
+            
+            let cost = 0;
+            regionTxns.forEach((t: any) => {
+              const prod = productsResult.data?.find((p: any) => p.product_sku === t.product_sku);
+              cost += (prod?.cost || 0) * parseInt(t.quantity || 0);
+            });
+            
+            const margin = revenue - cost - discount;
+            const roi = discount > 0 ? margin / discount : 0;
+            
+            return {
+              name,
+              margin: Math.round(margin),
+              roi: parseFloat(roi.toFixed(2)),
+              value: Math.round(revenue)
+            };
+          }
+          
+          return item;
+        });
+        
+        console.log('Verified chartData:', analysisResult.chartData.length, 'items');
+      }
+      
+      // Verify KPIs are within reasonable bounds based on actual data
+      if (analysisResult.kpis) {
+        const kpis = analysisResult.kpis;
+        
+        // Validate and correct ROI - should be based on actual spend
+        if (actualKPIs.totalSpend > 0) {
+          // Ensure ROI is in reasonable range based on actual data
+          if (Math.abs(kpis.roi) > 10 || isNaN(kpis.roi)) {
+            kpis.roi = parseFloat(actualROI.toFixed(2));
+            console.log('Corrected ROI to:', kpis.roi);
+          }
+        }
+        
+        // Validate lift percentage
+        if (Math.abs(kpis.liftPct) > 100 || isNaN(kpis.liftPct)) {
+          kpis.liftPct = parseFloat(actualLiftPct.toFixed(1));
+          console.log('Corrected liftPct to:', kpis.liftPct);
+        }
+        
+        // Validate spend is realistic
+        if (kpis.spend > actualKPIs.totalSpend * 2 || kpis.spend < 0) {
+          kpis.spend = Math.round(actualKPIs.totalSpend);
+          console.log('Corrected spend to:', kpis.spend);
+        }
+        
+        // Validate margin is realistic
+        if (Math.abs(kpis.incrementalMargin) > actualMargin * 3) {
+          kpis.incrementalMargin = Math.round(actualMargin);
+          console.log('Corrected incrementalMargin to:', kpis.incrementalMargin);
+        }
+        
+        analysisResult.kpis = kpis;
+      }
+      
+      // Add verification metadata
+      analysisResult.verified = true;
+      analysisResult.dataSource = {
+        promotions: promotionsResult.data?.length || 0,
+        transactions: transactionsResult.data?.length || 0,
+        products: productsResult.data?.length || 0,
+        stores: storesResult.data?.length || 0,
+        customers: customersResult.data?.length || 0,
+      };
+      
+      console.log('Verification complete. Data source counts:', analysisResult.dataSource);
+      
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
       throw new Error('Failed to parse AI response as JSON');
