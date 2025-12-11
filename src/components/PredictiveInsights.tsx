@@ -8,15 +8,22 @@ interface PredictiveInsightsProps {
     forecast: string[];
     confidence: number;
     timeframe: string;
+    projectedImpact?: {
+      revenue: number;
+      margin: number;
+      roi: number;
+    };
   };
   causalDrivers?: {
     driver: string;
     impact: string;
     correlation: number;
+    actionable?: string;
   }[];
   mlInsights?: {
     pattern: string;
     significance: string;
+    recommendation?: string;
   }[];
 }
 
@@ -66,6 +73,33 @@ export default function PredictiveInsights({ predictions, causalDrivers, mlInsig
               </div>
             ))}
           </div>
+
+          {/* Projected Impact */}
+          {predictions.projectedImpact && (
+            <div className="mt-6 pt-4 border-t border-border">
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Projected Impact</h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-status-good/10 rounded-lg p-3 text-center">
+                  <div className="text-xs text-status-good mb-1">Revenue</div>
+                  <div className="text-lg font-bold text-status-good">
+                    ${(predictions.projectedImpact.revenue / 1000000).toFixed(1)}M
+                  </div>
+                </div>
+                <div className="bg-primary/10 rounded-lg p-3 text-center">
+                  <div className="text-xs text-primary mb-1">Margin</div>
+                  <div className="text-lg font-bold text-primary">
+                    ${(predictions.projectedImpact.margin / 1000).toFixed(0)}K
+                  </div>
+                </div>
+                <div className="bg-chart-3/10 rounded-lg p-3 text-center">
+                  <div className="text-xs text-chart-3 mb-1">ROI</div>
+                  <div className="text-lg font-bold text-chart-3">
+                    {predictions.projectedImpact.roi.toFixed(2)}x
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </Card>
       )}
 
@@ -95,6 +129,14 @@ export default function PredictiveInsights({ predictions, causalDrivers, mlInsig
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">{driver.impact}</p>
+                {driver.actionable && (
+                  <div className="mt-2 pt-2 border-t border-border/50">
+                    <p className="text-sm text-primary font-medium flex items-center gap-2">
+                      <span className="text-xs">💡</span>
+                      {driver.actionable}
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -119,6 +161,14 @@ export default function PredictiveInsights({ predictions, causalDrivers, mlInsig
                 <p className="text-sm text-muted-foreground leading-relaxed pl-7">
                   {insight.significance}
                 </p>
+                {insight.recommendation && (
+                  <div className="mt-2 pl-7">
+                    <p className="text-sm text-status-good font-medium flex items-center gap-2">
+                      <span className="text-xs">✓</span>
+                      {insight.recommendation}
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </div>

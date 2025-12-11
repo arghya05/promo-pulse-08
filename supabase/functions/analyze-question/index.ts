@@ -460,42 +460,46 @@ Focus on:
     // Build KPI focus instructions if user selected specific KPIs
     const kpiInstructions = selectedKPIs && selectedKPIs.length > 0 
       ? `
-USER-SELECTED KPIs FOR FOCUSED ANALYSIS:
-The user has specifically requested focus on these KPIs: ${selectedKPIs.join(', ')}
+USER-SELECTED KPIs FOR FOCUSED ANALYSIS (CRITICAL - THESE MUST APPEAR IN YOUR ANSWER):
+The user has specifically selected these KPIs: ${selectedKPIs.join(', ')}
 
-You MUST:
-1. Prioritize these selected KPIs in your analysis and insights
-2. Include specific calculations and values for each selected KPI
-3. Structure your chartData to include columns for these KPIs when relevant
-4. In whatHappened, why, and whatToDo sections, reference these KPIs explicitly
-5. In causalDrivers, show how factors impact these specific KPIs
-6. Format the kpis object to include these metrics with actual calculated values
+MANDATORY KPI DISPLAY REQUIREMENTS:
+1. For EACH selected KPI, you MUST calculate and display the actual value in your answer
+2. Include a "selectedKpiValues" object in your response with each KPI and its calculated value
+3. In whatHappened bullets, START with the selected KPI values and their context
+4. In why section, EXPLAIN what drives each selected KPI
+5. In whatToDo section, provide SPECIFIC actions to improve each selected KPI with TARGET numbers
+6. chartData MUST include columns for selected KPIs (e.g., if user selected "roi" and "lift_pct", each chart item must have these fields)
 
-KPI ID to Metric Mapping:
-- roi: Return on Investment (revenue/spend ratio)
-- lift_pct: Sales Lift % during promotion vs baseline
-- incremental_margin: Additional profit from promotion
-- promo_spend: Total promotion investment
-- revenue: Total sales revenue
-- gross_margin: Revenue minus COGS
-- margin_pct: Margin as % of revenue
-- aov: Average Order Value
-- units_sold: Quantity sold
-- customer_count: Unique customers
-- clv: Customer Lifetime Value
-- retention_rate: % customers returning
-- conversion_rate: Visitors to buyers %
-- redemption_rate: Coupon/offer redemption %
-- market_share: Share of market
-- stock_level: Current inventory
-- stockout_risk: Risk of stock depletion
-- impressions: Ad views
-- ctr: Click-through rate
-- roas: Return on ad spend
-- category_share: % of category sales
-- halo_effect: Cross-product sales lift
-- cannibalization: % sales taken from other products
-- price_elasticity: Price sensitivity coefficient
+KPI CALCULATION FORMULAS (use ACTUAL database values):
+- roi: (Revenue - Cost - Discounts - Spend) / Spend * 100, format as "1.85x"
+- lift_pct: ((Promo Sales - Baseline Sales) / Baseline Sales) * 100, format as "+18.5%"
+- incremental_margin: Revenue - Baseline Revenue - Variable Costs, format as "$XXX,XXX"
+- promo_spend: Sum of promotion total_spend, format as "$XXX,XXX"
+- revenue: Sum of transaction total_amount, format as "$X.XXM"
+- gross_margin: Revenue - COGS, format as "$XXX,XXX"
+- margin_pct: (Gross Margin / Revenue) * 100, format as "XX.X%"
+- aov: Total Revenue / Transaction Count, format as "$XX.XX"
+- units_sold: Sum of transaction quantities, format as "XX,XXX units"
+- customer_count: Distinct customer_ids, format as "X,XXX customers"
+- clv: Sum of customer total_lifetime_value / count, format as "$X,XXX"
+- retention_rate: Repeat customers / Total customers * 100, format as "XX%"
+- conversion_rate: Transactions / Store foot traffic * 100, format as "XX.X%"
+- redemption_rate: Redeemed / Issued * 100, format as "XX%"
+- market_share: Category sales / Total category market * 100, format as "XX.X%"
+- stock_level: Current inventory units, format as "X,XXX units"
+- stockout_risk: Items at risk / Total items * 100, format as "XX% at risk"
+- impressions: Marketing channel impressions sum, format as "X.XM"
+- ctr: Clicks / Impressions * 100, format as "X.XX%"
+- roas: Revenue / Marketing Spend, format as "X.Xx"
+- category_share: Category revenue / Total revenue * 100, format as "XX.X%"
+- halo_effect: Related product lift %, format as "+X.X%"
+- cannibalization: Lost sales from substitution / Promo sales * 100, format as "X.X%"
+- price_elasticity: % Change in demand / % Change in price, format as "-X.XX"
+
+EXAMPLE: If user selected ["roi", "lift_pct", "incremental_margin"]:
+- whatHappened MUST include: "ROI reached 1.85x on Dairy BOGO promotion, with 18.5% lift and $342,500 incremental margin"
+- selectedKpiValues MUST include: {"roi": 1.85, "lift_pct": 18.5, "incremental_margin": 342500}
 `
       : '';
 
@@ -564,41 +568,70 @@ ${dataContextMessage}
 
 Your response MUST be a valid JSON object with this exact structure:
 {
-  "whatHappened": ["bullet point 1", "bullet point 2", "bullet point 3"],
-  "why": ["reason 1", "reason 2", "reason 3"],
-  "whatToDo": ["recommendation 1", "recommendation 2"],
+  "whatHappened": ["bullet point 1 with specific KPI values", "bullet point 2 with numbers", "bullet point 3 with data"],
+  "why": ["data-backed reason 1 with correlation %", "reason 2 with specific metrics", "reason 3 tied to actual patterns"],
+  "whatToDo": ["ACTION-DRIVEN recommendation with TARGET: 'Increase Dairy BOGO from 20% to 25% discount - projected to lift ROI from 1.2x to 1.6x based on elasticity of -1.8'", "Second specific action with expected outcome and timeline"],
   "kpis": {
     "liftPct": number (calculated from actual data),
     "roi": number (calculated as (margin - spend) / spend from actual data),
     "incrementalMargin": number (sum of margins from relevant transactions),
     "spend": number (sum of total_spend from relevant promotions)
   },
+  "selectedKpiValues": {
+    "kpi_id": {"value": number, "formatted": "formatted string", "trend": "+X% vs prior period"}
+  },
   "chartData": [
-    {"name": "Category A", "roi": number, "margin": number},
-    {"name": "Category B", "roi": number, "margin": number}
+    {"name": "Category A", "roi": number, "margin": number, "forecast": number},
+    {"name": "Category B", "roi": number, "margin": number, "forecast": number}
   ],
   "drillPath": ["level1", "level2", "level3", ...],
   "nextQuestions": ["question 1", "question 2"],
   "sources": "string describing data sources",
   "predictions": {
-    "forecast": ["prediction 1", "prediction 2", "prediction 3"],
+    "forecast": ["SPECIFIC prediction with number: 'Beverages ROI will increase to 1.95x by Q2 if 20% discount maintained'", "Second prediction with $ impact", "Third prediction with timeline"],
     "confidence": number (between 0.6 and 0.95),
-    "timeframe": "string like 'Next 4 weeks' or 'Q2 2024'"
+    "timeframe": "string like 'Next 4 weeks' or 'Q2 2024'",
+    "projectedImpact": {
+      "revenue": number,
+      "margin": number,
+      "roi": number
+    }
   },
   "causalDrivers": [
     {
       "driver": "string describing the factor",
-      "impact": "string describing the effect with numbers from actual data",
-      "correlation": number (between -1 and 1)
+      "impact": "QUANTIFIED impact: '+$125K margin' or '-15% conversion'",
+      "correlation": number (between -1 and 1),
+      "actionable": "specific action to leverage/mitigate this driver"
     }
   ],
   "mlInsights": [
     {
       "pattern": "string describing detected pattern from actual data",
-      "significance": "string explaining why this matters"
+      "significance": "string explaining business impact with $ or % numbers",
+      "recommendation": "specific action based on this pattern"
     }
   ]
 }
+
+CRITICAL: ACTION-DRIVEN RECOMMENDATIONS WITH SPECIFIC NUMBERS
+Your whatToDo recommendations MUST follow this format:
+1. SPECIFIC ACTION: What exactly to do (e.g., "Increase discount from 15% to 20%", "Shift $50K budget from Snacks to Dairy")
+2. TARGET METRIC: What KPI will improve and by how much (e.g., "ROI projected to increase from 1.2x to 1.6x")
+3. DATA JUSTIFICATION: Why this works (e.g., "based on price elasticity of -1.8 and 23% lift at 20% depth in test stores")
+4. TIMELINE: When to implement (e.g., "Implement in Q1 2025 before seasonal peak")
+5. RISK MITIGATION: What could go wrong and how to monitor (e.g., "Monitor cannibalization rate weekly - abort if >25%")
+
+BAD RECOMMENDATION (too generic): "Consider increasing promotional activity"
+GOOD RECOMMENDATION: "Increase Dairy BOGO promotion budget by $75K (from $200K to $275K) to capture 12% more market share - based on 1.85x ROI performance and 18% lift in Northeast stores. Expected incremental margin: $138K over 6 weeks. Monitor cannibalization vs yogurt category weekly."
+
+PREDICTIVE FORECAST REQUIREMENTS:
+1. EVERY answer must include predictions with SPECIFIC NUMBERS
+2. Base forecasts on historical trends from PERFORMANCE BY MONTH data
+3. Include confidence intervals (e.g., "ROI forecast: 1.6x-1.9x with 85% confidence")
+4. Project specific $ impacts (e.g., "Expected revenue uplift: $2.3M over Q2")
+5. Provide 3 forecast scenarios: conservative, expected, optimistic
+6. Tie forecasts to actionable triggers (e.g., "If conversion drops below 12%, reduce discount to 15%")
 
 CRITICAL: REALISTIC NUMBERS FOR $3-4 BILLION US GROCERY RETAILER
 This retailer represents a major US grocery chain with:

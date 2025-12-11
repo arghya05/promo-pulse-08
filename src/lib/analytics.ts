@@ -21,6 +21,13 @@ export interface AnalyticsResult {
     incrementalMargin: number;
     spend: number;
   };
+  selectedKpiValues?: {
+    [kpiId: string]: {
+      value: number;
+      formatted: string;
+      trend?: string;
+    };
+  };
   sources: string;
   chartData: any[];
   nextQuestions: string[];
@@ -37,15 +44,22 @@ export interface AnalyticsResult {
     forecast: string[];
     confidence: number;
     timeframe: string;
+    projectedImpact?: {
+      revenue: number;
+      margin: number;
+      roi: number;
+    };
   };
   causalDrivers?: {
     driver: string;
     impact: string;
     correlation: number;
+    actionable?: string;
   }[];
   mlInsights?: {
     pattern: string;
     significance: string;
+    recommendation?: string;
   }[];
 }
 
