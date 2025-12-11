@@ -86,6 +86,9 @@ export default function Index() {
     const startTime = Date.now();
     
     try {
+      // Log what we're sending for debugging
+      console.log('Sending question with KPIs:', { question: questionToAsk, selectedKPIs });
+      
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-question`,
         {
@@ -97,7 +100,7 @@ export default function Index() {
             question: questionToAsk,
             persona: persona,
             categories: personaConfig[persona].categories,
-            selectedKPIs: selectedKPIs.length > 0 ? selectedKPIs : undefined
+            selectedKPIs: selectedKPIs.length > 0 ? selectedKPIs : null
           }),
         }
       );
@@ -147,6 +150,9 @@ export default function Index() {
     const startTime = Date.now();
     
     try {
+      // Log what we're sending for debugging
+      console.log('Chat sending question with KPIs:', { question: questionText, kpis });
+      
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-question`,
         {
@@ -158,7 +164,7 @@ export default function Index() {
             question: questionText,
             persona: persona,
             categories: personaConfig[persona].categories,
-            selectedKPIs: kpis.length > 0 ? kpis : undefined
+            selectedKPIs: kpis.length > 0 ? kpis : null
           }),
         }
       );
@@ -189,6 +195,8 @@ export default function Index() {
   }, [persona, toast]);
 
   const handleQuestionClick = async (question: string) => {
+    setQuery(question);
+    // Use current selectedKPIs - don't reset them
     await handleAsk(question);
   };
 
