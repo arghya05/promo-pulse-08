@@ -49,6 +49,11 @@ export interface AnalyticsResult {
       margin: number;
       roi: number;
     };
+    scenarios?: {
+      conservative: { revenue: number; margin: number; roi: number };
+      expected: { revenue: number; margin: number; roi: number };
+      optimistic: { revenue: number; margin: number; roi: number };
+    };
   };
   causalDrivers?: {
     driver: string;
