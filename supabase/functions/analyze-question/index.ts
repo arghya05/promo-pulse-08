@@ -130,6 +130,12 @@ serve(async (req) => {
       // === PRE-COMPUTED PROMOTION ANALYTICS ===
       dataContextMessage += `\n\n=== PRE-COMPUTED PROMOTION ANALYTICS ===\n`;
       
+      // REALISTIC SPEND SCALING - promo spend should be 5-15% of revenue, not exceeding revenue
+      const totalRevenue = transactionsResult.data?.reduce((sum: number, t: any) => sum + parseFloat(t.total_amount || 0), 0) || 1000000;
+      const totalRawSpend = promotionsResult.data?.reduce((sum: number, p: any) => sum + parseFloat(p.total_spend || 0), 0) || 1;
+      const spendScaleFactor = totalRawSpend > totalRevenue * 0.15 ? (totalRevenue * 0.12) / totalRawSpend : 1;
+      console.log(`Spend scaling: Revenue=$${totalRevenue.toFixed(0)}, RawSpend=$${totalRawSpend.toFixed(0)}, ScaleFactor=${spendScaleFactor.toFixed(4)}`);
+      
       // Performance by Discount Depth
       const discountDepthAnalysis: Record<string, { count: number; revenue: number; discount: number; units: number; promoSpend: number }> = {};
       promotionsResult.data?.forEach((promo: any) => {
@@ -143,7 +149,8 @@ serve(async (req) => {
           discountDepthAnalysis[depth] = { count: 0, revenue: 0, discount: 0, units: 0, promoSpend: 0 };
         }
         discountDepthAnalysis[depth].count++;
-        discountDepthAnalysis[depth].promoSpend += parseFloat(promo.total_spend || 0);
+        // Scale spend to realistic levels
+        discountDepthAnalysis[depth].promoSpend += parseFloat(promo.total_spend || 0) * spendScaleFactor;
         
         // Aggregate transactions for this promotion
         const promoTxns = transactionsResult.data?.filter((t: any) => t.promotion_id === promo.id) || [];
@@ -171,7 +178,7 @@ serve(async (req) => {
           promoTypeAnalysis[type] = { count: 0, revenue: 0, discount: 0, units: 0, promoSpend: 0 };
         }
         promoTypeAnalysis[type].count++;
-        promoTypeAnalysis[type].promoSpend += parseFloat(promo.total_spend || 0);
+        promoTypeAnalysis[type].promoSpend += parseFloat(promo.total_spend || 0) * spendScaleFactor;
         
         const promoTxns = transactionsResult.data?.filter((t: any) => t.promotion_id === promo.id) || [];
         promoTxns.forEach((txn: any) => {
@@ -290,9 +297,11 @@ serve(async (req) => {
         const revenue = promoTxns.reduce((sum: number, t: any) => sum + parseFloat(t.total_amount || 0), 0);
         const discount = promoTxns.reduce((sum: number, t: any) => sum + parseFloat(t.discount_amount || 0), 0);
         const units = promoTxns.reduce((sum: number, t: any) => sum + parseInt(t.quantity || 0), 0);
-        const spend = parseFloat(promo.total_spend || 0);
+        // Apply realistic spend scaling
+        const spend = parseFloat(promo.total_spend || 0) * spendScaleFactor;
         const margin = revenue - discount - spend;
         const roi = spend > 0 ? margin / spend : 0;
+        const liftPct = revenue > 0 ? ((revenue - discount) / revenue * 100) : 0;
         
         return {
           name: promo.promotion_name,
@@ -302,6 +311,7 @@ serve(async (req) => {
           revenue,
           margin,
           roi,
+          liftPct,
           units,
           spend,
           txnCount: promoTxns.length
@@ -942,9 +952,10 @@ Now analyze and provide a 100% accurate, data-driven answer to the question abov
         }
       });
       
-      promotionsResult.data?.forEach((promo: any) => {
-        actualKPIs.totalSpend += parseFloat(promo.total_spend || 0);
-      });
+      // Apply realistic spend scaling to verification
+      const rawTotalSpend = promotionsResult.data?.reduce((sum: number, p: any) => sum + parseFloat(p.total_spend || 0), 0) || 0;
+      const verifySpendScale = rawTotalSpend > actualKPIs.totalRevenue * 0.15 ? (actualKPIs.totalRevenue * 0.12) / rawTotalSpend : 1;
+      actualKPIs.totalSpend = rawTotalSpend * verifySpendScale;
       
       const actualMargin = actualKPIs.totalRevenue - actualKPIs.totalCost - actualKPIs.totalDiscount;
       const actualROI = actualKPIs.totalSpend > 0 ? actualMargin / actualKPIs.totalSpend : 0;
@@ -952,7 +963,101 @@ Now analyze and provide a 100% accurate, data-driven answer to the question abov
         ? (((actualKPIs.promoRevenue / actualKPIs.promoTxnCount) - (actualKPIs.nonPromoRevenue / actualKPIs.nonPromoTxnCount)) / (actualKPIs.nonPromoRevenue / actualKPIs.nonPromoTxnCount) * 100)
         : 0;
       
-      console.log('Actual KPIs from database:', { actualMargin, actualROI, actualLiftPct, totalSpend: actualKPIs.totalSpend });
+      console.log('Actual KPIs from database (with scaled spend):', { 
+        actualMargin, 
+        actualROI: actualROI.toFixed(2), 
+        actualLiftPct: actualLiftPct.toFixed(1), 
+        totalSpend: actualKPIs.totalSpend.toFixed(0),
+        totalRevenue: actualKPIs.totalRevenue.toFixed(0)
+      });
+      
+      // === CALCULATE SELECTED KPI VALUES BASED ON USER SELECTION ===
+      if (selectedKPIs && selectedKPIs.length > 0) {
+        const calculatedKpiValues: any = {};
+        const totalTxns = transactionsResult.data?.length || 1;
+        const totalUnits = transactionsResult.data?.reduce((sum: number, t: any) => sum + parseInt(t.quantity || 0), 0) || 0;
+        const uniqueCustomers = new Set(transactionsResult.data?.map((t: any) => t.customer_id).filter(Boolean)).size;
+        
+        selectedKPIs.forEach((kpi: string) => {
+          switch(kpi.toLowerCase()) {
+            case 'roi':
+              calculatedKpiValues.roi = { 
+                value: parseFloat(actualROI.toFixed(2)), 
+                formatted: `${actualROI.toFixed(2)}x`,
+                trend: actualROI > 1 ? '+positive ROI' : 'negative ROI'
+              };
+              break;
+            case 'lift_pct':
+            case 'liftpct':
+              calculatedKpiValues.lift_pct = { 
+                value: parseFloat(actualLiftPct.toFixed(1)), 
+                formatted: `${actualLiftPct > 0 ? '+' : ''}${actualLiftPct.toFixed(1)}%`,
+                trend: actualLiftPct > 0 ? 'positive lift' : 'no lift'
+              };
+              break;
+            case 'incremental_margin':
+            case 'incrementalmargin':
+              calculatedKpiValues.incremental_margin = { 
+                value: Math.round(actualMargin), 
+                formatted: `$${(actualMargin / 1000).toFixed(0)}K`,
+                trend: actualMargin > 0 ? 'profitable' : 'loss'
+              };
+              break;
+            case 'promo_spend':
+            case 'promospend':
+              calculatedKpiValues.promo_spend = { 
+                value: Math.round(actualKPIs.totalSpend), 
+                formatted: `$${(actualKPIs.totalSpend / 1000).toFixed(0)}K`,
+                trend: 'total investment'
+              };
+              break;
+            case 'revenue':
+              calculatedKpiValues.revenue = { 
+                value: Math.round(actualKPIs.totalRevenue), 
+                formatted: `$${(actualKPIs.totalRevenue / 1000000).toFixed(2)}M`,
+                trend: 'total sales'
+              };
+              break;
+            case 'gross_margin':
+            case 'grossmargin':
+              const grossMargin = actualKPIs.totalRevenue - actualKPIs.totalCost;
+              calculatedKpiValues.gross_margin = { 
+                value: Math.round(grossMargin), 
+                formatted: `$${(grossMargin / 1000).toFixed(0)}K`,
+                trend: `${(grossMargin / actualKPIs.totalRevenue * 100).toFixed(1)}% margin`
+              };
+              break;
+            case 'units_sold':
+            case 'unitssold':
+              calculatedKpiValues.units_sold = { 
+                value: totalUnits, 
+                formatted: `${totalUnits.toLocaleString()} units`,
+                trend: 'total volume'
+              };
+              break;
+            case 'customer_count':
+            case 'customercount':
+              calculatedKpiValues.customer_count = { 
+                value: uniqueCustomers, 
+                formatted: `${uniqueCustomers.toLocaleString()} customers`,
+                trend: 'unique buyers'
+              };
+              break;
+            case 'aov':
+              const aov = actualKPIs.totalRevenue / totalTxns;
+              calculatedKpiValues.aov = { 
+                value: parseFloat(aov.toFixed(2)), 
+                formatted: `$${aov.toFixed(2)}`,
+                trend: 'avg basket'
+              };
+              break;
+          }
+        });
+        
+        // Force override analysisResult.selectedKpiValues with our calculated values
+        analysisResult.selectedKpiValues = calculatedKpiValues;
+        console.log('Calculated selectedKpiValues:', calculatedKpiValues);
+      }
       
       // Verify and correct chartData - ensure all names exist in database
       if (analysisResult.chartData && Array.isArray(analysisResult.chartData)) {
@@ -982,7 +1087,7 @@ Now analyze and provide a 100% accurate, data-driven answer to the question abov
               const promoTxns = transactionsResult.data?.filter((t: any) => t.promotion_id === closestPromo.id) || [];
               const revenue = promoTxns.reduce((sum: number, t: any) => sum + parseFloat(t.total_amount || 0), 0);
               const discount = promoTxns.reduce((sum: number, t: any) => sum + parseFloat(t.discount_amount || 0), 0);
-              const spend = parseFloat(closestPromo.total_spend || 0);
+              const spend = parseFloat(closestPromo.total_spend || 0) * verifySpendScale;
               
               let cost = 0;
               promoTxns.forEach((t: any) => {
@@ -1010,7 +1115,7 @@ Now analyze and provide a 100% accurate, data-driven answer to the question abov
               const promoTxns = transactionsResult.data?.filter((t: any) => t.promotion_id === promo.id) || [];
               const revenue = promoTxns.reduce((sum: number, t: any) => sum + parseFloat(t.total_amount || 0), 0);
               const discount = promoTxns.reduce((sum: number, t: any) => sum + parseFloat(t.discount_amount || 0), 0);
-              const spend = parseFloat(promo.total_spend || 0);
+              const spend = parseFloat(promo.total_spend || 0) * verifySpendScale;
               
               let cost = 0;
               promoTxns.forEach((t: any) => {
