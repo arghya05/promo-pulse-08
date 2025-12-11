@@ -407,7 +407,29 @@ export default function Index() {
                   DATA INSIGHTS
                 </h2>
                 
-                {/* KPI Pills */}
+                {/* Selected KPIs Display - Show when user selected specific KPIs */}
+                {result.selectedKpiValues && Object.keys(result.selectedKpiValues).length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Your Selected KPIs</h3>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {Object.entries(result.selectedKpiValues).map(([kpiId, kpiData]) => (
+                        <div key={kpiId} className="bg-primary/10 border border-primary/20 rounded-lg p-4 overflow-hidden">
+                          <div className="text-xs text-primary mb-1 uppercase tracking-wide font-medium">{kpiId.replace(/_/g, ' ')}</div>
+                          <div className="text-xl sm:text-2xl font-bold text-primary tabular-nums truncate">
+                            {kpiData.formatted || kpiData.value}
+                          </div>
+                          {kpiData.trend && (
+                            <div className={`text-xs mt-1 ${kpiData.trend.startsWith('+') ? 'text-status-good' : kpiData.trend.startsWith('-') ? 'text-status-bad' : 'text-muted-foreground'}`}>
+                              {kpiData.trend}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Standard KPI Pills */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                   <div className="bg-secondary/50 rounded-lg p-4 overflow-hidden">
                     <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">Lift %</div>
