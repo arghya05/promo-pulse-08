@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Search, TrendingUp, AlertTriangle, CheckCircle2, ChevronRight, User, ChevronDown, MessageSquare, LayoutGrid } from "lucide-react";
+import { Search, TrendingUp, AlertTriangle, CheckCircle2, ChevronDown, User, MessageSquare, LayoutGrid } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -54,7 +54,7 @@ export default function Index() {
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
   const [persona, setPersona] = useState<Persona>('executive');
   const [selectedKPIs, setSelectedKPIs] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<'chat' | 'classic'>('chat');
+  
 
   // Format large numbers to fit in KPI cards
   const formatKPIValue = (value: number | null | undefined) => {
@@ -239,27 +239,6 @@ export default function Index() {
               <p className="text-sm text-muted-foreground">AI-powered promotion analysis and ROI intelligence</p>
             </div>
             <div className="flex items-center gap-3">
-              {/* View Mode Toggle */}
-              <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-1">
-                <Button 
-                  variant={viewMode === 'chat' ? 'secondary' : 'ghost'}
-                  size="sm" 
-                  onClick={() => setViewMode('chat')}
-                  className="gap-2"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  Chat
-                </Button>
-                <Button 
-                  variant={viewMode === 'classic' ? 'secondary' : 'ghost'}
-                  size="sm" 
-                  onClick={() => setViewMode('classic')}
-                  className="gap-2"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                  Classic
-                </Button>
-              </div>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -275,14 +254,22 @@ export default function Index() {
       </header>
 
       <div className="max-w-[1600px] mx-auto px-8 py-8">
-        <Tabs defaultValue="insights" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
-            <TabsTrigger value="insights">Insights & Analytics</TabsTrigger>
+        <Tabs defaultValue="chat" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 mb-8">
+            <TabsTrigger value="chat" className="gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Chat Assistant
+            </TabsTrigger>
+            <TabsTrigger value="classic" className="gap-2">
+              <LayoutGrid className="h-4 w-4" />
+              Classic View
+            </TabsTrigger>
             <TabsTrigger value="data">Data Management</TabsTrigger>
             <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="insights">
+          {/* Chat Assistant Tab */}
+          <TabsContent value="chat">
             {/* Persona Selector */}
             <div className="mb-6">
               <Card className="p-4 bg-card/50 backdrop-blur-sm border-border/50">
@@ -335,107 +322,151 @@ export default function Index() {
               </Card>
             </div>
 
-            {/* Chat Mode */}
-            {viewMode === 'chat' ? (
-              <div className="grid grid-cols-12 gap-6">
-                {/* Chat Interface */}
-                <div className="col-span-8">
-                  <ChatInterface
-                    persona={persona}
-                    personaConfig={personaConfig[persona]}
-                    onAsk={handleChatAsk}
-                    isLoading={isLoading}
-                    currentResult={result}
-                  />
-                </div>
-                
-                {/* Results Panel (shows when there's a result) */}
-                <div className="col-span-4 space-y-4">
-                  {result ? (
-                    <>
-                      {/* Quick KPIs */}
-                      <Card className="p-4">
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Key Metrics</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="bg-secondary/50 rounded-lg p-3">
-                            <div className="text-xs text-muted-foreground mb-0.5">ROI</div>
-                            <div className={`text-xl font-bold ${getKPIStatus("roi", Number(result.kpis?.roi) || 0) === "good" ? "text-status-good" : getKPIStatus("roi", Number(result.kpis?.roi) || 0) === "warning" ? "text-status-warning" : "text-status-bad"}`}>
-                              {(Number(result.kpis?.roi) || 0).toFixed(2)}x
-                            </div>
-                          </div>
-                          <div className="bg-secondary/50 rounded-lg p-3">
-                            <div className="text-xs text-muted-foreground mb-0.5">Lift</div>
-                            <div className={`text-xl font-bold ${getKPIStatus("liftPct", Number(result.kpis?.liftPct) || 0) === "good" ? "text-status-good" : "text-status-warning"}`}>
-                              {(Number(result.kpis?.liftPct) || 0).toFixed(1)}%
-                            </div>
-                          </div>
-                          <div className="bg-secondary/50 rounded-lg p-3">
-                            <div className="text-xs text-muted-foreground mb-0.5">Margin</div>
-                            <div className="text-xl font-bold text-foreground">
-                              {formatKPIValue(Number(result.kpis?.incrementalMargin) || 0)}
-                            </div>
-                          </div>
-                          <div className="bg-secondary/50 rounded-lg p-3">
-                            <div className="text-xs text-muted-foreground mb-0.5">Spend</div>
-                            <div className="text-xl font-bold text-foreground">
-                              {formatKPIValue(Number(result.kpis?.spend) || 0)}
-                            </div>
+            {/* Chat Interface */}
+            <div className="grid grid-cols-12 gap-6">
+              <div className="col-span-8">
+                <ChatInterface
+                  persona={persona}
+                  personaConfig={personaConfig[persona]}
+                  onAsk={handleChatAsk}
+                  isLoading={isLoading}
+                  currentResult={result}
+                />
+              </div>
+              
+              {/* Results Panel */}
+              <div className="col-span-4 space-y-4">
+                {result ? (
+                  <>
+                    {/* Quick KPIs */}
+                    <Card className="p-4">
+                      <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Key Metrics</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-secondary/50 rounded-lg p-3">
+                          <div className="text-xs text-muted-foreground mb-0.5">ROI</div>
+                          <div className={`text-xl font-bold ${getKPIStatus("roi", Number(result.kpis?.roi) || 0) === "good" ? "text-status-good" : getKPIStatus("roi", Number(result.kpis?.roi) || 0) === "warning" ? "text-status-warning" : "text-status-bad"}`}>
+                            {(Number(result.kpis?.roi) || 0).toFixed(2)}x
                           </div>
                         </div>
-                      </Card>
-
-                      {/* Mini Chart */}
-                      {result.chartData && result.chartData.length > 0 && (
-                        <Card className="p-4">
-                          <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Quick View</h3>
-                          <div className="h-48">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={result.chartData.slice(0, 5)} layout="vertical">
-                                <XAxis type="number" hide />
-                                <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 10 }} />
-                                <Tooltip />
-                                <Bar 
-                                  dataKey={Object.keys(result.chartData[0]).find(k => k !== 'name' && typeof result.chartData[0][k] === 'number') || 'value'} 
-                                  fill="hsl(var(--primary))" 
-                                  radius={[0, 4, 4, 0]}
-                                />
-                              </BarChart>
-                            </ResponsiveContainer>
+                        <div className="bg-secondary/50 rounded-lg p-3">
+                          <div className="text-xs text-muted-foreground mb-0.5">Lift</div>
+                          <div className={`text-xl font-bold ${getKPIStatus("liftPct", Number(result.kpis?.liftPct) || 0) === "good" ? "text-status-good" : "text-status-warning"}`}>
+                            {(Number(result.kpis?.liftPct) || 0).toFixed(1)}%
                           </div>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="w-full mt-2 text-xs"
-                            onClick={() => setViewMode('classic')}
-                          >
-                            View Full Analysis →
-                          </Button>
-                        </Card>
-                      )}
-                    </>
-                  ) : (
-                    /* Suggested Questions Panel */
-                    <Card className="p-4">
-                      <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Popular Questions</h3>
-                      <div className="space-y-2">
-                        {currentQuestions.slice(0, 5).map(q => (
-                          <button
-                            key={q.id}
-                            onClick={() => handleQuestionClick(q.question)}
-                            className="w-full text-left text-sm p-2.5 rounded-md hover:bg-accent transition-colors border border-transparent hover:border-border"
-                          >
-                            <Badge variant="outline" className="text-[10px] mb-1">{q.tag}</Badge>
-                            <p className="text-xs text-muted-foreground line-clamp-2">{q.question}</p>
-                          </button>
-                        ))}
+                        </div>
+                        <div className="bg-secondary/50 rounded-lg p-3">
+                          <div className="text-xs text-muted-foreground mb-0.5">Margin</div>
+                          <div className="text-xl font-bold text-foreground">
+                            {formatKPIValue(Number(result.kpis?.incrementalMargin) || 0)}
+                          </div>
+                        </div>
+                        <div className="bg-secondary/50 rounded-lg p-3">
+                          <div className="text-xs text-muted-foreground mb-0.5">Spend</div>
+                          <div className="text-xl font-bold text-foreground">
+                            {formatKPIValue(Number(result.kpis?.spend) || 0)}
+                          </div>
+                        </div>
                       </div>
                     </Card>
-                  )}
-                </div>
+
+                    {/* Mini Chart */}
+                    {result.chartData && result.chartData.length > 0 && (
+                      <Card className="p-4">
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Quick View</h3>
+                        <div className="h-48">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={result.chartData.slice(0, 5)} layout="vertical">
+                              <XAxis type="number" hide />
+                              <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 10 }} />
+                              <Tooltip />
+                              <Bar 
+                                dataKey={Object.keys(result.chartData[0]).find(k => k !== 'name' && typeof result.chartData[0][k] === 'number') || 'value'} 
+                                fill="hsl(var(--primary))" 
+                                radius={[0, 4, 4, 0]}
+                              />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </Card>
+                    )}
+                  </>
+                ) : (
+                  /* Suggested Questions Panel */
+                  <Card className="p-4">
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Popular Questions</h3>
+                    <div className="space-y-2">
+                      {currentQuestions.slice(0, 5).map(q => (
+                        <button
+                          key={q.id}
+                          onClick={() => handleQuestionClick(q.question)}
+                          className="w-full text-left text-sm p-2.5 rounded-md hover:bg-accent transition-colors border border-transparent hover:border-border"
+                        >
+                          <Badge variant="outline" className="text-[10px] mb-1">{q.tag}</Badge>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{q.question}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </Card>
+                )}
               </div>
-            ) : (
-              /* Classic Mode */
-              <>
+            </div>
+          </TabsContent>
+
+          {/* Classic View Tab */}
+          <TabsContent value="classic">
+            {/* Persona Selector */}
+            <div className="mb-6">
+              <Card className="p-4 bg-card/50 backdrop-blur-sm border-border/50">
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground min-w-fit">
+                    <User className="h-4 w-4" />
+                    <span>Viewing as:</span>
+                  </div>
+                  
+                  <Select value={persona} onValueChange={(value: Persona) => setPersona(value)}>
+                    <SelectTrigger className="w-[380px] h-12 bg-background border-border shadow-sm hover:bg-accent/50 transition-colors">
+                      <SelectValue>
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg">{personaConfig[persona].icon}</span>
+                          <div className="text-left">
+                            <div className="font-semibold text-foreground">{personaConfig[persona].label}</div>
+                            <div className="text-xs text-muted-foreground">{personaConfig[persona].description}</div>
+                          </div>
+                        </div>
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border shadow-lg">
+                      {Object.entries(personaConfig).map(([key, config]) => (
+                        <SelectItem 
+                          key={key} 
+                          value={key}
+                          className="py-3 px-3 cursor-pointer hover:bg-accent focus:bg-accent"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg">{config.icon}</span>
+                            <div>
+                              <div className="font-semibold text-foreground">{config.label}</div>
+                              <div className="text-xs text-muted-foreground">{config.description}</div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Badge 
+                    variant="secondary" 
+                    className="px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary border-0"
+                  >
+                    {personaConfig[persona].categories 
+                      ? `${personaConfig[persona].categories.length} categories` 
+                      : 'All categories'}
+                  </Badge>
+                </div>
+              </Card>
+            </div>
+
+            {/* Classic Mode Content */}
                 <div className="mb-8 space-y-6">
                   {/* Search Bar */}
                   <Card className="p-2 bg-card border-border shadow-sm">
@@ -841,8 +872,6 @@ export default function Index() {
             </div>
           </div>
           )}
-              </>
-            )}
           </TabsContent>
 
           <TabsContent value="data">
