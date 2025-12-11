@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Sparkles, ArrowRight, Lightbulb, TrendingUp, AlertTriangle, HelpCircle, Target, Compass, ChevronRight, Zap, BarChart3, PieChart, Clock, Filter } from "lucide-react";
+import { Send, Bot, User, Sparkles, ArrowRight, Lightbulb, TrendingUp, AlertTriangle, HelpCircle, Target, Compass, ChevronRight, Zap, BarChart3, PieChart, Clock, Filter, ThumbsUp, ThumbsDown, RefreshCw, MessageSquare, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import VoiceRecorder from "./VoiceRecorder";
 import KPISelector from "./KPISelector";
+import { useToast } from "@/hooks/use-toast";
 import type { AnalyticsResult } from "@/lib/analytics";
 
 interface Message {
@@ -18,6 +19,19 @@ interface Message {
   suggestions?: string[];
   guideTip?: string;
   actionButtons?: { label: string; question: string; icon: string }[];
+  feedback?: 'positive' | 'negative' | null;
+  isError?: boolean;
+  needsClarification?: boolean;
+  clarificationOptions?: string[];
+}
+
+// Conversation context for memory
+interface ConversationContext {
+  lastCategory?: string;
+  lastMetric?: string;
+  lastTimePeriod?: string;
+  lastPromotion?: string;
+  recentTopics: string[];
 }
 
 interface ChatInterfaceProps {
@@ -165,7 +179,22 @@ const contextualPrompts = {
     { text: "How do I read the charts?", icon: BarChart3 },
     { text: "What data do you have?", icon: Compass },
   ],
+  errorSuggestions: [
+    "Try asking about top promotions by ROI",
+    "Ask about category performance comparison",
+    "Request a forecast for next quarter",
+    "Explore underperforming promotions",
+  ],
 };
+
+// Progress messages for loading state
+const progressMessages = [
+  { text: "Connecting to analytics engine...", delay: 0 },
+  { text: "Querying transaction data...", delay: 800 },
+  { text: "Analyzing promotion performance...", delay: 1600 },
+  { text: "Calculating KPIs...", delay: 2400 },
+  { text: "Generating insights...", delay: 3200 },
+];
 
 export default function ChatInterface({ 
   persona, 
@@ -174,6 +203,7 @@ export default function ChatInterface({
   isLoading, 
   currentResult 
 }: ChatInterfaceProps) {
+  const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [query, setQuery] = useState("");
   const [selectedKPIs, setSelectedKPIs] = useState<string[]>([]);
@@ -181,11 +211,26 @@ export default function ChatInterface({
   const [showHelpMenu, setShowHelpMenu] = useState(false);
   const [messageCount, setMessageCount] = useState(0);
   const [lastPersona, setLastPersona] = useState(persona);
+  const [refinementInput, setRefinementInput] = useState("");
+  const [showRefinement, setShowRefinement] = useState<string | null>(null);
+  const [progressIndex, setProgressIndex] = useState(0);
+  const [conversationContext, setConversationContext] = useState<ConversationContext>({ recentTopics: [] });
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const personaKey = getPersonaKey(persona);
   const content = personaContent[personaKey];
+
+  // Progress indicator during loading
+  useEffect(() => {
+    if (isLoading) {
+      setProgressIndex(0);
+      const interval = setInterval(() => {
+        setProgressIndex(prev => Math.min(prev + 1, progressMessages.length - 1));
+      }, 800);
+      return () => clearInterval(interval);
+    }
+  }, [isLoading]);
 
   // Initialize with greeting - reset when persona changes
   useEffect(() => {
@@ -202,6 +247,7 @@ export default function ChatInterface({
       }]);
       setLastPersona(persona);
       setMessageCount(0);
+      setConversationContext({ recentTopics: [] });
     }
   }, [persona, content]);
 
@@ -212,6 +258,102 @@ export default function ChatInterface({
     }
   }, [messages, isLoading]);
 
+  // Update conversation context from question
+  const updateContext = (question: string, result?: AnalyticsResult) => {
+    const categories = ['dairy', 'beverages', 'snacks', 'produce', 'frozen', 'bakery', 'pantry', 'personal care', 'home care'];
+    const metrics = ['roi', 'margin', 'lift', 'spend', 'revenue'];
+    const timePeriods = ['month', 'quarter', 'year', 'ytd'];
+    
+    const questionLower = question.toLowerCase();
+    const newContext = { ...conversationContext };
+    
+    categories.forEach(cat => {
+      if (questionLower.includes(cat)) newContext.lastCategory = cat;
+    });
+    metrics.forEach(metric => {
+      if (questionLower.includes(metric)) newContext.lastMetric = metric;
+    });
+    timePeriods.forEach(period => {
+      if (questionLower.includes(period)) newContext.lastTimePeriod = period;
+    });
+    
+    // Extract promotion names from results
+    if (result?.chartData?.[0]?.name) {
+      newContext.lastPromotion = result.chartData[0].name;
+    }
+    
+    // Track recent topics
+    newContext.recentTopics = [question, ...newContext.recentTopics].slice(0, 5);
+    
+    setConversationContext(newContext);
+  };
+
+  // Resolve context-dependent questions (conversation memory)
+  const resolveContextualQuestion = (question: string): string => {
+    const questionLower = question.toLowerCase();
+    
+    // Check for context-dependent phrases
+    if (questionLower.includes('same for') || questionLower.includes('show me the same')) {
+      // User wants to apply previous analysis to new context
+      const lastTopic = conversationContext.recentTopics[0] || '';
+      return question;
+    }
+    
+    if (questionLower.includes('that category') || questionLower.includes('this category')) {
+      if (conversationContext.lastCategory) {
+        return question.replace(/that category|this category/gi, conversationContext.lastCategory);
+      }
+    }
+    
+    if (questionLower.includes('that promotion') || questionLower.includes('this promotion')) {
+      if (conversationContext.lastPromotion) {
+        return question.replace(/that promotion|this promotion/gi, `"${conversationContext.lastPromotion}"`);
+      }
+    }
+    
+    if (questionLower === 'compare to last year' || questionLower === 'show last year') {
+      const lastQuestion = conversationContext.recentTopics[0];
+      if (lastQuestion) {
+        return `${lastQuestion} compared to last year`;
+      }
+    }
+    
+    return question;
+  };
+
+  // Check if question needs clarification
+  const needsClarification = (question: string): { needs: boolean; options?: string[] } => {
+    const questionLower = question.toLowerCase();
+    
+    // Vague questions that need time period
+    if ((questionLower.includes('performance') || questionLower.includes('how') || questionLower.includes('show')) 
+        && !questionLower.includes('month') && !questionLower.includes('quarter') && !questionLower.includes('year')) {
+      return {
+        needs: true,
+        options: [
+          `${question} for last month`,
+          `${question} for last quarter`,
+          `${question} for last year`,
+        ]
+      };
+    }
+    
+    // Generic "best" or "top" without metric
+    if ((questionLower.includes('best') || questionLower.includes('top')) 
+        && !questionLower.includes('roi') && !questionLower.includes('margin') && !questionLower.includes('lift')) {
+      return {
+        needs: true,
+        options: [
+          `${question} by ROI`,
+          `${question} by margin`,
+          `${question} by lift percentage`,
+        ]
+      };
+    }
+    
+    return { needs: false };
+  };
+
   // Update messages when result changes
   useEffect(() => {
     if (currentResult && messages.length > 0) {
@@ -220,6 +362,8 @@ export default function ChatInterface({
         const followUpSuggestions = generateFollowUps(currentResult);
         const response = generateConversationalResponse(currentResult);
         const tip = generateContextualTip(currentResult, messageCount);
+        
+        updateContext(lastMessage.content, currentResult);
         
         setMessages(prev => [...prev, {
           id: Date.now().toString(),
@@ -230,6 +374,7 @@ export default function ChatInterface({
           suggestions: followUpSuggestions,
           guideTip: tip,
           actionButtons: generateActionButtons(currentResult),
+          feedback: null,
         }]);
         
         setMessageCount(prev => prev + 1);
@@ -261,7 +406,6 @@ export default function ChatInterface({
   };
 
   const generateContextualTip = (result: AnalyticsResult, count: number): string | undefined => {
-    // Show tips periodically to guide users
     if (count === 1) return "💡 Tip: Click on chart bars to drill down and see more details";
     if (count === 3) return "🎯 Tip: Select specific KPIs before asking to focus your analysis";
     if (count === 5) return "🔮 Tip: Try predictive questions like 'Forecast next quarter's ROI'";
@@ -285,7 +429,7 @@ export default function ChatInterface({
       buttons.push({ label: "Explore scenarios", question: "Show me different forecast scenarios", icon: "layers" });
     }
     
-    return buttons.slice(0, 2); // Max 2 buttons
+    return buttons.slice(0, 2);
   };
 
   const generateFollowUps = (result: AnalyticsResult): string[] => {
@@ -308,10 +452,37 @@ export default function ChatInterface({
   const handleSend = async () => {
     if (!query.trim() || isLoading) return;
 
+    // Check for clarification needs
+    const clarification = needsClarification(query);
+    if (clarification.needs && clarification.options) {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: query,
+        timestamp: new Date(),
+      };
+      
+      const clarifyMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: "🤔 I want to give you the most relevant analysis. Could you clarify?",
+        timestamp: new Date(),
+        needsClarification: true,
+        clarificationOptions: clarification.options,
+      };
+      
+      setMessages(prev => [...prev, userMessage, clarifyMessage]);
+      setQuery("");
+      return;
+    }
+
+    // Resolve contextual references
+    const resolvedQuestion = resolveContextualQuestion(query);
+
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
-      content: query,
+      content: resolvedQuestion,
       timestamp: new Date(),
     };
 
@@ -320,8 +491,21 @@ export default function ChatInterface({
     setShowKPISelector(false);
     setShowHelpMenu(false);
 
-    await onAsk(query, selectedKPIs);
-    setSelectedKPIs([]);
+    try {
+      await onAsk(resolvedQuestion, selectedKPIs);
+      setSelectedKPIs([]);
+    } catch (error) {
+      // Error handling with suggestions
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: "😕 I ran into an issue analyzing that question. Here are some things you can try:",
+        timestamp: new Date(),
+        isError: true,
+        suggestions: contextualPrompts.errorSuggestions,
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    }
   };
 
   const handleSuggestionClick = async (suggestion: string) => {
@@ -336,8 +520,47 @@ export default function ChatInterface({
     };
 
     setMessages(prev => [...prev, userMessage]);
-    // Pass current selectedKPIs instead of empty array
-    await onAsk(suggestion, selectedKPIs);
+    
+    try {
+      await onAsk(suggestion, selectedKPIs);
+    } catch (error) {
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: "😕 Something went wrong. Try rephrasing your question or selecting a different option.",
+        timestamp: new Date(),
+        isError: true,
+        suggestions: contextualPrompts.errorSuggestions,
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    }
+  };
+
+  const handleRefinement = async (messageId: string) => {
+    if (!refinementInput.trim()) return;
+    
+    const originalMessage = messages.find(m => m.id === messageId);
+    if (!originalMessage?.analyticsResult) return;
+    
+    const refinedQuestion = `${originalMessage.analyticsResult.sources || 'Analysis'} ${refinementInput}`;
+    setRefinementInput("");
+    setShowRefinement(null);
+    
+    await handleSuggestionClick(refinedQuestion);
+  };
+
+  const handleFeedback = (messageId: string, type: 'positive' | 'negative') => {
+    setMessages(prev => prev.map(m => 
+      m.id === messageId ? { ...m, feedback: type } : m
+    ));
+    
+    toast({
+      title: type === 'positive' ? "Thanks for the feedback! 👍" : "Sorry to hear that 👎",
+      description: type === 'positive' 
+        ? "Glad this was helpful!" 
+        : "I'll try to do better. Try rephrasing or asking a follow-up.",
+      duration: 2000,
+    });
   };
 
   const handleVoiceTranscript = (text: string) => {
@@ -364,15 +587,23 @@ export default function ChatInterface({
               </p>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-primary"
-            onClick={() => setShowHelpMenu(!showHelpMenu)}
-          >
-            <HelpCircle className="h-4 w-4 mr-1" />
-            Need help?
-          </Button>
+          <div className="flex items-center gap-2">
+            {conversationContext.recentTopics.length > 0 && (
+              <Badge variant="outline" className="text-[10px] gap-1">
+                <MessageSquare className="h-3 w-3" />
+                {conversationContext.recentTopics.length} context
+              </Badge>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-primary"
+              onClick={() => setShowHelpMenu(!showHelpMenu)}
+            >
+              <HelpCircle className="h-4 w-4 mr-1" />
+              Need help?
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -406,6 +637,8 @@ export default function ChatInterface({
               <div className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                 message.type === 'user' 
                   ? 'bg-primary text-primary-foreground' 
+                  : message.isError 
+                  ? 'bg-destructive/20 text-destructive'
                   : 'bg-secondary text-secondary-foreground'
               }`}>
                 {message.type === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
@@ -416,16 +649,62 @@ export default function ChatInterface({
                 <div className={`rounded-2xl px-4 py-3 ${
                   message.type === 'user'
                     ? 'bg-primary text-primary-foreground rounded-br-md'
+                    : message.isError
+                    ? 'bg-destructive/10 text-foreground border border-destructive/30 rounded-bl-md'
                     : 'bg-secondary/50 text-foreground rounded-bl-md'
                 }`}>
                   <p className="text-sm leading-relaxed">{message.content}</p>
                 </div>
+
+                {/* Clarification Options */}
+                {message.needsClarification && message.clarificationOptions && (
+                  <div className="mt-2 space-y-2">
+                    <p className="text-[10px] text-muted-foreground">Choose an option or type your own:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {message.clarificationOptions.map((option, idx) => (
+                        <Button
+                          key={idx}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-7"
+                          onClick={() => handleSuggestionClick(option)}
+                          disabled={isLoading}
+                        >
+                          {option}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Guide Tip */}
                 {message.guideTip && (
                   <div className="flex items-start gap-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg max-w-full">
                     <Zap className="h-3.5 w-3.5 text-primary flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-muted-foreground">{message.guideTip}</p>
+                  </div>
+                )}
+
+                {/* Feedback Buttons - Feature #5 */}
+                {message.analyticsResult && message.type === 'assistant' && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] text-muted-foreground">Was this helpful?</span>
+                    <Button
+                      variant={message.feedback === 'positive' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => handleFeedback(message.id, 'positive')}
+                    >
+                      <ThumbsUp className={`h-3 w-3 ${message.feedback === 'positive' ? 'text-primary-foreground' : ''}`} />
+                    </Button>
+                    <Button
+                      variant={message.feedback === 'negative' ? 'destructive' : 'ghost'}
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => handleFeedback(message.id, 'negative')}
+                    >
+                      <ThumbsDown className={`h-3 w-3 ${message.feedback === 'negative' ? 'text-destructive-foreground' : ''}`} />
+                    </Button>
                   </div>
                 )}
 
@@ -445,6 +724,50 @@ export default function ChatInterface({
                         {btn.label}
                       </Button>
                     ))}
+                  </div>
+                )}
+
+                {/* Inline Refinement Input - Feature #3 */}
+                {message.analyticsResult && (
+                  <div className="mt-2">
+                    {showRefinement === message.id ? (
+                      <div className="flex gap-2 items-center">
+                        <Input
+                          value={refinementInput}
+                          onChange={(e) => setRefinementInput(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleRefinement(message.id)}
+                          placeholder="e.g., 'focus on Dairy only' or 'for Q1'"
+                          className="text-xs h-8 w-48"
+                          autoFocus
+                        />
+                        <Button
+                          size="sm"
+                          className="h-8"
+                          onClick={() => handleRefinement(message.id)}
+                          disabled={!refinementInput.trim() || isLoading}
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8"
+                          onClick={() => setShowRefinement(null)}
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-[10px] h-6 text-muted-foreground hover:text-primary"
+                        onClick={() => setShowRefinement(message.id)}
+                      >
+                        <Filter className="h-3 w-3 mr-1" />
+                        Refine this analysis...
+                      </Button>
+                    )}
                   </div>
                 )}
 
@@ -532,20 +855,28 @@ export default function ChatInterface({
             </div>
           ))}
 
-          {/* Loading indicator */}
+          {/* Loading indicator with progress - Feature #4 */}
           {isLoading && (
             <div className="flex gap-3">
               <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
                 <Bot className="h-4 w-4 text-secondary-foreground" />
               </div>
               <div className="bg-secondary/50 rounded-2xl rounded-bl-md px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-1">
-                    <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span className="text-sm text-foreground">{progressMessages[progressIndex].text}</span>
                   </div>
-                  <span className="text-sm text-muted-foreground">Analyzing your data...</span>
+                  <div className="flex gap-1">
+                    {progressMessages.map((_, idx) => (
+                      <div 
+                        key={idx} 
+                        className={`h-1 w-6 rounded-full transition-colors ${
+                          idx <= progressIndex ? 'bg-primary' : 'bg-muted'
+                        }`} 
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -553,7 +884,7 @@ export default function ChatInterface({
         </div>
       </ScrollArea>
 
-      {/* Quick Actions Bar - Show on initial or when exploration is needed */}
+      {/* Quick Actions Bar */}
       {(messages.length === 1 || (messages.length > 0 && messages.length % 5 === 0)) && !isLoading && (
         <div className="px-6 py-3 border-t border-border/50 bg-gradient-to-r from-secondary/30 to-secondary/10">
           <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
@@ -579,7 +910,7 @@ export default function ChatInterface({
         </div>
       )}
 
-      {/* KPI Selector (expandable) */}
+      {/* KPI Selector */}
       {showKPISelector && query.length > 3 && (
         <div className="px-6 py-3 border-t border-border/50 bg-secondary/10">
           <KPISelector
@@ -632,7 +963,7 @@ export default function ChatInterface({
         </div>
         
         <p className="text-[10px] text-muted-foreground mt-2 text-center">
-          💬 Just type naturally • 🎤 Use voice • 📊 Select KPIs for focused analysis • 🆘 Click "Need help?" anytime
+          💬 I remember context • 🎤 Use voice • 📊 Select KPIs • 🔄 Refine any answer • 🆘 Click "Need help?" anytime
         </p>
       </div>
     </div>
