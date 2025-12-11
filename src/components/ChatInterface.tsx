@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Sparkles, ArrowRight, Lightbulb, TrendingUp, AlertTriangle, HelpCircle, Target, Compass, ChevronRight, Zap, BarChart3, PieChart, Clock, Filter, ThumbsUp, ThumbsDown, RefreshCw, MessageSquare, Loader2 } from "lucide-react";
+import { Send, Bot, User, Sparkles, ArrowRight, Lightbulb, TrendingUp, AlertTriangle, HelpCircle, Target, Compass, ChevronRight, Zap, BarChart3, PieChart, Clock, Filter, ThumbsUp, ThumbsDown, RefreshCw, MessageSquare, Loader2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import VoiceRecorder from "./VoiceRecorder";
 import KPISelector from "./KPISelector";
 import { useToast } from "@/hooks/use-toast";
 import type { AnalyticsResult } from "@/lib/analytics";
+import { getSuggestedKPIs, KPI } from "@/lib/data/kpi-library";
 
 interface Message {
   id: string;
@@ -23,6 +24,8 @@ interface Message {
   isError?: boolean;
   needsClarification?: boolean;
   clarificationOptions?: string[];
+  kpiExploration?: KPI[];
+  originalQuestion?: string;
 }
 
 // Conversation context for memory
@@ -354,6 +357,11 @@ export default function ChatInterface({
     return { needs: false };
   };
 
+  // Generate KPI exploration options based on question
+  const generateKPIExploration = (question: string): KPI[] => {
+    return getSuggestedKPIs(question);
+  };
+
   // Update messages when result changes
   useEffect(() => {
     if (currentResult && messages.length > 0) {
@@ -362,6 +370,7 @@ export default function ChatInterface({
         const followUpSuggestions = generateFollowUps(currentResult);
         const response = generateConversationalResponse(currentResult);
         const tip = generateContextualTip(currentResult, messageCount);
+        const kpiExploration = generateKPIExploration(lastMessage.content);
         
         updateContext(lastMessage.content, currentResult);
         
@@ -375,6 +384,8 @@ export default function ChatInterface({
           guideTip: tip,
           actionButtons: generateActionButtons(currentResult),
           feedback: null,
+          kpiExploration,
+          originalQuestion: lastMessage.content,
         }]);
         
         setMessageCount(prev => prev + 1);
@@ -705,6 +716,36 @@ export default function ChatInterface({
                     >
                       <ThumbsDown className={`h-3 w-3 ${message.feedback === 'negative' ? 'text-destructive-foreground' : ''}`} />
                     </Button>
+                  </div>
+                )}
+
+                {/* KPI Exploration Probing - New Feature */}
+                {message.kpiExploration && message.kpiExploration.length > 0 && message.analyticsResult && (
+                  <div className="mt-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      <span className="text-xs font-medium text-foreground">Explore Different KPIs</span>
+                      <Badge variant="secondary" className="text-[9px] px-1.5 py-0">AI-Powered</Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {message.kpiExploration.map((kpi) => (
+                        <Button
+                          key={kpi.id}
+                          variant="outline"
+                          size="sm"
+                          className="text-[11px] h-7 px-2.5 bg-primary text-primary-foreground hover:bg-primary/90 border-primary gap-1"
+                          onClick={() => handleSuggestionClick(`${message.originalQuestion || 'Show analysis'} focusing on ${kpi.label}`)}
+                          disabled={isLoading}
+                          title={kpi.description}
+                        >
+                          <TrendingUp className="h-3 w-3" />
+                          {kpi.name}
+                        </Button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-2">
+                      Click a KPI to see the same analysis from a different metric perspective
+                    </p>
                   </div>
                 )}
 
