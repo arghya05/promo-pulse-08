@@ -167,10 +167,13 @@ export default function SearchSuggestions({ query, onSelect, isVisible, persona 
             <button
               type="button"
               className={cn(
-                "w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-accent transition-colors",
+                "w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-accent transition-colors cursor-pointer",
                 suggestion.highlight && "bg-primary/5"
               )}
-              onClick={() => onSelect(suggestion.text)}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onSelect(suggestion.text);
+              }}
             >
               <suggestion.icon className={cn(
                 "h-4 w-4 flex-shrink-0",
