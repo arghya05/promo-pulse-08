@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Search, TrendingUp, AlertTriangle, CheckCircle2, ChevronRight, User, ChevronDown } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Search, TrendingUp, AlertTriangle, CheckCircle2, ChevronRight, User, ChevronDown, MessageSquare, LayoutGrid } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -19,6 +19,7 @@ import DataManagement from "@/components/DataManagement";
 import { RecommendationsEngine } from "@/components/RecommendationsEngine";
 import IntelligentDrillDown from "@/components/IntelligentDrillDown";
 import KPISelector from "@/components/KPISelector";
+import ChatInterface from "@/components/ChatInterface";
 
 type Persona = 'executive' | 'consumables' | 'non_consumables';
 
@@ -53,6 +54,7 @@ export default function Index() {
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
   const [persona, setPersona] = useState<Persona>('executive');
   const [selectedKPIs, setSelectedKPIs] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'chat' | 'classic'>('chat');
 
   // Format large numbers to fit in KPI cards
   const formatKPIValue = (value: number | null | undefined) => {
@@ -134,6 +136,58 @@ export default function Index() {
     }
   };
 
+  // Callback for ChatInterface
+  const handleChatAsk = useCallback(async (questionText: string, kpis: string[]): Promise<AnalyticsResult | null> => {
+    setQuery(questionText);
+    setSelectedKPIs(kpis);
+    setIsLoading(true);
+    setCacheHit(false);
+    setResponseTime(null);
+    
+    const startTime = Date.now();
+    
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-question`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            question: questionText,
+            persona: persona,
+            categories: personaConfig[persona].categories,
+            selectedKPIs: kpis.length > 0 ? kpis : undefined
+          }),
+        }
+      );
+
+      const elapsed = Date.now() - startTime;
+      setResponseTime(elapsed);
+      setCacheHit(response.headers.get('X-Cache') === 'HIT');
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze question');
+      }
+
+      const analyticsResult = await response.json();
+      setResult(analyticsResult);
+      return analyticsResult;
+    } catch (error) {
+      console.error('Error analyzing question:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to analyze question",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [persona, toast]);
+
   const handleQuestionClick = async (question: string) => {
     await handleAsk(question);
   };
@@ -184,15 +238,38 @@ export default function Index() {
               <h1 className="text-2xl font-bold text-foreground mb-1">Promotion Intelligence</h1>
               <p className="text-sm text-muted-foreground">AI-powered promotion analysis and ROI intelligence</p>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setShowRisksOnly(!showRisksOnly)}
-              className="gap-2"
-            >
-              <AlertTriangle className="h-4 w-4" />
-              {showRisksOnly ? "Show all" : "Show anomalies only"}
-            </Button>
+            <div className="flex items-center gap-3">
+              {/* View Mode Toggle */}
+              <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-1">
+                <Button 
+                  variant={viewMode === 'chat' ? 'secondary' : 'ghost'}
+                  size="sm" 
+                  onClick={() => setViewMode('chat')}
+                  className="gap-2"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Chat
+                </Button>
+                <Button 
+                  variant={viewMode === 'classic' ? 'secondary' : 'ghost'}
+                  size="sm" 
+                  onClick={() => setViewMode('classic')}
+                  className="gap-2"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  Classic
+                </Button>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowRisksOnly(!showRisksOnly)}
+                className="gap-2"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                {showRisksOnly ? "Show all" : "Show anomalies only"}
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -206,9 +283,8 @@ export default function Index() {
           </TabsList>
 
           <TabsContent value="insights">
-            {/* Persona Selector & Search Bar */}
-            <div className="mb-8 space-y-6">
-              {/* Persona Selector Row */}
+            {/* Persona Selector */}
+            <div className="mb-6">
               <Card className="p-4 bg-card/50 backdrop-blur-sm border-border/50">
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground min-w-fit">
@@ -257,61 +333,164 @@ export default function Index() {
                   </Badge>
                 </div>
               </Card>
-
-              {/* Search Bar */}
-              <Card className="p-2 bg-card border-border shadow-sm">
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground/70" />
-                    <Input
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleAsk()}
-                      placeholder={
-                        persona === 'executive' 
-                          ? "Ask strategic questions about overall portfolio, cross-category trends..."
-                          : persona === 'consumables'
-                          ? "Ask about grocery ROI, dairy promotions, beverage trends..."
-                          : "Ask about personal care ROI, home care promotions, soap trends..."
-                      }
-                      className="pl-12 pr-4 h-12 text-base bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60"
-                    />
-                  </div>
-                  
-                  <div className="flex items-center gap-2 pr-1">
-                    <VoiceRecorder 
-                      onTranscript={(text) => {
-                        setQuery(text);
-                        handleAsk(text);
-                      }}
-                      disabled={isLoading}
-                    />
-                    <Button 
-                      onClick={() => handleAsk()}
-                      className="px-6 h-10 font-medium shadow-sm"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <span className="flex items-center gap-2">
-                          <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                          Analyzing...
-                        </span>
-                      ) : "Ask"}
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-
-              {/* KPI Selector */}
-              <KPISelector
-                question={query}
-                selectedKPIs={selectedKPIs}
-                onKPIsChange={setSelectedKPIs}
-                isLoading={isLoading}
-              />
             </div>
 
-            {result ? (
+            {/* Chat Mode */}
+            {viewMode === 'chat' ? (
+              <div className="grid grid-cols-12 gap-6">
+                {/* Chat Interface */}
+                <div className="col-span-8">
+                  <ChatInterface
+                    persona={persona}
+                    personaConfig={personaConfig[persona]}
+                    onAsk={handleChatAsk}
+                    isLoading={isLoading}
+                    currentResult={result}
+                  />
+                </div>
+                
+                {/* Results Panel (shows when there's a result) */}
+                <div className="col-span-4 space-y-4">
+                  {result ? (
+                    <>
+                      {/* Quick KPIs */}
+                      <Card className="p-4">
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Key Metrics</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-secondary/50 rounded-lg p-3">
+                            <div className="text-xs text-muted-foreground mb-0.5">ROI</div>
+                            <div className={`text-xl font-bold ${getKPIStatus("roi", Number(result.kpis?.roi) || 0) === "good" ? "text-status-good" : getKPIStatus("roi", Number(result.kpis?.roi) || 0) === "warning" ? "text-status-warning" : "text-status-bad"}`}>
+                              {(Number(result.kpis?.roi) || 0).toFixed(2)}x
+                            </div>
+                          </div>
+                          <div className="bg-secondary/50 rounded-lg p-3">
+                            <div className="text-xs text-muted-foreground mb-0.5">Lift</div>
+                            <div className={`text-xl font-bold ${getKPIStatus("liftPct", Number(result.kpis?.liftPct) || 0) === "good" ? "text-status-good" : "text-status-warning"}`}>
+                              {(Number(result.kpis?.liftPct) || 0).toFixed(1)}%
+                            </div>
+                          </div>
+                          <div className="bg-secondary/50 rounded-lg p-3">
+                            <div className="text-xs text-muted-foreground mb-0.5">Margin</div>
+                            <div className="text-xl font-bold text-foreground">
+                              {formatKPIValue(Number(result.kpis?.incrementalMargin) || 0)}
+                            </div>
+                          </div>
+                          <div className="bg-secondary/50 rounded-lg p-3">
+                            <div className="text-xs text-muted-foreground mb-0.5">Spend</div>
+                            <div className="text-xl font-bold text-foreground">
+                              {formatKPIValue(Number(result.kpis?.spend) || 0)}
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+
+                      {/* Mini Chart */}
+                      {result.chartData && result.chartData.length > 0 && (
+                        <Card className="p-4">
+                          <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Quick View</h3>
+                          <div className="h-48">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={result.chartData.slice(0, 5)} layout="vertical">
+                                <XAxis type="number" hide />
+                                <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 10 }} />
+                                <Tooltip />
+                                <Bar 
+                                  dataKey={Object.keys(result.chartData[0]).find(k => k !== 'name' && typeof result.chartData[0][k] === 'number') || 'value'} 
+                                  fill="hsl(var(--primary))" 
+                                  radius={[0, 4, 4, 0]}
+                                />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="w-full mt-2 text-xs"
+                            onClick={() => setViewMode('classic')}
+                          >
+                            View Full Analysis →
+                          </Button>
+                        </Card>
+                      )}
+                    </>
+                  ) : (
+                    /* Suggested Questions Panel */
+                    <Card className="p-4">
+                      <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Popular Questions</h3>
+                      <div className="space-y-2">
+                        {currentQuestions.slice(0, 5).map(q => (
+                          <button
+                            key={q.id}
+                            onClick={() => handleQuestionClick(q.question)}
+                            className="w-full text-left text-sm p-2.5 rounded-md hover:bg-accent transition-colors border border-transparent hover:border-border"
+                          >
+                            <Badge variant="outline" className="text-[10px] mb-1">{q.tag}</Badge>
+                            <p className="text-xs text-muted-foreground line-clamp-2">{q.question}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Classic Mode */
+              <>
+                <div className="mb-8 space-y-6">
+                  {/* Search Bar */}
+                  <Card className="p-2 bg-card border-border shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground/70" />
+                        <Input
+                          value={query}
+                          onChange={(e) => setQuery(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && handleAsk()}
+                          placeholder={
+                            persona === 'executive' 
+                              ? "Ask strategic questions about overall portfolio, cross-category trends..."
+                              : persona === 'consumables'
+                              ? "Ask about grocery ROI, dairy promotions, beverage trends..."
+                              : "Ask about personal care ROI, home care promotions, soap trends..."
+                          }
+                          className="pl-12 pr-4 h-12 text-base bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center gap-2 pr-1">
+                        <VoiceRecorder 
+                          onTranscript={(text) => {
+                            setQuery(text);
+                            handleAsk(text);
+                          }}
+                          disabled={isLoading}
+                        />
+                        <Button 
+                          onClick={() => handleAsk()}
+                          className="px-6 h-10 font-medium shadow-sm"
+                          disabled={isLoading}
+                        >
+                          {isLoading ? (
+                            <span className="flex items-center gap-2">
+                              <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                              Analyzing...
+                            </span>
+                          ) : "Ask"}
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* KPI Selector */}
+                  <KPISelector
+                    question={query}
+                    selectedKPIs={selectedKPIs}
+                    onKPIsChange={setSelectedKPIs}
+                    isLoading={isLoading}
+                  />
+                </div>
+
+                {result ? (
               /* Answer View */
               <div className="grid grid-cols-12 gap-8">
                 {/* Main Content */}
@@ -662,6 +841,8 @@ export default function Index() {
             </div>
           </div>
           )}
+              </>
+            )}
           </TabsContent>
 
           <TabsContent value="data">
