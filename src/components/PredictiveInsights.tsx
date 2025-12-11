@@ -13,6 +13,11 @@ interface PredictiveInsightsProps {
       margin: number;
       roi: number;
     };
+    scenarios?: {
+      conservative: { revenue: number; margin: number; roi: number };
+      expected: { revenue: number; margin: number; roi: number };
+      optimistic: { revenue: number; margin: number; roi: number };
+    };
   };
   causalDrivers?: {
     driver: string;
@@ -77,24 +82,93 @@ export default function PredictiveInsights({ predictions, causalDrivers, mlInsig
           {/* Projected Impact */}
           {predictions.projectedImpact && (
             <div className="mt-6 pt-4 border-t border-border">
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Projected Impact</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Expected Impact</h3>
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-status-good/10 rounded-lg p-3 text-center">
                   <div className="text-xs text-status-good mb-1">Revenue</div>
                   <div className="text-lg font-bold text-status-good">
-                    ${(predictions.projectedImpact.revenue / 1000000).toFixed(1)}M
+                    ${predictions.projectedImpact.revenue >= 1000000 
+                      ? (predictions.projectedImpact.revenue / 1000000).toFixed(1) + 'M'
+                      : (predictions.projectedImpact.revenue / 1000).toFixed(0) + 'K'}
                   </div>
                 </div>
                 <div className="bg-primary/10 rounded-lg p-3 text-center">
                   <div className="text-xs text-primary mb-1">Margin</div>
                   <div className="text-lg font-bold text-primary">
-                    ${(predictions.projectedImpact.margin / 1000).toFixed(0)}K
+                    ${predictions.projectedImpact.margin >= 1000000 
+                      ? (predictions.projectedImpact.margin / 1000000).toFixed(1) + 'M'
+                      : (predictions.projectedImpact.margin / 1000).toFixed(0) + 'K'}
                   </div>
                 </div>
                 <div className="bg-chart-3/10 rounded-lg p-3 text-center">
                   <div className="text-xs text-chart-3 mb-1">ROI</div>
                   <div className="text-lg font-bold text-chart-3">
                     {predictions.projectedImpact.roi.toFixed(2)}x
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Scenario Analysis */}
+          {predictions.scenarios && (
+            <div className="mt-6 pt-4 border-t border-border">
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Scenario Analysis</h3>
+              <div className="grid grid-cols-3 gap-3">
+                {/* Conservative */}
+                <div className="bg-status-warning/10 border border-status-warning/20 rounded-lg p-3">
+                  <div className="text-xs font-medium text-status-warning mb-2">Conservative</div>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Revenue:</span>
+                      <span className="font-semibold">${(predictions.scenarios.conservative.revenue / 1000000).toFixed(1)}M</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Margin:</span>
+                      <span className="font-semibold">${(predictions.scenarios.conservative.margin / 1000).toFixed(0)}K</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">ROI:</span>
+                      <span className="font-semibold">{predictions.scenarios.conservative.roi.toFixed(2)}x</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expected */}
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+                  <div className="text-xs font-medium text-primary mb-2">Expected</div>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Revenue:</span>
+                      <span className="font-semibold text-primary">${(predictions.scenarios.expected.revenue / 1000000).toFixed(1)}M</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Margin:</span>
+                      <span className="font-semibold text-primary">${(predictions.scenarios.expected.margin / 1000).toFixed(0)}K</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">ROI:</span>
+                      <span className="font-semibold text-primary">{predictions.scenarios.expected.roi.toFixed(2)}x</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Optimistic */}
+                <div className="bg-status-good/10 border border-status-good/20 rounded-lg p-3">
+                  <div className="text-xs font-medium text-status-good mb-2">Optimistic</div>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Revenue:</span>
+                      <span className="font-semibold text-status-good">${(predictions.scenarios.optimistic.revenue / 1000000).toFixed(1)}M</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Margin:</span>
+                      <span className="font-semibold text-status-good">${(predictions.scenarios.optimistic.margin / 1000).toFixed(0)}K</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">ROI:</span>
+                      <span className="font-semibold text-status-good">{predictions.scenarios.optimistic.roi.toFixed(2)}x</span>
+                    </div>
                   </div>
                 </div>
               </div>

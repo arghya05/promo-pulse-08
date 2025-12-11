@@ -598,13 +598,22 @@ Your response MUST be a valid JSON object with this exact structure:
   "nextQuestions": ["question 1", "question 2"],
   "sources": "string describing data sources",
   "predictions": {
-    "forecast": ["SPECIFIC prediction with number: 'Beverages ROI will increase to 1.95x by Q2 if 20% discount maintained'", "Second prediction with $ impact", "Third prediction with timeline"],
+    "forecast": [
+      "SPECIFIC NUMBERS REQUIRED: 'Portfolio ROI projected to reach 1.45x (+0.25x from current 1.2x) by Q2 2025, generating $2.3M incremental margin'",
+      "Second prediction: 'Dairy category lift expected to increase from 18% to 24% with $125K additional spend - based on -1.6 elasticity'",
+      "Third prediction: 'Conservative: $1.8M margin | Expected: $2.3M margin | Optimistic: $2.9M margin over next quarter'"
+    ],
     "confidence": number (between 0.6 and 0.95),
-    "timeframe": "string like 'Next 4 weeks' or 'Q2 2024'",
+    "timeframe": "string like 'Next 4 weeks' or 'Q2 2025'",
     "projectedImpact": {
-      "revenue": number,
-      "margin": number,
-      "roi": number
+      "revenue": number (MANDATORY - must be specific $ amount like 2300000),
+      "margin": number (MANDATORY - must be specific $ amount like 450000),
+      "roi": number (MANDATORY - must be specific value like 1.45)
+    },
+    "scenarios": {
+      "conservative": {"revenue": number, "margin": number, "roi": number},
+      "expected": {"revenue": number, "margin": number, "roi": number},
+      "optimistic": {"revenue": number, "margin": number, "roi": number}
     }
   },
   "causalDrivers": [
@@ -635,13 +644,22 @@ Your whatToDo recommendations MUST follow this format:
 BAD RECOMMENDATION (too generic): "Consider increasing promotional activity"
 GOOD RECOMMENDATION: "Increase Dairy BOGO promotion budget by $75K (from $200K to $275K) to capture 12% more market share - based on 1.85x ROI performance and 18% lift in Northeast stores. Expected incremental margin: $138K over 6 weeks. Monitor cannibalization vs yogurt category weekly."
 
-PREDICTIVE FORECAST REQUIREMENTS:
-1. EVERY answer must include predictions with SPECIFIC NUMBERS
-2. Base forecasts on historical trends from PERFORMANCE BY MONTH data
-3. Include confidence intervals (e.g., "ROI forecast: 1.6x-1.9x with 85% confidence")
-4. Project specific $ impacts (e.g., "Expected revenue uplift: $2.3M over Q2")
-5. Provide 3 forecast scenarios: conservative, expected, optimistic
-6. Tie forecasts to actionable triggers (e.g., "If conversion drops below 12%, reduce discount to 15%")
+PREDICTIVE FORECAST REQUIREMENTS (MANDATORY - NEVER VAGUE):
+1. EVERY forecast bullet MUST contain SPECIFIC NUMBERS - no vague statements allowed
+2. Include specific $ amounts: "Expected revenue: $2.3M" not "expected to increase"
+3. Include specific % values: "ROI will reach 1.45x (+0.25x)" not "ROI will improve"
+4. Include specific timeframes: "by Q2 2025" or "over next 6 weeks"
+5. Include confidence intervals: "ROI forecast: 1.4x-1.8x with 82% confidence"
+6. ALWAYS provide 3 scenarios with specific numbers:
+   - Conservative (10th percentile): "$1.8M margin, 1.2x ROI"
+   - Expected (50th percentile): "$2.3M margin, 1.45x ROI"  
+   - Optimistic (90th percentile): "$2.9M margin, 1.7x ROI"
+7. NEVER write vague forecasts like "expected to remain negative" - instead write "ROI projected at 0.85x (-$245K margin) unless discount depth reduced from 30% to 22%"
+8. Base ALL numbers on actual database trends and benchmark ranges provided
+9. Include trigger conditions: "If conversion drops below 12%, reduce discount to 15%"
+
+BAD FORECAST (too vague): "ROI is projected to remain negative in the next quarter"
+GOOD FORECAST: "Portfolio ROI projected at 0.92x in Q2 2025, improving from current 0.78x if Dairy spend reduced by $125K. Conservative: 0.85x ($-180K), Expected: 0.92x ($45K), Optimistic: 1.12x ($340K). Key trigger: If Dairy lift <12% by week 3, pause campaign."
 
 CRITICAL: REALISTIC NUMBERS FOR $3-4 BILLION US GROCERY RETAILER
 This retailer represents a major US grocery chain with:
