@@ -97,11 +97,12 @@ serve(async (req) => {
     
     console.log('Cache MISS, proceeding with AI analysis');
 
-    // Build transactions query with optional date filter
+    // Build transactions query with optional date filter - LIMIT for performance
     let transactionsQuery = supabaseClient
       .from('transactions')
       .select('*, stores(store_name, region), promotions(promotion_name, promotion_type)')
-      .order('transaction_date', { ascending: false });
+      .order('transaction_date', { ascending: false })
+      .limit(1000);
     
     if (dateFilter) {
       transactionsQuery = transactionsQuery.gte('transaction_date', dateFilter);
@@ -120,17 +121,17 @@ serve(async (req) => {
       customerJourneyResult,
       inventoryLevelsResult
     ] = await Promise.all([
-      supabaseClient.from('stores').select('*'),
-      supabaseClient.from('promotions').select('*').order('created_at', { ascending: false }),
+      supabaseClient.from('stores').select('*').limit(100),
+      supabaseClient.from('promotions').select('*').order('created_at', { ascending: false }).limit(100),
       transactionsQuery,
-      supabaseClient.from('customers').select('*'),
-      supabaseClient.from('third_party_data').select('*').order('data_date', { ascending: false }).limit(100),
-      supabaseClient.from('products').select('*'),
-      supabaseClient.from('marketing_channels').select('*, promotions(promotion_name)'),
-      supabaseClient.from('competitor_data').select('*').order('observation_date', { ascending: false }),
-      supabaseClient.from('store_performance').select('*, stores(store_name)').order('metric_date', { ascending: false }),
-      supabaseClient.from('customer_journey').select('*, customers(customer_name), promotions(promotion_name)').order('touchpoint_date', { ascending: false }),
-      supabaseClient.from('inventory_levels').select('*, stores(store_name)').order('created_at', { ascending: false })
+      supabaseClient.from('customers').select('*').limit(500),
+      supabaseClient.from('third_party_data').select('*').order('data_date', { ascending: false }).limit(50),
+      supabaseClient.from('products').select('*').limit(100),
+      supabaseClient.from('marketing_channels').select('*, promotions(promotion_name)').limit(100),
+      supabaseClient.from('competitor_data').select('*').order('observation_date', { ascending: false }).limit(50),
+      supabaseClient.from('store_performance').select('*, stores(store_name)').order('metric_date', { ascending: false }).limit(200),
+      supabaseClient.from('customer_journey').select('*, customers(customer_name), promotions(promotion_name)').order('touchpoint_date', { ascending: false }).limit(200),
+      supabaseClient.from('inventory_levels').select('*, stores(store_name)').order('created_at', { ascending: false }).limit(100)
     ]);
 
     const hasData = (transactionsResult.data?.length || 0) > 0;
