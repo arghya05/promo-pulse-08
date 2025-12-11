@@ -124,7 +124,7 @@ const personaContent = {
 
 const getPersonaKey = (persona: string): keyof typeof personaContent => {
   if (persona === 'executive') return 'executive';
-  if (persona === 'category-consumables') return 'category-consumables';
+  if (persona === 'consumables' || persona === 'category-consumables') return 'category-consumables';
   return 'category-non-consumables';
 };
 
