@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { DataTableFilter } from "@/components/DataTableFilter";
 
 export default function DataManagement() {
   const { toast } = useToast();
@@ -29,6 +30,19 @@ export default function DataManagement() {
   const [customerJourney, setCustomerJourney] = useState<any[]>([]);
   const [inventoryLevels, setInventoryLevels] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Filter states for each tab
+  const [storeFilters, setStoreFilters] = useState<Record<string, string>>({});
+  const [promoFilters, setPromoFilters] = useState<Record<string, string>>({});
+  const [txnFilters, setTxnFilters] = useState<Record<string, string>>({});
+  const [customerFilters, setCustomerFilters] = useState<Record<string, string>>({});
+  const [thirdPartyFilters, setThirdPartyFilters] = useState<Record<string, string>>({});
+  const [productFilters, setProductFilters] = useState<Record<string, string>>({});
+  const [marketingFilters, setMarketingFilters] = useState<Record<string, string>>({});
+  const [competitorFilters, setCompetitorFilters] = useState<Record<string, string>>({});
+  const [perfFilters, setPerfFilters] = useState<Record<string, string>>({});
+  const [journeyFilters, setJourneyFilters] = useState<Record<string, string>>({});
+  const [inventoryFilters, setInventoryFilters] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadAllData();
@@ -85,6 +99,89 @@ export default function DataManagement() {
       setIsLoading(false);
     }
   };
+
+  // Filter helper functions
+  const getUniqueValues = (data: any[], key: string) => 
+    [...new Set(data.map(item => item[key]).filter(Boolean))].sort();
+
+  // Filtered data for each tab
+  const filteredStores = useMemo(() => stores.filter(s => {
+    if (storeFilters.search && !s.store_name?.toLowerCase().includes(storeFilters.search.toLowerCase()) && 
+        !s.store_code?.toLowerCase().includes(storeFilters.search.toLowerCase())) return false;
+    if (storeFilters.region && storeFilters.region !== "all" && s.region !== storeFilters.region) return false;
+    if (storeFilters.store_type && storeFilters.store_type !== "all" && s.store_type !== storeFilters.store_type) return false;
+    return true;
+  }), [stores, storeFilters]);
+
+  const filteredPromotions = useMemo(() => promotions.filter(p => {
+    if (promoFilters.search && !p.promotion_name?.toLowerCase().includes(promoFilters.search.toLowerCase())) return false;
+    if (promoFilters.promotion_type && promoFilters.promotion_type !== "all" && p.promotion_type !== promoFilters.promotion_type) return false;
+    if (promoFilters.status && promoFilters.status !== "all" && p.status !== promoFilters.status) return false;
+    return true;
+  }), [promotions, promoFilters]);
+
+  const filteredTransactions = useMemo(() => transactions.filter(t => {
+    if (txnFilters.search && !t.product_name?.toLowerCase().includes(txnFilters.search.toLowerCase()) && 
+        !t.product_sku?.toLowerCase().includes(txnFilters.search.toLowerCase())) return false;
+    return true;
+  }), [transactions, txnFilters]);
+
+  const filteredCustomers = useMemo(() => customers.filter(c => {
+    if (customerFilters.search && !c.customer_name?.toLowerCase().includes(customerFilters.search.toLowerCase()) && 
+        !c.email?.toLowerCase().includes(customerFilters.search.toLowerCase())) return false;
+    if (customerFilters.segment && customerFilters.segment !== "all" && c.segment !== customerFilters.segment) return false;
+    if (customerFilters.loyalty_tier && customerFilters.loyalty_tier !== "all" && c.loyalty_tier !== customerFilters.loyalty_tier) return false;
+    return true;
+  }), [customers, customerFilters]);
+
+  const filteredThirdParty = useMemo(() => thirdPartyData.filter(d => {
+    if (thirdPartyFilters.search && !d.metric_name?.toLowerCase().includes(thirdPartyFilters.search.toLowerCase())) return false;
+    if (thirdPartyFilters.data_source && thirdPartyFilters.data_source !== "all" && d.data_source !== thirdPartyFilters.data_source) return false;
+    if (thirdPartyFilters.data_type && thirdPartyFilters.data_type !== "all" && d.data_type !== thirdPartyFilters.data_type) return false;
+    return true;
+  }), [thirdPartyData, thirdPartyFilters]);
+
+  const filteredProducts = useMemo(() => products.filter(p => {
+    if (productFilters.search && !p.product_name?.toLowerCase().includes(productFilters.search.toLowerCase()) && 
+        !p.product_sku?.toLowerCase().includes(productFilters.search.toLowerCase())) return false;
+    if (productFilters.category && productFilters.category !== "all" && p.category !== productFilters.category) return false;
+    if (productFilters.brand && productFilters.brand !== "all" && p.brand !== productFilters.brand) return false;
+    return true;
+  }), [products, productFilters]);
+
+  const filteredMarketing = useMemo(() => marketingChannels.filter(m => {
+    if (marketingFilters.search && !m.channel_name?.toLowerCase().includes(marketingFilters.search.toLowerCase())) return false;
+    if (marketingFilters.channel_type && marketingFilters.channel_type !== "all" && m.channel_type !== marketingFilters.channel_type) return false;
+    return true;
+  }), [marketingChannels, marketingFilters]);
+
+  const filteredCompetitor = useMemo(() => competitorData.filter(c => {
+    if (competitorFilters.search && !c.competitor_name?.toLowerCase().includes(competitorFilters.search.toLowerCase())) return false;
+    if (competitorFilters.competitor_name && competitorFilters.competitor_name !== "all" && c.competitor_name !== competitorFilters.competitor_name) return false;
+    if (competitorFilters.product_category && competitorFilters.product_category !== "all" && c.product_category !== competitorFilters.product_category) return false;
+    return true;
+  }), [competitorData, competitorFilters]);
+
+  const filteredPerformance = useMemo(() => storePerformance.filter(p => {
+    if (perfFilters.weather_condition && perfFilters.weather_condition !== "all" && p.weather_condition !== perfFilters.weather_condition) return false;
+    return true;
+  }), [storePerformance, perfFilters]);
+
+  const filteredJourney = useMemo(() => customerJourney.filter(j => {
+    if (journeyFilters.touchpoint_type && journeyFilters.touchpoint_type !== "all" && j.touchpoint_type !== journeyFilters.touchpoint_type) return false;
+    if (journeyFilters.channel && journeyFilters.channel !== "all" && j.channel !== journeyFilters.channel) return false;
+    if (journeyFilters.converted && journeyFilters.converted !== "all") {
+      const isConverted = journeyFilters.converted === "yes";
+      if (j.converted !== isConverted) return false;
+    }
+    return true;
+  }), [customerJourney, journeyFilters]);
+
+  const filteredInventory = useMemo(() => inventoryLevels.filter(i => {
+    if (inventoryFilters.search && !i.product_sku?.toLowerCase().includes(inventoryFilters.search.toLowerCase())) return false;
+    if (inventoryFilters.stockout_risk && inventoryFilters.stockout_risk !== "all" && i.stockout_risk !== inventoryFilters.stockout_risk) return false;
+    return true;
+  }), [inventoryLevels, inventoryFilters]);
 
   const DataStats = () => (
     <div className="grid grid-cols-2 md:grid-cols-6 lg:grid-cols-11 gap-4 mb-6">
@@ -210,6 +307,17 @@ export default function DataManagement() {
           </TabsList>
 
           <TabsContent value="stores" className="mt-6">
+            <DataTableFilter
+              filters={[
+                { key: "search", label: "Search stores...", type: "text" },
+                { key: "region", label: "Region", type: "select", options: getUniqueValues(stores, "region") },
+                { key: "store_type", label: "Type", type: "select", options: getUniqueValues(stores, "store_type") },
+              ]}
+              values={storeFilters}
+              onChange={(key, value) => setStoreFilters(prev => ({ ...prev, [key]: value }))}
+              onClear={() => setStoreFilters({})}
+            />
+            <div className="text-sm text-muted-foreground mb-2">Showing {filteredStores.length} of {stores.length} stores</div>
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -222,14 +330,14 @@ export default function DataManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {stores.length === 0 ? (
+                  {filteredStores.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                        No stores data. Import CSV or add manually to get started.
+                        No stores found matching filters.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    stores.map((store) => (
+                    filteredStores.map((store) => (
                       <TableRow key={store.id}>
                         <TableCell className="font-medium">{store.store_code}</TableCell>
                         <TableCell>{store.store_name}</TableCell>
@@ -247,6 +355,17 @@ export default function DataManagement() {
           </TabsContent>
 
           <TabsContent value="promotions" className="mt-6">
+            <DataTableFilter
+              filters={[
+                { key: "search", label: "Search promotions...", type: "text" },
+                { key: "promotion_type", label: "Type", type: "select", options: getUniqueValues(promotions, "promotion_type") },
+                { key: "status", label: "Status", type: "select", options: getUniqueValues(promotions, "status") },
+              ]}
+              values={promoFilters}
+              onChange={(key, value) => setPromoFilters(prev => ({ ...prev, [key]: value }))}
+              onClear={() => setPromoFilters({})}
+            />
+            <div className="text-sm text-muted-foreground mb-2">Showing {filteredPromotions.length} of {promotions.length} promotions</div>
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -260,14 +379,14 @@ export default function DataManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {promotions.length === 0 ? (
+                  {filteredPromotions.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        No promotions data. Import CSV or add manually to get started.
+                        No promotions found matching filters.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    promotions.map((promo) => (
+                    filteredPromotions.map((promo) => (
                       <TableRow key={promo.id}>
                         <TableCell className="font-medium">{promo.promotion_name}</TableCell>
                         <TableCell>{promo.promotion_type}</TableCell>
@@ -288,6 +407,15 @@ export default function DataManagement() {
           </TabsContent>
 
           <TabsContent value="transactions" className="mt-6">
+            <DataTableFilter
+              filters={[
+                { key: "search", label: "Search by SKU or name...", type: "text" },
+              ]}
+              values={txnFilters}
+              onChange={(key, value) => setTxnFilters(prev => ({ ...prev, [key]: value }))}
+              onClear={() => setTxnFilters({})}
+            />
+            <div className="text-sm text-muted-foreground mb-2">Showing {filteredTransactions.length} of {transactions.length} transactions</div>
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -300,14 +428,14 @@ export default function DataManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.length === 0 ? (
+                  {filteredTransactions.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                        No transactions data. Import CSV or add manually to get started.
+                        No transactions found matching filters.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    transactions.map((txn) => (
+                    filteredTransactions.map((txn) => (
                       <TableRow key={txn.id}>
                         <TableCell>{new Date(txn.transaction_date).toLocaleDateString()}</TableCell>
                         <TableCell className="font-medium">{txn.product_sku}</TableCell>
@@ -323,6 +451,17 @@ export default function DataManagement() {
           </TabsContent>
 
           <TabsContent value="customers" className="mt-6">
+            <DataTableFilter
+              filters={[
+                { key: "search", label: "Search customers...", type: "text" },
+                { key: "segment", label: "Segment", type: "select", options: getUniqueValues(customers, "segment") },
+                { key: "loyalty_tier", label: "Loyalty Tier", type: "select", options: getUniqueValues(customers, "loyalty_tier") },
+              ]}
+              values={customerFilters}
+              onChange={(key, value) => setCustomerFilters(prev => ({ ...prev, [key]: value }))}
+              onClear={() => setCustomerFilters({})}
+            />
+            <div className="text-sm text-muted-foreground mb-2">Showing {filteredCustomers.length} of {customers.length} customers</div>
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -336,14 +475,14 @@ export default function DataManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {customers.length === 0 ? (
+                  {filteredCustomers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        No customers data. Import CSV or add manually to get started.
+                        No customers found matching filters.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    customers.map((customer) => (
+                    filteredCustomers.map((customer) => (
                       <TableRow key={customer.id}>
                         <TableCell className="font-medium">{customer.customer_code}</TableCell>
                         <TableCell>{customer.customer_name}</TableCell>
@@ -364,6 +503,17 @@ export default function DataManagement() {
           </TabsContent>
 
           <TabsContent value="third-party" className="mt-6">
+            <DataTableFilter
+              filters={[
+                { key: "search", label: "Search metrics...", type: "text" },
+                { key: "data_source", label: "Source", type: "select", options: getUniqueValues(thirdPartyData, "data_source") },
+                { key: "data_type", label: "Type", type: "select", options: getUniqueValues(thirdPartyData, "data_type") },
+              ]}
+              values={thirdPartyFilters}
+              onChange={(key, value) => setThirdPartyFilters(prev => ({ ...prev, [key]: value }))}
+              onClear={() => setThirdPartyFilters({})}
+            />
+            <div className="text-sm text-muted-foreground mb-2">Showing {filteredThirdParty.length} of {thirdPartyData.length} records</div>
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -376,14 +526,14 @@ export default function DataManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {thirdPartyData.length === 0 ? (
+                  {filteredThirdParty.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                        No third-party data. Import CSV or add manually to get started.
+                        No third-party data found matching filters.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    thirdPartyData.map((data) => (
+                    filteredThirdParty.map((data) => (
                       <TableRow key={data.id}>
                         <TableCell className="font-medium">{data.data_source}</TableCell>
                         <TableCell>{data.data_type}</TableCell>
@@ -399,6 +549,17 @@ export default function DataManagement() {
           </TabsContent>
 
           <TabsContent value="products" className="mt-6">
+            <DataTableFilter
+              filters={[
+                { key: "search", label: "Search products...", type: "text" },
+                { key: "category", label: "Category", type: "select", options: getUniqueValues(products, "category") },
+                { key: "brand", label: "Brand", type: "select", options: getUniqueValues(products, "brand") },
+              ]}
+              values={productFilters}
+              onChange={(key, value) => setProductFilters(prev => ({ ...prev, [key]: value }))}
+              onClear={() => setProductFilters({})}
+            />
+            <div className="text-sm text-muted-foreground mb-2">Showing {filteredProducts.length} of {products.length} products</div>
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -413,14 +574,14 @@ export default function DataManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {products.length === 0 ? (
+                  {filteredProducts.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                        No products data available.
+                        No products found matching filters.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    products.map((product) => (
+                    filteredProducts.map((product) => (
                       <TableRow key={product.id}>
                         <TableCell className="font-medium">{product.product_sku}</TableCell>
                         <TableCell>{product.product_name}</TableCell>
@@ -438,6 +599,16 @@ export default function DataManagement() {
           </TabsContent>
 
           <TabsContent value="marketing" className="mt-6">
+            <DataTableFilter
+              filters={[
+                { key: "search", label: "Search channels...", type: "text" },
+                { key: "channel_type", label: "Type", type: "select", options: getUniqueValues(marketingChannels, "channel_type") },
+              ]}
+              values={marketingFilters}
+              onChange={(key, value) => setMarketingFilters(prev => ({ ...prev, [key]: value }))}
+              onClear={() => setMarketingFilters({})}
+            />
+            <div className="text-sm text-muted-foreground mb-2">Showing {filteredMarketing.length} of {marketingChannels.length} channels</div>
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -451,14 +622,14 @@ export default function DataManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {marketingChannels.length === 0 ? (
+                  {filteredMarketing.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        No marketing channels data available.
+                        No marketing channels found matching filters.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    marketingChannels.map((channel) => (
+                    filteredMarketing.map((channel) => (
                       <TableRow key={channel.id}>
                         <TableCell className="font-medium">{channel.channel_name}</TableCell>
                         <TableCell><Badge>{channel.channel_type}</Badge></TableCell>
@@ -475,6 +646,17 @@ export default function DataManagement() {
           </TabsContent>
 
           <TabsContent value="competitor" className="mt-6">
+            <DataTableFilter
+              filters={[
+                { key: "search", label: "Search competitors...", type: "text" },
+                { key: "competitor_name", label: "Competitor", type: "select", options: getUniqueValues(competitorData, "competitor_name") },
+                { key: "product_category", label: "Category", type: "select", options: getUniqueValues(competitorData, "product_category") },
+              ]}
+              values={competitorFilters}
+              onChange={(key, value) => setCompetitorFilters(prev => ({ ...prev, [key]: value }))}
+              onClear={() => setCompetitorFilters({})}
+            />
+            <div className="text-sm text-muted-foreground mb-2">Showing {filteredCompetitor.length} of {competitorData.length} records</div>
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -488,14 +670,14 @@ export default function DataManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {competitorData.length === 0 ? (
+                  {filteredCompetitor.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        No competitor data available.
+                        No competitor data found matching filters.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    competitorData.map((comp) => (
+                    filteredCompetitor.map((comp) => (
                       <TableRow key={comp.id}>
                         <TableCell className="font-medium">{comp.competitor_name}</TableCell>
                         <TableCell>{comp.product_category}</TableCell>
@@ -512,6 +694,15 @@ export default function DataManagement() {
           </TabsContent>
 
           <TabsContent value="performance" className="mt-6">
+            <DataTableFilter
+              filters={[
+                { key: "weather_condition", label: "Weather", type: "select", options: getUniqueValues(storePerformance, "weather_condition") },
+              ]}
+              values={perfFilters}
+              onChange={(key, value) => setPerfFilters(prev => ({ ...prev, [key]: value }))}
+              onClear={() => setPerfFilters({})}
+            />
+            <div className="text-sm text-muted-foreground mb-2">Showing {filteredPerformance.length} of {storePerformance.length} records</div>
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -525,14 +716,14 @@ export default function DataManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {storePerformance.length === 0 ? (
+                  {filteredPerformance.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        No store performance data available.
+                        No performance data found matching filters.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    storePerformance.map((perf) => (
+                    filteredPerformance.map((perf) => (
                       <TableRow key={perf.id}>
                         <TableCell className="font-medium">{perf.store_id}</TableCell>
                         <TableCell>{perf.metric_date}</TableCell>
@@ -549,6 +740,17 @@ export default function DataManagement() {
           </TabsContent>
 
           <TabsContent value="journey" className="mt-6">
+            <DataTableFilter
+              filters={[
+                { key: "touchpoint_type", label: "Touchpoint", type: "select", options: getUniqueValues(customerJourney, "touchpoint_type") },
+                { key: "channel", label: "Channel", type: "select", options: getUniqueValues(customerJourney, "channel") },
+                { key: "converted", label: "Converted", type: "select", options: ["yes", "no"] },
+              ]}
+              values={journeyFilters}
+              onChange={(key, value) => setJourneyFilters(prev => ({ ...prev, [key]: value }))}
+              onClear={() => setJourneyFilters({})}
+            />
+            <div className="text-sm text-muted-foreground mb-2">Showing {filteredJourney.length} of {customerJourney.length} touchpoints</div>
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -562,14 +764,14 @@ export default function DataManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {customerJourney.length === 0 ? (
+                  {filteredJourney.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        No customer journey data available.
+                        No journey data found matching filters.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    customerJourney.map((touch) => (
+                    filteredJourney.map((touch) => (
                       <TableRow key={touch.id}>
                         <TableCell className="font-medium">{touch.customer_id}</TableCell>
                         <TableCell>{touch.touchpoint_type}</TableCell>
@@ -586,6 +788,16 @@ export default function DataManagement() {
           </TabsContent>
 
           <TabsContent value="inventory" className="mt-6">
+            <DataTableFilter
+              filters={[
+                { key: "search", label: "Search by SKU...", type: "text" },
+                { key: "stockout_risk", label: "Stockout Risk", type: "select", options: getUniqueValues(inventoryLevels, "stockout_risk") },
+              ]}
+              values={inventoryFilters}
+              onChange={(key, value) => setInventoryFilters(prev => ({ ...prev, [key]: value }))}
+              onClear={() => setInventoryFilters({})}
+            />
+            <div className="text-sm text-muted-foreground mb-2">Showing {filteredInventory.length} of {inventoryLevels.length} inventory items</div>
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -599,14 +811,14 @@ export default function DataManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {inventoryLevels.length === 0 ? (
+                  {filteredInventory.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        No inventory data available.
+                        No inventory data found matching filters.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    inventoryLevels.map((inv) => (
+                    filteredInventory.map((inv) => (
                       <TableRow key={inv.id}>
                         <TableCell className="font-medium">{inv.store_id}</TableCell>
                         <TableCell>{inv.product_sku}</TableCell>
