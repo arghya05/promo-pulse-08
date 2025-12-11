@@ -796,9 +796,54 @@ Now analyze and provide a 100% accurate, data-driven answer to the question abov
       
       // Try to extract JSON from markdown code blocks if present
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-      const jsonString = jsonMatch ? jsonMatch[1] : content;
+      let jsonString = jsonMatch ? jsonMatch[1] : content;
       
-      analysisResult = JSON.parse(jsonString);
+      // Clean up common JSON issues
+      jsonString = jsonString.trim();
+      
+      // Remove trailing commas before ] or }
+      jsonString = jsonString.replace(/,\s*]/g, ']').replace(/,\s*}/g, '}');
+      
+      // Fix missing closing brackets - count opens vs closes
+      const openBraces = (jsonString.match(/{/g) || []).length;
+      const closeBraces = (jsonString.match(/}/g) || []).length;
+      const openBrackets = (jsonString.match(/\[/g) || []).length;
+      const closeBrackets = (jsonString.match(/]/g) || []).length;
+      
+      // Add missing closing brackets/braces
+      for (let i = 0; i < openBrackets - closeBrackets; i++) {
+        jsonString += ']';
+      }
+      for (let i = 0; i < openBraces - closeBraces; i++) {
+        jsonString += '}';
+      }
+      
+      // Try parsing, if fails try more aggressive cleanup
+      try {
+        analysisResult = JSON.parse(jsonString);
+      } catch (firstError: unknown) {
+        const errorMsg = firstError instanceof Error ? firstError.message : 'Unknown parse error';
+        console.log('First parse attempt failed, trying cleanup:', errorMsg);
+        
+        // Try to find and extract just the JSON object
+        const objectMatch = jsonString.match(/\{[\s\S]*\}/);
+        if (objectMatch) {
+          let cleaned = objectMatch[0];
+          cleaned = cleaned.replace(/,\s*]/g, ']').replace(/,\s*}/g, '}');
+          
+          // Recount and fix brackets
+          const ob = (cleaned.match(/{/g) || []).length;
+          const cb = (cleaned.match(/}/g) || []).length;
+          const oq = (cleaned.match(/\[/g) || []).length;
+          const cq = (cleaned.match(/]/g) || []).length;
+          for (let i = 0; i < oq - cq; i++) cleaned += ']';
+          for (let i = 0; i < ob - cb; i++) cleaned += '}';
+          
+          analysisResult = JSON.parse(cleaned);
+        } else {
+          throw firstError;
+        }
+      }
       console.log('Parsed analysis result:', analysisResult);
       
       // POST-PROCESSING: Ensure all KPIs are numeric (not strings)
