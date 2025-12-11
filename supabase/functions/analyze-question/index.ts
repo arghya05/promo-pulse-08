@@ -470,46 +470,50 @@ Focus on:
     // Build KPI focus instructions if user selected specific KPIs
     const kpiInstructions = selectedKPIs && selectedKPIs.length > 0 
       ? `
-USER-SELECTED KPIs FOR FOCUSED ANALYSIS (CRITICAL - THESE MUST APPEAR IN YOUR ANSWER):
-The user has specifically selected these KPIs: ${selectedKPIs.join(', ')}
+=== CRITICAL: USER-SELECTED KPIs - MANDATORY INCLUSION ===
+The user has SPECIFICALLY SELECTED these KPIs for analysis: ${selectedKPIs.join(', ')}
 
-MANDATORY KPI DISPLAY REQUIREMENTS:
-1. For EACH selected KPI, you MUST calculate and display the actual value in your answer
-2. Include a "selectedKpiValues" object in your response with each KPI and its calculated value
-3. In whatHappened bullets, START with the selected KPI values and their context
-4. In why section, EXPLAIN what drives each selected KPI
-5. In whatToDo section, provide SPECIFIC actions to improve each selected KPI with TARGET numbers
-6. chartData MUST include columns for selected KPIs (e.g., if user selected "roi" and "lift_pct", each chart item must have these fields)
+*** ABSOLUTE REQUIREMENT - DO NOT SKIP THIS ***
+EVERY SINGLE KPI selected by the user MUST appear with its calculated value in your answer text.
+If user selected 4 KPIs, ALL 4 must appear with specific numbers in whatHappened bullets.
 
-KPI CALCULATION FORMULAS (use ACTUAL database values):
-- roi: (Revenue - Cost - Discounts - Spend) / Spend * 100, format as "1.85x"
-- lift_pct: ((Promo Sales - Baseline Sales) / Baseline Sales) * 100, format as "+18.5%"
-- incremental_margin: Revenue - Baseline Revenue - Variable Costs, format as "$XXX,XXX"
-- promo_spend: Sum of promotion total_spend, format as "$XXX,XXX"
-- revenue: Sum of transaction total_amount, format as "$X.XXM"
+KPI NAME MAPPING (use these exact terms in your answer):
+- "roi" → mention as "ROI" with value like "1.85x" or "185%"
+- "lift_pct" → mention as "Lift" or "Lift %" with value like "+18.5%" or "18.5% lift"
+- "incremental_margin" → mention as "Incremental Margin" with value like "$342,500"
+- "revenue" → mention as "Revenue" with value like "$2.3M" or "$2,300,000"
+- "gross_margin" → mention as "Gross Margin" with value like "$450,000"
+- "promo_spend" or "spend" → mention as "Promotional Spend" or "Spend" with value like "$125,000"
+- "margin_pct" → mention as "Margin %" with value like "32.5%"
+- "aov" → mention as "Average Order Value" or "AOV" with value like "$45.20"
+- "units_sold" → mention as "Units Sold" with value like "15,420 units"
+- "customer_count" → mention as "Customer Count" with value like "3,245 customers"
+- "clv" → mention as "Customer Lifetime Value" or "CLV" with value like "$1,250"
+- "conversion_rate" → mention as "Conversion Rate" with value like "12.5%"
+- "redemption_rate" → mention as "Redemption Rate" with value like "8.2%"
+- "market_share" → mention as "Market Share" with value like "23.5%"
+
+MANDATORY STRUCTURE FOR whatHappened BULLETS:
+- FIRST BULLET: Must include ${selectedKPIs.slice(0, 2).join(' and ')} with calculated values
+- SUBSEQUENT BULLETS: Must include remaining selected KPIs: ${selectedKPIs.slice(2).join(', ') || 'none'}
+- EVERY selected KPI MUST appear at least once with a specific number
+
+EXAMPLE FOR SELECTED KPIs ["roi", "lift_pct", "incremental_margin", "revenue"]:
+whatHappened: [
+  "Overall ROI across all promotions reached 1.45x with a strong 22.3% Lift compared to baseline periods.",
+  "Total Revenue generated was $4.8M with $892,000 in Incremental Margin from promotional activities.",
+  "Top performer 'Winter Sale' achieved 2.1x ROI with 28% Lift generating $1.2M Revenue."
+]
+
+CALCULATION FORMULAS (use ACTUAL database values):
+- roi: (Revenue - Cost - Discounts - Spend) / Spend, format as "X.XXx"
+- lift_pct: ((Promo Sales - Baseline Sales) / Baseline Sales) * 100, format as "+XX.X%"
+- incremental_margin: Promo Revenue - Baseline Revenue - Variable Costs, format as "$XXX,XXX"
+- revenue: Sum of transaction total_amount, format as "$X.XM"
 - gross_margin: Revenue - COGS, format as "$XXX,XXX"
-- margin_pct: (Gross Margin / Revenue) * 100, format as "XX.X%"
-- aov: Total Revenue / Transaction Count, format as "$XX.XX"
-- units_sold: Sum of transaction quantities, format as "XX,XXX units"
-- customer_count: Distinct customer_ids, format as "X,XXX customers"
-- clv: Sum of customer total_lifetime_value / count, format as "$X,XXX"
-- retention_rate: Repeat customers / Total customers * 100, format as "XX%"
-- conversion_rate: Transactions / Store foot traffic * 100, format as "XX.X%"
-- redemption_rate: Redeemed / Issued * 100, format as "XX%"
-- market_share: Category sales / Total category market * 100, format as "XX.X%"
-- stock_level: Current inventory units, format as "X,XXX units"
-- stockout_risk: Items at risk / Total items * 100, format as "XX% at risk"
-- impressions: Marketing channel impressions sum, format as "X.XM"
-- ctr: Clicks / Impressions * 100, format as "X.XX%"
-- roas: Revenue / Marketing Spend, format as "X.Xx"
-- category_share: Category revenue / Total revenue * 100, format as "XX.X%"
-- halo_effect: Related product lift %, format as "+X.X%"
-- cannibalization: Lost sales from substitution / Promo sales * 100, format as "X.X%"
-- price_elasticity: % Change in demand / % Change in price, format as "-X.XX"
+- promo_spend: Sum of promotion total_spend, format as "$XXX,XXX"
 
-EXAMPLE: If user selected ["roi", "lift_pct", "incremental_margin"]:
-- whatHappened MUST include: "ROI reached 1.85x on Dairy BOGO promotion, with 18.5% lift and $342,500 incremental margin"
-- selectedKpiValues MUST include: {"roi": 1.85, "lift_pct": 18.5, "incremental_margin": 342500}
+VALIDATION CHECK: Before finalizing, verify EACH of these KPIs appears with a number: ${selectedKPIs.join(', ')}
 `
       : '';
 
