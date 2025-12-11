@@ -33,33 +33,88 @@ interface ChatInterfaceProps {
   currentResult: AnalyticsResult | null;
 }
 
-const greetings = [
-  "👋 Hi! I'm your promotion intelligence assistant. I can help you discover insights, spot risks, and optimize performance. What would you like to explore?",
-  "Hello! Ready to help you uncover opportunities in your promotion data. Ask me anything or pick a quick start below!",
-  "Welcome! I'm here to guide you through your promotion analytics. Let's find some valuable insights together!",
-];
+const personaContent = {
+  executive: {
+    greetings: [
+      "👋 Hi! I'm your executive insights assistant. I can help you see the big picture across all categories and regions. What strategic question can I answer?",
+      "Welcome! Ready to provide high-level insights on portfolio performance, cross-category trends, and strategic opportunities.",
+      "Hello! Let's explore your promotion performance from a strategic lens - ROI trends, category comparisons, and growth opportunities await.",
+    ],
+    quickStarts: [
+      { text: "Portfolio ROI overview", icon: TrendingUp, tag: "STRATEGIC", color: "text-primary" },
+      { text: "Cross-category performance comparison", icon: BarChart3, tag: "COMPARE", color: "text-status-good" },
+      { text: "Which categories need attention?", icon: AlertTriangle, tag: "RISK", color: "text-status-bad" },
+      { text: "Forecast next quarter's performance", icon: Target, tag: "FORECAST", color: "text-status-warning" },
+    ],
+    exploration: [
+      { text: "Regional performance gaps", icon: BarChart3, tag: "REGIONS" },
+      { text: "YoY trend analysis", icon: TrendingUp, tag: "TRENDS" },
+      { text: "Budget allocation recommendations", icon: Compass, tag: "OPTIMIZE" },
+      { text: "Competitive positioning", icon: PieChart, tag: "MARKET" },
+    ],
+    tips: [
+      "💡 As an executive, I focus on high-level metrics across both consumables and non-consumables",
+      "📊 Ask me about portfolio-wide ROI, cross-category comparisons, or strategic forecasts",
+      "🎯 I can help identify which categories or regions need strategic intervention",
+    ],
+  },
+  "category-consumables": {
+    greetings: [
+      "👋 Hi! I'm your consumables category assistant. I specialize in Dairy, Produce, Beverages, Snacks, Bakery, Pantry, and Frozen. What would you like to analyze?",
+      "Welcome, Category Manager! Ready to dive deep into your consumables performance - from dairy promotions to beverage trends.",
+      "Hello! Let's optimize your consumables portfolio together. I can analyze promotion ROI, lift, and opportunities across your categories.",
+    ],
+    quickStarts: [
+      { text: "Top performing consumables promotions", icon: TrendingUp, tag: "WINNERS", color: "text-status-good" },
+      { text: "Which consumables promotions are losing money?", icon: AlertTriangle, tag: "RISK", color: "text-status-bad" },
+      { text: "Dairy vs Beverages ROI comparison", icon: BarChart3, tag: "COMPARE", color: "text-primary" },
+      { text: "Optimal discount depth for Snacks", icon: Lightbulb, tag: "OPTIMIZE", color: "text-status-warning" },
+    ],
+    exploration: [
+      { text: "Seasonal patterns in consumables", icon: TrendingUp, tag: "SEASONAL" },
+      { text: "Bakery promotion opportunities", icon: Compass, tag: "DISCOVER" },
+      { text: "Fresh category cannibalization", icon: PieChart, tag: "HALO" },
+      { text: "Pantry stock-up promotion ideas", icon: Lightbulb, tag: "IDEAS" },
+    ],
+    tips: [
+      "💡 I focus on consumables: Dairy, Produce, Beverages, Snacks, Bakery, Pantry, Frozen",
+      "🥛 Ask about specific categories like 'How is Dairy BOGO performing?' for detailed analysis",
+      "📈 I can help optimize promotion timing around freshness and seasonal demand",
+    ],
+  },
+  "category-non-consumables": {
+    greetings: [
+      "👋 Hi! I'm your non-consumables category assistant. I specialize in Personal Care and Home Care products. What insights do you need?",
+      "Welcome, Category Manager! Ready to analyze your Personal Care and Home Care promotions - from detergents to skincare.",
+      "Hello! Let's optimize your non-consumables portfolio. I can help with promotion ROI, customer response, and competitive positioning.",
+    ],
+    quickStarts: [
+      { text: "Top non-consumables promotions by ROI", icon: TrendingUp, tag: "WINNERS", color: "text-status-good" },
+      { text: "Underperforming Personal Care promotions", icon: AlertTriangle, tag: "RISK", color: "text-status-bad" },
+      { text: "Personal Care vs Home Care comparison", icon: BarChart3, tag: "COMPARE", color: "text-primary" },
+      { text: "Best discount depth for Home Care", icon: Lightbulb, tag: "OPTIMIZE", color: "text-status-warning" },
+    ],
+    exploration: [
+      { text: "Detergent promotion effectiveness", icon: TrendingUp, tag: "ANALYZE" },
+      { text: "Shampoo brand performance", icon: Compass, tag: "BRANDS" },
+      { text: "Cross-sell with consumables", icon: PieChart, tag: "HALO" },
+      { text: "Premium vs value tier response", icon: Lightbulb, tag: "SEGMENT" },
+    ],
+    tips: [
+      "💡 I focus on non-consumables: Personal Care (soaps, shampoos, skincare) and Home Care (detergents, cleaners)",
+      "🧴 Non-consumables often have different purchase cycles - ask about timing optimization",
+      "📊 I can analyze brand-level performance within your categories",
+    ],
+  },
+};
 
-const guideTips = [
-  { tip: "💡 Pro tip: Ask about specific categories like 'How is Dairy performing?' for focused insights", trigger: 'initial' },
-  { tip: "🎯 You can drill down into any chart by clicking on the bars to explore deeper", trigger: 'afterChart' },
-  { tip: "📊 Select specific KPIs using the KPIs button to focus your analysis on metrics you care about", trigger: 'afterAnswer' },
-  { tip: "🔮 Try asking predictive questions like 'What will ROI look like next quarter?' for forecasts", trigger: 'afterRoi' },
-  { tip: "⚠️ Want to find problems? Ask 'Which promotions are losing money?' to spot risks", trigger: 'afterSuccess' },
-];
+const getPersonaKey = (persona: string): keyof typeof personaContent => {
+  if (persona === 'executive') return 'executive';
+  if (persona === 'category-consumables') return 'category-consumables';
+  return 'category-non-consumables';
+};
 
 const contextualPrompts = {
-  initial: [
-    { text: "Show me top performing promotions", icon: TrendingUp, tag: "PERFORMANCE", color: "text-status-good" },
-    { text: "Which promotions are losing money?", icon: AlertTriangle, tag: "RISK", color: "text-status-bad" },
-    { text: "What's our overall ROI this month?", icon: Target, tag: "OVERVIEW", color: "text-primary" },
-    { text: "Help me optimize discount depth", icon: Lightbulb, tag: "OPTIMIZE", color: "text-status-warning" },
-  ],
-  exploration: [
-    { text: "Compare categories", icon: BarChart3, tag: "COMPARE" },
-    { text: "Forecast next quarter", icon: TrendingUp, tag: "PREDICT" },
-    { text: "Find opportunities", icon: Compass, tag: "DISCOVER" },
-    { text: "Analyze customer segments", icon: PieChart, tag: "SEGMENT" },
-  ],
   afterAnswer: [
     "Tell me more about the top performer",
     "Why is this happening?",
@@ -113,23 +168,30 @@ export default function ChatInterface({
   const [showKPISelector, setShowKPISelector] = useState(false);
   const [showHelpMenu, setShowHelpMenu] = useState(false);
   const [messageCount, setMessageCount] = useState(0);
+  const [lastPersona, setLastPersona] = useState(persona);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize with greeting and guidance
+  const personaKey = getPersonaKey(persona);
+  const content = personaContent[personaKey];
+
+  // Initialize with greeting - reset when persona changes
   useEffect(() => {
-    if (messages.length === 0) {
-      const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+    if (messages.length === 0 || persona !== lastPersona) {
+      const greeting = content.greetings[Math.floor(Math.random() * content.greetings.length)];
+      const randomTip = content.tips[Math.floor(Math.random() * content.tips.length)];
       setMessages([{
-        id: 'greeting',
+        id: 'greeting-' + Date.now(),
         type: 'assistant',
         content: greeting,
         timestamp: new Date(),
-        suggestions: contextualPrompts.initial.map(p => p.text),
-        guideTip: "I can answer questions about ROI, lift, margins, forecasts, risks, and more. Just ask naturally!",
+        suggestions: content.quickStarts.map(p => p.text),
+        guideTip: randomTip,
       }]);
+      setLastPersona(persona);
+      setMessageCount(0);
     }
-  }, []);
+  }, [persona, content]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -435,7 +497,7 @@ export default function ChatInterface({
             {messages.length === 1 ? "Quick starts - click to explore:" : "More ways to explore:"}
           </p>
           <div className="flex flex-wrap gap-2">
-            {(messages.length === 1 ? contextualPrompts.initial : contextualPrompts.exploration).map((prompt, idx) => (
+            {(messages.length === 1 ? content.quickStarts : content.exploration).map((prompt, idx) => (
               <Button
                 key={idx}
                 variant="secondary"
