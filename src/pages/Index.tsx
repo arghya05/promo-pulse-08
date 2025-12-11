@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Search, TrendingUp, AlertTriangle, CheckCircle2, ChevronRight, User } from "lucide-react";
+import { Search, TrendingUp, AlertTriangle, CheckCircle2, ChevronRight, User, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { questionLibrary } from "@/lib/data/questions";
 import { executeQuestion, getKPIStatus } from "@/lib/analytics";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from "recharts";
@@ -330,46 +331,67 @@ export default function Index() {
                     </div>
                   )}
                   
-                  {/* What Happened Section */}
-                  <Card className="p-6">
-                    <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                      WHAT HAPPENED
-                    </h2>
-                    <div className="space-y-4">
-                      {result.whatHappened.map((point, idx) => (
-                    <div key={idx} className="flex gap-3">
-                      <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
-                      <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
-                    </div>
-                  ))}
-                </div>
-              </Card>
+                  {/* What Happened Section - Collapsible */}
+                  <Collapsible defaultOpen>
+                    <Card className="p-6">
+                      <CollapsibleTrigger className="w-full flex items-center justify-between group">
+                        <h2 className="text-lg font-bold flex items-center gap-2">
+                          WHAT HAPPENED
+                        </h2>
+                        <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-4">
+                        <div className="space-y-4">
+                          {result.whatHappened.map((point, idx) => (
+                            <div key={idx} className="flex gap-3">
+                              <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
+                              <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
+                            </div>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </Card>
+                  </Collapsible>
 
-              {/* Why It Happened Section */}
-              <Card className="p-6">
-                <h2 className="text-lg font-bold mb-4">WHY IT HAPPENED</h2>
-                <div className="space-y-4">
-                  {result.why.map((point, idx) => (
-                    <div key={idx} className="flex gap-3">
-                      <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-chart-3 flex-shrink-0" />
-                      <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
-                    </div>
-                  ))}
-                </div>
-              </Card>
+                  {/* Why It Happened Section - Collapsible */}
+                  <Collapsible defaultOpen>
+                    <Card className="p-6">
+                      <CollapsibleTrigger className="w-full flex items-center justify-between group">
+                        <h2 className="text-lg font-bold">WHY IT HAPPENED</h2>
+                        <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-4">
+                        <div className="space-y-4">
+                          {result.why.map((point, idx) => (
+                            <div key={idx} className="flex gap-3">
+                              <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-chart-3 flex-shrink-0" />
+                              <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
+                            </div>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </Card>
+                  </Collapsible>
 
-              {/* Recommendation Section */}
-              <Card className="p-6">
-                <h2 className="text-lg font-bold mb-4">RECOMMENDATION</h2>
-                <div className="space-y-4">
-                  {result.whatToDo.map((point, idx) => (
-                    <div key={idx} className="flex gap-3">
-                      <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-status-good flex-shrink-0" />
-                      <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
-                    </div>
-                  ))}
-                </div>
-              </Card>
+                  {/* Recommendation Section - Collapsible */}
+                  <Collapsible defaultOpen>
+                    <Card className="p-6">
+                      <CollapsibleTrigger className="w-full flex items-center justify-between group">
+                        <h2 className="text-lg font-bold">RECOMMENDATION</h2>
+                        <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-4">
+                        <div className="space-y-4">
+                          {result.whatToDo.map((point, idx) => (
+                            <div key={idx} className="flex gap-3">
+                              <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-status-good flex-shrink-0" />
+                              <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
+                            </div>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </Card>
+                  </Collapsible>
 
               {/* Predictive & ML Insights */}
               <PredictiveInsights 
