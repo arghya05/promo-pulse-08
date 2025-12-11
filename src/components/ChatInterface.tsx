@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Sparkles, ArrowRight, Lightbulb, TrendingUp, AlertTriangle, HelpCircle, Target, Compass, ChevronRight, Zap, BarChart3, PieChart } from "lucide-react";
+import { Send, Bot, User, Sparkles, ArrowRight, Lightbulb, TrendingUp, AlertTriangle, HelpCircle, Target, Compass, ChevronRight, Zap, BarChart3, PieChart, Clock, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -121,6 +121,12 @@ const contextualPrompts = {
     "What should I do next?",
     "Compare this to other categories",
   ],
+  timeFilters: [
+    { text: "Last month", filter: "last month" },
+    { text: "Last quarter", filter: "last 3 months" },
+    { text: "Last year", filter: "last 12 months" },
+    { text: "Year to date", filter: "year to date" },
+  ],
   followUp: {
     roi: [
       "Which category has the best ROI?",
@@ -147,6 +153,12 @@ const contextualPrompts = {
       "Which products should we promote next?",
     ],
   },
+  refinements: [
+    { text: "Focus on high ROI (>1.5x)", filter: "with ROI above 1.5" },
+    { text: "Show only risks (ROI<1)", filter: "with ROI below 1" },
+    { text: "Top performers only", filter: "top 5 performers" },
+    { text: "Include forecasts", filter: "with forecast" },
+  ],
   needHelp: [
     { text: "What can I ask you?", icon: HelpCircle },
     { text: "Explain promotion ROI", icon: Lightbulb },
@@ -438,25 +450,76 @@ export default function ChatInterface({
 
                 {/* Suggestions */}
                 {message.suggestions && message.suggestions.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-[10px] text-muted-foreground mb-1.5 flex items-center gap-1">
-                      <Compass className="h-3 w-3" />
-                      Explore further:
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {message.suggestions.map((suggestion, idx) => (
-                        <Button
-                          key={idx}
-                          variant="outline"
-                          size="sm"
-                          className="text-xs h-7 px-2.5 bg-background hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
-                          onClick={() => handleSuggestionClick(suggestion)}
-                          disabled={isLoading}
-                        >
-                          <ArrowRight className="h-3 w-3 mr-1" />
-                          {suggestion}
-                        </Button>
-                      ))}
+                  <div className="mt-2 space-y-3">
+                    {/* Time Filter Pills */}
+                    {message.analyticsResult && (
+                      <div>
+                        <p className="text-[10px] text-muted-foreground mb-1.5 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Refine by time period:
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {contextualPrompts.timeFilters.map((filter, idx) => (
+                            <Button
+                              key={idx}
+                              variant="outline"
+                              size="sm"
+                              className="text-[10px] h-6 px-2 bg-secondary/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                              onClick={() => handleSuggestionClick(`${message.analyticsResult?.sources || 'Analysis'} for ${filter.filter}`)}
+                              disabled={isLoading}
+                            >
+                              {filter.text}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Refinement Options */}
+                    {message.analyticsResult && (
+                      <div>
+                        <p className="text-[10px] text-muted-foreground mb-1.5 flex items-center gap-1">
+                          <Filter className="h-3 w-3" />
+                          Fine-tune analysis:
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {contextualPrompts.refinements.map((ref, idx) => (
+                            <Button
+                              key={idx}
+                              variant="outline"
+                              size="sm"
+                              className="text-[10px] h-6 px-2 bg-secondary/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                              onClick={() => handleSuggestionClick(`Show me the same analysis ${ref.filter}`)}
+                              disabled={isLoading}
+                            >
+                              {ref.text}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Follow-up Questions */}
+                    <div>
+                      <p className="text-[10px] text-muted-foreground mb-1.5 flex items-center gap-1">
+                        <Compass className="h-3 w-3" />
+                        Explore further:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {message.suggestions.map((suggestion, idx) => (
+                          <Button
+                            key={idx}
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-7 px-2.5 bg-background hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
+                            onClick={() => handleSuggestionClick(suggestion)}
+                            disabled={isLoading}
+                          >
+                            <ArrowRight className="h-3 w-3 mr-1" />
+                            {suggestion}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
