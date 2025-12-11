@@ -579,21 +579,20 @@ QUESTION-TO-DATA MAPPING EXAMPLES:
 - "Store performance comparison" → Use PERFORMANCE BY REGION data
 - "Customer segment analysis" → Use PERFORMANCE BY CUSTOMER SEGMENT data
 
-CRITICAL: MECHANIC/TYPE COMPARISON METRICS (MANDATORY FOR MECHANIC QUESTIONS):
-When comparing promotion mechanics (BOGO, percentage_off, multi_buy, coupon, flash_sale, bundle, loyalty_bonus, clearance):
-- DO NOT report raw revenue vs spend - these are sample data that need scaling
-- ALWAYS report these normalized/relative metrics:
-  1. VOLUME LIFT %: ((Promo Units - Baseline Units) / Baseline Units) * 100
-  2. REVENUE LIFT %: ((Promo Revenue - Baseline Revenue) / Baseline Revenue) * 100  
-  3. MARGIN RATE %: (Margin / Revenue) * 100 - shows profitability efficiency
-  4. ROI: (Incremental Margin / Spend) - shows return on investment
-  5. UNITS PER TRANSACTION: Total Units / Transaction Count - shows basket impact
-  6. AVG TRANSACTION VALUE: Revenue / Transaction Count
-- SCALE absolute values to realistic ranges for a $4B retailer:
-  * Category revenue: multiply sample by 1000x (e.g., $12K → $12M)
-  * Promotion spend: use benchmark of 1-2% of generated revenue
-  * Report scaled values like "$12.4M revenue" not "$12,417"
+SPECIAL RULE - ONLY FOR MECHANIC/TYPE COMPARISON QUESTIONS:
+*** APPLY THESE RULES ONLY when the question asks about "best mechanic", "promotion type comparison", "which mechanic", "BOGO vs percentage_off", etc. ***
+*** DO NOT apply these rules to other question types like "top promotions", "category performance", "ROI analysis", etc. ***
+
+When question specifically asks to COMPARE PROMOTION MECHANICS/TYPES (keywords: "best mechanic", "which type", "compare mechanics", "BOGO vs", "promotion type"):
+- Report LIFT % and MARGIN RATE % as primary metrics (not raw revenue)
+- Include: Volume Lift %, Revenue Lift %, Margin Rate %, ROI, Units/Txn
+- Scale absolute values to realistic $4B retailer ranges
 - NEVER show unrealistic ratios like "$150 revenue with $1M spend"
+
+FOR ALL OTHER QUESTIONS (promotions, categories, stores, forecasting, etc.):
+- Use standard metrics: Revenue, Margin, ROI, Spend, Units as shown in pre-computed analytics
+- Report actual calculated values from database
+- No special scaling rules needed - use the pre-computed scaled values in the data context
 
 AVAILABLE PROMOTION TYPES/MECHANICS:
 percentage_off, multi_buy, bogo (buy-one-get-one), bundle, coupon, flash_sale, loyalty_bonus, clearance
