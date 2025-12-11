@@ -29,7 +29,7 @@ serve(async (req) => {
   }
 
   try {
-    const { question, persona = 'executive', categories = null } = await req.json();
+    const { question, persona = 'executive', categories = null, selectedKPIs = null } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     if (!LOVABLE_API_KEY) {
@@ -39,6 +39,7 @@ serve(async (req) => {
     console.log('Processing question:', question);
     console.log('Persona:', persona);
     console.log('Categories filter:', categories);
+    console.log('Selected KPIs:', selectedKPIs);
 
     // Query ALL actual data from database for rich context
     const supabaseClient = createClient(
@@ -48,7 +49,8 @@ serve(async (req) => {
 
     // === CACHE CHECK ===
     const normalizedQuestion = normalizeQuestion(question);
-    const questionHash = simpleHash(normalizedQuestion + '|' + persona);
+    const kpiSuffix = selectedKPIs && selectedKPIs.length > 0 ? '|' + selectedKPIs.sort().join(',') : '';
+    const questionHash = simpleHash(normalizedQuestion + '|' + persona + kpiSuffix);
     
     console.log('Checking cache for hash:', questionHash);
     
@@ -455,9 +457,53 @@ Focus on:
 - Language should be tactical and execution-focused
 - All chartData, recommendations, and insights must be filtered to non-consumables only`;
 
+    // Build KPI focus instructions if user selected specific KPIs
+    const kpiInstructions = selectedKPIs && selectedKPIs.length > 0 
+      ? `
+USER-SELECTED KPIs FOR FOCUSED ANALYSIS:
+The user has specifically requested focus on these KPIs: ${selectedKPIs.join(', ')}
+
+You MUST:
+1. Prioritize these selected KPIs in your analysis and insights
+2. Include specific calculations and values for each selected KPI
+3. Structure your chartData to include columns for these KPIs when relevant
+4. In whatHappened, why, and whatToDo sections, reference these KPIs explicitly
+5. In causalDrivers, show how factors impact these specific KPIs
+6. Format the kpis object to include these metrics with actual calculated values
+
+KPI ID to Metric Mapping:
+- roi: Return on Investment (revenue/spend ratio)
+- lift_pct: Sales Lift % during promotion vs baseline
+- incremental_margin: Additional profit from promotion
+- promo_spend: Total promotion investment
+- revenue: Total sales revenue
+- gross_margin: Revenue minus COGS
+- margin_pct: Margin as % of revenue
+- aov: Average Order Value
+- units_sold: Quantity sold
+- customer_count: Unique customers
+- clv: Customer Lifetime Value
+- retention_rate: % customers returning
+- conversion_rate: Visitors to buyers %
+- redemption_rate: Coupon/offer redemption %
+- market_share: Share of market
+- stock_level: Current inventory
+- stockout_risk: Risk of stock depletion
+- impressions: Ad views
+- ctr: Click-through rate
+- roas: Return on ad spend
+- category_share: % of category sales
+- halo_effect: Cross-product sales lift
+- cannibalization: % sales taken from other products
+- price_elasticity: Price sensitivity coefficient
+`
+      : '';
+
     const systemPrompt = `You are an advanced promotion analytics AI assistant specialized in retail promotion intelligence. Your PRIMARY DIRECTIVE is to provide 100% relevant, data-driven answers grounded in the actual database context provided below.
 
 ${personaContext}
+
+${kpiInstructions}
 
 CRITICAL RELEVANCE REQUIREMENTS - ANSWER MUST BE 100% LINKED TO QUESTION:
 1. READ THE QUESTION CAREFULLY - identify exactly what is being asked (promotion name, category, metric, time period, etc.)

@@ -17,6 +17,7 @@ import VoiceRecorder from "@/components/VoiceRecorder";
 import DataManagement from "@/components/DataManagement";
 import { RecommendationsEngine } from "@/components/RecommendationsEngine";
 import IntelligentDrillDown from "@/components/IntelligentDrillDown";
+import KPISelector from "@/components/KPISelector";
 
 type Persona = 'executive' | 'consumables' | 'non_consumables';
 
@@ -50,6 +51,7 @@ export default function Index() {
   const [drillDownData, setDrillDownData] = useState<{ name: string; roi: number; margin: number } | null>(null);
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
   const [persona, setPersona] = useState<Persona>('executive');
+  const [selectedKPIs, setSelectedKPIs] = useState<string[]>([]);
 
   // Format large numbers to fit in KPI cards
   const formatKPIValue = (value: number | null | undefined) => {
@@ -91,7 +93,8 @@ export default function Index() {
           body: JSON.stringify({ 
             question: questionToAsk,
             persona: persona,
-            categories: personaConfig[persona].categories
+            categories: personaConfig[persona].categories,
+            selectedKPIs: selectedKPIs.length > 0 ? selectedKPIs : undefined
           }),
         }
       );
@@ -297,6 +300,14 @@ export default function Index() {
                   </div>
                 </div>
               </Card>
+
+              {/* KPI Selector */}
+              <KPISelector
+                question={query}
+                selectedKPIs={selectedKPIs}
+                onKPIsChange={setSelectedKPIs}
+                isLoading={isLoading}
+              />
             </div>
 
             {result ? (
