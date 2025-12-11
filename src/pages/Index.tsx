@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { Search, TrendingUp, AlertTriangle, CheckCircle2, ChevronDown, User, MessageSquare, LayoutGrid } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { Search, TrendingUp, AlertTriangle, CheckCircle2, ChevronDown, User, MessageSquare, LayoutGrid, Calendar, Clock, Filter, SlidersHorizontal, RefreshCw, Zap, Target, Settings2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Slider } from "@/components/ui/slider";
 import { questionLibrary } from "@/lib/data/questions";
 import { executeQuestion, getKPIStatus } from "@/lib/analytics";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from "recharts";
@@ -23,6 +24,15 @@ import ChatInterface from "@/components/ChatInterface";
 import SearchSuggestions from "@/components/SearchSuggestions";
 
 type Persona = 'executive' | 'consumables' | 'non_consumables';
+type TimePeriod = 'last_month' | 'last_quarter' | 'last_year' | 'ytd' | 'custom';
+
+const timePeriodConfig = {
+  last_month: { label: 'Last Month', icon: Calendar, description: 'Past 30 days' },
+  last_quarter: { label: 'Last Quarter', icon: Clock, description: 'Past 3 months' },
+  last_year: { label: 'Last Year', icon: Calendar, description: 'Past 12 months' },
+  ytd: { label: 'Year to Date', icon: TrendingUp, description: 'Jan 1 - Today' },
+  custom: { label: 'Custom', icon: SlidersHorizontal, description: 'Select range' },
+};
 
 const personaConfig = {
   executive: {
@@ -57,6 +67,15 @@ export default function Index() {
   const [selectedKPIs, setSelectedKPIs] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   
+  // New state for improvements
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('last_quarter');
+  const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
+  const [showRefinement, setShowRefinement] = useState(false);
+  const [roiThreshold, setRoiThreshold] = useState([1.0]);
+  const [liftThreshold, setLiftThreshold] = useState([15]);
+  
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const loadingRef = useRef<HTMLDivElement>(null);
 
   // Format large numbers to fit in KPI cards
   const formatKPIValue = (value: number | null | undefined) => {
@@ -71,6 +90,19 @@ export default function Index() {
 
   const [cacheHit, setCacheHit] = useState(false);
   const [responseTime, setResponseTime] = useState<number | null>(null);
+
+  // Scroll to loading/results when question is asked
+  useEffect(() => {
+    if (isLoading && loadingRef.current) {
+      loadingRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [isLoading]);
+
+  useEffect(() => {
+    if (result && resultsRef.current) {
+      resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [result]);
 
   const handleAsk = async (questionText?: string) => {
     const questionToAsk = questionText || query;
@@ -196,10 +228,51 @@ export default function Index() {
     }
   }, [persona, toast]);
 
-  const handleQuestionClick = async (question: string) => {
+  const handleQuestionClick = async (question: string, questionId?: string) => {
+    // Visual feedback - highlight selected question
+    setSelectedQuestion(questionId || question);
     setQuery(question);
+    
+    // Add time period context to the question if selected
+    const timeContext = timePeriod !== 'custom' ? ` (${timePeriodConfig[timePeriod].description})` : '';
+    const questionWithContext = question.includes('last') ? question : question + timeContext;
+    
     // Use current selectedKPIs - don't reset them
-    await handleAsk(question);
+    await handleAsk(questionWithContext);
+    
+    // Clear selection after a delay
+    setTimeout(() => setSelectedQuestion(null), 2000);
+  };
+
+  // Handle refinement - rerun with adjusted parameters
+  const handleRefinement = async () => {
+    if (!query) return;
+    
+    const refinedQuestion = `${query} (ROI threshold: ${roiThreshold[0]}x, Lift threshold: ${liftThreshold[0]}%)`;
+    await handleAsk(refinedQuestion);
+  };
+
+  // Determine output section visibility based on question type
+  const getOutputSections = () => {
+    const questionLower = query.toLowerCase();
+    const isForecasting = questionLower.includes('forecast') || questionLower.includes('predict') || questionLower.includes('future');
+    const isComparison = questionLower.includes('compare') || questionLower.includes('vs') || questionLower.includes('versus');
+    const isOptimization = questionLower.includes('optimal') || questionLower.includes('best') || questionLower.includes('improve');
+    const isRisk = questionLower.includes('risk') || questionLower.includes('underperform') || questionLower.includes('lost money');
+    
+    return {
+      showWhatHappened: true,
+      showWhy: !isForecasting, // Hide "why" for forecasting - focus on predictions
+      showRecommendation: true,
+      showPredictions: isForecasting || isOptimization,
+      showComparison: isComparison,
+      showRiskAlert: isRisk && result?.kpis?.roi && result.kpis.roi < 1,
+      sectionOrder: isForecasting 
+        ? ['whatHappened', 'predictions', 'recommendation']
+        : isRisk 
+        ? ['riskAlert', 'whatHappened', 'why', 'recommendation']
+        : ['whatHappened', 'why', 'recommendation'],
+    };
   };
 
   // Persona-specific popular questions
@@ -561,26 +634,117 @@ export default function Index() {
                     onKPIsChange={setSelectedKPIs}
                     isLoading={isLoading}
                   />
+
+                  {/* Time Period Filters */}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      Time Period:
+                    </span>
+                    {(Object.entries(timePeriodConfig) as [TimePeriod, typeof timePeriodConfig.last_month][]).slice(0, -1).map(([key, config]) => (
+                      <Button
+                        key={key}
+                        variant={timePeriod === key ? "default" : "outline"}
+                        size="sm"
+                        className={`gap-1.5 h-8 ${timePeriod === key ? '' : 'hover:bg-primary/10 hover:text-primary hover:border-primary/30'}`}
+                        onClick={() => setTimePeriod(key)}
+                      >
+                        <config.icon className="h-3.5 w-3.5" />
+                        {config.label}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
+
+                {/* Loading Indicator with scroll anchor */}
+                {isLoading && (
+                  <div ref={loadingRef} className="flex items-center justify-center py-12">
+                    <Card className="p-6 flex items-center gap-4 bg-primary/5 border-primary/20">
+                      <div className="h-8 w-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+                      <div>
+                        <p className="font-semibold text-foreground">Analyzing your question...</p>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedQuestion ? `"${selectedQuestion.substring(0, 50)}..."` : 'Processing data'}
+                        </p>
+                      </div>
+                    </Card>
+                  </div>
+                )}
 
                 {result ? (
               /* Answer View */
-              <div className="grid grid-cols-12 gap-8">
+              <div ref={resultsRef} className="grid grid-cols-12 gap-8">
                 {/* Main Content */}
                 <div className="col-span-8 space-y-6">
-                  {/* Cache/Response Status */}
-                  {responseTime !== null && (
+                  {/* Cache/Response Status & Refinement Toggle */}
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      {cacheHit ? (
-                        <Badge variant="secondary" className="bg-status-good/10 text-status-good border-0">
-                          ⚡ Cached ({responseTime}ms)
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-muted-foreground">
-                          Analyzed ({(responseTime / 1000).toFixed(1)}s)
-                        </Badge>
+                      {responseTime !== null && (
+                        <>
+                          {cacheHit ? (
+                            <Badge variant="secondary" className="bg-status-good/10 text-status-good border-0">
+                              ⚡ Cached ({responseTime}ms)
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground">
+                              Analyzed ({(responseTime / 1000).toFixed(1)}s)
+                            </Badge>
+                          )}
+                        </>
                       )}
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => setShowRefinement(!showRefinement)}
+                    >
+                      <SlidersHorizontal className="h-4 w-4" />
+                      Refine Analysis
+                    </Button>
+                  </div>
+
+                  {/* Refinement Panel */}
+                  {showRefinement && (
+                    <Card className="p-4 bg-secondary/30 border-primary/20">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Settings2 className="h-4 w-4 text-primary" />
+                        <span className="font-semibold text-sm">Fine-tune your analysis</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-xs text-muted-foreground">ROI Threshold: {roiThreshold[0]}x</label>
+                          <Slider
+                            value={roiThreshold}
+                            onValueChange={setRoiThreshold}
+                            min={0.5}
+                            max={3}
+                            step={0.1}
+                            className="w-full"
+                          />
+                          <p className="text-xs text-muted-foreground">Show promotions with ROI above this value</p>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs text-muted-foreground">Lift Threshold: {liftThreshold[0]}%</label>
+                          <Slider
+                            value={liftThreshold}
+                            onValueChange={setLiftThreshold}
+                            min={5}
+                            max={50}
+                            step={5}
+                            className="w-full"
+                          />
+                          <p className="text-xs text-muted-foreground">Focus on promotions with lift above this %</p>
+                        </div>
+                      </div>
+                      <div className="flex justify-end mt-4 gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setShowRefinement(false)}>Cancel</Button>
+                        <Button size="sm" className="gap-1" onClick={handleRefinement}>
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          Re-analyze
+                        </Button>
+                      </div>
+                    </Card>
                   )}
                   
                   {/* What Happened Section - Collapsible */}
@@ -864,10 +1028,17 @@ export default function Index() {
                   {currentQuestions.slice(0, 6).map(q => (
                     <button
                       key={q.id}
-                      onClick={() => handleQuestionClick(q.question)}
-                      className="w-full text-left text-sm p-3 rounded-md hover:bg-accent transition-colors border border-transparent hover:border-border"
+                      onClick={() => handleQuestionClick(q.question, q.id)}
+                      className={`w-full text-left text-sm p-3 rounded-md transition-all border ${
+                        selectedQuestion === q.id 
+                          ? 'bg-primary/20 border-primary text-primary ring-2 ring-primary/30' 
+                          : 'border-transparent hover:bg-accent hover:border-border'
+                      }`}
                     >
-                      {q.question}
+                      <div className="flex items-center gap-2">
+                        {selectedQuestion === q.id && <Zap className="h-3.5 w-3.5 animate-pulse" />}
+                        <span>{q.question}</span>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -894,15 +1065,30 @@ export default function Index() {
                 {currentQuestions.map(q => (
                   <Card 
                     key={q.id}
-                    className="p-5 cursor-pointer hover:shadow-lg transition-all hover:border-primary/50"
-                    onClick={() => handleQuestionClick(q.question)}
+                    className={`p-5 cursor-pointer transition-all ${
+                      selectedQuestion === q.id 
+                        ? 'shadow-lg border-primary bg-primary/5 ring-2 ring-primary/30' 
+                        : 'hover:shadow-lg hover:border-primary/50'
+                    }`}
+                    onClick={() => handleQuestionClick(q.question, q.id)}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="bg-primary/10 p-2 rounded-lg">
-                        <TrendingUp className="h-5 w-5 text-primary" />
+                      <div className={`p-2 rounded-lg ${selectedQuestion === q.id ? 'bg-primary/20' : 'bg-primary/10'}`}>
+                        {selectedQuestion === q.id ? (
+                          <Zap className="h-5 w-5 text-primary animate-pulse" />
+                        ) : (
+                          <TrendingUp className="h-5 w-5 text-primary" />
+                        )}
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-semibold mb-2">{q.tag}</h4>
+                        <h4 className="font-semibold mb-2 flex items-center gap-2">
+                          {q.tag}
+                          {selectedQuestion === q.id && (
+                            <Badge variant="secondary" className="text-[10px] bg-primary/20 text-primary">
+                              Analyzing...
+                            </Badge>
+                          )}
+                        </h4>
                         <p className="text-sm text-muted-foreground leading-relaxed">
                           {q.question}
                         </p>
