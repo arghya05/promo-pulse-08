@@ -20,6 +20,7 @@ import { RecommendationsEngine } from "@/components/RecommendationsEngine";
 import IntelligentDrillDown from "@/components/IntelligentDrillDown";
 import KPISelector from "@/components/KPISelector";
 import ChatInterface from "@/components/ChatInterface";
+import SearchSuggestions from "@/components/SearchSuggestions";
 
 type Persona = 'executive' | 'consumables' | 'non_consumables';
 
@@ -54,6 +55,7 @@ export default function Index() {
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
   const [persona, setPersona] = useState<Persona>('executive');
   const [selectedKPIs, setSelectedKPIs] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   
 
   // Format large numbers to fit in KPI cards
@@ -480,11 +482,27 @@ export default function Index() {
                   <Card className="p-2 bg-card border-border shadow-sm">
                     <div className="flex items-center gap-2">
                       <div className="relative flex-1">
-                        <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground/70" />
+                        <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground/70 z-10" />
                         <Input
                           value={query}
-                          onChange={(e) => setQuery(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleAsk()}
+                          onChange={(e) => {
+                            setQuery(e.target.value);
+                            setShowSuggestions(e.target.value.length >= 2);
+                          }}
+                          onFocus={() => setShowSuggestions(query.length >= 2)}
+                          onBlur={() => {
+                            // Delay hiding to allow click on suggestion
+                            setTimeout(() => setShowSuggestions(false), 200);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              setShowSuggestions(false);
+                              handleAsk();
+                            }
+                            if (e.key === "Escape") {
+                              setShowSuggestions(false);
+                            }
+                          }}
                           placeholder={
                             persona === 'executive' 
                               ? "Ask strategic questions about overall portfolio, cross-category trends..."
@@ -494,18 +512,34 @@ export default function Index() {
                           }
                           className="pl-12 pr-4 h-12 text-base bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60"
                         />
+                        
+                        {/* AI-powered search suggestions */}
+                        <SearchSuggestions
+                          query={query}
+                          persona={persona}
+                          isVisible={showSuggestions && !isLoading}
+                          onSelect={(suggestion) => {
+                            setQuery(suggestion);
+                            setShowSuggestions(false);
+                            handleAsk(suggestion);
+                          }}
+                        />
                       </div>
                       
                       <div className="flex items-center gap-2 pr-1">
                         <VoiceRecorder 
                           onTranscript={(text) => {
                             setQuery(text);
+                            setShowSuggestions(false);
                             handleAsk(text);
                           }}
                           disabled={isLoading}
                         />
                         <Button 
-                          onClick={() => handleAsk()}
+                          onClick={() => {
+                            setShowSuggestions(false);
+                            handleAsk();
+                          }}
                           className="px-6 h-10 font-medium shadow-sm"
                           disabled={isLoading}
                         >
