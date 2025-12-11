@@ -324,7 +324,8 @@ export default function ChatInterface({
     };
 
     setMessages(prev => [...prev, userMessage]);
-    await onAsk(suggestion, []);
+    // Pass current selectedKPIs instead of empty array
+    await onAsk(suggestion, selectedKPIs);
   };
 
   const handleVoiceTranscript = (text: string) => {
