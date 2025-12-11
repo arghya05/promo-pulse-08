@@ -134,7 +134,8 @@ export default function Index() {
             question: questionToAsk,
             persona: persona,
             categories: personaConfig[persona].categories,
-            selectedKPIs: selectedKPIs.length > 0 ? selectedKPIs : null
+            selectedKPIs: selectedKPIs.length > 0 ? selectedKPIs : null,
+            timePeriod: timePeriod !== 'custom' ? timePeriod : null
           }),
         }
       );
@@ -198,7 +199,8 @@ export default function Index() {
             question: questionText,
             persona: persona,
             categories: personaConfig[persona].categories,
-            selectedKPIs: kpis.length > 0 ? kpis : null
+            selectedKPIs: kpis.length > 0 ? kpis : null,
+            timePeriod: timePeriod !== 'custom' ? timePeriod : null
           }),
         }
       );

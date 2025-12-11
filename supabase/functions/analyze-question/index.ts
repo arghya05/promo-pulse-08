@@ -29,17 +29,33 @@ serve(async (req) => {
   }
 
   try {
-    const { question, persona = 'executive', categories = null, selectedKPIs = null } = await req.json();
+    const { question, persona = 'executive', categories = null, selectedKPIs = null, timePeriod = null } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
+    // Calculate date range based on time period
+    const now = new Date();
+    let startDate: Date | null = null;
+    if (timePeriod === 'last_month') {
+      startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+    } else if (timePeriod === 'last_quarter') {
+      startDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+    } else if (timePeriod === 'last_year') {
+      startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+    } else if (timePeriod === 'ytd') {
+      startDate = new Date(now.getFullYear(), 0, 1);
+    }
+    
+    const dateFilter = startDate ? startDate.toISOString().split('T')[0] : null;
+
     console.log('Processing question:', question);
     console.log('Persona:', persona);
     console.log('Categories filter:', categories);
     console.log('Selected KPIs:', selectedKPIs);
+    console.log('Time period:', timePeriod, '| Date filter:', dateFilter);
 
     // Query ALL actual data from database for rich context
     const supabaseClient = createClient(
@@ -50,7 +66,8 @@ serve(async (req) => {
     // === CACHE CHECK ===
     const normalizedQuestion = normalizeQuestion(question);
     const kpiSuffix = selectedKPIs && selectedKPIs.length > 0 ? '|' + selectedKPIs.sort().join(',') : '';
-    const questionHash = simpleHash(normalizedQuestion + '|' + persona + kpiSuffix);
+    const timeSuffix = timePeriod ? '|' + timePeriod : '';
+    const questionHash = simpleHash(normalizedQuestion + '|' + persona + kpiSuffix + timeSuffix);
     
     console.log('Checking cache for hash:', questionHash);
     
@@ -80,6 +97,16 @@ serve(async (req) => {
     
     console.log('Cache MISS, proceeding with AI analysis');
 
+    // Build transactions query with optional date filter
+    let transactionsQuery = supabaseClient
+      .from('transactions')
+      .select('*, stores(store_name, region), promotions(promotion_name, promotion_type)')
+      .order('transaction_date', { ascending: false });
+    
+    if (dateFilter) {
+      transactionsQuery = transactionsQuery.gte('transaction_date', dateFilter);
+    }
+
     const [
       storesResult, 
       promotionsResult, 
@@ -95,7 +122,7 @@ serve(async (req) => {
     ] = await Promise.all([
       supabaseClient.from('stores').select('*'),
       supabaseClient.from('promotions').select('*').order('created_at', { ascending: false }),
-      supabaseClient.from('transactions').select('*, stores(store_name, region), promotions(promotion_name, promotion_type)').order('transaction_date', { ascending: false }),
+      transactionsQuery,
       supabaseClient.from('customers').select('*'),
       supabaseClient.from('third_party_data').select('*').order('data_date', { ascending: false }).limit(100),
       supabaseClient.from('products').select('*'),
@@ -545,9 +572,20 @@ VALIDATION CHECK: Before finalizing, verify EACH of these KPIs appears with a nu
 `
       : '';
 
+    const timePeriodContext = timePeriod ? `
+TIME PERIOD FILTER: Analysis is scoped to ${timePeriod === 'last_month' ? 'the last month (past 30 days)' : 
+  timePeriod === 'last_quarter' ? 'the last quarter (past 3 months)' : 
+  timePeriod === 'last_year' ? 'the last year (past 12 months)' : 
+  'year-to-date'}.
+When presenting results, explicitly mention this time scope in your analysis (e.g., "In the last quarter...", "Over the past 3 months...").
+The transaction data has already been filtered to this time period.
+` : '';
+
     const systemPrompt = `You are an advanced promotion analytics AI assistant specialized in retail promotion intelligence. Your PRIMARY DIRECTIVE is to provide 100% relevant, data-driven answers grounded in the actual database context provided below.
 
 ${personaContext}
+
+${timePeriodContext}
 
 ${kpiInstructions}
 
