@@ -1199,34 +1199,61 @@ Now analyze and provide a 100% accurate, data-driven answer to the question abov
       if (analysisResult.kpis) {
         const kpis = analysisResult.kpis;
         
-        // Validate and correct ROI - should be based on actual spend
-        if (actualKPIs.totalSpend > 0) {
-          // Ensure ROI is in reasonable range based on actual data
-          if (Math.abs(kpis.roi) > 10 || isNaN(kpis.roi)) {
-            kpis.roi = parseFloat(actualROI.toFixed(2));
-            console.log('Corrected ROI to:', kpis.roi);
-          }
-        }
-        
-        // Validate lift percentage
-        if (Math.abs(kpis.liftPct) > 100 || isNaN(kpis.liftPct)) {
+        // ALWAYS set liftPct from actual data if null/undefined/NaN
+        if (kpis.liftPct === null || kpis.liftPct === undefined || isNaN(kpis.liftPct)) {
           kpis.liftPct = parseFloat(actualLiftPct.toFixed(1));
-          console.log('Corrected liftPct to:', kpis.liftPct);
+          console.log('Set liftPct from actual data:', kpis.liftPct);
+        } else if (Math.abs(kpis.liftPct) > 100) {
+          kpis.liftPct = parseFloat(actualLiftPct.toFixed(1));
+          console.log('Corrected extreme liftPct to:', kpis.liftPct);
         }
         
-        // Validate spend is realistic
-        if (kpis.spend > actualKPIs.totalSpend * 2 || kpis.spend < 0) {
+        // ALWAYS set ROI from actual data if null/undefined/NaN or unrealistic
+        if (kpis.roi === null || kpis.roi === undefined || isNaN(kpis.roi) || Math.abs(kpis.roi) > 10) {
+          kpis.roi = parseFloat(actualROI.toFixed(2));
+          console.log('Set ROI from actual data:', kpis.roi);
+        }
+        
+        // ALWAYS set spend from actual data if null/undefined or unrealistic
+        if (kpis.spend === null || kpis.spend === undefined || kpis.spend < 0 || kpis.spend > actualKPIs.totalSpend * 2) {
           kpis.spend = Math.round(actualKPIs.totalSpend);
-          console.log('Corrected spend to:', kpis.spend);
+          console.log('Set spend from actual data:', kpis.spend);
         }
         
-        // Validate margin is realistic
-        if (Math.abs(kpis.incrementalMargin) > actualMargin * 3) {
+        // ALWAYS set margin from actual data if null/undefined or unrealistic
+        if (kpis.incrementalMargin === null || kpis.incrementalMargin === undefined || Math.abs(kpis.incrementalMargin) > actualMargin * 3) {
           kpis.incrementalMargin = Math.round(actualMargin);
-          console.log('Corrected incrementalMargin to:', kpis.incrementalMargin);
+          console.log('Set incrementalMargin from actual data:', kpis.incrementalMargin);
         }
         
         analysisResult.kpis = kpis;
+      } else {
+        // If no kpis object at all, create one from actual data
+        analysisResult.kpis = {
+          liftPct: parseFloat(actualLiftPct.toFixed(1)),
+          roi: parseFloat(actualROI.toFixed(2)),
+          incrementalMargin: Math.round(actualMargin),
+          spend: Math.round(actualKPIs.totalSpend)
+        };
+        console.log('Created kpis from actual data:', analysisResult.kpis);
+      }
+      
+      // ALWAYS include lift_pct in selectedKpiValues if user selected it
+      if (selectedKPIs && selectedKPIs.length > 0) {
+        const liftKpiNames = ['lift_pct', 'liftpct', 'lift %', 'lift', 'lift_percent'];
+        const hasLiftSelected = selectedKPIs.some((kpi: string) => 
+          liftKpiNames.includes(kpi.toLowerCase().replace(/[^a-z_]/g, '').replace('percent', 'pct'))
+        );
+        
+        if (hasLiftSelected && !analysisResult.selectedKpiValues?.lift_pct) {
+          if (!analysisResult.selectedKpiValues) analysisResult.selectedKpiValues = {};
+          analysisResult.selectedKpiValues.lift_pct = { 
+            value: parseFloat(actualLiftPct.toFixed(1)), 
+            formatted: `${actualLiftPct > 0 ? '+' : ''}${actualLiftPct.toFixed(1)}%`,
+            trend: actualLiftPct > 0 ? 'positive lift' : actualLiftPct < 0 ? 'negative lift' : 'no lift'
+          };
+          console.log('Added lift_pct to selectedKpiValues:', analysisResult.selectedKpiValues.lift_pct);
+        }
       }
       
       // Add verification metadata
