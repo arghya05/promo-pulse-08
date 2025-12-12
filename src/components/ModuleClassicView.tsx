@@ -455,16 +455,21 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                             </div>
                           </div>
                         </div>
-                        {result.predictions.forecast && result.predictions.forecast.length > 0 && (
+                        {result.predictions.forecast && (
                           <div className="space-y-2">
                             <span className="text-xs font-medium text-muted-foreground">Forecast</span>
                             <div className="flex flex-wrap gap-2">
-                              {result.predictions.forecast.map((f: any, i: number) => (
+                              {(Array.isArray(result.predictions.forecast) 
+                                ? result.predictions.forecast 
+                                : [result.predictions.forecast]
+                              ).map((f: any, i: number) => (
                                 <Badge key={i} variant="outline" className="text-xs">
-                                  {f.period}: {typeof f.value === 'number' ? f.value.toFixed(1) : f.value}
-                                  <span className="ml-1 text-muted-foreground">
-                                    ({(f.confidence * 100).toFixed(0)}%)
-                                  </span>
+                                  {f.period}: {typeof f.value === 'number' ? f.value.toFixed(1) : String(f.value || '')}
+                                  {f.confidence !== undefined && (
+                                    <span className="ml-1 text-muted-foreground">
+                                      ({(Number(f.confidence) * 100).toFixed(0)}%)
+                                    </span>
+                                  )}
                                 </Badge>
                               ))}
                             </div>
