@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Sparkles, ArrowRight, Lightbulb, TrendingUp, AlertTriangle, HelpCircle, Target, Compass, ChevronRight, ChevronDown, Zap, BarChart3, PieChart, Clock, Filter, ThumbsUp, ThumbsDown, RefreshCw, MessageSquare, Loader2, X } from "lucide-react";
+import { Send, Bot, User, Sparkles, ArrowRight, Lightbulb, TrendingUp, AlertTriangle, HelpCircle, Target, Compass, ChevronRight, ChevronDown, Zap, BarChart3, PieChart, Clock, Filter, ThumbsUp, ThumbsDown, RefreshCw, MessageSquare, Loader2, X, DollarSign, Package, Truck, Box, Grid3X3 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -145,14 +145,22 @@ interface ChatInterfaceProps {
   isLoading: boolean;
   currentResult: AnalyticsResult | null;
   moduleName?: string;
+  moduleId?: string;
 }
 
-const personaContent = {
-  executive: {
+// Module-specific content
+const moduleContent: Record<string, {
+  greetings: string[];
+  quickStarts: Array<{ text: string; icon: any; tag: string; color: string }>;
+  exploration: Array<{ text: string; icon: any; tag: string }>;
+  tips: string[];
+  placeholder: string;
+}> = {
+  promotion: {
     greetings: [
-      "👋 Hi! I'm your executive insights assistant. I can help you see the big picture across all categories and regions. What strategic question can I answer?",
-      "Welcome! Ready to provide high-level insights on portfolio performance, cross-category trends, and strategic opportunities.",
-      "Hello! Let's explore your promotion performance from a strategic lens - ROI trends, category comparisons, and growth opportunities await.",
+      "Hello! Let's explore your promotion performance - ROI trends, category comparisons, and growth opportunities await.",
+      "Welcome! Ready to analyze promotional ROI, lift metrics, and optimization opportunities.",
+      "Hi! I can help you understand promotion effectiveness across all categories.",
     ],
     quickStarts: [
       { text: "Portfolio ROI overview", icon: TrendingUp, tag: "STRATEGIC", color: "text-primary" },
@@ -164,68 +172,164 @@ const personaContent = {
       { text: "Regional performance gaps", icon: BarChart3, tag: "REGIONS" },
       { text: "YoY trend analysis", icon: TrendingUp, tag: "TRENDS" },
       { text: "Budget allocation recommendations", icon: Compass, tag: "OPTIMIZE" },
-      { text: "Competitive positioning", icon: PieChart, tag: "MARKET" },
     ],
     tips: [
-      "💡 As an executive, I focus on high-level metrics across both consumables and non-consumables",
-      "📊 Ask me about portfolio-wide ROI, cross-category comparisons, or strategic forecasts",
-      "🎯 I can help identify which categories or regions need strategic intervention",
+      "💡 Ask me about promotion ROI, lift, and margin impact across categories",
+      "📊 I can compare promotion mechanics like BOGO, price-off, and coupons",
+      "🎯 I can help identify which promotions are winners or losers",
     ],
+    placeholder: "Ask about promotions, ROI, lift, margins...",
   },
-  "category-consumables": {
+  pricing: {
     greetings: [
-      "👋 Hi! I'm your consumables category assistant. I specialize in Dairy, Produce, Beverages, Snacks, Bakery, Pantry, and Frozen. What would you like to analyze?",
-      "Welcome, Category Manager! Ready to dive deep into your consumables performance - from dairy promotions to beverage trends.",
-      "Hello! Let's optimize your consumables portfolio together. I can analyze promotion ROI, lift, and opportunities across your categories.",
+      "Welcome! Let's optimize your pricing strategy - I can analyze margins, price elasticity, and competitive positioning.",
+      "Hello! Ready to help with price optimization, competitive analysis, and margin opportunities.",
+      "Hi! I can analyze optimal price points, elasticity, and competitive gaps.",
     ],
     quickStarts: [
-      { text: "Top performing consumables promotions", icon: TrendingUp, tag: "WINNERS", color: "text-status-good" },
-      { text: "Which consumables promotions are losing money?", icon: AlertTriangle, tag: "RISK", color: "text-status-bad" },
-      { text: "Dairy vs Beverages ROI comparison", icon: BarChart3, tag: "COMPARE", color: "text-primary" },
-      { text: "Optimal discount depth for Snacks", icon: Lightbulb, tag: "OPTIMIZE", color: "text-status-warning" },
+      { text: "What's the optimal price for top sellers?", icon: Target, tag: "OPTIMIZE", color: "text-primary" },
+      { text: "Competitive price positioning analysis", icon: BarChart3, tag: "COMPARE", color: "text-status-good" },
+      { text: "Which products have highest margin?", icon: DollarSign, tag: "MARGIN", color: "text-status-warning" },
+      { text: "Price elasticity by category", icon: TrendingUp, tag: "ELASTICITY", color: "text-primary" },
     ],
     exploration: [
-      { text: "Seasonal patterns in consumables", icon: TrendingUp, tag: "SEASONAL" },
-      { text: "Bakery promotion opportunities", icon: Compass, tag: "DISCOVER" },
-      { text: "Fresh category cannibalization", icon: PieChart, tag: "HALO" },
-      { text: "Pantry stock-up promotion ideas", icon: Lightbulb, tag: "IDEAS" },
+      { text: "Price gap vs Walmart", icon: BarChart3, tag: "COMPETITIVE" },
+      { text: "Markdown strategy optimization", icon: Target, tag: "MARKDOWN" },
+      { text: "Private label pricing analysis", icon: Package, tag: "PRIVATE-LABEL" },
     ],
     tips: [
-      "💡 I focus on consumables: Dairy, Produce, Beverages, Snacks, Bakery, Pantry, Frozen",
-      "🥛 Ask about specific categories like 'How is Dairy BOGO performing?' for detailed analysis",
-      "📈 I can help optimize promotion timing around freshness and seasonal demand",
+      "💡 Ask me about price elasticity, competitive gaps, and margin optimization",
+      "💰 I can analyze how price changes impact volume and revenue",
+      "📊 I track competitor pricing from Walmart, Kroger, and Target",
     ],
+    placeholder: "Ask about pricing, margins, elasticity, competitors...",
   },
-  "category-non-consumables": {
+  "supply-chain": {
     greetings: [
-      "👋 Hi! I'm your non-consumables category assistant. I specialize in Personal Care and Home Care products. What insights do you need?",
-      "Welcome, Category Manager! Ready to analyze your Personal Care and Home Care promotions - from detergents to skincare.",
-      "Hello! Let's optimize your non-consumables portfolio. I can help with promotion ROI, customer response, and competitive positioning.",
+      "Welcome! Let's optimize your supply chain - I can analyze supplier performance, lead times, and logistics efficiency.",
+      "Hello! Ready to help with supplier management, route optimization, and delivery performance.",
+      "Hi! I can analyze supply chain metrics, warehouse utilization, and transportation costs.",
     ],
     quickStarts: [
-      { text: "Top non-consumables promotions by ROI", icon: TrendingUp, tag: "WINNERS", color: "text-status-good" },
-      { text: "Underperforming Personal Care promotions", icon: AlertTriangle, tag: "RISK", color: "text-status-bad" },
-      { text: "Personal Care vs Home Care comparison", icon: BarChart3, tag: "COMPARE", color: "text-primary" },
-      { text: "Best discount depth for Home Care", icon: Lightbulb, tag: "OPTIMIZE", color: "text-status-warning" },
+      { text: "Which suppliers have best on-time delivery?", icon: Truck, tag: "DELIVERY", color: "text-primary" },
+      { text: "Average lead time by category", icon: Clock, tag: "LEAD-TIME", color: "text-status-warning" },
+      { text: "How can we optimize routes?", icon: Compass, tag: "OPTIMIZE", color: "text-status-good" },
+      { text: "Logistics cost breakdown", icon: DollarSign, tag: "COST", color: "text-status-bad" },
     ],
     exploration: [
-      { text: "Detergent promotion effectiveness", icon: TrendingUp, tag: "ANALYZE" },
-      { text: "Shampoo brand performance", icon: Compass, tag: "BRANDS" },
-      { text: "Cross-sell with consumables", icon: PieChart, tag: "HALO" },
-      { text: "Premium vs value tier response", icon: Lightbulb, tag: "SEGMENT" },
+      { text: "Supplier reliability scores", icon: Target, tag: "RELIABILITY" },
+      { text: "Warehouse capacity utilization", icon: Box, tag: "WAREHOUSE" },
+      { text: "Perfect order rate by region", icon: BarChart3, tag: "METRICS" },
     ],
     tips: [
-      "💡 I focus on non-consumables: Personal Care (soaps, shampoos, skincare) and Home Care (detergents, cleaners)",
-      "🧴 Non-consumables often have different purchase cycles - ask about timing optimization",
-      "📊 I can analyze brand-level performance within your categories",
+      "💡 Ask me about supplier performance, delivery rates, and logistics costs",
+      "🚚 I can analyze routes, lead times, and transportation efficiency",
+      "📦 I track supplier orders, warehouse utilization, and fill rates",
     ],
+    placeholder: "Ask about suppliers, lead times, logistics, routes...",
+  },
+  demand: {
+    greetings: [
+      "Welcome! Let's optimize your demand forecasting - I can analyze predictions, accuracy, and inventory levels.",
+      "Hello! Ready to help with demand planning, stockout prevention, and seasonal patterns.",
+      "Hi! I can analyze forecast accuracy, reorder points, and demand variability.",
+    ],
+    quickStarts: [
+      { text: "Demand forecast for next 4 weeks", icon: Clock, tag: "FORECAST", color: "text-primary" },
+      { text: "Which products are at stockout risk?", icon: AlertTriangle, tag: "RISK", color: "text-status-bad" },
+      { text: "Forecast accuracy by category", icon: Target, tag: "ACCURACY", color: "text-status-good" },
+      { text: "Seasonal demand patterns", icon: TrendingUp, tag: "SEASONAL", color: "text-status-warning" },
+    ],
+    exploration: [
+      { text: "Inventory turnover by store", icon: Box, tag: "TURNOVER" },
+      { text: "Safety stock optimization", icon: Target, tag: "SAFETY-STOCK" },
+      { text: "Promotion impact on demand", icon: BarChart3, tag: "PROMO-IMPACT" },
+    ],
+    tips: [
+      "💡 Ask me about demand forecasts, stockout risks, and inventory levels",
+      "📊 I can analyze forecast accuracy and identify areas for improvement",
+      "🔮 I track seasonal patterns and predict future demand",
+    ],
+    placeholder: "Ask about forecasts, inventory, stockouts, seasonality...",
+  },
+  assortment: {
+    greetings: [
+      "Welcome! Let's optimize your product assortment - I can analyze SKU performance and category penetration.",
+      "Hello! Ready to help with assortment planning, rationalization, and new product analysis.",
+      "Hi! I can analyze which products to add, discontinue, or expand.",
+    ],
+    quickStarts: [
+      { text: "Which SKUs should be added?", icon: Package, tag: "EXPAND", color: "text-status-good" },
+      { text: "Products to discontinue", icon: AlertTriangle, tag: "RATIONALIZE", color: "text-status-bad" },
+      { text: "Category penetration by store type", icon: BarChart3, tag: "PENETRATION", color: "text-primary" },
+      { text: "Optimal brand mix by category", icon: PieChart, tag: "BRAND-MIX", color: "text-status-warning" },
+    ],
+    exploration: [
+      { text: "New product performance", icon: TrendingUp, tag: "NEW-PRODUCTS" },
+      { text: "Private label opportunity", icon: DollarSign, tag: "PRIVATE-LABEL" },
+      { text: "Regional preferences analysis", icon: Compass, tag: "REGIONAL" },
+    ],
+    tips: [
+      "💡 Ask me about SKU productivity, category gaps, and brand mix",
+      "📦 I can identify products to add, discontinue, or expand",
+      "📊 I track assortment depth and category penetration by store",
+    ],
+    placeholder: "Ask about SKUs, categories, brands, assortment...",
+  },
+  space: {
+    greetings: [
+      "Welcome! Let's optimize your space planning - I can analyze shelf allocation and planogram performance.",
+      "Hello! Ready to help with fixture utilization, product placement, and GMROI optimization.",
+      "Hi! I can analyze sales per square foot and optimal product positioning.",
+    ],
+    quickStarts: [
+      { text: "Categories with highest sales per sqft", icon: DollarSign, tag: "SALES", color: "text-status-good" },
+      { text: "Planogram compliance rate", icon: Target, tag: "COMPLIANCE", color: "text-primary" },
+      { text: "Optimal shelf space allocation", icon: Grid3X3, tag: "ALLOCATE", color: "text-status-warning" },
+      { text: "Endcap performance analysis", icon: TrendingUp, tag: "ENDCAP", color: "text-status-good" },
+    ],
+    exploration: [
+      { text: "Eye-level product performance", icon: Target, tag: "EYE-LEVEL" },
+      { text: "Cross-selling adjacency", icon: Package, tag: "ADJACENCY" },
+      { text: "Fixture utilization rates", icon: Box, tag: "FIXTURES" },
+    ],
+    tips: [
+      "💡 Ask me about shelf space allocation, planogram compliance, and GMROI",
+      "📏 I can analyze sales per square foot and optimal facings",
+      "📊 I track fixture performance and product adjacency impact",
+    ],
+    placeholder: "Ask about shelf space, planograms, layouts, fixtures...",
   },
 };
 
-const getPersonaKey = (persona: string): keyof typeof personaContent => {
+// Persona variations per module - combines module + persona
+const getModulePersonaContent = (moduleId: string, persona: string) => {
+  const module = moduleContent[moduleId] || moduleContent.promotion;
+  
+  // Add persona-specific variations
+  const personaPrefix = persona === 'executive' ? 'Executive view: ' : 
+                        persona === 'consumables' ? 'Consumables focus: ' : 
+                        'Non-consumables focus: ';
+  
+  const tips = [...module.tips];
+  if (persona === 'executive') {
+    tips.push("🎯 As an executive, I provide strategic insights across all categories");
+  } else if (persona === 'consumables') {
+    tips.push("🥛 I focus on consumables: Dairy, Beverages, Snacks, Produce, Frozen, Bakery, Pantry");
+  } else {
+    tips.push("🧴 I focus on non-consumables: Personal Care, Home Care, Household");
+  }
+  
+  return {
+    ...module,
+    tips,
+  };
+};
+
+const getPersonaKey = (persona: string): string => {
   if (persona === 'executive') return 'executive';
-  if (persona === 'consumables' || persona === 'category-consumables') return 'category-consumables';
-  return 'category-non-consumables';
+  if (persona === 'consumables' || persona === 'category-consumables') return 'consumables';
+  return 'non_consumables';
 };
 
 const contextualPrompts = {
@@ -302,7 +406,8 @@ export default function ChatInterface({
   onAsk, 
   isLoading, 
   currentResult,
-  moduleName = 'Promotion Intelligence'
+  moduleName = 'Promotion Intelligence',
+  moduleId = 'promotion'
 }: ChatInterfaceProps) {
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -312,6 +417,7 @@ export default function ChatInterface({
   const [showHelpMenu, setShowHelpMenu] = useState(false);
   const [messageCount, setMessageCount] = useState(0);
   const [lastPersona, setLastPersona] = useState(persona);
+  const [lastModuleId, setLastModuleId] = useState(moduleId);
   const [refinementInput, setRefinementInput] = useState("");
   const [showRefinement, setShowRefinement] = useState<string | null>(null);
   const [progressIndex, setProgressIndex] = useState(0);
@@ -350,8 +456,8 @@ export default function ChatInterface({
   };
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const personaKey = getPersonaKey(persona);
-  const content = personaContent[personaKey];
+  // Get module-specific content based on moduleId and persona
+  const content = getModulePersonaContent(moduleId, persona);
 
   // Progress indicator during loading
   useEffect(() => {
@@ -364,9 +470,9 @@ export default function ChatInterface({
     }
   }, [isLoading]);
 
-  // Initialize with greeting - reset when persona changes
+  // Initialize with greeting - reset when persona or module changes
   useEffect(() => {
-    if (messages.length === 0 || persona !== lastPersona) {
+    if (messages.length === 0 || persona !== lastPersona || moduleId !== lastModuleId) {
       const greeting = content.greetings[Math.floor(Math.random() * content.greetings.length)];
       const randomTip = content.tips[Math.floor(Math.random() * content.tips.length)];
       setMessages([{
@@ -378,10 +484,11 @@ export default function ChatInterface({
         guideTip: randomTip,
       }]);
       setLastPersona(persona);
+      setLastModuleId(moduleId);
       setMessageCount(0);
       setConversationContext({ recentTopics: [] });
     }
-  }, [persona, content]);
+  }, [persona, moduleId, content]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -1116,7 +1223,7 @@ export default function ChatInterface({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Ask anything about promotions, ROI, forecasts, risks..."
+              placeholder={content.placeholder}
               className="pr-20 h-11 bg-secondary/30 border-0 focus-visible:ring-1 focus-visible:ring-primary/50"
               disabled={isLoading}
             />
