@@ -21,7 +21,8 @@ import {
   Target,
   AlertTriangle,
   Lightbulb,
-  Zap
+  Zap,
+  Layers
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -40,6 +41,7 @@ import {
   Cell
 } from 'recharts';
 import SearchSuggestions from './SearchSuggestions';
+import MultiLevelDrillDown from './MultiLevelDrillDown';
 
 interface ModuleClassicViewProps {
   module: Module;
@@ -50,12 +52,23 @@ interface ModuleClassicViewProps {
 
 const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
+// Module-specific drill paths
+const MODULE_DRILL_PATHS: Record<string, string[]> = {
+  promotion: ['category', 'brand', 'sku', 'store', 'region'],
+  pricing: ['category', 'brand', 'sku', 'competitor', 'region'],
+  assortment: ['category', 'brand', 'sku', 'store', 'performance'],
+  demand: ['category', 'product', 'store', 'time_period', 'forecast_model'],
+  'supply-chain': ['supplier', 'product', 'route', 'status', 'region'],
+  space: ['category', 'planogram', 'fixture', 'store', 'shelf']
+};
+
 const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: ModuleClassicViewProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<ModuleQuestion | null>(null);
   const [result, setResult] = useState<any>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [drillDownData, setDrillDownData] = useState<any>(null);
   const [expandedSections, setExpandedSections] = useState({
     whatHappened: true,
     why: true,
@@ -71,6 +84,17 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
+
+  const handleChartClick = (data: any) => {
+    if (data && data.name) {
+      setDrillDownData({
+        name: data.name,
+        roi: data.value || 1.5,
+        margin: data.margin || data.value * 1000 || 50000
+      });
+    }
+  };
+
 
   const handleAnalyze = async (question: string) => {
     setIsLoading(true);
@@ -154,17 +178,19 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
       default:
         return (
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data}>
+            <BarChart data={data} onClick={(e) => e?.activePayload?.[0] && handleChartClick(e.activePayload[0].payload)}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis dataKey="name" className="text-xs" />
               <YAxis className="text-xs" />
               <Tooltip />
-              <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} className="cursor-pointer" />
             </BarChart>
           </ResponsiveContainer>
         );
     }
   };
+
+  const drillPath = MODULE_DRILL_PATHS[module.id] || MODULE_DRILL_PATHS.promotion;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -463,8 +489,21 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                 {/* Chart */}
                 {result.chartData && (
                   <div className="bg-muted/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
+                      <Layers className="h-3 w-3" />
+                      Click any bar to drill down
+                    </div>
                     {renderChart()}
                   </div>
+                )}
+
+                {/* Drill Down Panel */}
+                {drillDownData && (
+                  <MultiLevelDrillDown
+                    initialData={drillDownData}
+                    drillPath={drillPath}
+                    onClose={() => setDrillDownData(null)}
+                  />
                 )}
 
                 {/* Follow-up Questions */}

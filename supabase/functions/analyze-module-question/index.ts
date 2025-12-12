@@ -48,29 +48,70 @@ serve(async (req) => {
     switch (moduleId) {
       case 'pricing': {
         const [priceChangesRes, competitorPricesRes, competitorDataRes] = await Promise.all([
-          supabase.from('price_change_history').select('*').limit(200),
-          supabase.from('competitor_prices').select('*').limit(200),
-          supabase.from('competitor_data').select('*').limit(100),
+          supabase.from('price_change_history').select('*').limit(500),
+          supabase.from('competitor_prices').select('*').limit(500),
+          supabase.from('competitor_data').select('*').limit(200),
         ]);
         const priceChanges = priceChangesRes.data || [];
         const competitorPrices = competitorPricesRes.data || [];
         const competitorData = competitorDataRes.data || [];
+        
+        // Create product lookup for names
+        const productLookup: Record<string, any> = {};
+        products.forEach((p: any) => { productLookup[p.product_sku] = p; });
         
         const avgMargin = products.reduce((sum, p: any) => sum + Number(p.margin_percent || 0), 0) / (products.length || 1);
         const avgBasePrice = products.reduce((sum, p: any) => sum + Number(p.base_price || 0), 0) / (products.length || 1);
         const elasticProducts = products.filter((p: any) => p.price_elasticity);
         const avgElasticity = elasticProducts.reduce((sum, p: any) => sum + Number(p.price_elasticity || 0), 0) / (elasticProducts.length || 1);
         
-        const priceIncreases = priceChanges.filter((pc: any) => pc.new_price > pc.old_price);
-        const priceDecreases = priceChanges.filter((pc: any) => pc.new_price < pc.old_price);
+        const priceIncreases = priceChanges.filter((pc: any) => Number(pc.new_price) > Number(pc.old_price));
+        const priceDecreases = priceChanges.filter((pc: any) => Number(pc.new_price) < Number(pc.old_price));
+        
+        // Get specific products with highest/lowest margins
+        const sortedByMargin = [...products].sort((a: any, b: any) => Number(b.margin_percent || 0) - Number(a.margin_percent || 0));
+        const highMarginProducts = sortedByMargin.slice(0, 10);
+        const lowMarginProducts = sortedByMargin.slice(-10).reverse();
+        
+        // Get most elastic products
+        const sortedByElasticity = [...products].filter((p: any) => p.price_elasticity).sort((a: any, b: any) => Math.abs(Number(b.price_elasticity || 0)) - Math.abs(Number(a.price_elasticity || 0)));
+        const mostElasticProducts = sortedByElasticity.slice(0, 10);
+        
+        // Recent price changes with product names
+        const recentPriceChanges = priceChanges.slice(0, 15).map((pc: any) => {
+          const product = productLookup[pc.product_sku] || {};
+          const pctChange = ((Number(pc.new_price) - Number(pc.old_price)) / Number(pc.old_price) * 100).toFixed(1);
+          return {
+            name: product.product_name || pc.product_sku,
+            sku: pc.product_sku,
+            oldPrice: pc.old_price,
+            newPrice: pc.new_price,
+            pctChange,
+            reason: pc.change_reason,
+            type: pc.change_type
+          };
+        });
+        
+        // Competitor price gaps by product
+        const competitorGaps = competitorPrices.slice(0, 15).map((cp: any) => {
+          const product = productLookup[cp.product_sku] || {};
+          return {
+            name: product.product_name || cp.product_sku,
+            competitor: cp.competitor_name,
+            ourPrice: cp.our_price,
+            theirPrice: cp.competitor_price,
+            gap: cp.price_gap_percent
+          };
+        });
         
         const avgPriceGap = competitorPrices.reduce((sum, cp: any) => sum + Number(cp.price_gap_percent || 0), 0) / (competitorPrices.length || 1);
         
-        const categoryMargins: Record<string, { sum: number; count: number }> = {};
+        const categoryMargins: Record<string, { sum: number; count: number; products: string[] }> = {};
         products.forEach((p: any) => {
-          if (!categoryMargins[p.category]) categoryMargins[p.category] = { sum: 0, count: 0 };
+          if (!categoryMargins[p.category]) categoryMargins[p.category] = { sum: 0, count: 0, products: [] };
           categoryMargins[p.category].sum += Number(p.margin_percent || 0);
           categoryMargins[p.category].count++;
+          categoryMargins[p.category].products.push(p.product_name);
         });
         
         dataContext = `
@@ -81,42 +122,112 @@ PRICING DATA SUMMARY:
 - Average margin: ${avgMargin.toFixed(1)}%
 - Average price elasticity: ${avgElasticity.toFixed(2)}
 
+HIGH MARGIN PRODUCTS (USE THESE SPECIFIC NAMES):
+${highMarginProducts.map((p: any) => `- ${p.product_name} (${p.product_sku}): ${Number(p.margin_percent).toFixed(1)}% margin, $${Number(p.base_price).toFixed(2)} price`).join('\n')}
+
+LOW MARGIN PRODUCTS (NEED ATTENTION):
+${lowMarginProducts.map((p: any) => `- ${p.product_name}: ${Number(p.margin_percent).toFixed(1)}% margin, $${Number(p.base_price).toFixed(2)} price`).join('\n')}
+
+MOST PRICE-ELASTIC PRODUCTS:
+${mostElasticProducts.slice(0, 8).map((p: any) => `- ${p.product_name}: Elasticity ${Number(p.price_elasticity).toFixed(2)}, Category: ${p.category}`).join('\n')}
+
 MARGIN BY CATEGORY:
-${Object.entries(categoryMargins).map(([cat, data]) => `- ${cat}: ${(data.sum / data.count).toFixed(1)}%`).join('\n')}
+${Object.entries(categoryMargins).map(([cat, data]) => `- ${cat}: ${(data.sum / data.count).toFixed(1)}% avg margin (${data.count} products)`).join('\n')}
 
-PRICE CHANGES (${priceChanges.length} records):
-- Price increases: ${priceIncreases.length}
-- Price decreases: ${priceDecreases.length}
-- Change types: ${[...new Set(priceChanges.map((pc: any) => pc.change_type))].join(', ')}
+RECENT PRICE CHANGES (${priceChanges.length} total):
+${recentPriceChanges.map(pc => `- ${pc.name}: $${Number(pc.oldPrice).toFixed(2)} → $${Number(pc.newPrice).toFixed(2)} (${pc.pctChange}%), Reason: ${pc.reason || pc.type}`).join('\n')}
 
-COMPETITOR ANALYSIS:
+COMPETITOR PRICE COMPARISON:
 - Competitors tracked: ${[...new Set(competitorPrices.map((cp: any) => cp.competitor_name))].join(', ')}
-- Average price gap vs competitors: ${avgPriceGap.toFixed(1)}%`;
+- Average price gap: ${avgPriceGap.toFixed(1)}%
+${competitorGaps.slice(0, 8).map(cg => `- ${cg.name} vs ${cg.competitor}: Our $${Number(cg.ourPrice).toFixed(2)} vs Their $${Number(cg.theirPrice).toFixed(2)} (${Number(cg.gap).toFixed(1)}% gap)`).join('\n')}`;
         break;
       }
       
       case 'assortment': {
         const [inventoryRes, promotionsRes] = await Promise.all([
-          supabase.from('inventory_levels').select('*').limit(200),
-          supabase.from('promotions').select('*').limit(100),
+          supabase.from('inventory_levels').select('*').limit(500),
+          supabase.from('promotions').select('*').limit(200),
         ]);
         const inventory = inventoryRes.data || [];
+        const promotions = promotionsRes.data || [];
         
-        const categoryProducts: Record<string, number> = {};
-        const brandProducts: Record<string, number> = {};
+        // Create product lookup for names
+        const productLookup: Record<string, any> = {};
+        products.forEach((p: any) => { productLookup[p.product_sku] = p; });
+        
+        const categoryProducts: Record<string, { count: number; products: any[] }> = {};
+        const brandProducts: Record<string, { count: number; products: any[] }> = {};
         products.forEach((p: any) => {
-          categoryProducts[p.category] = (categoryProducts[p.category] || 0) + 1;
-          if (p.brand) brandProducts[p.brand] = (brandProducts[p.brand] || 0) + 1;
+          if (!categoryProducts[p.category]) categoryProducts[p.category] = { count: 0, products: [] };
+          categoryProducts[p.category].count++;
+          categoryProducts[p.category].products.push(p);
+          
+          if (p.brand) {
+            if (!brandProducts[p.brand]) brandProducts[p.brand] = { count: 0, products: [] };
+            brandProducts[p.brand].count++;
+            brandProducts[p.brand].products.push(p);
+          }
         });
         
         const totalRevenue = transactions.reduce((sum, t: any) => sum + Number(t.total_amount || 0), 0);
-        const productSales: Record<string, number> = {};
+        const productSales: Record<string, { revenue: number; units: number }> = {};
         transactions.forEach((t: any) => {
-          productSales[t.product_sku] = (productSales[t.product_sku] || 0) + Number(t.total_amount || 0);
+          if (!productSales[t.product_sku]) productSales[t.product_sku] = { revenue: 0, units: 0 };
+          productSales[t.product_sku].revenue += Number(t.total_amount || 0);
+          productSales[t.product_sku].units += Number(t.quantity || 0);
         });
         
-        const topProducts = Object.entries(productSales).sort((a, b) => b[1] - a[1]).slice(0, 10);
-        const lowPerformers = Object.entries(productSales).sort((a, b) => a[1] - b[1]).slice(0, 10);
+        // Top and bottom performers with full product names
+        const topPerformers = Object.entries(productSales)
+          .sort((a, b) => b[1].revenue - a[1].revenue)
+          .slice(0, 12)
+          .map(([sku, data]) => {
+            const product = productLookup[sku] || {};
+            return {
+              name: product.product_name || sku,
+              sku,
+              category: product.category,
+              brand: product.brand,
+              revenue: data.revenue,
+              units: data.units
+            };
+          });
+        
+        const bottomPerformers = Object.entries(productSales)
+          .sort((a, b) => a[1].revenue - b[1].revenue)
+          .slice(0, 12)
+          .map(([sku, data]) => {
+            const product = productLookup[sku] || {};
+            return {
+              name: product.product_name || sku,
+              sku,
+              category: product.category,
+              brand: product.brand,
+              revenue: data.revenue,
+              units: data.units
+            };
+          });
+        
+        // Calculate category performance
+        const categoryRevenue: Record<string, number> = {};
+        transactions.forEach((t: any) => {
+          const product = productLookup[t.product_sku];
+          if (product?.category) {
+            categoryRevenue[product.category] = (categoryRevenue[product.category] || 0) + Number(t.total_amount || 0);
+          }
+        });
+        
+        // Brand performance
+        const brandRevenue: Record<string, number> = {};
+        transactions.forEach((t: any) => {
+          const product = productLookup[t.product_sku];
+          if (product?.brand) {
+            brandRevenue[product.brand] = (brandRevenue[product.brand] || 0) + Number(t.total_amount || 0);
+          }
+        });
+        
+        const topBrands = Object.entries(brandRevenue).sort((a, b) => b[1] - a[1]).slice(0, 10);
         
         dataContext = `
 ASSORTMENT DATA SUMMARY:
@@ -124,21 +235,29 @@ ASSORTMENT DATA SUMMARY:
 - Categories: ${Object.keys(categoryProducts).length}
 - Brands: ${Object.keys(brandProducts).length}
 - Stores: ${stores.length} across ${[...new Set(stores.map((s: any) => s.region))].length} regions
+- Total Revenue: $${totalRevenue.toFixed(2)}
 
-PRODUCTS BY CATEGORY:
-${Object.entries(categoryProducts).map(([cat, count]) => `- ${cat}: ${count} SKUs`).join('\n')}
+PRODUCTS BY CATEGORY (with sample products):
+${Object.entries(categoryProducts).map(([cat, data]) => 
+  `- ${cat}: ${data.count} SKUs (e.g., ${data.products.slice(0, 3).map((p: any) => p.product_name).join(', ')})`
+).join('\n')}
 
-TOP BRANDS BY SKU COUNT:
-${Object.entries(brandProducts).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([brand, count]) => `- ${brand}: ${count} SKUs`).join('\n')}
+TOP PERFORMING PRODUCTS (USE THESE SPECIFIC NAMES):
+${topPerformers.slice(0, 10).map(p => `- ${p.name} (${p.brand}, ${p.category}): $${p.revenue.toFixed(0)} revenue, ${p.units} units`).join('\n')}
 
-SALES PERFORMANCE:
-- Total revenue: $${totalRevenue.toFixed(2)}
-- Top performers: ${topProducts.slice(0, 5).map(([sku, sales]) => `${sku}: $${Number(sales).toFixed(0)}`).join(', ')}
-- Low performers: ${lowPerformers.slice(0, 5).map(([sku, sales]) => `${sku}: $${Number(sales).toFixed(0)}`).join(', ')}
+BOTTOM PERFORMING PRODUCTS (CANDIDATES FOR RATIONALIZATION):
+${bottomPerformers.slice(0, 10).map(p => `- ${p.name} (${p.brand}, ${p.category}): $${p.revenue.toFixed(0)} revenue, ${p.units} units`).join('\n')}
+
+CATEGORY REVENUE:
+${Object.entries(categoryRevenue).sort((a, b) => b[1] - a[1]).map(([cat, rev]) => `- ${cat}: $${Number(rev).toFixed(0)}`).join('\n')}
+
+TOP BRANDS BY REVENUE:
+${topBrands.map(([brand, rev]) => `- ${brand}: $${Number(rev).toFixed(0)}`).join('\n')}
 
 INVENTORY STATUS:
 - SKU-store combinations: ${inventory.length}
-- High stockout risk: ${inventory.filter((i: any) => i.stockout_risk === 'high').length}`;
+- High stockout risk: ${inventory.filter((i: any) => i.stockout_risk?.toLowerCase() === 'high').length}
+- Low stock items: ${inventory.filter((i: any) => Number(i.stock_level) < Number(i.reorder_point)).length}`;
         break;
       }
       
@@ -244,57 +363,190 @@ ${Object.entries(seasonalByType).map(([type, prods]) => `- ${type}: ${prods.slic
       
       case 'supply-chain': {
         const [suppliersRes, ordersRes, routesRes, inventoryRes] = await Promise.all([
-          supabase.from('suppliers').select('*').limit(50),
-          supabase.from('supplier_orders').select('*').limit(200),
-          supabase.from('shipping_routes').select('*').limit(100),
-          supabase.from('inventory_levels').select('*').limit(200),
+          supabase.from('suppliers').select('*').limit(100),
+          supabase.from('supplier_orders').select('*').limit(500),
+          supabase.from('shipping_routes').select('*').limit(200),
+          supabase.from('inventory_levels').select('*').limit(500),
         ]);
         const suppliers = suppliersRes.data || [];
         const orders = ordersRes.data || [];
         const routes = routesRes.data || [];
         const inventory = inventoryRes.data || [];
         
+        // Create product lookup for names
+        const productLookup: Record<string, any> = {};
+        products.forEach((p: any) => { productLookup[p.product_sku] = p; });
+        
+        // Create supplier lookup
+        const supplierLookup: Record<string, any> = {};
+        suppliers.forEach((s: any) => { supplierLookup[s.id] = s; });
+        
         const avgReliability = suppliers.reduce((sum, s: any) => sum + Number(s.reliability_score || 0), 0) / (suppliers.length || 1);
         const avgLeadTime = suppliers.reduce((sum, s: any) => sum + Number(s.lead_time_days || 0), 0) / (suppliers.length || 1);
         
+        // Sort suppliers by reliability
+        const sortedSuppliers = [...suppliers].sort((a: any, b: any) => Number(b.reliability_score || 0) - Number(a.reliability_score || 0));
+        const topSuppliers = sortedSuppliers.slice(0, 10);
+        const lowSuppliers = sortedSuppliers.slice(-5).reverse();
+        
         const onTimeOrders = orders.filter((o: any) => o.on_time === true);
+        const lateOrders = orders.filter((o: any) => o.on_time === false);
+        const pendingOrders = orders.filter((o: any) => o.status === 'pending');
         const totalOrderValue = orders.reduce((sum, o: any) => sum + Number(o.total_cost || 0), 0);
+        
+        // Recent orders with product and supplier names
+        const recentOrders = orders.slice(0, 15).map((o: any) => {
+          const product = productLookup[o.product_sku] || {};
+          const supplier = supplierLookup[o.supplier_id] || {};
+          return {
+            product: product.product_name || o.product_sku,
+            supplier: supplier.supplier_name || 'Unknown',
+            quantity: o.quantity,
+            value: o.total_cost,
+            status: o.status,
+            onTime: o.on_time
+          };
+        });
+        
+        // Late orders with details
+        const lateOrderDetails = lateOrders.slice(0, 10).map((o: any) => {
+          const product = productLookup[o.product_sku] || {};
+          const supplier = supplierLookup[o.supplier_id] || {};
+          return {
+            product: product.product_name || o.product_sku,
+            supplier: supplier.supplier_name || 'Unknown',
+            expected: o.expected_delivery_date,
+            actual: o.actual_delivery_date
+          };
+        });
+        
+        // Shipping routes summary
+        const activeRoutes = routes.filter((r: any) => r.is_active);
+        const routesByMode: Record<string, number> = {};
+        routes.forEach((r: any) => {
+          routesByMode[r.transportation_mode || 'unknown'] = (routesByMode[r.transportation_mode || 'unknown'] || 0) + 1;
+        });
         
         dataContext = `
 SUPPLY CHAIN DATA SUMMARY:
 - Suppliers: ${suppliers.length}
-- Active routes: ${routes.filter((r: any) => r.is_active).length}
+- Active routes: ${activeRoutes.length}
 - Total orders: ${orders.length}
+- Total order value: $${totalOrderValue.toFixed(2)}
 
-SUPPLIER PERFORMANCE:
+TOP PERFORMING SUPPLIERS (USE THESE SPECIFIC NAMES):
+${topSuppliers.map((s: any) => `- ${s.supplier_name}: ${(Number(s.reliability_score) * 100).toFixed(1)}% reliability, ${s.lead_time_days} day lead time, ${s.city || ''} ${s.state || ''}`).join('\n')}
+
+LOW PERFORMING SUPPLIERS (NEED ATTENTION):
+${lowSuppliers.map((s: any) => `- ${s.supplier_name}: ${(Number(s.reliability_score) * 100).toFixed(1)}% reliability, ${s.lead_time_days} day lead time`).join('\n')}
+
+SUPPLIER PERFORMANCE METRICS:
 - Average reliability: ${(avgReliability * 100).toFixed(1)}%
 - Average lead time: ${avgLeadTime.toFixed(1)} days
-- Top suppliers: ${suppliers.sort((a: any, b: any) => (b.reliability_score || 0) - (a.reliability_score || 0)).slice(0, 3).map((s: any) => `${s.supplier_name} (${((s.reliability_score || 0) * 100).toFixed(0)}%)`).join(', ')}
 
 ORDER PERFORMANCE:
 - On-time deliveries: ${onTimeOrders.length} (${orders.length ? ((onTimeOrders.length / orders.length) * 100).toFixed(1) : 0}%)
-- Total order value: $${totalOrderValue.toFixed(2)}
+- Late deliveries: ${lateOrders.length}
+- Pending orders: ${pendingOrders.length}
 
-LOGISTICS:
-- Transportation modes: ${[...new Set(routes.map((r: any) => r.transportation_mode))].join(', ')}`;
+LATE ORDERS (CRITICAL):
+${lateOrderDetails.length > 0 
+  ? lateOrderDetails.map(o => `- ${o.product} from ${o.supplier}: Expected ${o.expected}, Actual ${o.actual || 'Not delivered'}`).join('\n')
+  : '- No late orders currently'}
+
+RECENT ORDERS:
+${recentOrders.slice(0, 8).map(o => `- ${o.product} from ${o.supplier}: ${o.quantity} units, $${Number(o.value).toFixed(0)}, ${o.status}${o.onTime === false ? ' (LATE)' : ''}`).join('\n')}
+
+LOGISTICS NETWORK:
+- Transportation modes: ${Object.entries(routesByMode).map(([mode, count]) => `${mode}: ${count} routes`).join(', ')}
+- Active shipping routes: ${activeRoutes.length}
+- Average transit time: ${(routes.reduce((sum, r: any) => sum + Number(r.avg_transit_time_hours || 0), 0) / (routes.length || 1)).toFixed(1)} hours`;
         break;
       }
       
       case 'space': {
         const [planogramsRes, allocationsRes, fixturesRes, storePerfRes] = await Promise.all([
-          supabase.from('planograms').select('*').limit(100),
-          supabase.from('shelf_allocations').select('*').limit(200),
-          supabase.from('fixtures').select('*').limit(100),
-          supabase.from('store_performance').select('*').limit(200),
+          supabase.from('planograms').select('*').limit(200),
+          supabase.from('shelf_allocations').select('*').limit(500),
+          supabase.from('fixtures').select('*').limit(200),
+          supabase.from('store_performance').select('*').limit(300),
         ]);
         const planograms = planogramsRes.data || [];
         const allocations = allocationsRes.data || [];
         const fixtures = fixturesRes.data || [];
         const storePerf = storePerfRes.data || [];
         
+        // Create product lookup for names
+        const productLookup: Record<string, any> = {};
+        products.forEach((p: any) => { productLookup[p.product_sku] = p; });
+        
+        // Create store lookup
+        const storeLookup: Record<string, any> = {};
+        stores.forEach((s: any) => { storeLookup[s.id] = s; });
+        
+        // Planogram lookup
+        const planogramLookup: Record<string, any> = {};
+        planograms.forEach((p: any) => { planogramLookup[p.id] = p; });
+        
         const allocsWithSales = allocations.filter((a: any) => a.sales_per_sqft);
         const avgSalesPerSqft = allocsWithSales.reduce((sum, a: any) => sum + Number(a.sales_per_sqft || 0), 0) / (allocsWithSales.length || 1);
         const eyeLevelItems = allocations.filter((a: any) => a.is_eye_level);
+        
+        // Top shelf performers with product names
+        const sortedBySalesPerSqft = [...allocsWithSales].sort((a: any, b: any) => Number(b.sales_per_sqft || 0) - Number(a.sales_per_sqft || 0));
+        const topShelfPerformers = sortedBySalesPerSqft.slice(0, 12).map((a: any) => {
+          const product = productLookup[a.product_sku] || {};
+          const planogram = planogramLookup[a.planogram_id] || {};
+          return {
+            product: product.product_name || a.product_sku,
+            category: product.category,
+            salesPerSqft: a.sales_per_sqft,
+            facings: a.facings,
+            isEyeLevel: a.is_eye_level,
+            shelf: a.shelf_number,
+            planogram: planogram.planogram_name
+          };
+        });
+        
+        const bottomShelfPerformers = sortedBySalesPerSqft.slice(-10).reverse().map((a: any) => {
+          const product = productLookup[a.product_sku] || {};
+          return {
+            product: product.product_name || a.product_sku,
+            category: product.category,
+            salesPerSqft: a.sales_per_sqft,
+            facings: a.facings,
+            isEyeLevel: a.is_eye_level
+          };
+        });
+        
+        // Planogram summary
+        const planogramsByCategory: Record<string, any[]> = {};
+        planograms.forEach((p: any) => {
+          if (!planogramsByCategory[p.category]) planogramsByCategory[p.category] = [];
+          planogramsByCategory[p.category].push(p);
+        });
+        
+        // Fixture summary by type
+        const fixturesByType: Record<string, { count: number; capacity: number }> = {};
+        fixtures.forEach((f: any) => {
+          const type = f.fixture_type || 'unknown';
+          if (!fixturesByType[type]) fixturesByType[type] = { count: 0, capacity: 0 };
+          fixturesByType[type].count++;
+          fixturesByType[type].capacity += Number(f.capacity_sqft || 0);
+        });
+        
+        // Store performance with names
+        const storePerformanceDetails = storePerf.slice(0, 15).map((sp: any) => {
+          const store = storeLookup[sp.store_id] || {};
+          return {
+            store: store.store_name || 'Unknown Store',
+            region: store.region,
+            footTraffic: sp.foot_traffic,
+            conversion: sp.conversion_rate,
+            sales: sp.total_sales,
+            basketSize: sp.avg_basket_size
+          };
+        });
         
         const avgConversion = storePerf.reduce((sum, s: any) => sum + Number(s.conversion_rate || 0), 0) / (storePerf.length || 1);
         const avgFootTraffic = storePerf.reduce((sum, s: any) => sum + Number(s.foot_traffic || 0), 0) / (storePerf.length || 1);
@@ -304,19 +556,35 @@ SPACE PLANNING DATA SUMMARY:
 - Planograms: ${planograms.length}
 - Shelf allocations: ${allocations.length}
 - Fixtures: ${fixtures.length}
+- Stores tracked: ${stores.length}
 
-SHELF PERFORMANCE:
+TOP SHELF PERFORMERS (USE THESE SPECIFIC PRODUCT NAMES):
+${topShelfPerformers.map(p => `- ${p.product} (${p.category}): $${Number(p.salesPerSqft).toFixed(2)}/sqft, ${p.facings} facings, ${p.isEyeLevel ? 'Eye-level' : 'Non-eye-level'}, Shelf ${p.shelf}`).join('\n')}
+
+LOW SHELF PERFORMERS (NEED REPOSITIONING):
+${bottomShelfPerformers.map(p => `- ${p.product} (${p.category}): $${Number(p.salesPerSqft).toFixed(2)}/sqft, ${p.facings} facings, ${p.isEyeLevel ? 'Eye-level' : 'Non-eye-level'}`).join('\n')}
+
+PLANOGRAMS BY CATEGORY:
+${Object.entries(planogramsByCategory).map(([cat, plans]) => 
+  `- ${cat}: ${plans.length} planograms (${plans.slice(0, 3).map((p: any) => p.planogram_name).join(', ')})`
+).join('\n')}
+
+FIXTURE UTILIZATION:
+${Object.entries(fixturesByType).map(([type, data]) => 
+  `- ${type}: ${data.count} fixtures, ${data.capacity.toFixed(0)} sq ft capacity`
+).join('\n')}
+- Active fixtures: ${fixtures.filter((f: any) => f.status === 'active').length}
+- Total capacity: ${fixtures.reduce((sum, f: any) => sum + Number(f.capacity_sqft || 0), 0).toFixed(0)} sq ft
+
+SHELF PERFORMANCE METRICS:
 - Average sales per sq ft: $${avgSalesPerSqft.toFixed(2)}
 - Eye-level placements: ${eyeLevelItems.length} (${allocations.length ? ((eyeLevelItems.length / allocations.length) * 100).toFixed(1) : 0}%)
 - Total shelf positions: ${allocations.length}
 
-FIXTURE UTILIZATION:
-- Active fixtures: ${fixtures.filter((f: any) => f.status === 'active').length}
-- Total capacity: ${fixtures.reduce((sum, f: any) => sum + Number(f.capacity_sqft || 0), 0).toFixed(0)} sq ft
-
 STORE PERFORMANCE:
 - Average conversion rate: ${(avgConversion * 100).toFixed(1)}%
-- Average daily foot traffic: ${avgFootTraffic.toFixed(0)}`;
+- Average daily foot traffic: ${avgFootTraffic.toFixed(0)}
+${storePerformanceDetails.slice(0, 8).map(s => `- ${s.store} (${s.region}): ${s.footTraffic} visitors, ${(Number(s.conversion) * 100).toFixed(1)}% conversion, $${Number(s.basketSize).toFixed(0)} avg basket`).join('\n')}`;
         break;
       }
     }
