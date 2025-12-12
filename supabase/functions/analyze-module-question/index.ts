@@ -144,37 +144,101 @@ INVENTORY STATUS:
       
       case 'demand': {
         const [forecastsRes, accuracyRes, inventoryRes] = await Promise.all([
-          supabase.from('demand_forecasts').select('*').limit(200),
-          supabase.from('forecast_accuracy_tracking').select('*').limit(100),
-          supabase.from('inventory_levels').select('*').limit(200),
+          supabase.from('demand_forecasts').select('*').limit(500),
+          supabase.from('forecast_accuracy_tracking').select('*').limit(200),
+          supabase.from('inventory_levels').select('*').limit(500),
         ]);
         const forecasts = forecastsRes.data || [];
         const accuracyTracking = accuracyRes.data || [];
         const inventory = inventoryRes.data || [];
         
+        // Create product lookup for names
+        const productLookup: Record<string, any> = {};
+        products.forEach((p: any) => { productLookup[p.product_sku] = p; });
+        
         const forecastsWithAccuracy = forecasts.filter((f: any) => f.forecast_accuracy);
         const avgAccuracy = forecastsWithAccuracy.reduce((sum, f: any) => sum + Number(f.forecast_accuracy || 0), 0) / (forecastsWithAccuracy.length || 1);
         const avgMAPE = accuracyTracking.reduce((sum, a: any) => sum + Number(a.mape || 0), 0) / (accuracyTracking.length || 1);
         
-        const stockoutRiskHigh = inventory.filter((i: any) => i.stockout_risk === 'high');
-        const belowReorderPoint = inventory.filter((i: any) => (i.stock_level || 0) < (i.reorder_point || 0));
+        // Find stockout risk products WITH product names
+        const stockoutRiskHigh = inventory.filter((i: any) => i.stockout_risk?.toLowerCase() === 'high');
+        const stockoutRiskMedium = inventory.filter((i: any) => i.stockout_risk?.toLowerCase() === 'medium');
+        const belowReorderPoint = inventory.filter((i: any) => Number(i.stock_level || 0) <= Number(i.reorder_point || 0));
+        
+        // Get lowest stock items with product names
+        const lowestStockItems = [...inventory]
+          .sort((a: any, b: any) => Number(a.stock_level || 0) - Number(b.stock_level || 0))
+          .slice(0, 15)
+          .map((i: any) => {
+            const product = productLookup[i.product_sku] || {};
+            return {
+              sku: i.product_sku,
+              name: product.product_name || i.product_sku,
+              category: product.category || 'Unknown',
+              stockLevel: i.stock_level,
+              reorderPoint: i.reorder_point,
+              risk: i.stockout_risk
+            };
+          });
+        
+        // Categorize inventory by risk
+        const highRiskProducts = lowestStockItems.filter((i: any) => i.risk?.toLowerCase() === 'high' || i.stockLevel <= i.reorderPoint);
+        const mediumRiskProducts = lowestStockItems.filter((i: any) => i.risk?.toLowerCase() === 'medium');
+        
+        // Get forecast accuracy by model
+        const modelAccuracy: Record<string, { sum: number; count: number }> = {};
+        accuracyTracking.forEach((a: any) => {
+          const model = a.forecast_model || 'default';
+          if (!modelAccuracy[model]) modelAccuracy[model] = { sum: 0, count: 0 };
+          modelAccuracy[model].sum += Number(a.mape || 0);
+          modelAccuracy[model].count++;
+        });
+        
+        // Seasonal product breakdown
+        const seasonalProducts = products.filter((p: any) => p.seasonality_factor);
+        const seasonalByType: Record<string, string[]> = {};
+        seasonalProducts.forEach((p: any) => {
+          const factor = p.seasonality_factor || 'unknown';
+          if (!seasonalByType[factor]) seasonalByType[factor] = [];
+          seasonalByType[factor].push(p.product_name);
+        });
         
         dataContext = `
 DEMAND FORECASTING DATA SUMMARY:
 - Forecast records: ${forecasts.length}
 - Average forecast accuracy: ${avgAccuracy.toFixed(1)}%
 - Average MAPE: ${avgMAPE.toFixed(1)}%
+- Products tracked: ${products.length}
 
-STOCKOUT RISK ANALYSIS:
-- High risk items: ${stockoutRiskHigh.length}
-- Items below reorder point: ${belowReorderPoint.length}
+STOCKOUT RISK PRODUCTS (CRITICAL - USE THESE EXACT PRODUCT NAMES):
+${highRiskProducts.length > 0 
+  ? highRiskProducts.map((p: any) => `- ${p.name} (${p.sku}, ${p.category}): Stock ${p.stockLevel} units, Reorder Point ${p.reorderPoint}, Risk: ${p.risk}`).join('\n')
+  : '- No products currently at high stockout risk'}
+
+MEDIUM RISK PRODUCTS:
+${mediumRiskProducts.slice(0, 10).map((p: any) => `- ${p.name} (${p.category}): Stock ${p.stockLevel} units, Risk: ${p.risk}`).join('\n')}
+
+LOWEST STOCK ITEMS:
+${lowestStockItems.slice(0, 10).map((p: any) => `- ${p.name}: ${p.stockLevel} units in stock (reorder at ${p.reorderPoint})`).join('\n')}
+
+INVENTORY SUMMARY:
+- High stockout risk items: ${stockoutRiskHigh.length}
+- Medium stockout risk items: ${stockoutRiskMedium.length}
+- Items at/below reorder point: ${belowReorderPoint.length}
 - Total inventory records: ${inventory.length}
 
-FORECAST VS ACTUAL:
-${forecasts.filter((f: any) => f.actual_units).slice(0, 5).map((f: any) => `- ${f.product_sku}: Forecast ${f.forecasted_units}, Actual ${f.actual_units}`).join('\n')}
+FORECAST MODEL ACCURACY:
+${Object.entries(modelAccuracy).map(([model, data]) => `- ${model}: MAPE ${(data.sum / data.count).toFixed(1)}%`).join('\n')}
+
+FORECAST VS ACTUAL (Recent):
+${forecasts.filter((f: any) => f.actual_units).slice(0, 8).map((f: any) => {
+  const product = productLookup[f.product_sku] || {};
+  const variance = f.actual_units ? ((f.forecasted_units - f.actual_units) / f.actual_units * 100).toFixed(1) : 'N/A';
+  return `- ${product.product_name || f.product_sku}: Forecast ${f.forecasted_units}, Actual ${f.actual_units}, Variance ${variance}%`;
+}).join('\n')}
 
 SEASONAL PATTERNS:
-- Products with seasonal factor: ${products.filter((p: any) => p.seasonality_factor).length}`;
+${Object.entries(seasonalByType).map(([type, prods]) => `- ${type}: ${prods.slice(0, 5).join(', ')}${prods.length > 5 ? ` (+${prods.length - 5} more)` : ''}`).join('\n')}`;
         break;
       }
       
@@ -266,30 +330,38 @@ ${dataContext}
 
 Selected KPIs: ${selectedKPIs?.join(', ') || 'All relevant KPIs'}
 
-CRITICAL: Your response must be 100% relevant to ${moduleId.toUpperCase()} module ONLY.
-- Focus ONLY on ${moduleId === 'pricing' ? 'pricing, margins, elasticity, competitor pricing' : 
+CRITICAL RULES - FOLLOW EXACTLY:
+1. Your response must be 100% relevant to ${moduleId.toUpperCase()} module ONLY.
+2. NEVER mention promotions, promotional ROI, or promotional lift.
+3. USE EXACT PRODUCT NAMES, SKUs, and specific numbers from the data provided above.
+4. DO NOT say "no products identified" if products are listed in the data - USE THE SPECIFIC PRODUCTS LISTED.
+5. If the question asks about stockout risk, LIST THE ACTUAL PRODUCTS with their stock levels.
+6. Every statement must reference specific products, categories, or metrics from the data.
+7. NO VAGUE STATEMENTS - be specific with product names, numbers, percentages.
+
+Focus areas for ${moduleId}:
+${moduleId === 'pricing' ? 'pricing, margins, elasticity, competitor pricing, price changes' : 
   moduleId === 'assortment' ? 'SKU performance, category gaps, brand mix, product rationalization' :
-  moduleId === 'demand' ? 'demand forecasts, stockout risk, inventory levels, forecast accuracy' :
+  moduleId === 'demand' ? 'demand forecasts, stockout risk BY PRODUCT NAME, inventory levels, forecast accuracy, reorder points' :
   moduleId === 'supply-chain' ? 'supplier performance, lead times, logistics, delivery rates' :
   moduleId === 'space' ? 'shelf space, planograms, sales per sqft, fixture utilization' : 'relevant metrics'}
-- NEVER mention promotions, promotional ROI, or promotional lift unless this IS the promotion module
 
 Respond with a JSON object:
 {
-  "whatHappened": ["3-4 bullet points with specific ${moduleId} metrics from data"],
-  "why": ["2-3 causal explanations for these ${moduleId} patterns"],
-  "whatToDo": ["2-3 actionable ${moduleId} recommendations"],
-  "kpis": {"${moduleId}_metric_name": "value with units", ...},
-  "chartData": [{"name": "Label", "value": number}, ...],
+  "whatHappened": ["3-4 bullet points with SPECIFIC product names and metrics from data above - NO vague statements"],
+  "why": ["2-3 causal explanations with specific data references"],
+  "whatToDo": ["2-3 actionable recommendations with SPECIFIC product names"],
+  "kpis": {"metric_name": "value with units", ...},
+  "chartData": [{"name": "Specific Product/Category Name", "value": number}, ...],
   "nextQuestions": ["${moduleId}-specific follow-up 1", "${moduleId}-specific follow-up 2"],
   "causalDrivers": [
-    {"driver": "${moduleId} driver name", "impact": "percentage or value", "correlation": 0.85, "direction": "positive"},
-    {"driver": "Second ${moduleId} driver", "impact": "percentage or value", "correlation": 0.72, "direction": "negative"}
+    {"driver": "Specific driver with product/category", "impact": "percentage or value", "correlation": 0.85, "direction": "positive"},
+    {"driver": "Second driver", "impact": "percentage or value", "correlation": 0.72, "direction": "negative"}
   ],
   "mlInsights": {
-    "patternDetected": "${moduleId} pattern or anomaly detected",
+    "patternDetected": "Specific pattern with product names",
     "confidence": 0.87,
-    "businessSignificance": "What this means for ${moduleId} decisions"
+    "businessSignificance": "What this means for business decisions"
   },
   "predictions": {
     "forecast": [{"period": "Week 1", "value": number, "confidence": 0.8}],
