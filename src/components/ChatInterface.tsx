@@ -144,6 +144,7 @@ interface ChatInterfaceProps {
   onAsk: (question: string, selectedKPIs: string[]) => Promise<AnalyticsResult | null>;
   isLoading: boolean;
   currentResult: AnalyticsResult | null;
+  moduleName?: string;
 }
 
 const personaContent = {
@@ -300,7 +301,8 @@ export default function ChatInterface({
   personaConfig, 
   onAsk, 
   isLoading, 
-  currentResult 
+  currentResult,
+  moduleName = 'Promotion Intelligence'
 }: ChatInterfaceProps) {
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -716,7 +718,7 @@ export default function ChatInterface({
             </div>
             <div>
               <h3 className="font-semibold text-foreground flex items-center gap-2">
-                Promotion Intelligence Assistant
+                {moduleName} Assistant
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0">AI</Badge>
               </h3>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
