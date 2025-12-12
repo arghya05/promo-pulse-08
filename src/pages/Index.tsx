@@ -742,6 +742,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                         <SearchSuggestions
                           query={query}
                           persona={persona}
+                          moduleId={moduleId}
                           isVisible={showSuggestions && !isLoading}
                           onSelect={(suggestion) => {
                             setQuery(suggestion);

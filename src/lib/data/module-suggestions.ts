@@ -1,5 +1,5 @@
 // Module-specific search suggestions and templates
-import { TrendingUp, Calendar, BarChart3, Target, Clock, MapPin, Users, Package, Truck, DollarSign, ShoppingCart, Layers, Box, Warehouse, Route, Percent, Scale, Grid3X3 } from "lucide-react";
+import { TrendingUp, Calendar, BarChart3, Target, Clock, MapPin, Users, Package, Truck, DollarSign, ShoppingCart, Layers, Box, Warehouse, Route, Percent, Scale, Grid3X3, Sparkles } from "lucide-react";
 
 export interface SuggestionTemplate {
   text: string;
@@ -358,5 +358,3 @@ export const moduleChatContent: Record<string, ModuleChatContent> = {
 export const getModuleChatContent = (moduleId: string): ModuleChatContent => {
   return moduleChatContent[moduleId] || moduleChatContent.promotion;
 };
-
-import { Sparkles } from "lucide-react";
