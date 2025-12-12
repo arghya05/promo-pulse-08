@@ -17,7 +17,37 @@ const moduleContexts: Record<string, string> = {
   'supply-chain': `You are a Supply Chain AI for a $4B grocery retailer. Analyze supplier performance, lead times, on-time delivery, logistics costs, warehouse capacity, and distribution routes. Use actual data from suppliers, supplier_orders, and shipping_routes tables. NEVER mention promotions, ROI, or lift - focus ONLY on supply chain metrics.`,
   
   space: `You are a Space Planning AI for a $4B grocery retailer. Analyze shelf space allocation, planogram compliance, sales per square foot, fixture utilization, product adjacencies, and store layouts. Use actual data from planograms, shelf_allocations, fixtures, and store_performance tables. NEVER mention promotions, ROI, or lift - focus ONLY on space planning metrics.`,
+  
+  'cross-module': `You are a Holistic Merchandising AI for a $4B grocery retailer. You analyze cross-functional impacts across pricing, assortment, demand, supply chain, and space planning. Identify relationships between modules, end-to-end impacts, and optimization opportunities that span multiple domains. Use data from ALL tables to provide integrated insights.`,
 };
+
+// Detect if question is a simulation/what-if scenario
+function isSimulationQuestion(question: string): boolean {
+  const simulationTriggers = ['what if', 'what would happen', 'simulate', 'scenario', 'impact if', 'effect of increasing', 'effect of decreasing', 'if we'];
+  return simulationTriggers.some(trigger => question.toLowerCase().includes(trigger));
+}
+
+// Detect if question spans multiple modules
+function detectCrossModuleQuestion(question: string): string[] {
+  const moduleKeywords: Record<string, string[]> = {
+    pricing: ['price', 'pricing', 'margin', 'cost', 'competitive', 'elasticity', 'discount'],
+    demand: ['demand', 'forecast', 'stockout', 'inventory', 'reorder', 'safety stock', 'seasonal'],
+    'supply-chain': ['supplier', 'supply chain', 'lead time', 'logistics', 'delivery', 'shipping', 'warehouse'],
+    space: ['shelf', 'space', 'planogram', 'fixture', 'facing', 'sqft', 'layout'],
+    assortment: ['assortment', 'sku', 'category', 'brand', 'product mix', 'rationalization']
+  };
+  
+  const detectedModules: string[] = [];
+  const lowerQuestion = question.toLowerCase();
+  
+  for (const [module, keywords] of Object.entries(moduleKeywords)) {
+    if (keywords.some(keyword => lowerQuestion.includes(keyword))) {
+      detectedModules.push(module);
+    }
+  }
+  
+  return detectedModules;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -25,9 +55,15 @@ serve(async (req) => {
   }
 
   try {
-    const { question, moduleId, selectedKPIs } = await req.json();
+    const { question, moduleId, selectedKPIs, crossModules } = await req.json();
+    
+    // Detect simulation and cross-module questions
+    const isSimulation = isSimulationQuestion(question);
+    const detectedModules = detectCrossModuleQuestion(question);
+    const isCrossModule = detectedModules.length > 1 || moduleId === 'cross-module' || (crossModules && crossModules.length > 0);
     
     console.log(`[${moduleId}] Analyzing question: ${question}`);
+    console.log(`[${moduleId}] Is simulation: ${isSimulation}, Cross-module: ${isCrossModule}, Detected modules: ${detectedModules.join(', ')}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -44,6 +80,14 @@ serve(async (req) => {
 
     // Build comprehensive data context based on module
     let dataContext = '';
+    
+    // For cross-module questions, fetch data from all relevant modules
+    const modulesToFetch = isCrossModule ? [...new Set([...detectedModules, ...(crossModules || [])])] : [moduleId];
+    
+    // Always fetch cross-module data if it's a cross-module question
+    if (isCrossModule && modulesToFetch.length === 0) {
+      modulesToFetch.push('pricing', 'demand', 'supply-chain');
+    }
     
     switch (moduleId) {
       case 'pricing': {
@@ -589,7 +633,32 @@ ${storePerformanceDetails.slice(0, 8).map(s => `- ${s.store} (${s.region}): ${s.
       }
     }
 
-    const systemPrompt = moduleContexts[moduleId] || moduleContexts.pricing;
+    // Select appropriate system prompt
+    let systemPrompt = moduleContexts[moduleId] || moduleContexts.pricing;
+    if (isCrossModule) {
+      systemPrompt = moduleContexts['cross-module'];
+    }
+    
+    // Build simulation-specific instructions
+    const simulationInstructions = isSimulation ? `
+SIMULATION ANALYSIS INSTRUCTIONS:
+- This is a WHAT-IF scenario question. Model the hypothetical impact.
+- Provide projected outcomes with confidence levels.
+- Show baseline vs. simulated comparison.
+- Include risk assessment and sensitivity analysis.
+- Quantify potential upside AND downside.
+- Be specific about assumptions made.
+` : '';
+
+    // Build cross-module instructions
+    const crossModuleInstructions = isCrossModule ? `
+CROSS-MODULE ANALYSIS INSTRUCTIONS:
+- This question spans multiple merchandising domains: ${detectedModules.join(', ')}.
+- Analyze the interconnections and dependencies between modules.
+- Identify knock-on effects and ripple impacts across functions.
+- Provide integrated recommendations that consider all affected areas.
+- Highlight trade-offs between different modules.
+` : '';
     
     const userPrompt = `
 Question: ${question}
@@ -597,22 +666,27 @@ Question: ${question}
 ${dataContext}
 
 Selected KPIs: ${selectedKPIs?.join(', ') || 'All relevant KPIs'}
+${simulationInstructions}
+${crossModuleInstructions}
 
 CRITICAL RULES - FOLLOW EXACTLY:
-1. Your response must be 100% relevant to ${moduleId.toUpperCase()} module ONLY.
-2. NEVER mention promotions, promotional ROI, or promotional lift.
+1. Your response must be 100% relevant to ${isCrossModule ? 'CROSS-MODULE analysis' : moduleId.toUpperCase() + ' module ONLY'}.
+2. NEVER mention promotions, promotional ROI, or promotional lift unless directly asked.
 3. USE EXACT PRODUCT NAMES, SKUs, and specific numbers from the data provided above.
 4. DO NOT say "no products identified" if products are listed in the data - USE THE SPECIFIC PRODUCTS LISTED.
 5. If the question asks about stockout risk, LIST THE ACTUAL PRODUCTS with their stock levels.
 6. Every statement must reference specific products, categories, or metrics from the data.
 7. NO VAGUE STATEMENTS - be specific with product names, numbers, percentages.
+${isSimulation ? '8. Include SIMULATION RESULTS with baseline vs. projected values and confidence levels.' : ''}
+${isCrossModule ? '9. Show CROSS-MODULE IMPACTS connecting effects across ' + detectedModules.join(', ') + '.' : ''}
 
 Focus areas for ${moduleId}:
 ${moduleId === 'pricing' ? 'pricing, margins, elasticity, competitor pricing, price changes' : 
   moduleId === 'assortment' ? 'SKU performance, category gaps, brand mix, product rationalization' :
   moduleId === 'demand' ? 'demand forecasts, stockout risk BY PRODUCT NAME, inventory levels, forecast accuracy, reorder points' :
   moduleId === 'supply-chain' ? 'supplier performance, lead times, logistics, delivery rates' :
-  moduleId === 'space' ? 'shelf space, planograms, sales per sqft, fixture utilization' : 'relevant metrics'}
+  moduleId === 'space' ? 'shelf space, planograms, sales per sqft, fixture utilization' : 
+  isCrossModule ? 'relationships between modules, integrated impacts, trade-offs' : 'relevant metrics'}
 
 Respond with a JSON object:
 {
@@ -635,7 +709,20 @@ Respond with a JSON object:
     "forecast": [{"period": "Week 1", "value": number, "confidence": 0.8}],
     "trend": "increasing/decreasing/stable",
     "riskLevel": "low/medium/high"
-  }
+  }${isSimulation ? `,
+  "simulation": {
+    "baseline": {"metric": "current value"},
+    "projected": {"metric": "projected value after change"},
+    "impact": {"revenue": "+/-X%", "margin": "+/-X%", "units": "+/-X%"},
+    "confidence": 0.75,
+    "assumptions": ["assumption 1", "assumption 2"],
+    "risks": ["risk 1", "risk 2"],
+    "sensitivity": [{"factor": "factor name", "lowCase": value, "baseCase": value, "highCase": value}]
+  }` : ''}${isCrossModule ? `,
+  "crossModuleImpacts": [
+    {"sourceModule": "pricing", "targetModule": "demand", "impact": "description", "magnitude": "high/medium/low"},
+    {"sourceModule": "demand", "targetModule": "supply-chain", "impact": "description", "magnitude": "high/medium/low"}
+  ]` : ''}
 }`;
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
