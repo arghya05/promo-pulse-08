@@ -144,7 +144,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
       console.log('Sending question with KPIs:', { question: questionToAsk, selectedKPIs });
       
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-question`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${edgeFunctionName}`,
         {
           method: 'POST',
           headers: {
@@ -155,7 +155,8 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
             persona: persona,
             categories: personaConfig[persona].categories,
             selectedKPIs: selectedKPIs.length > 0 ? selectedKPIs : null,
-            timePeriod: timePeriod !== 'custom' ? timePeriod : null
+            timePeriod: timePeriod !== 'custom' ? timePeriod : null,
+            moduleId: moduleId
           }),
         }
       );
@@ -209,7 +210,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
       console.log('Chat sending question with KPIs:', { question: questionText, kpis });
       
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-question`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${edgeFunctionName}`,
         {
           method: 'POST',
           headers: {
@@ -220,7 +221,8 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
             persona: persona,
             categories: personaConfig[persona].categories,
             selectedKPIs: kpis.length > 0 ? kpis : null,
-            timePeriod: timePeriod !== 'custom' ? timePeriod : null
+            timePeriod: timePeriod !== 'custom' ? timePeriod : null,
+            moduleId: moduleId
           }),
         }
       );
@@ -297,41 +299,156 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
     };
   };
 
-  // Persona-specific popular questions
-  const personaQuestions = {
-    executive: [
-      { id: 'e1', question: "Executive scorecard: overall portfolio ROI across consumables & non-consumables?", tag: "SCORECARD" },
-      { id: 'e2', question: "Cross-category performance: which division (grocery vs home care) is driving growth?", tag: "PORTFOLIO" },
-      { id: 'e3', question: "Strategic opportunity: where should we reallocate promo spend across all categories?", tag: "STRATEGY" },
-      { id: 'e4', question: "Risk assessment: top 5 underperforming campaigns across entire business?", tag: "RISK" },
-      { id: 'e5', question: "Market share trends: how are promotions impacting overall competitive position?", tag: "MARKET" },
-      { id: 'e6', question: "Forecast: projected ROI and margin for Q2 across consumables and non-consumables?", tag: "FORECAST" },
-      { id: 'e7', question: "Cost efficiency: vendor funding optimization opportunities across all vendors?", tag: "EFFICIENCY" },
-      { id: 'e8', question: "Customer insights: which segments respond best to promotions overall?", tag: "CUSTOMER" },
-    ],
-    consumables: [
-      { id: 'c1', question: "Top 5 grocery promotions by ROI last month?", tag: "ROI" },
-      { id: 'c2', question: "Which Dairy promotions lost money (ROI < 1)?", tag: "RISK" },
-      { id: 'c3', question: "Optimal discount depth for Beverages to maximize margin?", tag: "OPTIMIZATION" },
-      { id: 'c4', question: "Best mechanic (BOGO/price-off/coupon) for Snacks category?", tag: "MECHANICS" },
-      { id: 'c5', question: "Halo effects: which Frozen promos drive cross-category sales?", tag: "HALO" },
-      { id: 'c6', question: "Coupon redemption rates for Pantry promotions last month?", tag: "COUPON" },
-      { id: 'c7', question: "Produce promo calendar for next month with predicted lift?", tag: "CALENDAR" },
-      { id: 'c8', question: "Bakery vendor funding ROI: which vendors deliver best returns?", tag: "VENDOR" },
-    ],
-    non_consumables: [
-      { id: 'n1', question: "Top 5 Personal Care promotions by ROI last month?", tag: "ROI" },
-      { id: 'n2', question: "Which Home Care promotions underperformed (ROI < 1)?", tag: "RISK" },
-      { id: 'n3', question: "Optimal discount depth for Soap products to maximize margin?", tag: "OPTIMIZATION" },
-      { id: 'n4', question: "Best mechanic (BOGO/price-off/bundle) for Cleaning products?", tag: "MECHANICS" },
-      { id: 'n5', question: "Cross-sell: which Personal Care promos drive Household purchases?", tag: "CROSS-SELL" },
-      { id: 'n6', question: "Hair Care vs Oral Care: which subcategory has better promo ROI?", tag: "COMPARISON" },
-      { id: 'n7', question: "Cooking Oil promotions: seasonal trends and optimal timing?", tag: "SEASONAL" },
-      { id: 'n8', question: "Paper Products inventory impact from recent promotions?", tag: "INVENTORY" },
-    ],
-  };
+  // Module-specific persona questions
+  const getModulePersonaQuestions = useMemo(() => {
+    if (moduleId === 'promotion') {
+      return {
+        executive: [
+          { id: 'e1', question: "Executive scorecard: overall portfolio ROI across consumables & non-consumables?", tag: "SCORECARD" },
+          { id: 'e2', question: "Cross-category performance: which division (grocery vs home care) is driving growth?", tag: "PORTFOLIO" },
+          { id: 'e3', question: "Strategic opportunity: where should we reallocate promo spend across all categories?", tag: "STRATEGY" },
+          { id: 'e4', question: "Risk assessment: top 5 underperforming campaigns across entire business?", tag: "RISK" },
+          { id: 'e5', question: "Market share trends: how are promotions impacting overall competitive position?", tag: "MARKET" },
+          { id: 'e6', question: "Forecast: projected ROI and margin for Q2 across consumables and non-consumables?", tag: "FORECAST" },
+          { id: 'e7', question: "Cost efficiency: vendor funding optimization opportunities across all vendors?", tag: "EFFICIENCY" },
+          { id: 'e8', question: "Customer insights: which segments respond best to promotions overall?", tag: "CUSTOMER" },
+        ],
+        consumables: [
+          { id: 'c1', question: "Top 5 grocery promotions by ROI last month?", tag: "ROI" },
+          { id: 'c2', question: "Which Dairy promotions lost money (ROI < 1)?", tag: "RISK" },
+          { id: 'c3', question: "Optimal discount depth for Beverages to maximize margin?", tag: "OPTIMIZATION" },
+          { id: 'c4', question: "Best mechanic (BOGO/price-off/coupon) for Snacks category?", tag: "MECHANICS" },
+          { id: 'c5', question: "Halo effects: which Frozen promos drive cross-category sales?", tag: "HALO" },
+          { id: 'c6', question: "Coupon redemption rates for Pantry promotions last month?", tag: "COUPON" },
+          { id: 'c7', question: "Produce promo calendar for next month with predicted lift?", tag: "CALENDAR" },
+          { id: 'c8', question: "Bakery vendor funding ROI: which vendors deliver best returns?", tag: "VENDOR" },
+        ],
+        non_consumables: [
+          { id: 'n1', question: "Top 5 Personal Care promotions by ROI last month?", tag: "ROI" },
+          { id: 'n2', question: "Which Home Care promotions underperformed (ROI < 1)?", tag: "RISK" },
+          { id: 'n3', question: "Optimal discount depth for Soap products to maximize margin?", tag: "OPTIMIZATION" },
+          { id: 'n4', question: "Best mechanic (BOGO/price-off/bundle) for Cleaning products?", tag: "MECHANICS" },
+          { id: 'n5', question: "Cross-sell: which Personal Care promos drive Household purchases?", tag: "CROSS-SELL" },
+          { id: 'n6', question: "Hair Care vs Oral Care: which subcategory has better promo ROI?", tag: "COMPARISON" },
+          { id: 'n7', question: "Cooking Oil promotions: seasonal trends and optimal timing?", tag: "SEASONAL" },
+          { id: 'n8', question: "Paper Products inventory impact from recent promotions?", tag: "INVENTORY" },
+        ],
+      };
+    } else if (moduleId === 'pricing') {
+      return {
+        executive: [
+          { id: 'e1', question: "Executive pricing scorecard: margin performance across all categories?", tag: "SCORECARD" },
+          { id: 'e2', question: "Competitive price positioning vs Walmart, Kroger, Target?", tag: "COMPETITIVE" },
+          { id: 'e3', question: "Which categories have the highest margin improvement opportunity?", tag: "OPPORTUNITY" },
+          { id: 'e4', question: "Price elasticity trends: where are we leaving money on the table?", tag: "ELASTICITY" },
+        ],
+        consumables: [
+          { id: 'c1', question: "Optimal price points for Dairy products to maximize margin?", tag: "OPTIMIZATION" },
+          { id: 'c2', question: "How does Beverages price elasticity vary by brand?", tag: "ELASTICITY" },
+          { id: 'c3', question: "Which Snacks products can sustain a price increase?", tag: "PRICING-POWER" },
+          { id: 'c4', question: "Produce markdown strategy: when to reduce prices?", tag: "MARKDOWN" },
+        ],
+        non_consumables: [
+          { id: 'n1', question: "Personal Care pricing vs competitors: where to adjust?", tag: "COMPETITIVE" },
+          { id: 'n2', question: "Home Care margin optimization opportunities?", tag: "MARGIN" },
+          { id: 'n3', question: "Private label pricing gap analysis for non-consumables?", tag: "PRIVATE-LABEL" },
+          { id: 'n4', question: "Which non-food products are most price sensitive?", tag: "SENSITIVITY" },
+        ],
+      };
+    } else if (moduleId === 'assortment') {
+      return {
+        executive: [
+          { id: 'e1', question: "Assortment scorecard: SKU productivity across categories?", tag: "SCORECARD" },
+          { id: 'e2', question: "Which SKUs should be rationalized to improve efficiency?", tag: "RATIONALIZATION" },
+          { id: 'e3', question: "Category gaps vs competition: where to expand assortment?", tag: "GAPS" },
+          { id: 'e4', question: "Private label vs national brand performance comparison?", tag: "BRAND-MIX" },
+        ],
+        consumables: [
+          { id: 'c1', question: "Bottom-performing Dairy SKUs to discontinue?", tag: "RATIONALIZATION" },
+          { id: 'c2', question: "Beverages assortment gaps vs Kroger?", tag: "GAPS" },
+          { id: 'c3', question: "Optimal brand mix for Snacks category?", tag: "BRAND-MIX" },
+          { id: 'c4', question: "New product performance in Frozen category?", tag: "NEW-PRODUCTS" },
+        ],
+        non_consumables: [
+          { id: 'n1', question: "Personal Care SKU productivity analysis?", tag: "PRODUCTIVITY" },
+          { id: 'n2', question: "Home Care assortment depth by store cluster?", tag: "CLUSTERING" },
+          { id: 'n3', question: "Which non-food brands are underperforming?", tag: "BRAND-ANALYSIS" },
+          { id: 'n4', question: "Private label expansion opportunities in household?", tag: "PRIVATE-LABEL" },
+        ],
+      };
+    } else if (moduleId === 'demand') {
+      return {
+        executive: [
+          { id: 'e1', question: "Demand forecast accuracy scorecard by category?", tag: "ACCURACY" },
+          { id: 'e2', question: "Which products are at highest stockout risk?", tag: "STOCKOUT" },
+          { id: 'e3', question: "Inventory turnover trends across categories?", tag: "TURNOVER" },
+          { id: 'e4', question: "Seasonal demand patterns: how to prepare for Q2?", tag: "SEASONAL" },
+        ],
+        consumables: [
+          { id: 'c1', question: "Dairy demand forecast for next 4 weeks?", tag: "FORECAST" },
+          { id: 'c2', question: "Beverages stockout risk assessment?", tag: "STOCKOUT" },
+          { id: 'c3', question: "Optimal safety stock for Snacks?", tag: "SAFETY-STOCK" },
+          { id: 'c4', question: "Produce spoilage and demand forecasting?", tag: "PERISHABLE" },
+        ],
+        non_consumables: [
+          { id: 'n1', question: "Personal Care demand forecast accuracy?", tag: "ACCURACY" },
+          { id: 'n2', question: "Home Care reorder point optimization?", tag: "REORDER" },
+          { id: 'n3', question: "Non-food seasonal demand patterns?", tag: "SEASONAL" },
+          { id: 'n4', question: "Inventory turnover improvement opportunities?", tag: "TURNOVER" },
+        ],
+      };
+    } else if (moduleId === 'supply-chain') {
+      return {
+        executive: [
+          { id: 'e1', question: "Supply chain performance scorecard?", tag: "SCORECARD" },
+          { id: 'e2', question: "Supplier on-time delivery rankings?", tag: "SUPPLIERS" },
+          { id: 'e3', question: "Logistics cost breakdown and optimization?", tag: "COSTS" },
+          { id: 'e4', question: "Warehouse capacity utilization trends?", tag: "CAPACITY" },
+        ],
+        consumables: [
+          { id: 'c1', question: "Dairy supplier performance and lead times?", tag: "SUPPLIERS" },
+          { id: 'c2', question: "Beverages distribution route efficiency?", tag: "DISTRIBUTION" },
+          { id: 'c3', question: "Cold chain logistics for frozen products?", tag: "COLD-CHAIN" },
+          { id: 'c4', question: "Produce freshness and supplier reliability?", tag: "FRESHNESS" },
+        ],
+        non_consumables: [
+          { id: 'n1', question: "Non-food supplier lead time analysis?", tag: "LEAD-TIME" },
+          { id: 'n2', question: "Home Care warehouse allocation?", tag: "WAREHOUSE" },
+          { id: 'n3', question: "Personal Care import logistics costs?", tag: "IMPORTS" },
+          { id: 'n4', question: "Bulk product transportation optimization?", tag: "TRANSPORT" },
+        ],
+      };
+    } else if (moduleId === 'space') {
+      return {
+        executive: [
+          { id: 'e1', question: "Sales per square foot performance by category?", tag: "SALES-SQFT" },
+          { id: 'e2', question: "Planogram compliance impact on sales?", tag: "COMPLIANCE" },
+          { id: 'e3', question: "Store layout conversion rate analysis?", tag: "CONVERSION" },
+          { id: 'e4', question: "Endcap display effectiveness ranking?", tag: "ENDCAPS" },
+        ],
+        consumables: [
+          { id: 'c1', question: "Dairy shelf space allocation optimization?", tag: "ALLOCATION" },
+          { id: 'c2', question: "Beverages facing count analysis?", tag: "FACINGS" },
+          { id: 'c3', question: "Snacks category adjacency for cross-sell?", tag: "ADJACENCY" },
+          { id: 'c4', question: "Frozen section GMROI by position?", tag: "GMROI" },
+        ],
+        non_consumables: [
+          { id: 'n1', question: "Personal Care planogram optimization?", tag: "PLANOGRAM" },
+          { id: 'n2', question: "Home Care shelf productivity?", tag: "PRODUCTIVITY" },
+          { id: 'n3', question: "Non-food endcap rotation strategy?", tag: "ROTATION" },
+          { id: 'n4', question: "Visual merchandising impact on sales?", tag: "VISUAL" },
+        ],
+      };
+    }
+    // Default fallback
+    return {
+      executive: [],
+      consumables: [],
+      non_consumables: [],
+    };
+  }, [moduleId]);
 
-  const currentQuestions = personaQuestions[persona];
+  const currentQuestions = getModulePersonaQuestions[persona] || [];
 
   return (
     <div className="min-h-screen bg-background">
