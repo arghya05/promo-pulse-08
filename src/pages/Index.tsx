@@ -565,6 +565,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                   isLoading={isLoading}
                   currentResult={result}
                   moduleName={module?.name || 'Promotion Intelligence'}
+                  moduleId={moduleId}
                 />
               </div>
               
