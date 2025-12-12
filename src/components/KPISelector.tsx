@@ -5,8 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronDown, Check, X, Sparkles, TrendingUp, DollarSign, Users, Package, Megaphone, Target, Store, ShoppingBag } from "lucide-react";
-import { kpiLibrary, getSuggestedKPIs, getKPIsByCategory, type KPI } from "@/lib/data/kpi-library";
+import { ChevronDown, Check, X, Sparkles, TrendingUp, DollarSign, Users, Package, Megaphone, Target, Store, ShoppingBag, Truck, BarChart3, Grid3X3, Gauge, Route, Layers } from "lucide-react";
+import { getKPIsByModule, type ModuleKPI } from "@/lib/data/module-kpis";
 import { cn } from "@/lib/utils";
 
 interface KPISelectorProps {
@@ -14,6 +14,7 @@ interface KPISelectorProps {
   selectedKPIs: string[];
   onKPIsChange: (kpis: string[]) => void;
   isLoading?: boolean;
+  moduleId?: string;
 }
 
 const categoryIcons: Record<string, React.ReactNode> = {
@@ -25,6 +26,14 @@ const categoryIcons: Record<string, React.ReactNode> = {
   competitive: <Target className="h-3.5 w-3.5" />,
   store: <Store className="h-3.5 w-3.5" />,
   product: <ShoppingBag className="h-3.5 w-3.5" />,
+  sales: <BarChart3 className="h-3.5 w-3.5" />,
+  pricing: <DollarSign className="h-3.5 w-3.5" />,
+  assortment: <Grid3X3 className="h-3.5 w-3.5" />,
+  forecasting: <TrendingUp className="h-3.5 w-3.5" />,
+  logistics: <Truck className="h-3.5 w-3.5" />,
+  supplier: <Package className="h-3.5 w-3.5" />,
+  cost: <DollarSign className="h-3.5 w-3.5" />,
+  space: <Layers className="h-3.5 w-3.5" />,
 };
 
 const categoryLabels: Record<string, string> = {
@@ -36,18 +45,73 @@ const categoryLabels: Record<string, string> = {
   competitive: 'Competitive',
   store: 'Store',
   product: 'Product',
+  sales: 'Sales',
+  pricing: 'Pricing',
+  assortment: 'Assortment',
+  forecasting: 'Forecasting',
+  logistics: 'Logistics',
+  supplier: 'Supplier',
+  cost: 'Cost',
+  space: 'Space',
 };
 
-export default function KPISelector({ question, selectedKPIs, onKPIsChange, isLoading }: KPISelectorProps) {
+export default function KPISelector({ question, selectedKPIs, onKPIsChange, isLoading, moduleId = 'promotion' }: KPISelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   
-  // Get AI-suggested KPIs based on question
-  const suggestedKPIs = useMemo(() => {
-    return question.trim() ? getSuggestedKPIs(question) : [];
-  }, [question]);
+  // Get module-specific KPIs
+  const moduleKPIs = useMemo(() => getKPIsByModule(moduleId), [moduleId]);
   
-  // Get all KPIs grouped by category
-  const kpisByCategory = useMemo(() => getKPIsByCategory(), []);
+  // Get AI-suggested KPIs based on question and module
+  const suggestedKPIs = useMemo(() => {
+    if (!question.trim()) return [];
+    
+    const questionLower = question.toLowerCase();
+    const scored = moduleKPIs.map(kpi => {
+      let score = 0;
+      const kpiNameLower = kpi.name.toLowerCase();
+      const kpiCatLower = kpi.category.toLowerCase();
+      
+      // Direct name match
+      if (questionLower.includes(kpiNameLower)) score += 10;
+      // Category match
+      if (questionLower.includes(kpiCatLower)) score += 5;
+      // Common term matches
+      if (questionLower.includes('roi') && kpi.id === 'roi') score += 10;
+      if (questionLower.includes('margin') && kpi.id.includes('margin')) score += 8;
+      if (questionLower.includes('cost') && kpi.id.includes('cost')) score += 8;
+      if (questionLower.includes('revenue') && kpi.id === 'revenue') score += 8;
+      if (questionLower.includes('forecast') && kpi.category === 'forecasting') score += 8;
+      if (questionLower.includes('supplier') && kpi.category === 'supplier') score += 8;
+      if (questionLower.includes('price') && kpi.category === 'pricing') score += 8;
+      if (questionLower.includes('inventory') && kpi.category === 'inventory') score += 8;
+      if (questionLower.includes('delivery') && kpi.id.includes('delivery')) score += 8;
+      if (questionLower.includes('lead time') && kpi.id === 'lead_time') score += 10;
+      if (questionLower.includes('shelf') && kpi.category === 'space') score += 8;
+      if (questionLower.includes('space') && kpi.category === 'space') score += 8;
+      // Base score for module-specific KPIs (not shared)
+      if (!['revenue', 'margin', 'margin_percent', 'units_sold', 'avg_transaction_value'].includes(kpi.id)) {
+        score += 2;
+      }
+      return { kpi, score };
+    });
+    
+    return scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8)
+      .map(s => s.kpi);
+  }, [question, moduleKPIs]);
+  
+  // Get all KPIs grouped by category for this module
+  const kpisByCategory = useMemo(() => {
+    const grouped: Record<string, ModuleKPI[]> = {};
+    moduleKPIs.forEach(kpi => {
+      if (!grouped[kpi.category]) {
+        grouped[kpi.category] = [];
+      }
+      grouped[kpi.category].push(kpi);
+    });
+    return grouped;
+  }, [moduleKPIs]);
   
   // Auto-select suggested KPIs when question changes
   useEffect(() => {
@@ -73,8 +137,8 @@ export default function KPISelector({ question, selectedKPIs, onKPIsChange, isLo
     onKPIsChange([]);
   };
   
-  const getKPIById = (id: string): KPI | undefined => {
-    return kpiLibrary.find(kpi => kpi.id === id);
+  const getKPIById = (id: string): ModuleKPI | undefined => {
+    return moduleKPIs.find(kpi => kpi.id === id);
   };
   
   if (!question.trim()) return null;
@@ -141,12 +205,12 @@ export default function KPISelector({ question, selectedKPIs, onKPIsChange, isLo
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">{kpi.label}</span>
+                              <span className="font-medium text-sm">{kpi.name}</span>
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                {categoryLabels[kpi.category]}
+                                {categoryLabels[kpi.category] || kpi.category}
                               </Badge>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-0.5">{kpi.description}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Data source: {kpi.dataSource}</p>
                           </div>
                         </div>
                       ))}
@@ -175,7 +239,7 @@ export default function KPISelector({ question, selectedKPIs, onKPIsChange, isLo
                                     : "hover:bg-accent"
                                 )}
                                 onClick={() => toggleKPI(kpi.id)}
-                                title={kpi.description}
+                                title={`Data source: ${kpi.dataSource}`}
                               >
                                 <div className={cn(
                                   "h-4 w-4 rounded border flex items-center justify-center flex-shrink-0",

@@ -786,6 +786,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                     selectedKPIs={selectedKPIs}
                     onKPIsChange={setSelectedKPIs}
                     isLoading={isLoading}
+                    moduleId={moduleId}
                   />
 
                   {/* Time Period Filters */}
