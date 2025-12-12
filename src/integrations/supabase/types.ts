@@ -50,6 +50,42 @@ export type Database = {
         }
         Relationships: []
       }
+      competitor_prices: {
+        Row: {
+          competitor_name: string
+          competitor_price: number
+          created_at: string
+          id: string
+          observation_date: string
+          our_price: number
+          price_gap_percent: number | null
+          product_sku: string
+          source: string | null
+        }
+        Insert: {
+          competitor_name: string
+          competitor_price: number
+          created_at?: string
+          id?: string
+          observation_date: string
+          our_price: number
+          price_gap_percent?: number | null
+          product_sku: string
+          source?: string | null
+        }
+        Update: {
+          competitor_name?: string
+          competitor_price?: number
+          created_at?: string
+          id?: string
+          observation_date?: string
+          our_price?: number
+          price_gap_percent?: number | null
+          product_sku?: string
+          source?: string | null
+        }
+        Relationships: []
+      }
       customer_journey: {
         Row: {
           action_taken: string | null
@@ -139,6 +175,171 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      demand_forecasts: {
+        Row: {
+          actual_units: number | null
+          confidence_interval_high: number | null
+          confidence_interval_low: number | null
+          created_at: string
+          forecast_accuracy: number | null
+          forecast_date: string
+          forecast_model: string | null
+          forecast_period_end: string
+          forecast_period_start: string
+          forecasted_units: number
+          id: string
+          product_sku: string
+          store_id: string | null
+        }
+        Insert: {
+          actual_units?: number | null
+          confidence_interval_high?: number | null
+          confidence_interval_low?: number | null
+          created_at?: string
+          forecast_accuracy?: number | null
+          forecast_date: string
+          forecast_model?: string | null
+          forecast_period_end: string
+          forecast_period_start: string
+          forecasted_units: number
+          id?: string
+          product_sku: string
+          store_id?: string | null
+        }
+        Update: {
+          actual_units?: number | null
+          confidence_interval_high?: number | null
+          confidence_interval_low?: number | null
+          created_at?: string
+          forecast_accuracy?: number | null
+          forecast_date?: string
+          forecast_model?: string | null
+          forecast_period_end?: string
+          forecast_period_start?: string
+          forecasted_units?: number
+          id?: string
+          product_sku?: string
+          store_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_forecasts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fixtures: {
+        Row: {
+          aisle_number: number | null
+          assigned_category: string | null
+          capacity_sqft: number | null
+          created_at: string
+          depth_inches: number
+          fixture_code: string
+          fixture_type: string
+          height_inches: number
+          id: string
+          installed_date: string | null
+          location_in_store: string | null
+          status: string | null
+          store_id: string | null
+          width_inches: number
+        }
+        Insert: {
+          aisle_number?: number | null
+          assigned_category?: string | null
+          capacity_sqft?: number | null
+          created_at?: string
+          depth_inches: number
+          fixture_code: string
+          fixture_type: string
+          height_inches: number
+          id?: string
+          installed_date?: string | null
+          location_in_store?: string | null
+          status?: string | null
+          store_id?: string | null
+          width_inches: number
+        }
+        Update: {
+          aisle_number?: number | null
+          assigned_category?: string | null
+          capacity_sqft?: number | null
+          created_at?: string
+          depth_inches?: number
+          fixture_code?: string
+          fixture_type?: string
+          height_inches?: number
+          id?: string
+          installed_date?: string | null
+          location_in_store?: string | null
+          status?: string | null
+          store_id?: string | null
+          width_inches?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixtures_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forecast_accuracy_tracking: {
+        Row: {
+          bias: number | null
+          category: string | null
+          created_at: string
+          forecast_model: string | null
+          id: string
+          mape: number
+          notes: string | null
+          rmse: number | null
+          sample_size: number | null
+          store_id: string | null
+          tracking_date: string
+        }
+        Insert: {
+          bias?: number | null
+          category?: string | null
+          created_at?: string
+          forecast_model?: string | null
+          id?: string
+          mape: number
+          notes?: string | null
+          rmse?: number | null
+          sample_size?: number | null
+          store_id?: string | null
+          tracking_date: string
+        }
+        Update: {
+          bias?: number | null
+          category?: string | null
+          created_at?: string
+          forecast_model?: string | null
+          id?: string
+          mape?: number
+          notes?: string | null
+          rmse?: number | null
+          sample_size?: number | null
+          store_id?: string | null
+          tracking_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forecast_accuracy_tracking_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       inventory_levels: {
         Row: {
@@ -230,6 +431,93 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      planograms: {
+        Row: {
+          category: string
+          created_at: string
+          effective_date: string | null
+          id: string
+          planogram_code: string | null
+          planogram_name: string
+          shelf_count: number
+          status: string | null
+          store_type: string | null
+          subcategory: string | null
+          total_height_inches: number
+          total_width_inches: number
+          updated_at: string
+          version: number | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          effective_date?: string | null
+          id?: string
+          planogram_code?: string | null
+          planogram_name: string
+          shelf_count?: number
+          status?: string | null
+          store_type?: string | null
+          subcategory?: string | null
+          total_height_inches?: number
+          total_width_inches?: number
+          updated_at?: string
+          version?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          effective_date?: string | null
+          id?: string
+          planogram_code?: string | null
+          planogram_name?: string
+          shelf_count?: number
+          status?: string | null
+          store_type?: string | null
+          subcategory?: string | null
+          total_height_inches?: number
+          total_width_inches?: number
+          updated_at?: string
+          version?: number | null
+        }
+        Relationships: []
+      }
+      price_change_history: {
+        Row: {
+          approved_by: string | null
+          change_date: string
+          change_reason: string | null
+          change_type: string | null
+          created_at: string
+          id: string
+          new_price: number
+          old_price: number
+          product_sku: string
+        }
+        Insert: {
+          approved_by?: string | null
+          change_date?: string
+          change_reason?: string | null
+          change_type?: string | null
+          created_at?: string
+          id?: string
+          new_price: number
+          old_price: number
+          product_sku: string
+        }
+        Update: {
+          approved_by?: string | null
+          change_date?: string
+          change_reason?: string | null
+          change_type?: string | null
+          created_at?: string
+          id?: string
+          new_price?: number
+          old_price?: number
+          product_sku?: string
+        }
+        Relationships: []
       }
       products: {
         Row: {
@@ -363,6 +651,122 @@ export type Database = {
         }
         Relationships: []
       }
+      shelf_allocations: {
+        Row: {
+          created_at: string
+          depth_inches: number | null
+          facings: number
+          height_inches: number
+          id: string
+          is_eye_level: boolean | null
+          planogram_id: string | null
+          position_from_left: number
+          product_sku: string
+          sales_per_sqft: number | null
+          shelf_number: number
+          width_inches: number
+        }
+        Insert: {
+          created_at?: string
+          depth_inches?: number | null
+          facings?: number
+          height_inches: number
+          id?: string
+          is_eye_level?: boolean | null
+          planogram_id?: string | null
+          position_from_left: number
+          product_sku: string
+          sales_per_sqft?: number | null
+          shelf_number: number
+          width_inches: number
+        }
+        Update: {
+          created_at?: string
+          depth_inches?: number | null
+          facings?: number
+          height_inches?: number
+          id?: string
+          is_eye_level?: boolean | null
+          planogram_id?: string | null
+          position_from_left?: number
+          product_sku?: string
+          sales_per_sqft?: number | null
+          shelf_number?: number
+          width_inches?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shelf_allocations_planogram_id_fkey"
+            columns: ["planogram_id"]
+            isOneToOne: false
+            referencedRelation: "planograms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shipping_routes: {
+        Row: {
+          avg_transit_time_hours: number
+          carbon_footprint_kg: number | null
+          cost_per_mile: number | null
+          created_at: string
+          destination_location: string
+          destination_store_id: string | null
+          distance_miles: number
+          id: string
+          is_active: boolean | null
+          origin_location: string
+          origin_store_id: string | null
+          route_name: string
+          transportation_mode: string | null
+        }
+        Insert: {
+          avg_transit_time_hours: number
+          carbon_footprint_kg?: number | null
+          cost_per_mile?: number | null
+          created_at?: string
+          destination_location: string
+          destination_store_id?: string | null
+          distance_miles: number
+          id?: string
+          is_active?: boolean | null
+          origin_location: string
+          origin_store_id?: string | null
+          route_name: string
+          transportation_mode?: string | null
+        }
+        Update: {
+          avg_transit_time_hours?: number
+          carbon_footprint_kg?: number | null
+          cost_per_mile?: number | null
+          created_at?: string
+          destination_location?: string
+          destination_store_id?: string | null
+          distance_miles?: number
+          id?: string
+          is_active?: boolean | null
+          origin_location?: string
+          origin_store_id?: string | null
+          route_name?: string
+          transportation_mode?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipping_routes_destination_store_id_fkey"
+            columns: ["destination_store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shipping_routes_origin_store_id_fkey"
+            columns: ["origin_store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_performance: {
         Row: {
           avg_basket_size: number | null
@@ -440,6 +844,116 @@ export type Database = {
           store_name?: string
           store_type?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      supplier_orders: {
+        Row: {
+          actual_delivery_date: string | null
+          created_at: string
+          expected_delivery_date: string
+          id: string
+          on_time: boolean | null
+          order_date: string
+          product_sku: string
+          quantity: number
+          status: string | null
+          supplier_id: string | null
+          total_cost: number | null
+          unit_cost: number
+        }
+        Insert: {
+          actual_delivery_date?: string | null
+          created_at?: string
+          expected_delivery_date: string
+          id?: string
+          on_time?: boolean | null
+          order_date: string
+          product_sku: string
+          quantity: number
+          status?: string | null
+          supplier_id?: string | null
+          total_cost?: number | null
+          unit_cost: number
+        }
+        Update: {
+          actual_delivery_date?: string | null
+          created_at?: string
+          expected_delivery_date?: string
+          id?: string
+          on_time?: boolean | null
+          order_date?: string
+          product_sku?: string
+          quantity?: number
+          status?: string | null
+          supplier_id?: string | null
+          total_cost?: number | null
+          unit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          address: string | null
+          city: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          country: string | null
+          created_at: string
+          id: string
+          lead_time_days: number
+          minimum_order_value: number | null
+          payment_terms: string | null
+          preferred_carrier: string | null
+          reliability_score: number | null
+          state: string | null
+          supplier_code: string
+          supplier_name: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          lead_time_days?: number
+          minimum_order_value?: number | null
+          payment_terms?: string | null
+          preferred_carrier?: string | null
+          reliability_score?: number | null
+          state?: string | null
+          supplier_code: string
+          supplier_name: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          lead_time_days?: number
+          minimum_order_value?: number | null
+          payment_terms?: string | null
+          preferred_carrier?: string | null
+          reliability_score?: number | null
+          state?: string | null
+          supplier_code?: string
+          supplier_name?: string
+          updated_at?: string
         }
         Relationships: []
       }
