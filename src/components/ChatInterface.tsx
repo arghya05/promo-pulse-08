@@ -12,58 +12,100 @@ import { useToast } from "@/hooks/use-toast";
 import type { AnalyticsResult } from "@/lib/analytics";
 import { getSuggestedKPIs, KPI } from "@/lib/data/kpi-library";
 
+// Collapsible Section Component - Reusable
+interface CollapsibleSectionProps {
+  title: string;
+  icon: React.ReactNode;
+  badge?: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+  className?: string;
+}
+
+const CollapsibleSection = ({ 
+  title, 
+  icon, 
+  badge, 
+  isOpen, 
+  onToggle, 
+  children, 
+  className = "" 
+}: CollapsibleSectionProps) => {
+  return (
+    <Collapsible open={isOpen} onOpenChange={onToggle} className={className}>
+      <CollapsibleTrigger asChild>
+        <button className="flex items-center justify-between w-full text-left">
+          <div className="flex items-center gap-2">
+            {icon}
+            <span className="text-xs font-medium text-foreground">{title}</span>
+            {badge && <Badge variant="secondary" className="text-[9px] px-1.5 py-0">{badge}</Badge>}
+          </div>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isOpen ? '' : '-rotate-90'}`} />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pt-2">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
+
 // Collapsible KPI Exploration Section Component
 const CollapsibleKPISection = ({ 
   kpis, 
   originalQuestion, 
   onKPIClick, 
-  isLoading 
+  isLoading,
+  isOpen,
+  onToggle
 }: { 
   kpis: KPI[]; 
   originalQuestion?: string; 
   onKPIClick: (kpiLabel: string) => void; 
   isLoading: boolean;
+  isOpen: boolean;
+  onToggle: () => void;
 }) => {
-  const [isOpen, setIsOpen] = useState(true);
-  
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mt-3">
-      <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
-        <CollapsibleTrigger asChild>
-          <button className="flex items-center justify-between w-full text-left">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span className="text-xs font-medium text-foreground">Explore Different KPIs</span>
-              <Badge variant="secondary" className="text-[9px] px-1.5 py-0">AI-Powered</Badge>
-            </div>
-            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isOpen ? '' : '-rotate-90'}`} />
-          </button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-2">
-          <div className="flex flex-wrap gap-1.5">
-            {kpis.map((kpi) => (
-              <Button
-                key={kpi.id}
-                variant="outline"
-                size="sm"
-                className="text-[11px] h-7 px-2.5 bg-primary text-primary-foreground hover:bg-primary/90 border-primary gap-1"
-                onClick={() => onKPIClick(kpi.label)}
-                disabled={isLoading}
-                title={kpi.description}
-              >
-                <TrendingUp className="h-3 w-3" />
-                {kpi.name}
-              </Button>
-            ))}
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-2">
-            Click a KPI to see the same analysis from a different metric perspective
-          </p>
-        </CollapsibleContent>
-      </div>
-    </Collapsible>
+    <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+      <CollapsibleSection
+        title="Explore Different KPIs"
+        icon={<Sparkles className="h-4 w-4 text-primary" />}
+        badge="AI-Powered"
+        isOpen={isOpen}
+        onToggle={onToggle}
+      >
+        <div className="flex flex-wrap gap-1.5">
+          {kpis.map((kpi) => (
+            <Button
+              key={kpi.id}
+              variant="outline"
+              size="sm"
+              className="text-[11px] h-7 px-2.5 bg-primary text-primary-foreground hover:bg-primary/90 border-primary gap-1"
+              onClick={() => onKPIClick(kpi.label)}
+              disabled={isLoading}
+              title={kpi.description}
+            >
+              <TrendingUp className="h-3 w-3" />
+              {kpi.name}
+            </Button>
+          ))}
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-2">
+          Click a KPI to see the same analysis from a different metric perspective
+        </p>
+      </CollapsibleSection>
+    </div>
   );
 };
+
+// Collapsed sections state per message
+interface CollapsedSections {
+  kpi: boolean;
+  timePeriod: boolean;
+  fineTune: boolean;
+}
 
 interface Message {
   id: string;
@@ -272,7 +314,38 @@ export default function ChatInterface({
   const [showRefinement, setShowRefinement] = useState<string | null>(null);
   const [progressIndex, setProgressIndex] = useState(0);
   const [conversationContext, setConversationContext] = useState<ConversationContext>({ recentTopics: [] });
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, CollapsedSections>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Get collapsed state for a message
+  const getCollapsedState = (messageId: string): CollapsedSections => {
+    return collapsedSections[messageId] || { kpi: false, timePeriod: false, fineTune: false };
+  };
+
+  // Toggle a section for a specific message
+  const toggleSection = (messageId: string, section: keyof CollapsedSections) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [messageId]: {
+        ...getCollapsedState(messageId),
+        [section]: !getCollapsedState(messageId)[section]
+      }
+    }));
+  };
+
+  // Collapse all sections for a message
+  const collapseAllSections = (messageId: string) => {
+    const current = getCollapsedState(messageId);
+    const allExpanded = !current.kpi && !current.timePeriod && !current.fineTune;
+    setCollapsedSections(prev => ({
+      ...prev,
+      [messageId]: {
+        kpi: !allExpanded,
+        timePeriod: !allExpanded,
+        fineTune: !allExpanded
+      }
+    }));
+  };
   const inputRef = useRef<HTMLInputElement>(null);
 
   const personaKey = getPersonaKey(persona);
@@ -780,6 +853,8 @@ export default function ChatInterface({
                     originalQuestion={message.originalQuestion}
                     onKPIClick={(kpiLabel) => handleSuggestionClick(`${message.originalQuestion || 'Show analysis'} focusing on ${kpiLabel}`)}
                     isLoading={isLoading}
+                    isOpen={!getCollapsedState(message.id).kpi}
+                    onToggle={() => toggleSection(message.id, 'kpi')}
                   />
                 )}
 
@@ -849,51 +924,74 @@ export default function ChatInterface({
                 {/* Suggestions */}
                 {message.suggestions && message.suggestions.length > 0 && (
                   <div className="mt-2 space-y-3">
-                    {/* Time Filter Pills */}
+                    {/* Collapse All Button */}
                     {message.analyticsResult && (
-                      <div>
-                        <p className="text-[10px] text-muted-foreground mb-1.5 flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          Refine by time period:
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {contextualPrompts.timeFilters.map((filter, idx) => (
-                            <Button
-                              key={idx}
-                              variant="outline"
-                              size="sm"
-                              className="text-[10px] h-6 px-2 bg-secondary/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-                              onClick={() => handleSuggestionClick(`${message.analyticsResult?.sources || 'Analysis'} for ${filter.filter}`)}
-                              disabled={isLoading}
-                            >
-                              {filter.text}
-                            </Button>
-                          ))}
-                        </div>
+                      <div className="flex justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-[10px] h-5 px-2 text-muted-foreground hover:text-primary"
+                          onClick={() => collapseAllSections(message.id)}
+                        >
+                          <ChevronDown className={`h-3 w-3 mr-1 transition-transform ${
+                            getCollapsedState(message.id).timePeriod && getCollapsedState(message.id).fineTune ? 'rotate-180' : ''
+                          }`} />
+                          {getCollapsedState(message.id).timePeriod && getCollapsedState(message.id).fineTune ? 'Expand all' : 'Collapse all'}
+                        </Button>
                       </div>
                     )}
 
-                    {/* Refinement Options */}
+                    {/* Time Filter Pills - Collapsible */}
                     {message.analyticsResult && (
-                      <div>
-                        <p className="text-[10px] text-muted-foreground mb-1.5 flex items-center gap-1">
-                          <Filter className="h-3 w-3" />
-                          Fine-tune analysis:
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {contextualPrompts.refinements.map((ref, idx) => (
-                            <Button
-                              key={idx}
-                              variant="outline"
-                              size="sm"
-                              className="text-[10px] h-6 px-2 bg-secondary/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-                              onClick={() => handleSuggestionClick(`Show me the same analysis ${ref.filter}`)}
-                              disabled={isLoading}
-                            >
-                              {ref.text}
-                            </Button>
-                          ))}
-                        </div>
+                      <div className="p-2 bg-secondary/30 border border-border/50 rounded-lg">
+                        <CollapsibleSection
+                          title="Refine by time period"
+                          icon={<Clock className="h-3 w-3 text-muted-foreground" />}
+                          isOpen={!getCollapsedState(message.id).timePeriod}
+                          onToggle={() => toggleSection(message.id, 'timePeriod')}
+                        >
+                          <div className="flex flex-wrap gap-1.5">
+                            {contextualPrompts.timeFilters.map((filter, idx) => (
+                              <Button
+                                key={idx}
+                                variant="outline"
+                                size="sm"
+                                className="text-[10px] h-6 px-2 bg-secondary/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                                onClick={() => handleSuggestionClick(`${message.analyticsResult?.sources || 'Analysis'} for ${filter.filter}`)}
+                                disabled={isLoading}
+                              >
+                                {filter.text}
+                              </Button>
+                            ))}
+                          </div>
+                        </CollapsibleSection>
+                      </div>
+                    )}
+
+                    {/* Refinement Options - Collapsible */}
+                    {message.analyticsResult && (
+                      <div className="p-2 bg-secondary/30 border border-border/50 rounded-lg">
+                        <CollapsibleSection
+                          title="Fine-tune analysis"
+                          icon={<Filter className="h-3 w-3 text-muted-foreground" />}
+                          isOpen={!getCollapsedState(message.id).fineTune}
+                          onToggle={() => toggleSection(message.id, 'fineTune')}
+                        >
+                          <div className="flex flex-wrap gap-1.5">
+                            {contextualPrompts.refinements.map((ref, idx) => (
+                              <Button
+                                key={idx}
+                                variant="outline"
+                                size="sm"
+                                className="text-[10px] h-6 px-2 bg-secondary/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                                onClick={() => handleSuggestionClick(`Show me the same analysis ${ref.filter}`)}
+                                disabled={isLoading}
+                              >
+                                {ref.text}
+                              </Button>
+                            ))}
+                          </div>
+                        </CollapsibleSection>
                       </div>
                     )}
 
