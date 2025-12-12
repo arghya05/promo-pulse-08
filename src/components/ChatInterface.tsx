@@ -1200,6 +1200,7 @@ export default function ChatInterface({
             selectedKPIs={selectedKPIs}
             onKPIsChange={setSelectedKPIs}
             isLoading={isLoading}
+            moduleId={moduleId}
           />
         </div>
       )}
