@@ -270,83 +270,83 @@ export interface ModuleChatContent {
 
 export const moduleChatContent: Record<string, ModuleChatContent> = {
   pricing: {
-    greeting: "Welcome, Pricing Analyst! Ready to optimize your pricing strategy and maximize margins.",
+    greeting: "Welcome! Let's optimize your pricing strategy - I can analyze margins, price elasticity, and competitive positioning.",
     capabilities: [
       "I can analyze price elasticity, competitive gaps, and margin opportunities",
       "Ask me about optimal price points, markdown strategies, or competitor positioning"
     ],
     quickStarts: [
       { text: "What's the optimal price for top sellers?", icon: Target, tag: "OPTIMIZE" },
-      { text: "How does our pricing compare to Walmart?", icon: BarChart3, tag: "COMPARE" },
-      { text: "Which products have the highest margin?", icon: DollarSign, tag: "ANALYZE" },
-      { text: "Show me price elasticity by category", icon: TrendingUp, tag: "EXPLORE" },
+      { text: "Price elasticity by product category", icon: TrendingUp, tag: "ELASTICITY" },
+      { text: "Competitive positioning vs Walmart", icon: BarChart3, tag: "COMPARE" },
+      { text: "Which products have highest margin?", icon: DollarSign, tag: "MARGIN" },
     ],
     placeholder: "Ask about pricing, margins, elasticity, competitors..."
   },
   "supply-chain": {
-    greeting: "Welcome, Logistics Manager! Ready to optimize your supply chain and distribution.",
+    greeting: "Welcome! Let's optimize your supply chain - I can analyze supplier performance, lead times, and logistics efficiency.",
     capabilities: [
       "I can analyze supplier performance, lead times, and logistics efficiency",
       "Ask me about delivery rates, route optimization, or inventory availability"
     ],
     quickStarts: [
-      { text: "Which suppliers have best delivery performance?", icon: Truck, tag: "ANALYZE" },
-      { text: "What's the average lead time by category?", icon: Clock, tag: "METRICS" },
+      { text: "Which suppliers have best delivery performance?", icon: Truck, tag: "DELIVERY" },
+      { text: "Average lead time by product category", icon: Clock, tag: "LEAD-TIME" },
       { text: "How can we optimize distribution routes?", icon: Route, tag: "OPTIMIZE" },
-      { text: "Show me logistics cost breakdown", icon: DollarSign, tag: "COST" },
+      { text: "Logistics cost breakdown analysis", icon: DollarSign, tag: "COST" },
     ],
     placeholder: "Ask about suppliers, lead times, logistics, routes..."
   },
   demand: {
-    greeting: "Welcome, Demand Planner! Ready to forecast demand and optimize inventory.",
+    greeting: "Welcome! Let's optimize your demand forecasting - I can analyze predictions, accuracy, and inventory levels.",
     capabilities: [
       "I can analyze demand patterns, forecast accuracy, and inventory levels",
       "Ask me about stockout risks, seasonal patterns, or reorder points"
     ],
     quickStarts: [
-      { text: "What's the demand forecast for next 4 weeks?", icon: Clock, tag: "FORECAST" },
+      { text: "Demand forecast for next 4 weeks", icon: Clock, tag: "FORECAST" },
       { text: "Which products are at stockout risk?", icon: Target, tag: "RISK" },
-      { text: "How accurate are our forecasts?", icon: TrendingUp, tag: "ACCURACY" },
-      { text: "Show me seasonal demand patterns", icon: Calendar, tag: "PATTERNS" },
+      { text: "Forecast accuracy by category", icon: TrendingUp, tag: "ACCURACY" },
+      { text: "Seasonal demand patterns analysis", icon: Calendar, tag: "SEASONAL" },
     ],
     placeholder: "Ask about forecasts, inventory, stockouts, seasonality..."
   },
   assortment: {
-    greeting: "Welcome, Category Manager! Ready to optimize your product assortment.",
+    greeting: "Welcome! Let's optimize your product assortment - I can analyze SKU performance, category gaps, and brand mix.",
     capabilities: [
       "I can analyze SKU performance, category penetration, and brand mix",
       "Ask me about new products, discontinuation candidates, or assortment depth"
     ],
     quickStarts: [
       { text: "Which SKUs should be added to assortment?", icon: ShoppingCart, tag: "EXPAND" },
-      { text: "What products should be discontinued?", icon: Target, tag: "RATIONALIZE" },
-      { text: "What's the optimal brand mix by category?", icon: Package, tag: "OPTIMIZE" },
-      { text: "How are new products performing?", icon: TrendingUp, tag: "ANALYZE" },
+      { text: "Bottom-performing SKUs to discontinue", icon: Target, tag: "RATIONALIZE" },
+      { text: "Optimal brand mix by category", icon: Package, tag: "BRAND-MIX" },
+      { text: "New product performance analysis", icon: TrendingUp, tag: "PERFORMANCE" },
     ],
     placeholder: "Ask about SKUs, categories, brands, assortment depth..."
   },
   space: {
-    greeting: "Welcome, Space Planner! Ready to optimize shelf allocation and store layouts.",
+    greeting: "Welcome! Let's optimize your space planning - I can analyze shelf allocation and planogram performance.",
     capabilities: [
       "I can analyze sales per sqft, planogram compliance, and fixture performance",
       "Ask me about shelf allocation, endcap performance, or cross-selling opportunities"
     ],
     quickStarts: [
-      { text: "Which categories generate highest sales per sqft?", icon: DollarSign, tag: "ANALYZE" },
-      { text: "What's our planogram compliance rate?", icon: Target, tag: "COMPLIANCE" },
-      { text: "How should we allocate shelf space?", icon: Grid3X3, tag: "OPTIMIZE" },
-      { text: "Which endcaps perform best?", icon: TrendingUp, tag: "PERFORMANCE" },
+      { text: "Categories with highest sales per sqft", icon: DollarSign, tag: "SALES" },
+      { text: "Planogram compliance rate analysis", icon: Target, tag: "COMPLIANCE" },
+      { text: "Optimal shelf space allocation", icon: Grid3X3, tag: "ALLOCATE" },
+      { text: "Endcap display performance", icon: TrendingUp, tag: "ENDCAP" },
     ],
     placeholder: "Ask about shelf space, planograms, layouts, fixtures..."
   },
   promotion: {
-    greeting: "Welcome, Promotion Analyst! Ready to analyze campaign performance and ROI.",
+    greeting: "Welcome! Let's analyze your promotion performance - I can help with ROI, lift, and optimization.",
     capabilities: [
       "I can analyze promotion ROI, lift, and margin impact",
       "Ask me about top performers, underperforming campaigns, or optimization opportunities"
     ],
     quickStarts: [
-      { text: "Top performing promotions by ROI", icon: TrendingUp, tag: "WINNERS" },
+      { text: "Top promotions by ROI this month", icon: TrendingUp, tag: "WINNERS" },
       { text: "Which promotions are losing money?", icon: Target, tag: "RISK" },
       { text: "Compare Dairy vs Beverages ROI", icon: BarChart3, tag: "COMPARE" },
       { text: "Optimal discount depth for Snacks", icon: DollarSign, tag: "OPTIMIZE" },
