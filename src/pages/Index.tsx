@@ -1,5 +1,6 @@
-import { useState, useCallback, useRef, useEffect } from "react";
-import { Search, TrendingUp, AlertTriangle, CheckCircle2, ChevronDown, User, MessageSquare, LayoutGrid, Calendar, Clock, Filter, SlidersHorizontal, RefreshCw, Zap, Target, Settings2 } from "lucide-react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { Search, TrendingUp, AlertTriangle, CheckCircle2, ChevronDown, User, MessageSquare, LayoutGrid, Calendar, Clock, Filter, SlidersHorizontal, RefreshCw, Zap, Target, Settings2, ArrowLeft, Home } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,6 +23,7 @@ import IntelligentDrillDown from "@/components/IntelligentDrillDown";
 import KPISelector from "@/components/KPISelector";
 import ChatInterface from "@/components/ChatInterface";
 import SearchSuggestions from "@/components/SearchSuggestions";
+import { getModuleById, getModulePersonas, getModuleQuestions, getModulePopularIds, getModuleEdgeFunction, Module } from "@/lib/data/module-config";
 
 type Persona = 'executive' | 'consumables' | 'non_consumables';
 type TimePeriod = 'last_month' | 'last_quarter' | 'last_year' | 'ytd' | 'custom';
@@ -34,12 +36,13 @@ const timePeriodConfig = {
   custom: { label: 'Custom', icon: SlidersHorizontal, description: 'Select range' },
 };
 
-const personaConfig = {
+// Default persona config for promotion module
+const defaultPersonaConfig = {
   executive: {
     label: 'Executive',
     description: 'Strategic insights across all categories',
     icon: '👔',
-    categories: null, // All categories
+    categories: null as string[] | null,
   },
   consumables: {
     label: 'Category Manager - Consumables',
@@ -55,8 +58,25 @@ const personaConfig = {
   },
 };
 
-export default function Index() {
+interface IndexProps {
+  moduleId?: string;
+}
+
+export default function Index({ moduleId = 'promotion' }: IndexProps) {
+  const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Get module configuration
+  const module = useMemo(() => getModuleById(moduleId), [moduleId]);
+  const personaConfig = useMemo(() => {
+    const personas = getModulePersonas(moduleId);
+    return personas as typeof defaultPersonaConfig;
+  }, [moduleId]);
+  const edgeFunctionName = useMemo(() => getModuleEdgeFunction(moduleId), [moduleId]);
+  const moduleQuestions = useMemo(() => getModuleQuestions(moduleId), [moduleId]);
+  const modulePopularIds = useMemo(() => getModulePopularIds(moduleId), [moduleId]);
+  
+  const isPromotion = moduleId === 'promotion';
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<AnalyticsResult | null>(null);
   const [showRisksOnly, setShowRisksOnly] = useState(false);
@@ -319,9 +339,21 @@ export default function Index() {
       <header className="border-b border-border bg-card sticky top-0 z-10">
         <div className="max-w-[1600px] mx-auto px-8 py-6">
           <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground mb-1">Promotion Intelligence</h1>
-              <p className="text-sm text-muted-foreground">AI-powered promotion analysis and ROI intelligence</p>
+            <div className="flex items-center gap-4">
+              {!isPromotion && (
+                <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  <Home className="h-4 w-4" />
+                </Button>
+              )}
+              <div>
+                <h1 className="text-2xl font-bold text-foreground mb-1">
+                  {module?.name || 'Promotion Intelligence'}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  {module?.description || 'AI-powered promotion analysis and ROI intelligence'}
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <Button 
