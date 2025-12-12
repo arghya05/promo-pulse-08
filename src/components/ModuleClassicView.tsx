@@ -7,13 +7,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Search, 
   Loader2, 
   Sparkles,
   TrendingUp,
+  TrendingDown,
   BarChart3,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  Brain,
+  Target,
+  AlertTriangle,
+  Lightbulb,
+  Zap
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -48,9 +56,21 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
   const [selectedQuestion, setSelectedQuestion] = useState<ModuleQuestion | null>(null);
   const [result, setResult] = useState<any>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({
+    whatHappened: true,
+    why: true,
+    whatToDo: true,
+    causalDrivers: true,
+    mlInsights: true,
+    predictions: true,
+  });
   const { toast } = useToast();
   const Icon = module.icon;
   const chatContent = getModuleChatContent(module.id);
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   const handleAnalyze = async (question: string) => {
     setIsLoading(true);
@@ -238,26 +258,199 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
               </div>
             ) : result ? (
               <div className="space-y-6">
-                {/* Insights */}
+                {/* WHAT HAPPENED Section */}
                 {result.whatHappened && (
-                  <div>
-                    <h3 className="font-semibold mb-2 flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-primary" />
-                      Key Insights
-                    </h3>
-                    <ul className="space-y-2">
-                      {result.whatHappened.map((point: string, i: number) => (
-                        <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                          <span className="text-primary">•</span>
-                          {point}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  <Collapsible open={expandedSections.whatHappened} onOpenChange={() => toggleSection('whatHappened')}>
+                    <CollapsibleTrigger className="flex items-center justify-between w-full">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4 text-primary" />
+                        WHAT HAPPENED
+                      </h3>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.whatHappened ? '' : '-rotate-90'}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <ul className="space-y-2 mt-3">
+                        {result.whatHappened.map((point: string, i: number) => (
+                          <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                            <span className="text-primary mt-1">•</span>
+                            {point}
+                          </li>
+                        ))}
+                      </ul>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+
+                {/* WHY IT HAPPENED Section */}
+                {result.why && (
+                  <Collapsible open={expandedSections.why} onOpenChange={() => toggleSection('why')}>
+                    <CollapsibleTrigger className="flex items-center justify-between w-full">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <Lightbulb className="h-4 w-4 text-yellow-500" />
+                        WHY IT HAPPENED
+                      </h3>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.why ? '' : '-rotate-90'}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <ul className="space-y-2 mt-3">
+                        {result.why.map((reason: string, i: number) => (
+                          <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                            <span className="text-yellow-500 mt-1">•</span>
+                            {reason}
+                          </li>
+                        ))}
+                      </ul>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+
+                {/* WHAT TO DO Section */}
+                {result.whatToDo && (
+                  <Collapsible open={expandedSections.whatToDo} onOpenChange={() => toggleSection('whatToDo')}>
+                    <CollapsibleTrigger className="flex items-center justify-between w-full">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <Target className="h-4 w-4 text-status-good" />
+                        WHAT TO DO
+                      </h3>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.whatToDo ? '' : '-rotate-90'}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <ul className="space-y-2 mt-3">
+                        {result.whatToDo.map((action: string, i: number) => (
+                          <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                            <span className="text-status-good mt-1">✓</span>
+                            {action}
+                          </li>
+                        ))}
+                      </ul>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+
+                {/* CAUSAL DRIVERS Section */}
+                {result.causalDrivers && result.causalDrivers.length > 0 && (
+                  <Collapsible open={expandedSections.causalDrivers} onOpenChange={() => toggleSection('causalDrivers')}>
+                    <CollapsibleTrigger className="flex items-center justify-between w-full">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-orange-500" />
+                        CAUSAL DRIVERS
+                      </h3>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.causalDrivers ? '' : '-rotate-90'}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                        {result.causalDrivers.map((driver: any, i: number) => (
+                          <div key={i} className="bg-muted/30 rounded-lg p-3 border border-border">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-medium text-sm">{driver.driver}</span>
+                              {driver.direction === 'positive' ? (
+                                <TrendingUp className="h-4 w-4 text-status-good" />
+                              ) : (
+                                <TrendingDown className="h-4 w-4 text-status-bad" />
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span className={driver.direction === 'positive' ? 'text-status-good' : 'text-status-bad'}>
+                                {driver.impact}
+                              </span>
+                              <span>•</span>
+                              <span>Correlation: {(driver.correlation * 100).toFixed(0)}%</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+
+                {/* ML INSIGHTS Section */}
+                {result.mlInsights && (
+                  <Collapsible open={expandedSections.mlInsights} onOpenChange={() => toggleSection('mlInsights')}>
+                    <CollapsibleTrigger className="flex items-center justify-between w-full">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <Brain className="h-4 w-4 text-purple-500" />
+                        MACHINE LEARNING INSIGHTS
+                      </h3>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.mlInsights ? '' : '-rotate-90'}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="bg-purple-500/10 rounded-lg p-4 mt-3 border border-purple-500/20">
+                        <div className="flex items-start gap-3">
+                          <Brain className="h-5 w-5 text-purple-500 mt-0.5" />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-medium text-sm">Pattern Detected</span>
+                              <Badge variant="secondary" className="text-xs">
+                                {(result.mlInsights.confidence * 100).toFixed(0)}% confidence
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              {result.mlInsights.patternDetected}
+                            </p>
+                            <p className="text-xs text-purple-600 dark:text-purple-400">
+                              <strong>Business Significance:</strong> {result.mlInsights.businessSignificance}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+
+                {/* PREDICTIONS Section */}
+                {result.predictions && (
+                  <Collapsible open={expandedSections.predictions} onOpenChange={() => toggleSection('predictions')}>
+                    <CollapsibleTrigger className="flex items-center justify-between w-full">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-blue-500" />
+                        FORECASTING & PREDICTIONS
+                      </h3>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.predictions ? '' : '-rotate-90'}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="bg-blue-500/10 rounded-lg p-4 mt-3 border border-blue-500/20">
+                        <div className="flex items-center gap-4 mb-3">
+                          <div>
+                            <span className="text-xs text-muted-foreground">Trend</span>
+                            <div className={`font-semibold capitalize ${
+                              result.predictions.trend === 'increasing' ? 'text-status-good' :
+                              result.predictions.trend === 'decreasing' ? 'text-status-bad' : 'text-status-warning'
+                            }`}>
+                              {result.predictions.trend}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground">Risk Level</span>
+                            <div className={`font-semibold capitalize ${
+                              result.predictions.riskLevel === 'low' ? 'text-status-good' :
+                              result.predictions.riskLevel === 'high' ? 'text-status-bad' : 'text-status-warning'
+                            }`}>
+                              {result.predictions.riskLevel}
+                            </div>
+                          </div>
+                        </div>
+                        {result.predictions.forecast && result.predictions.forecast.length > 0 && (
+                          <div className="space-y-2">
+                            <span className="text-xs font-medium text-muted-foreground">Forecast</span>
+                            <div className="flex flex-wrap gap-2">
+                              {result.predictions.forecast.map((f: any, i: number) => (
+                                <Badge key={i} variant="outline" className="text-xs">
+                                  {f.period}: {typeof f.value === 'number' ? f.value.toFixed(1) : f.value}
+                                  <span className="ml-1 text-muted-foreground">
+                                    ({(f.confidence * 100).toFixed(0)}%)
+                                  </span>
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 )}
 
                 {/* KPI Values */}
-                {result.kpis && (
+                {result.kpis && Object.keys(result.kpis).length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(result.kpis).map(([key, value]) => (
                       <Badge key={key} className="text-sm py-1 px-3">
