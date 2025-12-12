@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Module } from '@/lib/data/modules';
 import { ModuleQuestion } from '@/lib/data/module-questions';
 import { ModuleKPI } from '@/lib/data/module-kpis';
+import { getModuleChatContent } from '@/lib/data/module-suggestions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
+import SearchSuggestions from './SearchSuggestions';
 
 interface ModuleClassicViewProps {
   module: Module;
@@ -45,8 +47,10 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
   const [isLoading, setIsLoading] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<ModuleQuestion | null>(null);
   const [result, setResult] = useState<any>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const { toast } = useToast();
   const Icon = module.icon;
+  const chatContent = getModuleChatContent(module.id);
 
   const handleAnalyze = async (question: string) => {
     setIsLoading(true);
@@ -149,16 +153,31 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
         {/* Search */}
         <Card>
           <CardContent className="p-4">
-            <div className="flex gap-2">
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={`Ask about ${module.name.toLowerCase()}...`}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            <div className="relative">
+              <div className="flex gap-2">
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  placeholder={chatContent.placeholder}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                />
+                <Button onClick={handleSearch} disabled={isLoading}>
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </Button>
+              </div>
+              <SearchSuggestions
+                query={searchQuery}
+                onSelect={(suggestion) => {
+                  setSearchQuery(suggestion);
+                  setShowSuggestions(false);
+                  handleAnalyze(suggestion);
+                }}
+                isVisible={showSuggestions && searchQuery.length >= 2}
+                persona="executive"
+                moduleId={module.id}
               />
-              <Button onClick={handleSearch} disabled={isLoading}>
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -198,7 +217,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-1">
-              {kpis.map((kpi) => (
+              {kpis.filter((_, i) => i >= 5).slice(0, 8).map((kpi) => (
                 <Badge key={kpi.id} variant="outline" className="text-xs">
                   {kpi.name}
                 </Badge>

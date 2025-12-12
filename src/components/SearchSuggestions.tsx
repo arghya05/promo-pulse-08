@@ -1,87 +1,15 @@
 import { useMemo } from "react";
 import { Sparkles, TrendingUp, Calendar, BarChart3, Target, Clock, MapPin, Users, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getSuggestionsByModule, SuggestionTemplate } from "@/lib/data/module-suggestions";
 
 interface SearchSuggestionsProps {
   query: string;
   onSelect: (suggestion: string) => void;
   isVisible: boolean;
   persona: string;
+  moduleId?: string;
 }
-
-// Question templates with variations
-const questionTemplates = {
-  "top": [
-    { text: "Top {n} promotions by ROI", icon: TrendingUp, variation: "roi" },
-    { text: "Top {n} promotions by margin", icon: BarChart3, variation: "margin" },
-    { text: "Top {n} promotions by lift", icon: TrendingUp, variation: "lift" },
-    { text: "Top {n} promotions this month", icon: Calendar, variation: "month" },
-    { text: "Top {n} promotions this quarter", icon: Calendar, variation: "quarter" },
-    { text: "Top {n} promotions by category", icon: Package, variation: "category" },
-    { text: "Top {n} promotions by region", icon: MapPin, variation: "region" },
-  ],
-  "show": [
-    { text: "Show me top performing promotions", icon: TrendingUp, variation: "performance" },
-    { text: "Show me promotions by month", icon: Calendar, variation: "month" },
-    { text: "Show me promotions by quarter", icon: Calendar, variation: "quarter" },
-    { text: "Show me ROI trends over time", icon: TrendingUp, variation: "trends" },
-    { text: "Show me underperforming promotions", icon: Target, variation: "risk" },
-    { text: "Show me category comparison", icon: BarChart3, variation: "category" },
-  ],
-  "which": [
-    { text: "Which promotions have best ROI?", icon: TrendingUp, variation: "roi" },
-    { text: "Which promotions are losing money?", icon: Target, variation: "risk" },
-    { text: "Which categories perform best?", icon: Package, variation: "category" },
-    { text: "Which regions have highest lift?", icon: MapPin, variation: "region" },
-    { text: "Which promotion types work best?", icon: BarChart3, variation: "type" },
-    { text: "Which customer segments respond most?", icon: Users, variation: "segment" },
-  ],
-  "what": [
-    { text: "What's our overall ROI this month?", icon: TrendingUp, variation: "roi" },
-    { text: "What's our overall ROI this quarter?", icon: Calendar, variation: "quarter" },
-    { text: "What's driving ROI performance?", icon: Target, variation: "drivers" },
-    { text: "What promotions should we run next?", icon: Sparkles, variation: "recommend" },
-    { text: "What's the optimal discount depth?", icon: BarChart3, variation: "optimize" },
-    { text: "What's our forecast for next quarter?", icon: Clock, variation: "forecast" },
-  ],
-  "how": [
-    { text: "How is Dairy performing?", icon: Package, variation: "dairy" },
-    { text: "How is Beverages performing?", icon: Package, variation: "beverages" },
-    { text: "How can we improve low ROI promotions?", icon: Target, variation: "improve" },
-    { text: "How do promotions compare by region?", icon: MapPin, variation: "region" },
-    { text: "How effective are BOGO promotions?", icon: BarChart3, variation: "bogo" },
-    { text: "How are customer segments responding?", icon: Users, variation: "segment" },
-  ],
-  "compare": [
-    { text: "Compare promotions by category", icon: Package, variation: "category" },
-    { text: "Compare promotions by region", icon: MapPin, variation: "region" },
-    { text: "Compare promotions by month", icon: Calendar, variation: "month" },
-    { text: "Compare BOGO vs percent off", icon: BarChart3, variation: "type" },
-    { text: "Compare this month vs last month", icon: Clock, variation: "time" },
-    { text: "Compare Q1 vs Q2 performance", icon: Calendar, variation: "quarter" },
-  ],
-  "forecast": [
-    { text: "Forecast next month's ROI", icon: Clock, variation: "month" },
-    { text: "Forecast next quarter's performance", icon: Calendar, variation: "quarter" },
-    { text: "Forecast sales for upcoming promotions", icon: TrendingUp, variation: "sales" },
-    { text: "Forecast margin impact of new campaign", icon: BarChart3, variation: "margin" },
-    { text: "Forecast customer response rate", icon: Users, variation: "customer" },
-  ],
-  "optimize": [
-    { text: "Optimize discount depth for maximum ROI", icon: Target, variation: "depth" },
-    { text: "Optimize promotion timing", icon: Calendar, variation: "timing" },
-    { text: "Optimize budget allocation by category", icon: Package, variation: "budget" },
-    { text: "Optimize promotion mix", icon: BarChart3, variation: "mix" },
-    { text: "Optimize regional targeting", icon: MapPin, variation: "region" },
-  ],
-  "roi": [
-    { text: "ROI breakdown by category", icon: Package, variation: "category" },
-    { text: "ROI breakdown by region", icon: MapPin, variation: "region" },
-    { text: "ROI trends over time", icon: TrendingUp, variation: "trends" },
-    { text: "ROI by promotion type", icon: BarChart3, variation: "type" },
-    { text: "ROI forecast for next quarter", icon: Clock, variation: "forecast" },
-  ],
-};
 
 // Persona-specific category suggestions
 const personaCategorySuggestions = {
@@ -90,7 +18,7 @@ const personaCategorySuggestions = {
   non_consumables: ["for Personal Care", "for Home Care", "for Soap products", "for Cleaning products"],
 };
 
-export default function SearchSuggestions({ query, onSelect, isVisible, persona }: SearchSuggestionsProps) {
+export default function SearchSuggestions({ query, onSelect, isVisible, persona, moduleId = 'promotion' }: SearchSuggestionsProps) {
   const suggestions = useMemo(() => {
     if (!query || query.length < 2) return [];
 
@@ -100,10 +28,13 @@ export default function SearchSuggestions({ query, onSelect, isVisible, persona 
     
     let matches: Array<{ text: string; icon: any; highlight: boolean }> = [];
     
+    // Get module-specific templates
+    const questionTemplates = getSuggestionsByModule(moduleId);
+    
     // Find matching templates
     Object.entries(questionTemplates).forEach(([key, templates]) => {
       if (lowerQuery.includes(key) || key.startsWith(firstWord)) {
-        templates.forEach(template => {
+        templates.forEach((template: SuggestionTemplate) => {
           const text = template.text.replace("{n}", "5");
           if (text.toLowerCase().includes(lowerQuery) || 
               lowerQuery.split(" ").every(word => text.toLowerCase().includes(word))) {
@@ -125,18 +56,11 @@ export default function SearchSuggestions({ query, onSelect, isVisible, persona 
       });
     }
 
-    // If no template matches, generate smart suggestions based on query
+    // If no template matches, generate module-specific smart suggestions based on query
     if (matches.length === 0) {
-      const smartSuggestions = [
-        `${query} by ROI`,
-        `${query} by month`,
-        `${query} by quarter`,
-        `${query} by category`,
-        `${query} trends`,
-        `${query} forecast`,
-      ];
-      smartSuggestions.forEach(text => {
-        matches.push({ text, icon: Sparkles, highlight: false });
+      const moduleSmartSuffixes = getModuleSmartSuffixes(moduleId);
+      moduleSmartSuffixes.forEach(suffix => {
+        matches.push({ text: `${query} ${suffix}`, icon: Sparkles, highlight: false });
       });
     }
 
@@ -149,7 +73,7 @@ export default function SearchSuggestions({ query, onSelect, isVisible, persona 
         return true;
       })
       .slice(0, 8);
-  }, [query, persona]);
+  }, [query, persona, moduleId]);
 
   if (!isVisible || suggestions.length === 0) return null;
 
@@ -198,6 +122,24 @@ export default function SearchSuggestions({ query, onSelect, isVisible, persona 
       </div>
     </div>
   );
+}
+
+// Helper to get module-specific smart suffixes
+function getModuleSmartSuffixes(moduleId: string): string[] {
+  switch (moduleId) {
+    case 'pricing':
+      return ['by margin', 'by elasticity', 'vs competitors', 'by category', 'trends', 'by region'];
+    case 'supply-chain':
+      return ['by supplier', 'by lead time', 'by region', 'by route', 'performance', 'cost'];
+    case 'demand':
+      return ['forecast', 'by accuracy', 'by category', 'seasonal patterns', 'stockout risk', 'by store'];
+    case 'assortment':
+      return ['by category', 'by brand', 'by store type', 'penetration', 'performance', 'by region'];
+    case 'space':
+      return ['by sqft', 'by category', 'by fixture', 'compliance', 'by position', 'by store'];
+    default:
+      return ['by ROI', 'by month', 'by quarter', 'by category', 'trends', 'forecast'];
+  }
 }
 
 // Helper to highlight matching text

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Module } from '@/lib/data/modules';
 import { ModuleQuestion } from '@/lib/data/module-questions';
 import { ModuleKPI } from '@/lib/data/module-kpis';
+import { getModuleChatContent, ModuleChatContent } from '@/lib/data/module-suggestions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,17 +44,20 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const Icon = module.icon;
+  
+  // Get module-specific chat content
+  const chatContent = getModuleChatContent(module.id);
 
   useEffect(() => {
-    // Initial greeting
+    // Module-specific greeting
     const greeting: Message = {
       id: 'greeting',
       role: 'assistant',
-      content: `Welcome to ${module.name}! I'm your AI assistant for ${module.description.toLowerCase()}. Ask me anything or try one of the suggested questions below.`,
+      content: chatContent.greeting,
       timestamp: new Date()
     };
     setMessages([greeting]);
-  }, [module]);
+  }, [module, chatContent.greeting]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -135,16 +139,18 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
               <span className="font-medium text-sm">Quick Start</span>
             </div>
             <div className="space-y-2">
-              {popularQuestions.slice(0, 4).map((q) => (
+              {chatContent.quickStarts.map((qs, idx) => (
                 <Button
-                  key={q.id}
+                  key={idx}
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start text-left h-auto py-2 px-3"
-                  onClick={() => handleQuestionClick(q)}
+                  className="w-full justify-start text-left h-auto py-2 px-3 gap-2"
+                  onClick={() => handleSend(qs.text)}
                   disabled={isLoading}
                 >
-                  <span className="line-clamp-2 text-xs">{q.text}</span>
+                  <qs.icon className="h-3 w-3 flex-shrink-0 text-primary" />
+                  <span className="line-clamp-2 text-xs flex-1">{qs.text}</span>
+                  <Badge variant="secondary" className="text-[10px] px-1">{qs.tag}</Badge>
                 </Button>
               ))}
             </div>
@@ -158,7 +164,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
               <span className="font-medium text-sm">Key KPIs</span>
             </div>
             <div className="flex flex-wrap gap-1">
-              {kpis.slice(0, 6).map((kpi) => (
+              {kpis.filter((_, i) => i >= 5).slice(0, 6).map((kpi) => (
                 <Badge key={kpi.id} variant="secondary" className="text-xs">
                   {kpi.name}
                 </Badge>
@@ -243,7 +249,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={`Ask about ${module.name.toLowerCase()}...`}
+                placeholder={chatContent.placeholder}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend(input)}
                 disabled={isLoading}
                 className="flex-1"
