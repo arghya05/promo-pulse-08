@@ -148,7 +148,7 @@ interface ChatInterfaceProps {
   moduleId?: string;
 }
 
-// Module-specific content
+// Module-specific content - COMPLETELY UNIQUE per module
 const moduleContent: Record<string, {
   greetings: string[];
   quickStarts: Array<{ text: string; icon: any; tag: string; color: string }>;
@@ -163,14 +163,14 @@ const moduleContent: Record<string, {
       "Hi! I can help you understand promotion effectiveness across all categories.",
     ],
     quickStarts: [
-      { text: "Portfolio ROI overview", icon: TrendingUp, tag: "STRATEGIC", color: "text-primary" },
-      { text: "Cross-category performance comparison", icon: BarChart3, tag: "COMPARE", color: "text-status-good" },
-      { text: "Which categories need attention?", icon: AlertTriangle, tag: "RISK", color: "text-status-bad" },
-      { text: "Forecast next quarter's performance", icon: Target, tag: "FORECAST", color: "text-status-warning" },
+      { text: "Top promotions by ROI this month", icon: TrendingUp, tag: "WINNERS", color: "text-primary" },
+      { text: "Which promotions are losing money?", icon: AlertTriangle, tag: "RISK", color: "text-status-bad" },
+      { text: "Compare Dairy vs Beverages ROI", icon: BarChart3, tag: "COMPARE", color: "text-status-good" },
+      { text: "Optimal discount depth for Snacks", icon: Target, tag: "OPTIMIZE", color: "text-status-warning" },
     ],
     exploration: [
       { text: "Regional performance gaps", icon: BarChart3, tag: "REGIONS" },
-      { text: "YoY trend analysis", icon: TrendingUp, tag: "TRENDS" },
+      { text: "YoY promotion trend analysis", icon: TrendingUp, tag: "TRENDS" },
       { text: "Budget allocation recommendations", icon: Compass, tag: "OPTIMIZE" },
     ],
     tips: [
@@ -188,12 +188,12 @@ const moduleContent: Record<string, {
     ],
     quickStarts: [
       { text: "What's the optimal price for top sellers?", icon: Target, tag: "OPTIMIZE", color: "text-primary" },
-      { text: "Competitive price positioning analysis", icon: BarChart3, tag: "COMPARE", color: "text-status-good" },
-      { text: "Which products have highest margin?", icon: DollarSign, tag: "MARGIN", color: "text-status-warning" },
-      { text: "Price elasticity by category", icon: TrendingUp, tag: "ELASTICITY", color: "text-primary" },
+      { text: "Price elasticity by category", icon: TrendingUp, tag: "ELASTICITY", color: "text-status-good" },
+      { text: "Competitive positioning vs Walmart", icon: BarChart3, tag: "COMPARE", color: "text-status-warning" },
+      { text: "Which products have highest margin?", icon: DollarSign, tag: "MARGIN", color: "text-status-good" },
     ],
     exploration: [
-      { text: "Price gap vs Walmart", icon: BarChart3, tag: "COMPETITIVE" },
+      { text: "Price gap vs Kroger", icon: BarChart3, tag: "COMPETITIVE" },
       { text: "Markdown strategy optimization", icon: Target, tag: "MARKDOWN" },
       { text: "Private label pricing analysis", icon: Package, tag: "PRIVATE-LABEL" },
     ],
@@ -212,9 +212,9 @@ const moduleContent: Record<string, {
     ],
     quickStarts: [
       { text: "Which suppliers have best on-time delivery?", icon: Truck, tag: "DELIVERY", color: "text-primary" },
-      { text: "Average lead time by category", icon: Clock, tag: "LEAD-TIME", color: "text-status-warning" },
-      { text: "How can we optimize routes?", icon: Compass, tag: "OPTIMIZE", color: "text-status-good" },
-      { text: "Logistics cost breakdown", icon: DollarSign, tag: "COST", color: "text-status-bad" },
+      { text: "Average lead time by product category", icon: Clock, tag: "LEAD-TIME", color: "text-status-warning" },
+      { text: "How can we optimize distribution routes?", icon: Compass, tag: "OPTIMIZE", color: "text-status-good" },
+      { text: "Logistics cost breakdown analysis", icon: DollarSign, tag: "COST", color: "text-status-bad" },
     ],
     exploration: [
       { text: "Supplier reliability scores", icon: Target, tag: "RELIABILITY" },
@@ -238,7 +238,7 @@ const moduleContent: Record<string, {
       { text: "Demand forecast for next 4 weeks", icon: Clock, tag: "FORECAST", color: "text-primary" },
       { text: "Which products are at stockout risk?", icon: AlertTriangle, tag: "RISK", color: "text-status-bad" },
       { text: "Forecast accuracy by category", icon: Target, tag: "ACCURACY", color: "text-status-good" },
-      { text: "Seasonal demand patterns", icon: TrendingUp, tag: "SEASONAL", color: "text-status-warning" },
+      { text: "Seasonal demand patterns analysis", icon: TrendingUp, tag: "SEASONAL", color: "text-status-warning" },
     ],
     exploration: [
       { text: "Inventory turnover by store", icon: Box, tag: "TURNOVER" },
@@ -254,27 +254,27 @@ const moduleContent: Record<string, {
   },
   assortment: {
     greetings: [
-      "Welcome! Let's optimize your product assortment - I can analyze SKU performance and category penetration.",
-      "Hello! Ready to help with assortment planning, rationalization, and new product analysis.",
-      "Hi! I can analyze which products to add, discontinue, or expand.",
+      "Welcome! Let's optimize your product assortment - I can analyze SKU performance and category gaps.",
+      "Hello! Ready to help with assortment planning, SKU rationalization, and brand mix optimization.",
+      "Hi! I can analyze which products to add, discontinue, or expand in your assortment.",
     ],
     quickStarts: [
-      { text: "Which SKUs should be added?", icon: Package, tag: "EXPAND", color: "text-status-good" },
-      { text: "Products to discontinue", icon: AlertTriangle, tag: "RATIONALIZE", color: "text-status-bad" },
+      { text: "Which SKUs should be added to assortment?", icon: Package, tag: "EXPAND", color: "text-status-good" },
+      { text: "Bottom-performing SKUs to discontinue", icon: AlertTriangle, tag: "RATIONALIZE", color: "text-status-bad" },
       { text: "Category penetration by store type", icon: BarChart3, tag: "PENETRATION", color: "text-primary" },
-      { text: "Optimal brand mix by category", icon: PieChart, tag: "BRAND-MIX", color: "text-status-warning" },
+      { text: "Optimal brand mix by category", icon: Target, tag: "BRAND-MIX", color: "text-status-warning" },
     ],
     exploration: [
-      { text: "New product performance", icon: TrendingUp, tag: "NEW-PRODUCTS" },
-      { text: "Private label opportunity", icon: DollarSign, tag: "PRIVATE-LABEL" },
-      { text: "Regional preferences analysis", icon: Compass, tag: "REGIONAL" },
+      { text: "New product performance analysis", icon: TrendingUp, tag: "NEW-PRODUCTS" },
+      { text: "Private label opportunity by category", icon: DollarSign, tag: "PRIVATE-LABEL" },
+      { text: "Regional assortment preferences", icon: Compass, tag: "REGIONAL" },
     ],
     tips: [
       "💡 Ask me about SKU productivity, category gaps, and brand mix",
       "📦 I can identify products to add, discontinue, or expand",
       "📊 I track assortment depth and category penetration by store",
     ],
-    placeholder: "Ask about SKUs, categories, brands, assortment...",
+    placeholder: "Ask about SKUs, categories, brands, assortment depth...",
   },
   space: {
     greetings: [
@@ -284,13 +284,13 @@ const moduleContent: Record<string, {
     ],
     quickStarts: [
       { text: "Categories with highest sales per sqft", icon: DollarSign, tag: "SALES", color: "text-status-good" },
-      { text: "Planogram compliance rate", icon: Target, tag: "COMPLIANCE", color: "text-primary" },
+      { text: "Planogram compliance rate analysis", icon: Target, tag: "COMPLIANCE", color: "text-primary" },
       { text: "Optimal shelf space allocation", icon: Grid3X3, tag: "ALLOCATE", color: "text-status-warning" },
-      { text: "Endcap performance analysis", icon: TrendingUp, tag: "ENDCAP", color: "text-status-good" },
+      { text: "Endcap display performance", icon: TrendingUp, tag: "ENDCAP", color: "text-status-good" },
     ],
     exploration: [
       { text: "Eye-level product performance", icon: Target, tag: "EYE-LEVEL" },
-      { text: "Cross-selling adjacency", icon: Package, tag: "ADJACENCY" },
+      { text: "Cross-selling adjacency analysis", icon: Package, tag: "ADJACENCY" },
       { text: "Fixture utilization rates", icon: Box, tag: "FIXTURES" },
     ],
     tips: [
