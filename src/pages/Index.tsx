@@ -1203,11 +1203,14 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
           /* Welcome View */
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12 py-12">
-              <h2 className="text-4xl font-bold mb-4">Welcome to Promotion Intelligence</h2>
+              <h2 className="text-4xl font-bold mb-4">Welcome to {getModuleById(moduleId)?.name || 'Merchandising AI'}</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                Ask me anything about promotion ROI, price optimization, halo effects, vendor funding, 
-                coupon performance, or category analysis. I'll analyze the data and provide actionable 
-                insights with supporting documentation.
+                {moduleId === 'promotion' && "Ask me anything about promotion ROI, price optimization, halo effects, vendor funding, coupon performance, or category analysis. I'll analyze the data and provide actionable insights with supporting documentation."}
+                {moduleId === 'pricing' && "Ask me anything about price elasticity, competitive pricing, markdown optimization, price change impact, or margin analysis. I'll analyze pricing data and provide strategic recommendations."}
+                {moduleId === 'assortment' && "Ask me anything about SKU rationalization, category performance, brand analysis, product velocity, or assortment efficiency. I'll help optimize your product mix for maximum profitability."}
+                {moduleId === 'demand' && "Ask me anything about demand forecasting, inventory optimization, stockout prevention, seasonal trends, or forecast accuracy. I'll help you predict and plan for future demand."}
+                {moduleId === 'supply-chain' && "Ask me anything about supplier performance, lead times, logistics costs, delivery reliability, or order fulfillment. I'll analyze your supply chain and identify optimization opportunities."}
+                {moduleId === 'space' && "Ask me anything about planogram optimization, shelf allocation, space productivity, fixture utilization, or category space share. I'll help maximize your retail space ROI."}
               </p>
             </div>
 
