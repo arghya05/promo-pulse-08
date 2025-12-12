@@ -6,20 +6,30 @@ export interface ModuleKPI {
   format: 'currency' | 'percent' | 'number' | 'ratio';
 }
 
-// Pricing KPIs
-export const pricingKPIs: ModuleKPI[] = [
-  { id: 'price_elasticity', name: 'Price Elasticity', category: 'pricing', dataSource: 'products', format: 'ratio' },
-  { id: 'margin_percent', name: 'Margin %', category: 'financial', dataSource: 'products', format: 'percent' },
-  { id: 'competitive_index', name: 'Competitive Price Index', category: 'pricing', dataSource: 'competitor_data', format: 'ratio' },
-  { id: 'price_gap', name: 'Price Gap vs Competition', category: 'pricing', dataSource: 'competitor_data', format: 'percent' },
-  { id: 'revenue_per_unit', name: 'Revenue per Unit', category: 'financial', dataSource: 'transactions', format: 'currency' },
-  { id: 'price_variance', name: 'Price Variance', category: 'pricing', dataSource: 'transactions', format: 'percent' },
-  { id: 'markdown_rate', name: 'Markdown Rate', category: 'pricing', dataSource: 'transactions', format: 'percent' },
-  { id: 'gross_margin', name: 'Gross Margin', category: 'financial', dataSource: 'transactions', format: 'currency' },
+// Shared KPIs available across all modules
+export const sharedKPIs: ModuleKPI[] = [
+  { id: 'revenue', name: 'Revenue', category: 'financial', dataSource: 'transactions', format: 'currency' },
+  { id: 'margin', name: 'Margin', category: 'financial', dataSource: 'transactions', format: 'currency' },
+  { id: 'margin_percent', name: 'Margin %', category: 'financial', dataSource: 'transactions', format: 'percent' },
+  { id: 'units_sold', name: 'Units Sold', category: 'sales', dataSource: 'transactions', format: 'number' },
+  { id: 'avg_transaction_value', name: 'Avg Transaction Value', category: 'sales', dataSource: 'transactions', format: 'currency' },
 ];
 
-// Assortment KPIs
+// Pricing-specific KPIs
+export const pricingKPIs: ModuleKPI[] = [
+  ...sharedKPIs,
+  { id: 'price_elasticity', name: 'Price Elasticity', category: 'pricing', dataSource: 'products', format: 'ratio' },
+  { id: 'competitive_index', name: 'Competitive Price Index', category: 'pricing', dataSource: 'competitor_prices', format: 'ratio' },
+  { id: 'price_gap', name: 'Price Gap vs Competition', category: 'pricing', dataSource: 'competitor_prices', format: 'percent' },
+  { id: 'revenue_per_unit', name: 'Revenue per Unit', category: 'financial', dataSource: 'transactions', format: 'currency' },
+  { id: 'price_variance', name: 'Price Variance', category: 'pricing', dataSource: 'price_change_history', format: 'percent' },
+  { id: 'markdown_rate', name: 'Markdown Rate', category: 'pricing', dataSource: 'price_change_history', format: 'percent' },
+  { id: 'price_change_frequency', name: 'Price Change Frequency', category: 'pricing', dataSource: 'price_change_history', format: 'number' },
+];
+
+// Assortment-specific KPIs
 export const assortmentKPIs: ModuleKPI[] = [
+  ...sharedKPIs,
   { id: 'sku_count', name: 'Active SKU Count', category: 'assortment', dataSource: 'products', format: 'number' },
   { id: 'category_penetration', name: 'Category Penetration', category: 'assortment', dataSource: 'transactions', format: 'percent' },
   { id: 'brand_share', name: 'Brand Share', category: 'assortment', dataSource: 'transactions', format: 'percent' },
@@ -30,49 +40,76 @@ export const assortmentKPIs: ModuleKPI[] = [
   { id: 'private_label_share', name: 'Private Label Share', category: 'assortment', dataSource: 'transactions', format: 'percent' },
 ];
 
-// Demand Forecasting KPIs
+// Demand Forecasting-specific KPIs
 export const demandKPIs: ModuleKPI[] = [
-  { id: 'forecast_accuracy', name: 'Forecast Accuracy', category: 'forecasting', dataSource: 'inventory_levels', format: 'percent' },
+  ...sharedKPIs,
+  { id: 'forecast_accuracy', name: 'Forecast Accuracy', category: 'forecasting', dataSource: 'demand_forecasts', format: 'percent' },
+  { id: 'mape', name: 'MAPE', category: 'forecasting', dataSource: 'forecast_accuracy_tracking', format: 'percent' },
+  { id: 'forecast_bias', name: 'Forecast Bias', category: 'forecasting', dataSource: 'forecast_accuracy_tracking', format: 'percent' },
   { id: 'stock_days', name: 'Days of Stock', category: 'inventory', dataSource: 'inventory_levels', format: 'number' },
   { id: 'stockout_rate', name: 'Stockout Rate', category: 'inventory', dataSource: 'inventory_levels', format: 'percent' },
   { id: 'overstock_rate', name: 'Overstock Rate', category: 'inventory', dataSource: 'inventory_levels', format: 'percent' },
   { id: 'inventory_turnover', name: 'Inventory Turnover', category: 'inventory', dataSource: 'inventory_levels', format: 'ratio' },
   { id: 'fill_rate', name: 'Fill Rate', category: 'inventory', dataSource: 'inventory_levels', format: 'percent' },
   { id: 'demand_variability', name: 'Demand Variability', category: 'forecasting', dataSource: 'transactions', format: 'percent' },
-  { id: 'reorder_frequency', name: 'Reorder Frequency', category: 'inventory', dataSource: 'inventory_levels', format: 'number' },
 ];
 
-// Supply Chain KPIs
+// Supply Chain-specific KPIs
 export const supplyChainKPIs: ModuleKPI[] = [
-  { id: 'lead_time', name: 'Lead Time (Days)', category: 'logistics', dataSource: 'inventory_levels', format: 'number' },
-  { id: 'on_time_delivery', name: 'On-Time Delivery', category: 'logistics', dataSource: 'stores', format: 'percent' },
-  { id: 'supplier_fill_rate', name: 'Supplier Fill Rate', category: 'supplier', dataSource: 'inventory_levels', format: 'percent' },
-  { id: 'logistics_cost', name: 'Logistics Cost', category: 'cost', dataSource: 'stores', format: 'currency' },
+  ...sharedKPIs,
+  { id: 'lead_time', name: 'Lead Time (Days)', category: 'logistics', dataSource: 'suppliers', format: 'number' },
+  { id: 'on_time_delivery', name: 'On-Time Delivery', category: 'logistics', dataSource: 'supplier_orders', format: 'percent' },
+  { id: 'supplier_fill_rate', name: 'Supplier Fill Rate', category: 'supplier', dataSource: 'supplier_orders', format: 'percent' },
+  { id: 'supplier_reliability', name: 'Supplier Reliability Score', category: 'supplier', dataSource: 'suppliers', format: 'percent' },
+  { id: 'logistics_cost', name: 'Logistics Cost', category: 'cost', dataSource: 'shipping_routes', format: 'currency' },
   { id: 'warehouse_utilization', name: 'Warehouse Utilization', category: 'logistics', dataSource: 'stores', format: 'percent' },
-  { id: 'transport_cost_per_unit', name: 'Transport Cost/Unit', category: 'cost', dataSource: 'stores', format: 'currency' },
-  { id: 'order_cycle_time', name: 'Order Cycle Time', category: 'logistics', dataSource: 'inventory_levels', format: 'number' },
-  { id: 'perfect_order_rate', name: 'Perfect Order Rate', category: 'logistics', dataSource: 'stores', format: 'percent' },
+  { id: 'transport_cost_per_unit', name: 'Transport Cost/Unit', category: 'cost', dataSource: 'shipping_routes', format: 'currency' },
+  { id: 'order_cycle_time', name: 'Order Cycle Time', category: 'logistics', dataSource: 'supplier_orders', format: 'number' },
+  { id: 'perfect_order_rate', name: 'Perfect Order Rate', category: 'logistics', dataSource: 'supplier_orders', format: 'percent' },
 ];
 
-// Space Planning KPIs
+// Space Planning-specific KPIs
 export const spaceKPIs: ModuleKPI[] = [
-  { id: 'sales_per_sqft', name: 'Sales per Sq Ft', category: 'space', dataSource: 'store_performance', format: 'currency' },
+  ...sharedKPIs,
+  { id: 'sales_per_sqft', name: 'Sales per Sq Ft', category: 'space', dataSource: 'shelf_allocations', format: 'currency' },
   { id: 'gmroi', name: 'GMROI', category: 'financial', dataSource: 'store_performance', format: 'ratio' },
-  { id: 'shelf_capacity_utilization', name: 'Shelf Capacity %', category: 'space', dataSource: 'inventory_levels', format: 'percent' },
-  { id: 'facings_per_sku', name: 'Facings per SKU', category: 'space', dataSource: 'products', format: 'number' },
-  { id: 'category_space_share', name: 'Category Space Share', category: 'space', dataSource: 'products', format: 'percent' },
-  { id: 'planogram_compliance', name: 'Planogram Compliance', category: 'space', dataSource: 'stores', format: 'percent' },
+  { id: 'shelf_capacity_utilization', name: 'Shelf Capacity %', category: 'space', dataSource: 'shelf_allocations', format: 'percent' },
+  { id: 'facings_per_sku', name: 'Facings per SKU', category: 'space', dataSource: 'shelf_allocations', format: 'number' },
+  { id: 'category_space_share', name: 'Category Space Share', category: 'space', dataSource: 'planograms', format: 'percent' },
+  { id: 'planogram_compliance', name: 'Planogram Compliance', category: 'space', dataSource: 'planograms', format: 'percent' },
   { id: 'out_of_shelf', name: 'Out of Shelf Rate', category: 'space', dataSource: 'inventory_levels', format: 'percent' },
   { id: 'impulse_purchase_rate', name: 'Impulse Purchase Rate', category: 'space', dataSource: 'transactions', format: 'percent' },
+  { id: 'eye_level_performance', name: 'Eye-Level Performance', category: 'space', dataSource: 'shelf_allocations', format: 'percent' },
+];
+
+// Promotion-specific KPIs (existing module)
+export const promotionKPIs: ModuleKPI[] = [
+  ...sharedKPIs,
+  { id: 'roi', name: 'ROI', category: 'promotion', dataSource: 'promotions', format: 'ratio' },
+  { id: 'lift_percent', name: 'Lift %', category: 'promotion', dataSource: 'transactions', format: 'percent' },
+  { id: 'incremental_margin', name: 'Incremental Margin', category: 'promotion', dataSource: 'transactions', format: 'currency' },
+  { id: 'promo_spend', name: 'Promotion Spend', category: 'promotion', dataSource: 'promotions', format: 'currency' },
+  { id: 'redemption_rate', name: 'Redemption Rate', category: 'promotion', dataSource: 'customer_journey', format: 'percent' },
+  { id: 'cannibalization', name: 'Cannibalization %', category: 'promotion', dataSource: 'transactions', format: 'percent' },
+  { id: 'halo_effect', name: 'Halo Effect', category: 'promotion', dataSource: 'transactions', format: 'percent' },
 ];
 
 export const getKPIsByModule = (moduleId: string): ModuleKPI[] => {
   switch (moduleId) {
+    case 'promotion': return promotionKPIs;
     case 'pricing': return pricingKPIs;
     case 'assortment': return assortmentKPIs;
     case 'demand': return demandKPIs;
     case 'supply-chain': return supplyChainKPIs;
     case 'space': return spaceKPIs;
-    default: return [];
+    default: return sharedKPIs;
   }
+};
+
+export const getSharedKPIs = (): ModuleKPI[] => sharedKPIs;
+
+export const getModuleSpecificKPIs = (moduleId: string): ModuleKPI[] => {
+  const allKPIs = getKPIsByModule(moduleId);
+  const sharedIds = sharedKPIs.map(k => k.id);
+  return allKPIs.filter(kpi => !sharedIds.includes(kpi.id));
 };
