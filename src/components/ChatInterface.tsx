@@ -1,15 +1,69 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Sparkles, ArrowRight, Lightbulb, TrendingUp, AlertTriangle, HelpCircle, Target, Compass, ChevronRight, Zap, BarChart3, PieChart, Clock, Filter, ThumbsUp, ThumbsDown, RefreshCw, MessageSquare, Loader2, X } from "lucide-react";
+import { Send, Bot, User, Sparkles, ArrowRight, Lightbulb, TrendingUp, AlertTriangle, HelpCircle, Target, Compass, ChevronRight, ChevronDown, Zap, BarChart3, PieChart, Clock, Filter, ThumbsUp, ThumbsDown, RefreshCw, MessageSquare, Loader2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import VoiceRecorder from "./VoiceRecorder";
 import KPISelector from "./KPISelector";
 import { useToast } from "@/hooks/use-toast";
 import type { AnalyticsResult } from "@/lib/analytics";
 import { getSuggestedKPIs, KPI } from "@/lib/data/kpi-library";
+
+// Collapsible KPI Exploration Section Component
+const CollapsibleKPISection = ({ 
+  kpis, 
+  originalQuestion, 
+  onKPIClick, 
+  isLoading 
+}: { 
+  kpis: KPI[]; 
+  originalQuestion?: string; 
+  onKPIClick: (kpiLabel: string) => void; 
+  isLoading: boolean;
+}) => {
+  const [isOpen, setIsOpen] = useState(true);
+  
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mt-3">
+      <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+        <CollapsibleTrigger asChild>
+          <button className="flex items-center justify-between w-full text-left">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-xs font-medium text-foreground">Explore Different KPIs</span>
+              <Badge variant="secondary" className="text-[9px] px-1.5 py-0">AI-Powered</Badge>
+            </div>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isOpen ? '' : '-rotate-90'}`} />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-2">
+          <div className="flex flex-wrap gap-1.5">
+            {kpis.map((kpi) => (
+              <Button
+                key={kpi.id}
+                variant="outline"
+                size="sm"
+                className="text-[11px] h-7 px-2.5 bg-primary text-primary-foreground hover:bg-primary/90 border-primary gap-1"
+                onClick={() => onKPIClick(kpi.label)}
+                disabled={isLoading}
+                title={kpi.description}
+              >
+                <TrendingUp className="h-3 w-3" />
+                {kpi.name}
+              </Button>
+            ))}
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-2">
+            Click a KPI to see the same analysis from a different metric perspective
+          </p>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+};
 
 interface Message {
   id: string;
@@ -719,34 +773,14 @@ export default function ChatInterface({
                   </div>
                 )}
 
-                {/* KPI Exploration Probing - New Feature */}
+                {/* KPI Exploration Probing - Collapsible */}
                 {message.kpiExploration && message.kpiExploration.length > 0 && message.analyticsResult && (
-                  <div className="mt-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Sparkles className="h-4 w-4 text-primary" />
-                      <span className="text-xs font-medium text-foreground">Explore Different KPIs</span>
-                      <Badge variant="secondary" className="text-[9px] px-1.5 py-0">AI-Powered</Badge>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {message.kpiExploration.map((kpi) => (
-                        <Button
-                          key={kpi.id}
-                          variant="outline"
-                          size="sm"
-                          className="text-[11px] h-7 px-2.5 bg-primary text-primary-foreground hover:bg-primary/90 border-primary gap-1"
-                          onClick={() => handleSuggestionClick(`${message.originalQuestion || 'Show analysis'} focusing on ${kpi.label}`)}
-                          disabled={isLoading}
-                          title={kpi.description}
-                        >
-                          <TrendingUp className="h-3 w-3" />
-                          {kpi.name}
-                        </Button>
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-2">
-                      Click a KPI to see the same analysis from a different metric perspective
-                    </p>
-                  </div>
+                  <CollapsibleKPISection
+                    kpis={message.kpiExploration}
+                    originalQuestion={message.originalQuestion}
+                    onKPIClick={(kpiLabel) => handleSuggestionClick(`${message.originalQuestion || 'Show analysis'} focusing on ${kpiLabel}`)}
+                    isLoading={isLoading}
+                  />
                 )}
 
                 {/* Action Buttons */}
