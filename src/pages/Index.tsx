@@ -457,12 +457,11 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
         <div className="max-w-[1600px] mx-auto px-8 py-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              {!isPromotion && (
-                <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  <Home className="h-4 w-4" />
-                </Button>
-              )}
+              <Button variant="outline" size="sm" onClick={() => navigate('/')} className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                <Home className="h-4 w-4" />
+                <span className="hidden sm:inline">Home</span>
+              </Button>
               <div>
                 <h1 className="text-2xl font-bold text-foreground mb-1">
                   {module?.name || 'Promotion Intelligence'}
