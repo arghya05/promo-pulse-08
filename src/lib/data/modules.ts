@@ -5,6 +5,7 @@ import {
   TrendingUp, 
   Truck, 
   Grid3X3,
+  Briefcase,
   LucideIcon
 } from 'lucide-react';
 
@@ -19,6 +20,15 @@ export interface Module {
 }
 
 export const modules: Module[] = [
+  {
+    id: 'executive',
+    name: 'Executive Dashboard',
+    description: 'Strategic C-suite insights across all merchandising functions with drill-down to SKU level',
+    icon: Briefcase,
+    color: 'text-indigo-600',
+    gradient: 'from-indigo-500/20 to-indigo-600/10',
+    path: '/executive'
+  },
   {
     id: 'promotion',
     name: 'Promotion Intelligence',
