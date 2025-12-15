@@ -71,12 +71,21 @@ export default function PredictiveInsights({ predictions, causalDrivers, mlInsig
           </div>
 
           <div className="space-y-4">
-            {predictions.forecast.map((forecast, idx) => (
-              <div key={idx} className="flex gap-3">
-                <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
-                <p className="text-base leading-relaxed text-foreground">{forecast}</p>
-              </div>
-            ))}
+            {predictions.forecast.map((forecast, idx) => {
+              // Handle both string format and object format {period, value, confidence}
+              const forecastText = typeof forecast === 'string' 
+                ? forecast 
+                : typeof forecast === 'object' && forecast !== null
+                  ? `${(forecast as any).period || ''}: ${(forecast as any).value || ''} (${((forecast as any).confidence || 0) * 100}% confidence)`
+                  : String(forecast);
+              
+              return (
+                <div key={idx} className="flex gap-3">
+                  <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
+                  <p className="text-base leading-relaxed text-foreground">{forecastText}</p>
+                </div>
+              );
+            })}
           </div>
 
           {/* Projected Impact */}
