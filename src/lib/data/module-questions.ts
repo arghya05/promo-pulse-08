@@ -69,9 +69,9 @@ export const pricingQuestions: ModuleQuestion[] = [
 
 export const pricingPopularIds = [1, 2, 3, 10, 17, 33, 38];
 
-// Assortment Questions (16+)
+// Assortment Questions (40+)
 export const assortmentQuestions: ModuleQuestion[] = [
-  // Core Assortment
+  // Core Assortment Planning
   { id: 1, text: "Which SKUs should be added to the assortment?", tags: ['sku', 'expansion'], metricKey: 'sku_opportunity', chartType: 'bar' },
   { id: 2, text: "What products should be discontinued based on performance?", tags: ['rationalization', 'performance'], metricKey: 'sku_performance', chartType: 'bar' },
   { id: 3, text: "How does category penetration vary by store type?", tags: ['category', 'penetration'], metricKey: 'category_penetration', chartType: 'bar' },
@@ -80,24 +80,57 @@ export const assortmentQuestions: ModuleQuestion[] = [
   { id: 6, text: "What's the ideal assortment depth by store cluster?", tags: ['depth', 'cluster'], metricKey: 'assortment_depth', chartType: 'bar' },
   { id: 7, text: "How do regional preferences impact assortment decisions?", tags: ['regional', 'preferences'], metricKey: 'regional_preference', chartType: 'bar' },
   { id: 8, text: "What's the private label opportunity by category?", tags: ['private-label', 'opportunity'], metricKey: 'private_label_share', chartType: 'bar' },
-  // Extended Assortment
+  
+  // SKU Rationalization
   { id: 9, text: "Which products have declining velocity trends?", tags: ['velocity', 'trend'], metricKey: 'velocity_trend', chartType: 'line' },
   { id: 10, text: "What's the optimal SKU count per category?", tags: ['sku-count', 'optimization'], metricKey: 'optimal_sku_count', chartType: 'bar' },
-  { id: 11, text: "Which brands are over-represented vs their sales contribution?", tags: ['brand', 'efficiency'], metricKey: 'brand_space_efficiency', chartType: 'bar' },
-  { id: 12, text: "What's the customer basket affinity for product pairings?", tags: ['affinity', 'basket'], metricKey: 'product_affinity', chartType: 'bar' },
-  { id: 13, text: "How does assortment variety impact store performance?", tags: ['variety', 'performance'], metricKey: 'variety_impact', chartType: 'line' },
-  { id: 14, text: "What products are frequently out-of-stock substituted?", tags: ['substitution', 'oos'], metricKey: 'substitution_rate', chartType: 'bar' },
-  { id: 15, text: "What's the halo effect of key value items on category sales?", tags: ['halo', 'kvi'], metricKey: 'halo_impact', chartType: 'bar' },
-  { id: 16, text: "Which categories need assortment expansion vs rationalization?", tags: ['strategy', 'category'], metricKey: 'assortment_strategy', chartType: 'bar' },
-  // Simulation
-  { id: 17, text: "What if we remove the bottom 10% of SKUs by velocity?", tags: ['simulation', 'rationalization'], metricKey: 'simulated_efficiency', chartType: 'bar', isSimulation: true },
-  { id: 18, text: "What if we add private label alternatives to top national brands?", tags: ['simulation', 'private-label'], metricKey: 'simulated_margin', chartType: 'bar', isSimulation: true },
+  { id: 11, text: "What's the bottom 10% of SKUs by velocity?", tags: ['bottom-performers', 'velocity'], metricKey: 'low_velocity_skus', chartType: 'bar' },
+  { id: 12, text: "Which SKUs have high inventory but low sales velocity?", tags: ['dead-stock', 'inventory'], metricKey: 'dead_stock', chartType: 'bar' },
+  { id: 13, text: "What's the SKU productivity by category?", tags: ['productivity', 'category'], metricKey: 'sku_productivity', chartType: 'bar' },
+  { id: 14, text: "Which duplicate or overlapping SKUs can be consolidated?", tags: ['consolidation', 'overlap'], metricKey: 'sku_overlap', chartType: 'bar' },
+  
+  // Brand Portfolio Analysis
+  { id: 15, text: "Which brands are over-represented vs their sales contribution?", tags: ['brand', 'efficiency'], metricKey: 'brand_space_efficiency', chartType: 'bar' },
+  { id: 16, text: "What's the brand performance by category and region?", tags: ['brand', 'regional'], metricKey: 'brand_regional_perf', chartType: 'bar' },
+  { id: 17, text: "How does brand loyalty vary across customer segments?", tags: ['brand', 'loyalty', 'segment'], metricKey: 'brand_loyalty', chartType: 'bar' },
+  { id: 18, text: "What's the ideal price gap between private label and national brands?", tags: ['private-label', 'gap'], metricKey: 'pl_nb_gap', chartType: 'bar' },
+  { id: 19, text: "Which national brand SKUs can be replaced with private label?", tags: ['private-label', 'substitution'], metricKey: 'pl_opportunity', chartType: 'bar' },
+  
+  // Category Management
+  { id: 20, text: "Which categories need assortment expansion vs rationalization?", tags: ['strategy', 'category'], metricKey: 'assortment_strategy', chartType: 'bar' },
+  { id: 21, text: "What's the category role analysis (destination, routine, seasonal)?", tags: ['category-role', 'strategy'], metricKey: 'category_role', chartType: 'pie' },
+  { id: 22, text: "How does category performance vary by store format?", tags: ['category', 'format'], metricKey: 'category_format_perf', chartType: 'bar' },
+  { id: 23, text: "What's the subcategory growth opportunity by region?", tags: ['subcategory', 'growth'], metricKey: 'subcategory_growth', chartType: 'bar' },
+  { id: 24, text: "Which emerging trends should influence our assortment?", tags: ['trends', 'emerging'], metricKey: 'trend_signals', chartType: 'bar' },
+  
+  // Customer & Basket Analysis
+  { id: 25, text: "What's the customer basket affinity for product pairings?", tags: ['affinity', 'basket'], metricKey: 'product_affinity', chartType: 'bar' },
+  { id: 26, text: "How does assortment variety impact store performance?", tags: ['variety', 'performance'], metricKey: 'variety_impact', chartType: 'line' },
+  { id: 27, text: "What products are frequently out-of-stock substituted?", tags: ['substitution', 'oos'], metricKey: 'substitution_rate', chartType: 'bar' },
+  { id: 28, text: "What's the halo effect of key value items on category sales?", tags: ['halo', 'kvi'], metricKey: 'halo_impact', chartType: 'bar' },
+  { id: 29, text: "Which products drive customer trips vs basket fill?", tags: ['trip-driver', 'basket-fill'], metricKey: 'trip_driver_analysis', chartType: 'bar' },
+  { id: 30, text: "What's the market basket analysis for cross-sell opportunities?", tags: ['basket', 'cross-sell'], metricKey: 'cross_sell_opportunity', chartType: 'bar' },
+  
+  // Assortment Drivers & Signals
+  { id: 31, text: "What market trends are driving category growth?", tags: ['market-trends', 'drivers'], metricKey: 'market_drivers', chartType: 'bar' },
+  { id: 32, text: "How do competitor assortments compare to ours?", tags: ['competitive', 'assortment'], metricKey: 'competitive_assortment', chartType: 'bar' },
+  { id: 33, text: "What's driving SKU proliferation in each category?", tags: ['proliferation', 'drivers'], metricKey: 'proliferation_drivers', chartType: 'bar' },
+  { id: 34, text: "What seasonal assortment adjustments are needed?", tags: ['seasonal', 'adjustment'], metricKey: 'seasonal_assortment', chartType: 'line' },
+  
+  // Simulation / What-If
+  { id: 35, text: "What if we remove the bottom 10% of SKUs by velocity?", tags: ['simulation', 'rationalization'], metricKey: 'simulated_efficiency', chartType: 'bar', isSimulation: true },
+  { id: 36, text: "What if we add private label alternatives to top national brands?", tags: ['simulation', 'private-label'], metricKey: 'simulated_margin', chartType: 'bar', isSimulation: true },
+  { id: 37, text: "What if we expand organic/natural product assortment by 20%?", tags: ['simulation', 'organic'], metricKey: 'simulated_organic', chartType: 'bar', isSimulation: true },
+  { id: 38, text: "What if we localize assortment by regional preferences?", tags: ['simulation', 'localization'], metricKey: 'simulated_localization', chartType: 'bar', isSimulation: true },
+  { id: 39, text: "What if we reduce SKU count by 15% per category?", tags: ['simulation', 'reduction'], metricKey: 'simulated_reduction', chartType: 'bar', isSimulation: true },
+  
   // Cross-module
-  { id: 19, text: "How does assortment depth impact space productivity?", tags: ['cross-module', 'space'], metricKey: 'assortment_space_efficiency', chartType: 'bar', crossModule: ['space'] },
-  { id: 20, text: "What's the supply chain complexity impact of current assortment?", tags: ['cross-module', 'supply-chain'], metricKey: 'assortment_complexity', chartType: 'bar', crossModule: ['supply-chain'] },
+  { id: 40, text: "How does assortment depth impact space productivity?", tags: ['cross-module', 'space'], metricKey: 'assortment_space_efficiency', chartType: 'bar', crossModule: ['space'] },
+  { id: 41, text: "What's the supply chain complexity impact of current assortment?", tags: ['cross-module', 'supply-chain'], metricKey: 'assortment_complexity', chartType: 'bar', crossModule: ['supply-chain'] },
+  { id: 42, text: "How does assortment strategy affect demand forecasting?", tags: ['cross-module', 'demand'], metricKey: 'assortment_demand_impact', chartType: 'line', crossModule: ['demand'] },
 ];
 
-export const assortmentPopularIds = [1, 2, 3, 4, 5, 17, 19];
+export const assortmentPopularIds = [1, 2, 4, 10, 20, 25, 35];
 
 // Demand Forecasting & Replenishment Questions (30+)
 export const demandQuestions: ModuleQuestion[] = [
