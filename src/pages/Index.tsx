@@ -87,6 +87,17 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
   const [selectedKPIs, setSelectedKPIs] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   
+  // Conversation history for context continuity
+  const [conversationHistory, setConversationHistory] = useState<Array<{
+    role: 'user' | 'assistant';
+    content: string;
+    context?: {
+      promotionMentioned?: string;
+      categoryMentioned?: string;
+      metricMentioned?: string;
+    };
+  }>>([]);
+  
   // New state for improvements
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('last_quarter');
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
@@ -205,9 +216,19 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
     
     const startTime = Date.now();
     
+    // Add user message to conversation history
+    const userHistoryEntry = {
+      role: 'user' as const,
+      content: questionText,
+    };
+    
     try {
       // Log what we're sending for debugging
       console.log('Chat sending question with KPIs:', { question: questionText, kpis });
+      
+      // Build conversation context from history
+      const lastAssistantMessage = conversationHistory.filter(m => m.role === 'assistant').slice(-1)[0];
+      const conversationContext = lastAssistantMessage?.context || {};
       
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${edgeFunctionName}`,
@@ -222,7 +243,14 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
             categories: personaConfig[persona].categories,
             selectedKPIs: kpis.length > 0 ? kpis : null,
             timePeriod: timePeriod !== 'custom' ? timePeriod : null,
-            moduleId: moduleId
+            moduleId: moduleId,
+            // Pass conversation history for context continuity
+            conversationHistory: conversationHistory.slice(-6),
+            conversationContext: {
+              lastCategory: conversationContext.categoryMentioned,
+              lastPromotion: conversationContext.promotionMentioned,
+              lastMetric: conversationContext.metricMentioned,
+            }
           }),
         }
       );
@@ -238,6 +266,34 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
 
       const analyticsResult = await response.json();
       setResult(analyticsResult);
+      
+      // Extract context from response and add to history
+      const extractedContext = {
+        promotionMentioned: analyticsResult.chartData?.[0]?.name || undefined,
+        categoryMentioned: undefined as string | undefined,
+        metricMentioned: undefined as string | undefined,
+      };
+      
+      // Extract category from response
+      const categories = ['Dairy', 'Beverages', 'Snacks', 'Produce', 'Frozen', 'Bakery', 'Pantry', 'Personal Care', 'Home Care'];
+      const responseText = analyticsResult.whatHappened?.join(' ') || '';
+      categories.forEach(cat => {
+        if (responseText.toLowerCase().includes(cat.toLowerCase())) {
+          extractedContext.categoryMentioned = cat;
+        }
+      });
+      
+      // Add both messages to history
+      setConversationHistory(prev => [
+        ...prev.slice(-8), // Keep last 8 messages
+        userHistoryEntry,
+        {
+          role: 'assistant',
+          content: analyticsResult.whatHappened?.join(' ') || '',
+          context: extractedContext,
+        }
+      ]);
+      
       return analyticsResult;
     } catch (error) {
       console.error('Error analyzing question:', error);
