@@ -8,7 +8,25 @@ const corsHeaders = {
 };
 
 const moduleContexts: Record<string, string> = {
-  pricing: `You are a Pricing Optimization AI for a $4B grocery retailer. Analyze pricing strategies, price elasticity, competitive positioning, margin optimization, price changes, and markdown strategies. Use actual data from price_change_history, competitor_prices, and products tables to provide specific insights. NEVER mention promotions, ROI, or lift - focus ONLY on pricing metrics.`,
+  pricing: `You are a Pricing Optimization AI for a $4B grocery retailer.
+
+PRICING ANALYSIS CAPABILITIES:
+1. Price Optimization: Analyze optimal price points using elasticity data and margin targets
+2. Competitive Intelligence: Track competitor prices (Walmart, Kroger, Target, Costco), price gaps, and market positioning
+3. Margin Management: Identify margin erosion, optimization opportunities, and category margin performance
+4. Price Elasticity: Analyze price sensitivity by product, category, and customer segment
+5. Price Change Impact: Track historical price changes and their effects on volume and revenue
+6. Markdown Strategy: Optimize markdowns for seasonal and slow-moving inventory
+
+PRICING DRIVERS TO REFERENCE:
+- Competitive pressure (competitor price changes and gaps)
+- Cost changes (COGS, supplier costs, commodity indices)
+- Demand elasticity (price sensitivity by product/category)
+- Market conditions (inflation, consumer confidence)
+- Seasonal factors (holiday pricing, seasonal demand)
+- Promotional cadence (promotional vs everyday pricing effectiveness)
+
+When explaining pricing recommendations, reference specific COMPETITIVE DATA, PRICE GAPS, ELASTICITY VALUES, and MARGIN IMPACTS from the data. Use actual product names, competitor names, and specific percentages. NEVER mention ROI or lift - focus ONLY on pricing metrics like margin %, price gap %, elasticity, and revenue impact.`,
   
   assortment: `You are an Assortment Planning AI for a $4B grocery retailer. Analyze product mix, category management, SKU rationalization, brand portfolio, new product performance, and private label opportunities. Use actual data from products, transactions, and inventory tables. NEVER mention promotions, ROI, or lift - focus ONLY on assortment metrics like SKU productivity, category gaps, brand mix.`,
   
@@ -104,19 +122,24 @@ serve(async (req) => {
     
     switch (moduleId) {
       case 'pricing': {
-        const [priceChangesRes, competitorPricesRes, competitorDataRes] = await Promise.all([
+        const [priceChangesRes, competitorPricesRes, competitorDataRes, pricingDriversRes, transactionsExtendedRes] = await Promise.all([
           supabase.from('price_change_history').select('*').limit(500),
           supabase.from('competitor_prices').select('*').limit(500),
           supabase.from('competitor_data').select('*').limit(200),
+          supabase.from('third_party_data').select('*').in('data_type', ['pricing_driver', 'economic', 'commodity', 'inflation']).limit(100),
+          supabase.from('transactions').select('*').limit(1000),
         ]);
         const priceChanges = priceChangesRes.data || [];
         const competitorPrices = competitorPricesRes.data || [];
         const competitorData = competitorDataRes.data || [];
+        const pricingDrivers = pricingDriversRes.data || [];
+        const transactionsExtended = transactionsExtendedRes.data || [];
         
         // Create product lookup for names
         const productLookup: Record<string, any> = {};
         products.forEach((p: any) => { productLookup[p.product_sku] = p; });
         
+        // Calculate key metrics
         const avgMargin = products.reduce((sum, p: any) => sum + Number(p.margin_percent || 0), 0) / (products.length || 1);
         const avgBasePrice = products.reduce((sum, p: any) => sum + Number(p.base_price || 0), 0) / (products.length || 1);
         const elasticProducts = products.filter((p: any) => p.price_elasticity);
@@ -133,42 +156,97 @@ serve(async (req) => {
         // Get most elastic products
         const sortedByElasticity = [...products].filter((p: any) => p.price_elasticity).sort((a: any, b: any) => Math.abs(Number(b.price_elasticity || 0)) - Math.abs(Number(a.price_elasticity || 0)));
         const mostElasticProducts = sortedByElasticity.slice(0, 10);
+        const leastElasticProducts = sortedByElasticity.slice(-10).reverse();
         
-        // Recent price changes with product names
-        const recentPriceChanges = priceChanges.slice(0, 15).map((pc: any) => {
+        // Recent price changes with product names and impact analysis
+        const recentPriceChanges = priceChanges.slice(0, 20).map((pc: any) => {
           const product = productLookup[pc.product_sku] || {};
           const pctChange = ((Number(pc.new_price) - Number(pc.old_price)) / Number(pc.old_price) * 100).toFixed(1);
           return {
             name: product.product_name || pc.product_sku,
             sku: pc.product_sku,
+            category: product.category || 'Unknown',
             oldPrice: pc.old_price,
             newPrice: pc.new_price,
             pctChange,
             reason: pc.change_reason,
-            type: pc.change_type
+            type: pc.change_type,
+            elasticity: product.price_elasticity
           };
         });
         
-        // Competitor price gaps by product
-        const competitorGaps = competitorPrices.slice(0, 15).map((cp: any) => {
+        // Competitor analysis by competitor
+        const competitorAnalysis: Record<string, { count: number; avgGap: number; products: any[] }> = {};
+        competitorPrices.forEach((cp: any) => {
+          if (!competitorAnalysis[cp.competitor_name]) competitorAnalysis[cp.competitor_name] = { count: 0, avgGap: 0, products: [] };
+          competitorAnalysis[cp.competitor_name].count++;
+          competitorAnalysis[cp.competitor_name].avgGap += Number(cp.price_gap_percent || 0);
           const product = productLookup[cp.product_sku] || {};
-          return {
+          competitorAnalysis[cp.competitor_name].products.push({
             name: product.product_name || cp.product_sku,
-            competitor: cp.competitor_name,
             ourPrice: cp.our_price,
             theirPrice: cp.competitor_price,
             gap: cp.price_gap_percent
-          };
+          });
+        });
+        
+        // Calculate average gaps per competitor
+        Object.keys(competitorAnalysis).forEach(comp => {
+          competitorAnalysis[comp].avgGap = competitorAnalysis[comp].avgGap / (competitorAnalysis[comp].count || 1);
+        });
+        
+        // Find over-priced and under-priced items
+        const overPricedItems = competitorPrices.filter((cp: any) => Number(cp.price_gap_percent) > 5).map((cp: any) => {
+          const product = productLookup[cp.product_sku] || {};
+          return { name: product.product_name || cp.product_sku, competitor: cp.competitor_name, gap: cp.price_gap_percent, ourPrice: cp.our_price, theirPrice: cp.competitor_price };
+        });
+        const underPricedItems = competitorPrices.filter((cp: any) => Number(cp.price_gap_percent) < -5).map((cp: any) => {
+          const product = productLookup[cp.product_sku] || {};
+          return { name: product.product_name || cp.product_sku, competitor: cp.competitor_name, gap: cp.price_gap_percent, ourPrice: cp.our_price, theirPrice: cp.competitor_price };
         });
         
         const avgPriceGap = competitorPrices.reduce((sum, cp: any) => sum + Number(cp.price_gap_percent || 0), 0) / (competitorPrices.length || 1);
         
-        const categoryMargins: Record<string, { sum: number; count: number; products: string[] }> = {};
+        // Category-level margin and pricing analysis
+        const categoryAnalysis: Record<string, { sumMargin: number; sumPrice: number; sumElasticity: number; count: number; products: string[]; revenue: number; units: number }> = {};
         products.forEach((p: any) => {
-          if (!categoryMargins[p.category]) categoryMargins[p.category] = { sum: 0, count: 0, products: [] };
-          categoryMargins[p.category].sum += Number(p.margin_percent || 0);
-          categoryMargins[p.category].count++;
-          categoryMargins[p.category].products.push(p.product_name);
+          if (!categoryAnalysis[p.category]) categoryAnalysis[p.category] = { sumMargin: 0, sumPrice: 0, sumElasticity: 0, count: 0, products: [], revenue: 0, units: 0 };
+          categoryAnalysis[p.category].sumMargin += Number(p.margin_percent || 0);
+          categoryAnalysis[p.category].sumPrice += Number(p.base_price || 0);
+          categoryAnalysis[p.category].sumElasticity += Number(p.price_elasticity || 0);
+          categoryAnalysis[p.category].count++;
+          categoryAnalysis[p.category].products.push(p.product_name);
+        });
+        
+        // Add transaction data to category analysis
+        transactionsExtended.forEach((t: any) => {
+          const product = productLookup[t.product_sku];
+          if (product?.category && categoryAnalysis[product.category]) {
+            categoryAnalysis[product.category].revenue += Number(t.total_amount || 0);
+            categoryAnalysis[product.category].units += Number(t.quantity || 0);
+          }
+        });
+        
+        // Pricing drivers analysis
+        const driversByType: Record<string, any[]> = {};
+        pricingDrivers.forEach((d: any) => {
+          if (!driversByType[d.metric_name]) driversByType[d.metric_name] = [];
+          driversByType[d.metric_name].push(d);
+        });
+        
+        // Price change success analysis (correlate with transactions)
+        const priceChangeImpact = priceChanges.slice(0, 10).map((pc: any) => {
+          const product = productLookup[pc.product_sku] || {};
+          const postChangeTransactions = transactionsExtended.filter((t: any) => t.product_sku === pc.product_sku);
+          const postVolume = postChangeTransactions.reduce((sum, t: any) => sum + Number(t.quantity || 0), 0);
+          const postRevenue = postChangeTransactions.reduce((sum, t: any) => sum + Number(t.total_amount || 0), 0);
+          return {
+            name: product.product_name || pc.product_sku,
+            priceChange: ((Number(pc.new_price) - Number(pc.old_price)) / Number(pc.old_price) * 100).toFixed(1),
+            volume: postVolume,
+            revenue: postRevenue,
+            reason: pc.change_reason
+          };
         });
         
         dataContext = `
@@ -180,24 +258,52 @@ PRICING DATA SUMMARY:
 - Average price elasticity: ${avgElasticity.toFixed(2)}
 
 HIGH MARGIN PRODUCTS (USE THESE SPECIFIC NAMES):
-${highMarginProducts.map((p: any) => `- ${p.product_name} (${p.product_sku}): ${Number(p.margin_percent).toFixed(1)}% margin, $${Number(p.base_price).toFixed(2)} price`).join('\n')}
+${highMarginProducts.map((p: any) => `- ${p.product_name} (${p.category}): ${Number(p.margin_percent).toFixed(1)}% margin, $${Number(p.base_price).toFixed(2)} price, elasticity ${Number(p.price_elasticity || 0).toFixed(2)}`).join('\n')}
 
-LOW MARGIN PRODUCTS (NEED ATTENTION):
-${lowMarginProducts.map((p: any) => `- ${p.product_name}: ${Number(p.margin_percent).toFixed(1)}% margin, $${Number(p.base_price).toFixed(2)} price`).join('\n')}
+LOW MARGIN PRODUCTS (OPTIMIZATION CANDIDATES):
+${lowMarginProducts.map((p: any) => `- ${p.product_name} (${p.category}): ${Number(p.margin_percent).toFixed(1)}% margin, $${Number(p.base_price).toFixed(2)} price`).join('\n')}
 
-MOST PRICE-ELASTIC PRODUCTS:
-${mostElasticProducts.slice(0, 8).map((p: any) => `- ${p.product_name}: Elasticity ${Number(p.price_elasticity).toFixed(2)}, Category: ${p.category}`).join('\n')}
+MOST PRICE-ELASTIC PRODUCTS (SENSITIVE TO PRICE CHANGES):
+${mostElasticProducts.slice(0, 8).map((p: any) => `- ${p.product_name}: Elasticity ${Number(p.price_elasticity).toFixed(2)}, Category: ${p.category}, Price: $${Number(p.base_price).toFixed(2)}`).join('\n')}
 
-MARGIN BY CATEGORY:
-${Object.entries(categoryMargins).map(([cat, data]) => `- ${cat}: ${(data.sum / data.count).toFixed(1)}% avg margin (${data.count} products)`).join('\n')}
+LEAST PRICE-ELASTIC PRODUCTS (CAN SUSTAIN PRICE INCREASES):
+${leastElasticProducts.filter((p: any) => p.price_elasticity).slice(0, 5).map((p: any) => `- ${p.product_name}: Elasticity ${Number(p.price_elasticity).toFixed(2)}, Category: ${p.category}`).join('\n')}
 
-RECENT PRICE CHANGES (${priceChanges.length} total):
-${recentPriceChanges.map(pc => `- ${pc.name}: $${Number(pc.oldPrice).toFixed(2)} → $${Number(pc.newPrice).toFixed(2)} (${pc.pctChange}%), Reason: ${pc.reason || pc.type}`).join('\n')}
+CATEGORY PRICING ANALYSIS:
+${Object.entries(categoryAnalysis).map(([cat, data]) => 
+  `- ${cat}: Avg margin ${(data.sumMargin / data.count).toFixed(1)}%, Avg price $${(data.sumPrice / data.count).toFixed(2)}, Avg elasticity ${(data.sumElasticity / data.count).toFixed(2)}, Revenue $${data.revenue.toFixed(0)}, ${data.count} products`
+).join('\n')}
 
-COMPETITOR PRICE COMPARISON:
-- Competitors tracked: ${[...new Set(competitorPrices.map((cp: any) => cp.competitor_name))].join(', ')}
-- Average price gap: ${avgPriceGap.toFixed(1)}%
-${competitorGaps.slice(0, 8).map(cg => `- ${cg.name} vs ${cg.competitor}: Our $${Number(cg.ourPrice).toFixed(2)} vs Their $${Number(cg.theirPrice).toFixed(2)} (${Number(cg.gap).toFixed(1)}% gap)`).join('\n')}`;
+RECENT PRICE CHANGES (${priceChanges.length} total, ${priceIncreases.length} increases, ${priceDecreases.length} decreases):
+${recentPriceChanges.slice(0, 12).map(pc => `- ${pc.name} (${pc.category}): $${Number(pc.oldPrice).toFixed(2)} → $${Number(pc.newPrice).toFixed(2)} (${pc.pctChange}%), Reason: ${pc.reason || pc.type}, Elasticity: ${Number(pc.elasticity || 0).toFixed(2)}`).join('\n')}
+
+PRICE CHANGE IMPACT ANALYSIS:
+${priceChangeImpact.slice(0, 8).map(pci => `- ${pci.name}: ${pci.priceChange}% price change → ${pci.volume} units sold, $${pci.revenue.toFixed(0)} revenue, Reason: ${pci.reason || 'N/A'}`).join('\n')}
+
+COMPETITIVE INTELLIGENCE:
+- Competitors tracked: ${Object.keys(competitorAnalysis).join(', ')}
+- Average price gap vs competition: ${avgPriceGap.toFixed(1)}%
+- Price comparisons: ${competitorPrices.length}
+
+COMPETITOR-BY-COMPETITOR ANALYSIS:
+${Object.entries(competitorAnalysis).map(([comp, data]) => 
+  `- ${comp}: ${data.count} products compared, Avg gap ${data.avgGap.toFixed(1)}%
+   Top gaps: ${data.products.sort((a, b) => Math.abs(Number(b.gap)) - Math.abs(Number(a.gap))).slice(0, 3).map(p => `${p.name} (${Number(p.gap).toFixed(1)}%)`).join(', ')}`
+).join('\n')}
+
+OVER-PRICED ITEMS (RISK OF LOSING CUSTOMERS):
+${overPricedItems.slice(0, 8).map(item => `- ${item.name} vs ${item.competitor}: +${Number(item.gap).toFixed(1)}% (Our $${Number(item.ourPrice).toFixed(2)} vs Their $${Number(item.theirPrice).toFixed(2)})`).join('\n')}
+
+UNDER-PRICED ITEMS (MARGIN OPPORTUNITY):
+${underPricedItems.slice(0, 8).map(item => `- ${item.name} vs ${item.competitor}: ${Number(item.gap).toFixed(1)}% (Our $${Number(item.ourPrice).toFixed(2)} vs Their $${Number(item.theirPrice).toFixed(2)})`).join('\n')}
+
+PRICING DRIVERS & EXTERNAL SIGNALS:
+${Object.entries(driversByType).slice(0, 6).map(([metric, data]) => 
+  `- ${metric}: ${data.slice(0, 2).map((d: any) => `${d.product_category || 'All'}: ${Number(d.metric_value).toFixed(2)}`).join(', ')}`
+).join('\n')}
+
+COMPETITOR MARKET ACTIVITY:
+${competitorData.slice(0, 6).map((cd: any) => `- ${cd.competitor_name} (${cd.product_category}): ${cd.market_share_percent}% share, Promo intensity: ${cd.promotion_intensity}`).join('\n')}`;
         break;
       }
       

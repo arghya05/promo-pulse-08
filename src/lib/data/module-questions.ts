@@ -8,9 +8,9 @@ export interface ModuleQuestion {
   isSimulation?: boolean; // For scenario simulation
 }
 
-// Pricing Questions (16+)
+// Pricing Questions (38+)
 export const pricingQuestions: ModuleQuestion[] = [
-  // Core Pricing
+  // Core Pricing Optimization
   { id: 1, text: "What is the optimal price point for our top-selling products?", tags: ['pricing', 'optimization'], metricKey: 'optimal_price', chartType: 'bar' },
   { id: 2, text: "How does price elasticity vary across product categories?", tags: ['elasticity', 'category'], metricKey: 'price_elasticity', chartType: 'bar' },
   { id: 3, text: "What's our competitive price positioning vs major retailers?", tags: ['competitive', 'positioning'], metricKey: 'competitive_index', chartType: 'bar' },
@@ -19,24 +19,55 @@ export const pricingQuestions: ModuleQuestion[] = [
   { id: 6, text: "What's the optimal markdown strategy for seasonal items?", tags: ['markdown', 'seasonal'], metricKey: 'markdown_rate', chartType: 'area' },
   { id: 7, text: "Which regions are most price sensitive?", tags: ['regional', 'sensitivity'], metricKey: 'price_sensitivity', chartType: 'bar' },
   { id: 8, text: "How does our private label pricing compare to national brands?", tags: ['private-label', 'comparison'], metricKey: 'price_gap', chartType: 'bar' },
-  // Extended Pricing
+  
+  // Competitive Intelligence
   { id: 9, text: "What's the price-volume relationship for each category?", tags: ['price', 'volume', 'category'], metricKey: 'price_volume_curve', chartType: 'line' },
   { id: 10, text: "Which competitors are most aggressive on pricing?", tags: ['competitive', 'analysis'], metricKey: 'competitor_aggression', chartType: 'bar' },
   { id: 11, text: "What's the impact of recent price changes on margin?", tags: ['price-change', 'margin'], metricKey: 'margin_impact', chartType: 'bar' },
-  { id: 12, text: "How do everyday low prices compare to promotional pricing effectiveness?", tags: ['edlp', 'promo'], metricKey: 'pricing_strategy', chartType: 'bar' },
-  { id: 13, text: "What products are over-priced relative to elasticity?", tags: ['overpriced', 'opportunity'], metricKey: 'price_optimization_gap', chartType: 'bar' },
-  { id: 14, text: "What's the optimal price ladder within each category?", tags: ['price-ladder', 'tiering'], metricKey: 'price_tier_performance', chartType: 'bar' },
-  { id: 15, text: "How does weather impact price sensitivity?", tags: ['weather', 'sensitivity'], metricKey: 'weather_price_impact', chartType: 'line' },
+  { id: 12, text: "Where are our biggest price gaps vs Walmart?", tags: ['competitive', 'walmart'], metricKey: 'walmart_gap', chartType: 'bar' },
+  { id: 13, text: "How do competitor price changes affect our sales?", tags: ['competitive', 'impact'], metricKey: 'competitor_impact', chartType: 'line' },
+  { id: 14, text: "What products are we over-priced vs competition?", tags: ['competitive', 'overpriced'], metricKey: 'overpriced_items', chartType: 'bar' },
+  { id: 15, text: "What products are we under-priced and leaving margin on the table?", tags: ['competitive', 'underpriced'], metricKey: 'underpriced_items', chartType: 'bar' },
+  
+  // Margin Management
   { id: 16, text: "What's the cannibalization effect of price promotions?", tags: ['cannibalization', 'promo'], metricKey: 'cannibalization_rate', chartType: 'bar' },
-  // Simulation
-  { id: 17, text: "What if we increase prices by 5% on high-elasticity products?", tags: ['simulation', 'price-increase'], metricKey: 'simulated_revenue', chartType: 'bar', isSimulation: true },
-  { id: 18, text: "What if we match competitor prices on key value items?", tags: ['simulation', 'competitive'], metricKey: 'simulated_share', chartType: 'bar', isSimulation: true },
+  { id: 17, text: "Which categories have declining margins and why?", tags: ['margin', 'trend', 'drivers'], metricKey: 'margin_decline', chartType: 'line' },
+  { id: 18, text: "What's the margin impact of recent cost increases?", tags: ['cost', 'margin', 'impact'], metricKey: 'cost_impact', chartType: 'bar' },
+  { id: 19, text: "How can we improve margins without losing volume?", tags: ['margin', 'optimization'], metricKey: 'margin_opportunity', chartType: 'bar' },
+  { id: 20, text: "What's driving margin erosion in each category?", tags: ['margin', 'drivers', 'erosion'], metricKey: 'margin_erosion_drivers', chartType: 'bar' },
+  
+  // Elasticity & Price Sensitivity
+  { id: 21, text: "What products are over-priced relative to elasticity?", tags: ['overpriced', 'opportunity'], metricKey: 'price_optimization_gap', chartType: 'bar' },
+  { id: 22, text: "What's the optimal price ladder within each category?", tags: ['price-ladder', 'tiering'], metricKey: 'price_tier_performance', chartType: 'bar' },
+  { id: 23, text: "Which customer segments are most price sensitive?", tags: ['customer', 'sensitivity'], metricKey: 'customer_sensitivity', chartType: 'bar' },
+  { id: 24, text: "How does weather impact price sensitivity?", tags: ['weather', 'sensitivity'], metricKey: 'weather_price_impact', chartType: 'line' },
+  { id: 25, text: "What's the price elasticity for each brand?", tags: ['brand', 'elasticity'], metricKey: 'brand_elasticity', chartType: 'bar' },
+  
+  // Price Change Analysis
+  { id: 26, text: "What recent price changes performed best?", tags: ['price-change', 'performance'], metricKey: 'price_change_success', chartType: 'bar' },
+  { id: 27, text: "What recent price changes hurt volume the most?", tags: ['price-change', 'failure'], metricKey: 'price_change_failure', chartType: 'bar' },
+  { id: 28, text: "What's the optimal timing for price increases?", tags: ['timing', 'price-increase'], metricKey: 'optimal_timing', chartType: 'line' },
+  { id: 29, text: "How long does it take for price changes to stabilize volume?", tags: ['price-change', 'recovery'], metricKey: 'recovery_time', chartType: 'line' },
+  
+  // Pricing Strategy
+  { id: 30, text: "How do everyday low prices compare to promotional pricing effectiveness?", tags: ['edlp', 'promo', 'strategy'], metricKey: 'pricing_strategy', chartType: 'bar' },
+  { id: 31, text: "What's the ideal price gap between private label and national brands?", tags: ['private-label', 'gap', 'strategy'], metricKey: 'pl_nb_gap', chartType: 'bar' },
+  { id: 32, text: "Which categories should use EDLP vs Hi-Lo pricing?", tags: ['strategy', 'category'], metricKey: 'pricing_strategy_fit', chartType: 'bar' },
+  
+  // Simulation / What-If
+  { id: 33, text: "What if we increase prices by 5% on high-elasticity products?", tags: ['simulation', 'price-increase'], metricKey: 'simulated_revenue', chartType: 'bar', isSimulation: true },
+  { id: 34, text: "What if we match competitor prices on key value items?", tags: ['simulation', 'competitive'], metricKey: 'simulated_share', chartType: 'bar', isSimulation: true },
+  { id: 35, text: "What if we reduce prices by 10% on slow-moving inventory?", tags: ['simulation', 'markdown'], metricKey: 'simulated_velocity', chartType: 'bar', isSimulation: true },
+  { id: 36, text: "What if commodity costs increase by 15%?", tags: ['simulation', 'cost'], metricKey: 'simulated_margin_impact', chartType: 'bar', isSimulation: true },
+  { id: 37, text: "What if we implement zone pricing by region?", tags: ['simulation', 'zone-pricing'], metricKey: 'simulated_zone_impact', chartType: 'bar', isSimulation: true },
+  
   // Cross-module
-  { id: 19, text: "How does pricing impact demand forecasting accuracy?", tags: ['cross-module', 'demand'], metricKey: 'demand_price_correlation', chartType: 'line', crossModule: ['demand'] },
-  { id: 20, text: "What's the relationship between price changes and inventory levels?", tags: ['cross-module', 'inventory'], metricKey: 'price_inventory_impact', chartType: 'line', crossModule: ['demand', 'supply-chain'] },
+  { id: 38, text: "How does pricing impact demand forecasting accuracy?", tags: ['cross-module', 'demand'], metricKey: 'demand_price_correlation', chartType: 'line', crossModule: ['demand'] },
+  { id: 39, text: "What's the relationship between price changes and inventory levels?", tags: ['cross-module', 'inventory'], metricKey: 'price_inventory_impact', chartType: 'line', crossModule: ['demand', 'supply-chain'] },
+  { id: 40, text: "How do price changes affect shelf space productivity?", tags: ['cross-module', 'space'], metricKey: 'price_space_impact', chartType: 'bar', crossModule: ['space'] },
 ];
 
-export const pricingPopularIds = [1, 2, 3, 4, 6, 17, 19];
+export const pricingPopularIds = [1, 2, 3, 10, 17, 33, 38];
 
 // Assortment Questions (16+)
 export const assortmentQuestions: ModuleQuestion[] = [
