@@ -105,37 +105,72 @@ export const promotionKPIs: ModuleKPI[] = [
 // Executive Strategic KPIs - cross-functional
 export const executiveKPIs: ModuleKPI[] = [
   ...sharedKPIs,
-  // Overall Performance
+  // Core Financial Performance
   { id: 'total_revenue', name: 'Total Revenue', category: 'financial', dataSource: 'transactions', format: 'currency' },
   { id: 'yoy_growth', name: 'YoY Growth %', category: 'growth', dataSource: 'transactions', format: 'percent' },
   { id: 'gross_margin', name: 'Gross Margin %', category: 'financial', dataSource: 'transactions', format: 'percent' },
   { id: 'operating_margin', name: 'Operating Margin %', category: 'financial', dataSource: 'transactions', format: 'percent' },
+  { id: 'net_margin', name: 'Net Margin %', category: 'financial', dataSource: 'transactions', format: 'percent' },
+  
+  // Advanced Financial KPIs
+  { id: 'ebitda', name: 'EBITDA', category: 'financial', dataSource: 'transactions', format: 'currency' },
+  { id: 'ebitda_margin', name: 'EBITDA Margin %', category: 'financial', dataSource: 'transactions', format: 'percent' },
+  { id: 'working_capital', name: 'Working Capital', category: 'financial', dataSource: 'inventory_levels', format: 'currency' },
+  { id: 'working_capital_ratio', name: 'Working Capital Ratio', category: 'financial', dataSource: 'inventory_levels', format: 'ratio' },
+  { id: 'cash_conversion_cycle', name: 'Cash Conversion Cycle (Days)', category: 'financial', dataSource: 'supplier_orders', format: 'number' },
+  { id: 'operating_cash_flow', name: 'Operating Cash Flow', category: 'financial', dataSource: 'transactions', format: 'currency' },
+  { id: 'free_cash_flow', name: 'Free Cash Flow', category: 'financial', dataSource: 'transactions', format: 'currency' },
+  { id: 'return_on_assets', name: 'Return on Assets (ROA)', category: 'financial', dataSource: 'transactions', format: 'percent' },
+  { id: 'return_on_invested_capital', name: 'ROIC', category: 'financial', dataSource: 'transactions', format: 'percent' },
+  { id: 'asset_turnover', name: 'Asset Turnover', category: 'financial', dataSource: 'transactions', format: 'ratio' },
+  
+  // Profitability & Efficiency
+  { id: 'contribution_margin', name: 'Contribution Margin %', category: 'financial', dataSource: 'transactions', format: 'percent' },
+  { id: 'operating_leverage', name: 'Operating Leverage', category: 'financial', dataSource: 'transactions', format: 'ratio' },
+  { id: 'cost_to_serve', name: 'Cost to Serve', category: 'cost', dataSource: 'shipping_routes', format: 'currency' },
+  { id: 'shrinkage_rate', name: 'Shrinkage Rate %', category: 'financial', dataSource: 'inventory_levels', format: 'percent' },
+  { id: 'margin_vs_budget', name: 'Margin vs Budget', category: 'financial', dataSource: 'transactions', format: 'percent' },
+  
   // Pricing & Competitive
   { id: 'competitive_index', name: 'Competitive Price Index', category: 'pricing', dataSource: 'competitor_prices', format: 'ratio' },
   { id: 'price_perception', name: 'Price Perception Score', category: 'pricing', dataSource: 'competitor_data', format: 'ratio' },
-  { id: 'margin_vs_budget', name: 'Margin vs Budget', category: 'financial', dataSource: 'transactions', format: 'percent' },
+  { id: 'price_realization', name: 'Price Realization %', category: 'pricing', dataSource: 'transactions', format: 'percent' },
+  
   // Promotion
   { id: 'promo_roi', name: 'Promotion ROI', category: 'promotion', dataSource: 'promotions', format: 'ratio' },
   { id: 'promo_spend_pct', name: 'Promo Spend % of Revenue', category: 'promotion', dataSource: 'promotions', format: 'percent' },
   { id: 'promo_lift', name: 'Average Promo Lift %', category: 'promotion', dataSource: 'transactions', format: 'percent' },
+  { id: 'promo_effectiveness', name: 'Promo Effectiveness Index', category: 'promotion', dataSource: 'promotions', format: 'ratio' },
+  
   // Demand & Inventory
   { id: 'forecast_accuracy', name: 'Forecast Accuracy', category: 'demand', dataSource: 'demand_forecasts', format: 'percent' },
   { id: 'inventory_value', name: 'Inventory Investment', category: 'inventory', dataSource: 'inventory_levels', format: 'currency' },
   { id: 'stockout_rate', name: 'Stockout Rate', category: 'inventory', dataSource: 'inventory_levels', format: 'percent' },
   { id: 'inventory_turnover', name: 'Inventory Turnover', category: 'inventory', dataSource: 'inventory_levels', format: 'ratio' },
   { id: 'days_of_supply', name: 'Days of Supply', category: 'inventory', dataSource: 'inventory_levels', format: 'number' },
+  { id: 'gmroi', name: 'GMROI', category: 'inventory', dataSource: 'inventory_levels', format: 'ratio' },
+  { id: 'inventory_to_sales', name: 'Inventory to Sales Ratio', category: 'inventory', dataSource: 'inventory_levels', format: 'ratio' },
+  
   // Supply Chain
   { id: 'on_time_delivery', name: 'On-Time Delivery %', category: 'logistics', dataSource: 'supplier_orders', format: 'percent' },
   { id: 'supplier_reliability', name: 'Supplier Reliability', category: 'supplier', dataSource: 'suppliers', format: 'percent' },
   { id: 'logistics_cost_pct', name: 'Logistics Cost % Revenue', category: 'cost', dataSource: 'shipping_routes', format: 'percent' },
+  { id: 'supply_chain_cost', name: 'Total Supply Chain Cost', category: 'cost', dataSource: 'shipping_routes', format: 'currency' },
+  
   // Space & Store
   { id: 'sales_per_sqft', name: 'Sales per Sq Ft', category: 'space', dataSource: 'shelf_allocations', format: 'currency' },
   { id: 'store_conversion', name: 'Store Conversion Rate', category: 'store', dataSource: 'store_performance', format: 'percent' },
   { id: 'basket_size', name: 'Average Basket Size', category: 'store', dataSource: 'store_performance', format: 'currency' },
   { id: 'foot_traffic', name: 'Foot Traffic Index', category: 'store', dataSource: 'store_performance', format: 'number' },
-  // Customer
+  { id: 'same_store_sales', name: 'Same-Store Sales Growth', category: 'store', dataSource: 'store_performance', format: 'percent' },
+  { id: 'labor_productivity', name: 'Sales per Labor Hour', category: 'store', dataSource: 'store_performance', format: 'currency' },
+  
+  // Customer & Market
   { id: 'customer_ltv', name: 'Customer LTV', category: 'customer', dataSource: 'customers', format: 'currency' },
+  { id: 'customer_acquisition_cost', name: 'Customer Acquisition Cost', category: 'customer', dataSource: 'marketing_channels', format: 'currency' },
+  { id: 'customer_retention_rate', name: 'Customer Retention Rate', category: 'customer', dataSource: 'customers', format: 'percent' },
   { id: 'market_share', name: 'Market Share %', category: 'competitive', dataSource: 'competitor_data', format: 'percent' },
+  { id: 'share_of_wallet', name: 'Share of Wallet', category: 'customer', dataSource: 'customers', format: 'percent' },
 ];
 
 export const getKPIsByModule = (moduleId: string): ModuleKPI[] => {
