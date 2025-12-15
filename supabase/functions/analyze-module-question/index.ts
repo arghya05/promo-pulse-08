@@ -122,15 +122,20 @@ serve(async (req) => {
   }
 
   try {
-    const { question, moduleId, selectedKPIs, crossModules } = await req.json();
+    const { question, moduleId, selectedKPIs, crossModules, conversationHistory, conversationContext } = await req.json();
     
     // Detect simulation and cross-module questions
     const isSimulation = isSimulationQuestion(question);
     const detectedModules = detectCrossModuleQuestion(question);
     const isCrossModule = detectedModules.length > 1 || moduleId === 'cross-module' || (crossModules && crossModules.length > 0);
     
+    // Check if this is a drill-down continuation
+    const isDrillDown = conversationContext?.drillLevel > 0 || question.toLowerCase().includes('drill');
+    const drillPath = conversationContext?.drillPath || [];
+    
     console.log(`[${moduleId}] Analyzing question: ${question}`);
-    console.log(`[${moduleId}] Is simulation: ${isSimulation}, Cross-module: ${isCrossModule}, Detected modules: ${detectedModules.join(', ')}`);
+    console.log(`[${moduleId}] Is simulation: ${isSimulation}, Cross-module: ${isCrossModule}, Drill-down: ${isDrillDown}, Drill level: ${conversationContext?.drillLevel || 0}`);
+    console.log(`[${moduleId}] Conversation context:`, JSON.stringify(conversationContext || {}));
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -1491,6 +1496,33 @@ Respond with a JSON object:
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     
+    // Build conversation context for AI
+    const conversationContextPrompt = conversationContext ? `
+CONVERSATION CONTEXT (use this to provide continuity):
+- Previous category focus: ${conversationContext.lastCategory || 'none'}
+- Previous product focus: ${conversationContext.lastProduct || 'none'}
+- Previous metric focus: ${conversationContext.lastMetric || 'none'}
+- Previous time period: ${conversationContext.lastTimePeriod || 'none'}
+- Drill-down path so far: ${drillPath.join(' → ') || 'top level'}
+- Current drill level: ${conversationContext.drillLevel || 0}
+
+${isDrillDown ? `DRILL-DOWN INSTRUCTIONS:
+- This is a DRILL-DOWN request at level ${conversationContext.drillLevel || 1}
+- User is exploring deeper from: ${drillPath[drillPath.length - 1] || 'top level'}
+- Provide MORE GRANULAR data than the previous response
+- Break down the metric/category into its components
+- Show the NEXT LEVEL of detail (e.g., category → products, store → regions, week → days)
+- Suggest further drill-down options at the end
+` : ''}
+
+${conversationHistory && conversationHistory.length > 0 ? `
+PREVIOUS CONVERSATION (for context continuity):
+${conversationHistory.map((m: any) => `${m.role.toUpperCase()}: ${m.content}`).join('\n')}
+` : ''}
+` : '';
+
+    const enhancedUserPrompt = conversationContextPrompt + '\n\n' + userPrompt;
+    
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -1501,7 +1533,7 @@ Respond with a JSON object:
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          { role: 'user', content: enhancedUserPrompt }
         ],
         temperature: 0.3,
       }),
