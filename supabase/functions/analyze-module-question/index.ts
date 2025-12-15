@@ -12,7 +12,7 @@ const moduleContexts: Record<string, string> = {
   
   assortment: `You are an Assortment Planning AI for a $4B grocery retailer. Analyze product mix, category management, SKU rationalization, brand portfolio, new product performance, and private label opportunities. Use actual data from products, transactions, and inventory tables. NEVER mention promotions, ROI, or lift - focus ONLY on assortment metrics like SKU productivity, category gaps, brand mix.`,
   
-  demand: `You are a Demand Forecasting & Replenishment AI for a $4B grocery retailer. You MUST provide hierarchical forecasts from Category → Product/SKU → Store → Time Period (Month/Week/Day). When asked about forecasts by category or product, provide forecasted units, actual units, and accuracy for each level with drill-down capability. Analyze demand patterns, forecast accuracy, stockout risks, reorder points, and seasonal trends. Use actual data from demand_forecasts, forecast_accuracy_tracking, and inventory_levels tables. Your chartData MUST show forecasted values broken down by the requested dimension (category, SKU, month, etc.). NEVER mention promotions, ROI, or lift - focus ONLY on demand and inventory metrics.`,
+  demand: `You are a Demand Forecasting & Replenishment AI for a $4B grocery retailer. You MUST provide hierarchical forecasts from Category → Product/SKU → Store → Time Period (Month/Week/Day). When asked WHY forecasts are what they are, you MUST explain using DEMAND DRIVERS and EXTERNAL SIGNALS: seasonal patterns, weather impact, promotional lift, competitor activity, economic factors, historical trends, and event impacts. Always reference specific driver data with correlations and impact levels. Use actual data from demand_forecasts, forecast_accuracy_tracking, inventory_levels, and third_party_data tables. NEVER mention promotions, ROI, or lift unless explaining promotional demand drivers.`,
   
   'supply-chain': `You are a Supply Chain AI for a $4B grocery retailer. Analyze supplier performance, lead times, on-time delivery, logistics costs, warehouse capacity, and distribution routes. Use actual data from suppliers, supplier_orders, and shipping_routes tables. NEVER mention promotions, ROI, or lift - focus ONLY on supply chain metrics.`,
   
@@ -306,14 +306,20 @@ INVENTORY STATUS:
       }
       
       case 'demand': {
-        const [forecastsRes, accuracyRes, inventoryRes] = await Promise.all([
+        const [forecastsRes, accuracyRes, inventoryRes, demandDriversRes, externalSignalsRes, competitorRes] = await Promise.all([
           supabase.from('demand_forecasts').select('*').limit(1000),
           supabase.from('forecast_accuracy_tracking').select('*').limit(200),
           supabase.from('inventory_levels').select('*').limit(500),
+          supabase.from('third_party_data').select('*').eq('data_type', 'demand_driver').limit(100),
+          supabase.from('third_party_data').select('*').in('data_type', ['weather', 'economic', 'market_share']).limit(100),
+          supabase.from('competitor_data').select('*').limit(50),
         ]);
         const forecasts = forecastsRes.data || [];
         const accuracyTracking = accuracyRes.data || [];
         const inventory = inventoryRes.data || [];
+        const demandDrivers = demandDriversRes.data || [];
+        const externalSignals = externalSignalsRes.data || [];
+        const competitorData = competitorRes.data || [];
         
         // Create product lookup for names
         const productLookup: Record<string, any> = {};
@@ -567,10 +573,38 @@ ${Object.entries(modelAccuracy).map(([model, data]) => `- ${model}: MAPE ${(data
 SEASONAL PATTERNS:
 ${Object.entries(seasonalByType).map(([type, prods]) => `- ${type}: ${prods.slice(0, 5).join(', ')}${prods.length > 5 ? ` (+${prods.length - 5} more)` : ''}`).join('\n')}
 
+DEMAND DRIVERS & CAUSAL FACTORS (USE THESE TO EXPLAIN FORECASTS):
+${demandDrivers.map((d: any) => {
+  const meta = d.metadata || {};
+  const driverType = meta.driver_type || 'unknown';
+  const correlation = meta.correlation ? `(correlation: ${(meta.correlation * 100).toFixed(0)}%)` : '';
+  const impact = meta.impact ? `[${meta.impact} impact]` : '';
+  return `- ${d.metric_name} ${d.product_category ? `for ${d.product_category}` : ''}: ${d.metric_value} ${impact} ${correlation}
+    Source: ${d.data_source} | Type: ${driverType} | Date: ${d.data_date}`;
+}).join('\n')}
+
+EXTERNAL SIGNALS (WEATHER, ECONOMIC, MARKET):
+${externalSignals.map((s: any) => `- ${s.metric_name}: ${s.metric_value} (${s.data_source}, ${s.data_date})`).join('\n')}
+
+COMPETITOR ACTIVITY AFFECTING DEMAND:
+${competitorData.slice(0, 8).map((c: any) => `- ${c.competitor_name} (${c.product_category}): ${c.promotion_intensity || 'Normal'} promotion intensity, ${c.market_share_percent}% market share`).join('\n')}
+
+FORECAST REASONING FRAMEWORK:
+When explaining WHY forecasts are what they are, reference:
+1. SEASONAL DRIVERS: Holiday indices, seasonal patterns by category
+2. WEATHER IMPACT: Temperature, storms, weather-driven demand shifts
+3. PROMOTIONAL LIFT: Active promotions increasing baseline demand
+4. COMPETITIVE SIGNALS: Competitor stockouts, price changes, promotion intensity
+5. ECONOMIC FACTORS: Consumer confidence, inflation, disposable income
+6. HISTORICAL TRENDS: YoY growth rates, cyclical patterns
+7. EVENT IMPACTS: Super Bowl, holidays, local events
+8. SUPPLY CONSTRAINTS: Shipping delays, supplier issues limiting availability
+
 DRILL-DOWN PATHS AVAILABLE:
 - Category → Product/SKU → Store → Month/Week/Day
 - Month → Week → Day → Category → Product/SKU
-- Store/Region → Category → Week/Day → Product/SKU`;
+- Store/Region → Category → Week/Day → Product/SKU
+- Forecast → Drivers → External Signals → Historical Comparison`;
         break;
       }
       
