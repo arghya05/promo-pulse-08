@@ -1497,18 +1497,48 @@ Respond with a JSON object:
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     
     // Build conversation context for AI
-    const conversationContextPrompt = conversationContext ? `
+    // Build explicit context reference for conversational continuity
+    const buildContextReference = () => {
+      if (!conversationContext && (!conversationHistory || conversationHistory.length === 0)) {
+        return '';
+      }
+      
+      const refs: string[] = [];
+      if (conversationContext?.lastPromotion) {
+        refs.push(`the "${conversationContext.lastPromotion}" promotion we discussed`);
+      }
+      if (conversationContext?.lastCategory) {
+        refs.push(`the ${conversationContext.lastCategory} category you were exploring`);
+      }
+      if (conversationContext?.lastMetric) {
+        refs.push(`your focus on ${conversationContext.lastMetric}`);
+      }
+      
+      return refs.length > 0 ? `Building on ${refs.join(' and ')}: ` : '';
+    };
+    
+    const contextReference = buildContextReference();
+    
+    const conversationContextPrompt = conversationContext || (conversationHistory && conversationHistory.length > 0) ? `
 CONVERSATION CONTEXT (use this to provide continuity):
-- Previous category focus: ${conversationContext.lastCategory || 'none'}
-- Previous product focus: ${conversationContext.lastProduct || 'none'}
-- Previous metric focus: ${conversationContext.lastMetric || 'none'}
-- Previous time period: ${conversationContext.lastTimePeriod || 'none'}
+- Previous category focus: ${conversationContext?.lastCategory || 'none'}
+- Previous product/promotion focus: ${conversationContext?.lastPromotion || 'none'}
+- Previous metric focus: ${conversationContext?.lastMetric || 'none'}
+- Previous time period: ${conversationContext?.lastTimePeriod || 'none'}
 - Drill-down path so far: ${drillPath.join(' → ') || 'top level'}
-- Current drill level: ${conversationContext.drillLevel || 0}
+- Current drill level: ${conversationContext?.drillLevel || 0}
+
+CRITICAL RESPONSE INSTRUCTION FOR CONVERSATION CONTINUITY:
+${contextReference ? `- START your "whatHappened" response with context like: "${contextReference}" to acknowledge what was previously discussed.` : ''}
+- If continuing a previous analysis, explicitly reference the previous entities (promotion names, categories, metrics).
+- Use phrases like "Building on your [X] analysis...", "Following up on [previous topic]...", "Continuing from [previous context]...".
+- Make clear connections between this answer and previous questions when relevant.
+- If the user is drilling deeper, acknowledge the drill-down with "Drilling into [entity]..." or "Looking more closely at [entity]...".
 
 ${isDrillDown ? `DRILL-DOWN INSTRUCTIONS:
-- This is a DRILL-DOWN request at level ${conversationContext.drillLevel || 1}
+- This is a DRILL-DOWN request at level ${conversationContext?.drillLevel || 1}
 - User is exploring deeper from: ${drillPath[drillPath.length - 1] || 'top level'}
+- START response with "Drilling deeper into ${drillPath[drillPath.length - 1] || 'the data'}..."
 - Provide MORE GRANULAR data than the previous response
 - Break down the metric/category into its components
 - Show the NEXT LEVEL of detail (e.g., category → products, store → regions, week → days)
@@ -1516,8 +1546,10 @@ ${isDrillDown ? `DRILL-DOWN INSTRUCTIONS:
 ` : ''}
 
 ${conversationHistory && conversationHistory.length > 0 ? `
-PREVIOUS CONVERSATION (for context continuity):
-${conversationHistory.map((m: any) => `${m.role.toUpperCase()}: ${m.content}`).join('\n')}
+PREVIOUS CONVERSATION (reference these explicitly when relevant):
+${conversationHistory.slice(-4).map((m: any) => `${m.role.toUpperCase()}: ${m.content}`).join('\n')}
+
+Remember: Explicitly reference previous topics to make the conversation feel continuous.
 ` : ''}
 ` : '';
 
