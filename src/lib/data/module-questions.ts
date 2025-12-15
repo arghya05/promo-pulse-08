@@ -187,35 +187,68 @@ export const demandQuestions: ModuleQuestion[] = [
 
 export const demandPopularIds = [1, 2, 3, 5, 19, 20, 23, 32];
 
-// Supply Chain Questions (16+)
+// Supply Chain Questions (42+)
 export const supplyChainQuestions: ModuleQuestion[] = [
-  // Core Supply Chain
+  // Core Supplier Performance
   { id: 1, text: "Which suppliers have the best on-time delivery performance?", tags: ['supplier', 'delivery'], metricKey: 'on_time_delivery', chartType: 'bar' },
   { id: 2, text: "What's the average lead time by product category?", tags: ['lead-time', 'category'], metricKey: 'lead_time', chartType: 'bar' },
-  { id: 3, text: "How can we optimize distribution routes?", tags: ['distribution', 'optimization'], metricKey: 'route_efficiency', chartType: 'bar' },
-  { id: 4, text: "Which warehouses are operating at capacity?", tags: ['warehouse', 'capacity'], metricKey: 'warehouse_utilization', chartType: 'bar' },
-  { id: 5, text: "What's the cost breakdown of our logistics operations?", tags: ['cost', 'logistics'], metricKey: 'logistics_cost', chartType: 'pie' },
-  { id: 6, text: "How do supplier issues impact store availability?", tags: ['supplier', 'availability'], metricKey: 'supplier_fill_rate', chartType: 'bar' },
-  { id: 7, text: "What's the perfect order rate by region?", tags: ['perfect-order', 'regional'], metricKey: 'perfect_order_rate', chartType: 'bar' },
-  { id: 8, text: "How can we reduce transportation costs?", tags: ['transportation', 'cost'], metricKey: 'transport_cost_per_unit', chartType: 'bar' },
-  // Extended Supply Chain
-  { id: 9, text: "Which suppliers are single-source risks?", tags: ['risk', 'single-source'], metricKey: 'supplier_risk', chartType: 'bar' },
-  { id: 10, text: "What's the carbon footprint by transportation mode?", tags: ['sustainability', 'carbon'], metricKey: 'carbon_footprint', chartType: 'pie' },
-  { id: 11, text: "How does supplier reliability correlate with product availability?", tags: ['reliability', 'availability'], metricKey: 'reliability_availability', chartType: 'line' },
-  { id: 12, text: "What's the total cost of ownership by supplier?", tags: ['tco', 'supplier'], metricKey: 'total_cost_ownership', chartType: 'bar' },
-  { id: 13, text: "Which routes have the highest variability in transit time?", tags: ['transit', 'variability'], metricKey: 'transit_variability', chartType: 'bar' },
-  { id: 14, text: "What's the optimal order frequency by supplier?", tags: ['order-frequency', 'optimization'], metricKey: 'optimal_frequency', chartType: 'bar' },
-  { id: 15, text: "How do payment terms impact supplier performance?", tags: ['payment', 'performance'], metricKey: 'payment_performance', chartType: 'bar' },
-  { id: 16, text: "What's the inbound logistics efficiency by DC?", tags: ['inbound', 'dc'], metricKey: 'inbound_efficiency', chartType: 'bar' },
-  // Simulation
-  { id: 17, text: "What if a key supplier has a 2-week disruption?", tags: ['simulation', 'disruption'], metricKey: 'simulated_impact', chartType: 'bar', isSimulation: true },
-  { id: 18, text: "What if we consolidate shipments to reduce costs?", tags: ['simulation', 'consolidation'], metricKey: 'simulated_savings', chartType: 'bar', isSimulation: true },
+  { id: 3, text: "Which suppliers have the highest reliability scores?", tags: ['supplier', 'reliability'], metricKey: 'reliability_score', chartType: 'bar' },
+  { id: 4, text: "What's the supplier fill rate by vendor?", tags: ['supplier', 'fill-rate'], metricKey: 'fill_rate', chartType: 'bar' },
+  { id: 5, text: "Which suppliers are causing the most late deliveries?", tags: ['supplier', 'late'], metricKey: 'late_deliveries', chartType: 'bar' },
+  { id: 6, text: "What's the total cost of ownership by supplier?", tags: ['tco', 'supplier'], metricKey: 'total_cost_ownership', chartType: 'bar' },
+  { id: 7, text: "How do payment terms impact supplier performance?", tags: ['payment', 'performance'], metricKey: 'payment_performance', chartType: 'bar' },
+  { id: 8, text: "What's the supplier scorecard by key metrics?", tags: ['supplier', 'scorecard'], metricKey: 'supplier_scorecard', chartType: 'bar' },
+  
+  // Lead Time & Order Analysis
+  { id: 9, text: "What's the lead time variability by supplier?", tags: ['lead-time', 'variability'], metricKey: 'lead_time_variability', chartType: 'bar' },
+  { id: 10, text: "Which orders are currently at risk of being late?", tags: ['orders', 'risk'], metricKey: 'at_risk_orders', chartType: 'bar' },
+  { id: 11, text: "What's the order status breakdown by supplier?", tags: ['orders', 'status'], metricKey: 'order_status', chartType: 'pie' },
+  { id: 12, text: "What's the optimal order frequency by supplier?", tags: ['order-frequency', 'optimization'], metricKey: 'optimal_frequency', chartType: 'bar' },
+  { id: 13, text: "Which pending orders need expediting?", tags: ['orders', 'expedite'], metricKey: 'expedite_orders', chartType: 'bar' },
+  { id: 14, text: "What's the average order cycle time by supplier?", tags: ['cycle-time', 'supplier'], metricKey: 'cycle_time', chartType: 'bar' },
+  
+  // Logistics & Transportation
+  { id: 15, text: "How can we optimize distribution routes?", tags: ['distribution', 'optimization'], metricKey: 'route_efficiency', chartType: 'bar' },
+  { id: 16, text: "What's the cost breakdown of our logistics operations?", tags: ['cost', 'logistics'], metricKey: 'logistics_cost', chartType: 'pie' },
+  { id: 17, text: "How can we reduce transportation costs?", tags: ['transportation', 'cost'], metricKey: 'transport_cost_per_unit', chartType: 'bar' },
+  { id: 18, text: "Which routes have the highest variability in transit time?", tags: ['transit', 'variability'], metricKey: 'transit_variability', chartType: 'bar' },
+  { id: 19, text: "What's the carbon footprint by transportation mode?", tags: ['sustainability', 'carbon'], metricKey: 'carbon_footprint', chartType: 'pie' },
+  { id: 20, text: "What's the cost per mile by shipping route?", tags: ['cost', 'route'], metricKey: 'cost_per_mile', chartType: 'bar' },
+  { id: 21, text: "Which routes are most cost-effective for each region?", tags: ['route', 'regional'], metricKey: 'regional_routes', chartType: 'bar' },
+  
+  // Risk Management
+  { id: 22, text: "Which suppliers are single-source risks?", tags: ['risk', 'single-source'], metricKey: 'supplier_risk', chartType: 'bar' },
+  { id: 23, text: "What's our supplier concentration risk by category?", tags: ['risk', 'concentration'], metricKey: 'concentration_risk', chartType: 'bar' },
+  { id: 24, text: "Which suppliers have declining reliability trends?", tags: ['risk', 'trend'], metricKey: 'reliability_trend', chartType: 'line' },
+  { id: 25, text: "What's the geographic risk in our supplier base?", tags: ['risk', 'geographic'], metricKey: 'geographic_risk', chartType: 'bar' },
+  { id: 26, text: "Which categories have the highest supply chain risk?", tags: ['risk', 'category'], metricKey: 'category_risk', chartType: 'bar' },
+  
+  // Cost Optimization
+  { id: 27, text: "Where are the biggest cost reduction opportunities?", tags: ['cost', 'optimization'], metricKey: 'cost_opportunity', chartType: 'bar' },
+  { id: 28, text: "What's the inbound freight cost by supplier?", tags: ['freight', 'cost'], metricKey: 'inbound_freight', chartType: 'bar' },
+  { id: 29, text: "How do minimum order quantities impact our costs?", tags: ['moq', 'cost'], metricKey: 'moq_impact', chartType: 'bar' },
+  { id: 30, text: "What's the landed cost analysis by product category?", tags: ['landed-cost', 'category'], metricKey: 'landed_cost', chartType: 'bar' },
+  
+  // Capacity & Operations
+  { id: 31, text: "Which warehouses are operating at capacity?", tags: ['warehouse', 'capacity'], metricKey: 'warehouse_utilization', chartType: 'bar' },
+  { id: 32, text: "What's the inbound logistics efficiency by DC?", tags: ['inbound', 'dc'], metricKey: 'inbound_efficiency', chartType: 'bar' },
+  { id: 33, text: "What's the perfect order rate by region?", tags: ['perfect-order', 'regional'], metricKey: 'perfect_order_rate', chartType: 'bar' },
+  { id: 34, text: "How do supplier issues impact store availability?", tags: ['supplier', 'availability'], metricKey: 'supplier_fill_rate', chartType: 'bar' },
+  
+  // Simulation / What-If
+  { id: 35, text: "What if a key supplier has a 2-week disruption?", tags: ['simulation', 'disruption'], metricKey: 'simulated_impact', chartType: 'bar', isSimulation: true },
+  { id: 36, text: "What if we consolidate shipments to reduce costs?", tags: ['simulation', 'consolidation'], metricKey: 'simulated_savings', chartType: 'bar', isSimulation: true },
+  { id: 37, text: "What if we switch to a new carrier for West region?", tags: ['simulation', 'carrier'], metricKey: 'simulated_carrier_switch', chartType: 'bar', isSimulation: true },
+  { id: 38, text: "What if supplier lead times increase by 5 days?", tags: ['simulation', 'lead-time'], metricKey: 'simulated_lead_time', chartType: 'bar', isSimulation: true },
+  { id: 39, text: "What if we dual-source our highest-risk suppliers?", tags: ['simulation', 'dual-source'], metricKey: 'simulated_dual_source', chartType: 'bar', isSimulation: true },
+  
   // Cross-module
-  { id: 19, text: "How does supplier lead time impact pricing flexibility?", tags: ['cross-module', 'pricing'], metricKey: 'leadtime_pricing_impact', chartType: 'bar', crossModule: ['pricing'] },
-  { id: 20, text: "What's the supply chain constraint on assortment expansion?", tags: ['cross-module', 'assortment'], metricKey: 'supply_assortment_constraint', chartType: 'bar', crossModule: ['assortment'] },
+  { id: 40, text: "How does supplier lead time impact pricing flexibility?", tags: ['cross-module', 'pricing'], metricKey: 'leadtime_pricing_impact', chartType: 'bar', crossModule: ['pricing'] },
+  { id: 41, text: "What's the supply chain constraint on assortment expansion?", tags: ['cross-module', 'assortment'], metricKey: 'supply_assortment_constraint', chartType: 'bar', crossModule: ['assortment'] },
+  { id: 42, text: "How does supply variability affect demand forecasting?", tags: ['cross-module', 'demand'], metricKey: 'supply_demand_impact', chartType: 'line', crossModule: ['demand'] },
 ];
 
-export const supplyChainPopularIds = [1, 2, 4, 5, 6, 17, 19];
+export const supplyChainPopularIds = [1, 3, 10, 16, 22, 35, 40];
 
 // Space Planning Questions (16+)
 export const spaceQuestions: ModuleQuestion[] = [

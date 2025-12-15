@@ -63,7 +63,25 @@ REPLENISHMENT: Provide actionable replenishment recommendations including:
 
 Use actual data from demand_forecasts, forecast_accuracy_tracking, inventory_levels, suppliers, supplier_orders, and third_party_data tables. NEVER mention promotions, ROI, or lift unless explaining promotional demand drivers.`,
   
-  'supply-chain': `You are a Supply Chain AI for a $4B grocery retailer. Analyze supplier performance, lead times, on-time delivery, logistics costs, warehouse capacity, and distribution routes. Use actual data from suppliers, supplier_orders, and shipping_routes tables. NEVER mention promotions, ROI, or lift - focus ONLY on supply chain metrics.`,
+  'supply-chain': `You are a Supply Chain AI for a $4B grocery retailer.
+
+SUPPLY CHAIN ANALYSIS CAPABILITIES:
+1. Supplier Performance: Track reliability scores, on-time delivery, fill rates, and lead time compliance
+2. Order Management: Monitor order status, at-risk orders, expediting needs, and cycle times
+3. Logistics Optimization: Analyze shipping routes, transportation costs, and delivery networks
+4. Risk Management: Identify single-source risks, supplier concentration, geographic exposure
+5. Cost Analysis: Total cost of ownership, landed costs, freight analysis, and cost reduction opportunities
+6. Capacity Planning: Warehouse utilization, inbound efficiency, and perfect order rates
+
+SUPPLY CHAIN DRIVERS TO REFERENCE:
+- Supplier reliability metrics (on-time %, fill rate, quality score)
+- Lead time data (average, variability, trend)
+- Order performance (pending, late, at-risk)
+- Transportation costs (per mile, per unit, by mode)
+- Risk indicators (single-source, concentration, geographic)
+- Route efficiency (transit time, cost per mile, carbon footprint)
+
+When providing recommendations, reference specific SUPPLIER NAMES, ROUTE NAMES, ORDER DETAILS, and COST METRICS. Use actual reliability percentages, lead times, and order values. NEVER mention promotions, ROI, or lift - focus ONLY on supply chain metrics.`,
   
   space: `You are a Space Planning AI for a $4B grocery retailer. Analyze shelf space allocation, planogram compliance, sales per square foot, fixture utilization, product adjacencies, and store layouts. Use actual data from planograms, shelf_allocations, fixtures, and store_performance tables. NEVER mention promotions, ROI, or lift - focus ONLY on space planning metrics.`,
   
@@ -1007,16 +1025,18 @@ DRILL-DOWN PATHS AVAILABLE:
       }
       
       case 'supply-chain': {
-        const [suppliersRes, ordersRes, routesRes, inventoryRes] = await Promise.all([
+        const [suppliersRes, ordersRes, routesRes, inventoryRes, supplyChainSignalsRes] = await Promise.all([
           supabase.from('suppliers').select('*').limit(100),
-          supabase.from('supplier_orders').select('*').limit(500),
+          supabase.from('supplier_orders').select('*').limit(1000),
           supabase.from('shipping_routes').select('*').limit(200),
           supabase.from('inventory_levels').select('*').limit(500),
+          supabase.from('third_party_data').select('*').in('data_type', ['supply_chain', 'logistics', 'freight']).limit(50),
         ]);
         const suppliers = suppliersRes.data || [];
         const orders = ordersRes.data || [];
         const routes = routesRes.data || [];
         const inventory = inventoryRes.data || [];
+        const supplyChainSignals = supplyChainSignalsRes.data || [];
         
         // Create product lookup for names
         const productLookup: Record<string, any> = {};
@@ -1026,86 +1046,224 @@ DRILL-DOWN PATHS AVAILABLE:
         const supplierLookup: Record<string, any> = {};
         suppliers.forEach((s: any) => { supplierLookup[s.id] = s; });
         
-        const avgReliability = suppliers.reduce((sum, s: any) => sum + Number(s.reliability_score || 0), 0) / (suppliers.length || 1);
-        const avgLeadTime = suppliers.reduce((sum, s: any) => sum + Number(s.lead_time_days || 0), 0) / (suppliers.length || 1);
+        // Comprehensive supplier analysis
+        const supplierMetrics: Record<string, { 
+          name: string; 
+          orders: number; 
+          onTime: number; 
+          late: number; 
+          totalValue: number; 
+          avgLeadTime: number;
+          reliability: number;
+          products: Set<string>;
+          categories: Set<string>;
+          location: string;
+        }> = {};
         
-        // Sort suppliers by reliability
-        const sortedSuppliers = [...suppliers].sort((a: any, b: any) => Number(b.reliability_score || 0) - Number(a.reliability_score || 0));
-        const topSuppliers = sortedSuppliers.slice(0, 10);
-        const lowSuppliers = sortedSuppliers.slice(-5).reverse();
+        orders.forEach((o: any) => {
+          const supplier = supplierLookup[o.supplier_id];
+          const product = productLookup[o.product_sku] || {};
+          if (supplier) {
+            if (!supplierMetrics[supplier.id]) {
+              supplierMetrics[supplier.id] = {
+                name: supplier.supplier_name,
+                orders: 0,
+                onTime: 0,
+                late: 0,
+                totalValue: 0,
+                avgLeadTime: supplier.lead_time_days || 0,
+                reliability: supplier.reliability_score || 0,
+                products: new Set(),
+                categories: new Set(),
+                location: `${supplier.city || ''}, ${supplier.state || ''}`
+              };
+            }
+            supplierMetrics[supplier.id].orders++;
+            if (o.on_time === true) supplierMetrics[supplier.id].onTime++;
+            if (o.on_time === false) supplierMetrics[supplier.id].late++;
+            supplierMetrics[supplier.id].totalValue += Number(o.total_cost || 0);
+            supplierMetrics[supplier.id].products.add(o.product_sku);
+            if (product.category) supplierMetrics[supplier.id].categories.add(product.category);
+          }
+        });
         
+        // Convert to array and calculate on-time %
+        const supplierPerformance = Object.entries(supplierMetrics).map(([id, data]) => ({
+          ...data,
+          onTimeRate: data.orders > 0 ? (data.onTime / data.orders) * 100 : 0,
+          lateRate: data.orders > 0 ? (data.late / data.orders) * 100 : 0,
+          productCount: data.products.size,
+          categoryCount: data.categories.size
+        })).sort((a, b) => b.onTimeRate - a.onTimeRate);
+        
+        const topSuppliers = supplierPerformance.slice(0, 10);
+        const lowSuppliers = supplierPerformance.filter(s => s.orders > 2).sort((a, b) => a.onTimeRate - b.onTimeRate).slice(0, 8);
+        
+        // Single-source risk analysis
+        const categorySuppliers: Record<string, Set<string>> = {};
+        Object.values(supplierMetrics).forEach(s => {
+          s.categories.forEach(cat => {
+            if (!categorySuppliers[cat]) categorySuppliers[cat] = new Set();
+            categorySuppliers[cat].add(s.name);
+          });
+        });
+        const singleSourceRisks = Object.entries(categorySuppliers)
+          .filter(([_, suppliers]) => suppliers.size === 1)
+          .map(([category, suppliers]) => ({ category, supplier: Array.from(suppliers)[0] }));
+        
+        // Order analysis
         const onTimeOrders = orders.filter((o: any) => o.on_time === true);
         const lateOrders = orders.filter((o: any) => o.on_time === false);
         const pendingOrders = orders.filter((o: any) => o.status === 'pending');
         const totalOrderValue = orders.reduce((sum, o: any) => sum + Number(o.total_cost || 0), 0);
         
-        // Recent orders with product and supplier names
-        const recentOrders = orders.slice(0, 15).map((o: any) => {
-          const product = productLookup[o.product_sku] || {};
-          const supplier = supplierLookup[o.supplier_id] || {};
-          return {
-            product: product.product_name || o.product_sku,
-            supplier: supplier.supplier_name || 'Unknown',
-            quantity: o.quantity,
-            value: o.total_cost,
-            status: o.status,
-            onTime: o.on_time
-          };
-        });
-        
-        // Late orders with details
-        const lateOrderDetails = lateOrders.slice(0, 10).map((o: any) => {
+        // At-risk orders (pending with expected delivery approaching)
+        const today = new Date();
+        const atRiskOrders = pendingOrders.filter((o: any) => {
+          const expected = new Date(o.expected_delivery_date);
+          const daysUntil = (expected.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
+          return daysUntil <= 3 && daysUntil >= 0;
+        }).map((o: any) => {
           const product = productLookup[o.product_sku] || {};
           const supplier = supplierLookup[o.supplier_id] || {};
           return {
             product: product.product_name || o.product_sku,
             supplier: supplier.supplier_name || 'Unknown',
             expected: o.expected_delivery_date,
-            actual: o.actual_delivery_date
+            quantity: o.quantity,
+            value: o.total_cost
           };
         });
         
-        // Shipping routes summary
-        const activeRoutes = routes.filter((r: any) => r.is_active);
-        const routesByMode: Record<string, number> = {};
-        routes.forEach((r: any) => {
-          routesByMode[r.transportation_mode || 'unknown'] = (routesByMode[r.transportation_mode || 'unknown'] || 0) + 1;
+        // Late orders with details
+        const lateOrderDetails = lateOrders.slice(0, 12).map((o: any) => {
+          const product = productLookup[o.product_sku] || {};
+          const supplier = supplierLookup[o.supplier_id] || {};
+          const expected = new Date(o.expected_delivery_date);
+          const actual = o.actual_delivery_date ? new Date(o.actual_delivery_date) : null;
+          const daysLate = actual ? Math.round((actual.getTime() - expected.getTime()) / (1000 * 60 * 60 * 24)) : null;
+          return {
+            product: product.product_name || o.product_sku,
+            supplier: supplier.supplier_name || 'Unknown',
+            expected: o.expected_delivery_date,
+            actual: o.actual_delivery_date,
+            daysLate,
+            value: o.total_cost
+          };
         });
+        
+        // Shipping routes analysis
+        const activeRoutes = routes.filter((r: any) => r.is_active);
+        const routesByMode: Record<string, { count: number; totalCost: number; totalDistance: number; avgTransit: number }> = {};
+        routes.forEach((r: any) => {
+          const mode = r.transportation_mode || 'unknown';
+          if (!routesByMode[mode]) routesByMode[mode] = { count: 0, totalCost: 0, totalDistance: 0, avgTransit: 0 };
+          routesByMode[mode].count++;
+          routesByMode[mode].totalCost += Number(r.cost_per_mile || 0) * Number(r.distance_miles || 0);
+          routesByMode[mode].totalDistance += Number(r.distance_miles || 0);
+          routesByMode[mode].avgTransit += Number(r.avg_transit_time_hours || 0);
+        });
+        
+        Object.keys(routesByMode).forEach(mode => {
+          routesByMode[mode].avgTransit /= routesByMode[mode].count || 1;
+        });
+        
+        // Route cost analysis
+        const routeCostAnalysis = routes.map((r: any) => ({
+          name: r.route_name,
+          origin: r.origin_location,
+          destination: r.destination_location,
+          mode: r.transportation_mode,
+          distance: r.distance_miles,
+          costPerMile: r.cost_per_mile,
+          totalCost: Number(r.cost_per_mile || 0) * Number(r.distance_miles || 0),
+          transitTime: r.avg_transit_time_hours,
+          carbon: r.carbon_footprint_kg
+        })).sort((a, b) => b.totalCost - a.totalCost);
+        
+        // Cost analysis summary
+        const totalLogisticsCost = routeCostAnalysis.reduce((sum, r) => sum + r.totalCost, 0);
+        const avgCostPerMile = routes.reduce((sum, r: any) => sum + Number(r.cost_per_mile || 0), 0) / (routes.length || 1);
+        const totalCarbon = routes.reduce((sum, r: any) => sum + Number(r.carbon_footprint_kg || 0), 0);
+        
+        // Lead time by category
+        const leadTimeByCategory: Record<string, { total: number; count: number; suppliers: string[] }> = {};
+        Object.values(supplierMetrics).forEach(s => {
+          s.categories.forEach(cat => {
+            if (!leadTimeByCategory[cat]) leadTimeByCategory[cat] = { total: 0, count: 0, suppliers: [] };
+            leadTimeByCategory[cat].total += s.avgLeadTime;
+            leadTimeByCategory[cat].count++;
+            leadTimeByCategory[cat].suppliers.push(s.name);
+          });
+        });
+        
+        const avgReliability = suppliers.reduce((sum, s: any) => sum + Number(s.reliability_score || 0), 0) / (suppliers.length || 1);
+        const avgLeadTime = suppliers.reduce((sum, s: any) => sum + Number(s.lead_time_days || 0), 0) / (suppliers.length || 1);
         
         dataContext = `
 SUPPLY CHAIN DATA SUMMARY:
-- Suppliers: ${suppliers.length}
-- Active routes: ${activeRoutes.length}
-- Total orders: ${orders.length}
-- Total order value: $${totalOrderValue.toFixed(2)}
+- Total Suppliers: ${suppliers.length}
+- Active Shipping Routes: ${activeRoutes.length}
+- Total Orders: ${orders.length}
+- Total Order Value: $${totalOrderValue.toFixed(0)}
+- Total Logistics Cost: $${totalLogisticsCost.toFixed(0)}
+
+SUPPLIER PERFORMANCE SCORECARD:
+- Average On-Time Rate: ${orders.length ? ((onTimeOrders.length / orders.length) * 100).toFixed(1) : 0}%
+- Average Reliability Score: ${(avgReliability * 100).toFixed(1)}%
+- Average Lead Time: ${avgLeadTime.toFixed(1)} days
 
 TOP PERFORMING SUPPLIERS (USE THESE SPECIFIC NAMES):
-${topSuppliers.map((s: any) => `- ${s.supplier_name}: ${(Number(s.reliability_score) * 100).toFixed(1)}% reliability, ${s.lead_time_days} day lead time, ${s.city || ''} ${s.state || ''}`).join('\n')}
+${topSuppliers.slice(0, 10).map(s => 
+  `- ${s.name}: ${s.onTimeRate.toFixed(1)}% on-time (${s.onTime}/${s.orders} orders), ${s.avgLeadTime} day lead time, $${s.totalValue.toFixed(0)} order value, ${s.categoryCount} categories`
+).join('\n')}
 
 LOW PERFORMING SUPPLIERS (NEED ATTENTION):
-${lowSuppliers.map((s: any) => `- ${s.supplier_name}: ${(Number(s.reliability_score) * 100).toFixed(1)}% reliability, ${s.lead_time_days} day lead time`).join('\n')}
+${lowSuppliers.map(s => 
+  `- ${s.name}: ${s.onTimeRate.toFixed(1)}% on-time (${s.late} late orders), ${s.avgLeadTime} day lead time, Location: ${s.location}`
+).join('\n')}
 
-SUPPLIER PERFORMANCE METRICS:
-- Average reliability: ${(avgReliability * 100).toFixed(1)}%
-- Average lead time: ${avgLeadTime.toFixed(1)} days
+SINGLE-SOURCE RISKS (CRITICAL):
+${singleSourceRisks.length > 0 
+  ? singleSourceRisks.map(r => `- ${r.category}: Only supplied by ${r.supplier}`).join('\n')
+  : '- No single-source risks identified'}
 
-ORDER PERFORMANCE:
+ORDER STATUS BREAKDOWN:
 - On-time deliveries: ${onTimeOrders.length} (${orders.length ? ((onTimeOrders.length / orders.length) * 100).toFixed(1) : 0}%)
-- Late deliveries: ${lateOrders.length}
+- Late deliveries: ${lateOrders.length} (${orders.length ? ((lateOrders.length / orders.length) * 100).toFixed(1) : 0}%)
 - Pending orders: ${pendingOrders.length}
+
+AT-RISK ORDERS (DELIVERY DUE WITHIN 3 DAYS):
+${atRiskOrders.length > 0 
+  ? atRiskOrders.slice(0, 8).map(o => `- ${o.product} from ${o.supplier}: Due ${o.expected}, $${Number(o.value).toFixed(0)}`).join('\n')
+  : '- No at-risk orders currently'}
 
 LATE ORDERS (CRITICAL):
 ${lateOrderDetails.length > 0 
-  ? lateOrderDetails.map(o => `- ${o.product} from ${o.supplier}: Expected ${o.expected}, Actual ${o.actual || 'Not delivered'}`).join('\n')
+  ? lateOrderDetails.slice(0, 8).map(o => `- ${o.product} from ${o.supplier}: ${o.daysLate ? `${o.daysLate} days late` : 'Not delivered'}, $${Number(o.value).toFixed(0)}`).join('\n')
   : '- No late orders currently'}
 
-RECENT ORDERS:
-${recentOrders.slice(0, 8).map(o => `- ${o.product} from ${o.supplier}: ${o.quantity} units, $${Number(o.value).toFixed(0)}, ${o.status}${o.onTime === false ? ' (LATE)' : ''}`).join('\n')}
+LEAD TIME BY CATEGORY:
+${Object.entries(leadTimeByCategory).map(([cat, data]) => 
+  `- ${cat}: ${(data.total / data.count).toFixed(1)} days avg (${data.count} suppliers)`
+).join('\n')}
 
-LOGISTICS NETWORK:
-- Transportation modes: ${Object.entries(routesByMode).map(([mode, count]) => `${mode}: ${count} routes`).join(', ')}
-- Active shipping routes: ${activeRoutes.length}
-- Average transit time: ${(routes.reduce((sum, r: any) => sum + Number(r.avg_transit_time_hours || 0), 0) / (routes.length || 1)).toFixed(1)} hours`;
+LOGISTICS NETWORK BY MODE:
+${Object.entries(routesByMode).map(([mode, data]) => 
+  `- ${mode}: ${data.count} routes, $${data.totalCost.toFixed(0)} total cost, ${data.avgTransit.toFixed(1)} hrs avg transit`
+).join('\n')}
+
+HIGHEST COST ROUTES:
+${routeCostAnalysis.slice(0, 8).map(r => 
+  `- ${r.name}: ${r.origin} → ${r.destination}, ${r.distance} mi, $${r.costPerMile?.toFixed(2)}/mi, $${r.totalCost.toFixed(0)} total`
+).join('\n')}
+
+SUSTAINABILITY METRICS:
+- Total Carbon Footprint: ${totalCarbon.toFixed(0)} kg
+- Average Cost Per Mile: $${avgCostPerMile.toFixed(2)}
+
+SUPPLY CHAIN SIGNALS:
+${supplyChainSignals.slice(0, 5).map((s: any) => `- ${s.metric_name}: ${s.metric_value}`).join('\n')}`;
         break;
       }
       
