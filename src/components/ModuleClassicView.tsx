@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Module } from '@/lib/data/modules';
 import { ModuleQuestion } from '@/lib/data/module-questions';
 import { ModuleKPI } from '@/lib/data/module-kpis';
@@ -22,7 +22,12 @@ import {
   AlertTriangle,
   Lightbulb,
   Zap,
-  Layers
+  Layers,
+  Calendar,
+  Clock,
+  CalendarDays,
+  TrendingUp as YTDIcon,
+  Settings2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -42,6 +47,7 @@ import {
 } from 'recharts';
 import SearchSuggestions from './SearchSuggestions';
 import MultiLevelDrillDown from './MultiLevelDrillDown';
+import KPISelector from './KPISelector';
 
 interface ModuleClassicViewProps {
   module: Module;
@@ -59,8 +65,16 @@ const MODULE_DRILL_PATHS: Record<string, string[]> = {
   assortment: ['category', 'brand', 'sku', 'store', 'performance'],
   demand: ['category', 'product', 'store', 'time_period', 'forecast_model'],
   'supply-chain': ['supplier', 'product', 'route', 'status', 'region'],
-  space: ['category', 'planogram', 'fixture', 'store', 'shelf']
+  space: ['category', 'planogram', 'fixture', 'store', 'shelf'],
+  executive: ['region', 'category', 'brand', 'sku', 'store']
 };
+
+const TIME_PERIODS = [
+  { id: 'last_month', label: 'Last Month', icon: Calendar },
+  { id: 'last_quarter', label: 'Last Quarter', icon: Clock },
+  { id: 'last_year', label: 'Last Year', icon: CalendarDays },
+  { id: 'ytd', label: 'Year to Date', icon: YTDIcon }
+];
 
 const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: ModuleClassicViewProps) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,6 +83,10 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
   const [result, setResult] = useState<any>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [drillDownData, setDrillDownData] = useState<any>(null);
+  const [selectedKPIs, setSelectedKPIs] = useState<string[]>([]);
+  const [selectedTimePeriod, setSelectedTimePeriod] = useState<string>('last_month');
+  const [lastAnalyzedQuestion, setLastAnalyzedQuestion] = useState<string>('');
+  const [analysisTimestamp, setAnalysisTimestamp] = useState<number>(0);
   const [expandedSections, setExpandedSections] = useState({
     whatHappened: true,
     why: true,
@@ -95,17 +113,19 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
     }
   };
 
-
-  const handleAnalyze = async (question: string) => {
+  const handleAnalyze = useCallback(async (question: string, kpis: string[], timePeriod: string) => {
     setIsLoading(true);
     setResult(null);
+    setLastAnalyzedQuestion(question);
+    setAnalysisTimestamp(Date.now());
 
     try {
       const { data, error } = await supabase.functions.invoke('analyze-module-question', {
         body: { 
           question,
           moduleId: module.id,
-          selectedKPIs: kpis.slice(0, 4).map(k => k.id)
+          selectedKPIs: kpis.length > 0 ? kpis : undefined,
+          timePeriod
         }
       });
 
@@ -121,18 +141,37 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [module.id, toast]);
+
+  // Re-run analysis when KPIs or time period change (if we have a question)
+  useEffect(() => {
+    if (lastAnalyzedQuestion && selectedKPIs.length > 0) {
+      // Debounce the re-analysis
+      const timer = setTimeout(() => {
+        handleAnalyze(lastAnalyzedQuestion, selectedKPIs, selectedTimePeriod);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedKPIs, selectedTimePeriod]);
 
   const handleQuestionClick = (question: ModuleQuestion) => {
     setSelectedQuestion(question);
     setSearchQuery(question.text);
-    handleAnalyze(question.text);
+    handleAnalyze(question.text, selectedKPIs, selectedTimePeriod);
   };
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      handleAnalyze(searchQuery);
+      handleAnalyze(searchQuery, selectedKPIs, selectedTimePeriod);
     }
+  };
+
+  const handleKPIsChange = (newKPIs: string[]) => {
+    setSelectedKPIs(newKPIs);
+  };
+
+  const handleTimePeriodChange = (period: string) => {
+    setSelectedTimePeriod(period);
   };
 
   const renderChart = () => {
@@ -218,7 +257,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                 onSelect={(suggestion) => {
                   setSearchQuery(suggestion);
                   setShowSuggestions(false);
-                  handleAnalyze(suggestion);
+                  handleAnalyze(suggestion, selectedKPIs, selectedTimePeriod);
                 }}
                 isVisible={showSuggestions && searchQuery.length >= 2}
                 persona="executive"
@@ -227,6 +266,66 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
             </div>
           </CardContent>
         </Card>
+
+        {/* KPI Selector */}
+        {searchQuery.trim() && (
+          <KPISelector
+            question={searchQuery}
+            selectedKPIs={selectedKPIs}
+            onKPIsChange={handleKPIsChange}
+            isLoading={isLoading}
+            moduleId={module.id}
+          />
+        )}
+
+        {/* Time Period Filter */}
+        {searchQuery.trim() && (
+          <Card>
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Time Period:</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {TIME_PERIODS.map((period) => {
+                  const PeriodIcon = period.icon;
+                  return (
+                    <Button
+                      key={period.id}
+                      variant={selectedTimePeriod === period.id ? "default" : "outline"}
+                      size="sm"
+                      className="h-8 text-xs gap-1.5"
+                      onClick={() => handleTimePeriodChange(period.id)}
+                      disabled={isLoading}
+                    >
+                      <PeriodIcon className="h-3 w-3" />
+                      {period.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Analysis Info Badge */}
+        {result && analysisTimestamp > 0 && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+            <Badge variant="outline" className="text-xs">
+              Analyzed ({((Date.now() - analysisTimestamp) / 1000).toFixed(1)}s)
+            </Badge>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-6 text-xs gap-1"
+              onClick={() => handleAnalyze(lastAnalyzedQuestion, selectedKPIs, selectedTimePeriod)}
+              disabled={isLoading}
+            >
+              <Settings2 className="h-3 w-3" />
+              Refine Analysis
+            </Button>
+          </div>
+        )}
 
         {/* Popular Questions */}
         <Card>
@@ -523,7 +622,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                           size="sm"
                           onClick={() => {
                             setSearchQuery(q);
-                            handleAnalyze(q);
+                            handleAnalyze(q, selectedKPIs, selectedTimePeriod);
                           }}
                         >
                           {q}
