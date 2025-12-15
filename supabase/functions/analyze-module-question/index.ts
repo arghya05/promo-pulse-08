@@ -323,10 +323,31 @@ INVENTORY STATUS:
         const storeLookup: Record<string, any> = {};
         stores.forEach((s: any) => { storeLookup[s.id] = s; });
         
+        // Helper to determine granularity (daily, weekly, monthly)
+        const getGranularity = (start: string, end: string): string => {
+          if (!start || !end) return 'monthly';
+          const startDate = new Date(start);
+          const endDate = new Date(end);
+          const diffDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+          if (diffDays <= 1) return 'daily';
+          if (diffDays <= 7) return 'weekly';
+          return 'monthly';
+        };
+        
+        // Helper to get week number
+        const getWeekKey = (dateStr: string): string => {
+          const date = new Date(dateStr);
+          const startOfYear = new Date(date.getFullYear(), 0, 1);
+          const weekNum = Math.ceil(((date.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24) + startOfYear.getDay() + 1) / 7);
+          return `${date.getFullYear()}-W${weekNum.toString().padStart(2, '0')}`;
+        };
+        
         // Aggregate forecasts by category
-        const forecastsByCategory: Record<string, { forecasted: number; actual: number; products: string[]; months: Record<string, number> }> = {};
-        const forecastsByProduct: Record<string, { forecasted: number; actual: number; name: string; category: string; months: Record<string, { forecasted: number; actual: number }> }> = {};
+        const forecastsByCategory: Record<string, { forecasted: number; actual: number; products: string[]; months: Record<string, number>; weeks: Record<string, number>; days: Record<string, number> }> = {};
+        const forecastsByProduct: Record<string, { forecasted: number; actual: number; name: string; category: string; months: Record<string, { forecasted: number; actual: number }>; weeks: Record<string, { forecasted: number; actual: number }>; days: Record<string, { forecasted: number; actual: number }> }> = {};
         const forecastsByMonth: Record<string, { forecasted: number; actual: number; categories: Record<string, number> }> = {};
+        const forecastsByWeek: Record<string, { forecasted: number; actual: number; categories: Record<string, number>; products: Record<string, number> }> = {};
+        const forecastsByDay: Record<string, { forecasted: number; actual: number; categories: Record<string, number>; products: Record<string, number> }> = {};
         const forecastsByStore: Record<string, { forecasted: number; actual: number; storeName: string; region: string }> = {};
         
         forecasts.forEach((f: any) => {
@@ -334,28 +355,69 @@ INVENTORY STATUS:
           const category = product.category || 'Unknown';
           const productName = product.product_name || f.product_sku;
           const store = storeLookup[f.store_id] || {};
+          const granularity = getGranularity(f.forecast_period_start, f.forecast_period_end);
           const month = f.forecast_period_start ? f.forecast_period_start.substring(0, 7) : 'Unknown';
+          const week = f.forecast_period_start ? getWeekKey(f.forecast_period_start) : 'Unknown';
+          const day = f.forecast_period_start ? f.forecast_period_start.substring(0, 10) : 'Unknown';
           
           // By category
-          if (!forecastsByCategory[category]) forecastsByCategory[category] = { forecasted: 0, actual: 0, products: [], months: {} };
+          if (!forecastsByCategory[category]) forecastsByCategory[category] = { forecasted: 0, actual: 0, products: [], months: {}, weeks: {}, days: {} };
           forecastsByCategory[category].forecasted += Number(f.forecasted_units || 0);
           forecastsByCategory[category].actual += Number(f.actual_units || 0);
           if (!forecastsByCategory[category].products.includes(productName)) forecastsByCategory[category].products.push(productName);
-          forecastsByCategory[category].months[month] = (forecastsByCategory[category].months[month] || 0) + Number(f.forecasted_units || 0);
+          
+          if (granularity === 'monthly') {
+            forecastsByCategory[category].months[month] = (forecastsByCategory[category].months[month] || 0) + Number(f.forecasted_units || 0);
+          } else if (granularity === 'weekly') {
+            forecastsByCategory[category].weeks[week] = (forecastsByCategory[category].weeks[week] || 0) + Number(f.forecasted_units || 0);
+          } else {
+            forecastsByCategory[category].days[day] = (forecastsByCategory[category].days[day] || 0) + Number(f.forecasted_units || 0);
+          }
           
           // By product/SKU
-          if (!forecastsByProduct[f.product_sku]) forecastsByProduct[f.product_sku] = { forecasted: 0, actual: 0, name: productName, category, months: {} };
+          if (!forecastsByProduct[f.product_sku]) forecastsByProduct[f.product_sku] = { forecasted: 0, actual: 0, name: productName, category, months: {}, weeks: {}, days: {} };
           forecastsByProduct[f.product_sku].forecasted += Number(f.forecasted_units || 0);
           forecastsByProduct[f.product_sku].actual += Number(f.actual_units || 0);
-          if (!forecastsByProduct[f.product_sku].months[month]) forecastsByProduct[f.product_sku].months[month] = { forecasted: 0, actual: 0 };
-          forecastsByProduct[f.product_sku].months[month].forecasted += Number(f.forecasted_units || 0);
-          forecastsByProduct[f.product_sku].months[month].actual += Number(f.actual_units || 0);
           
-          // By month
-          if (!forecastsByMonth[month]) forecastsByMonth[month] = { forecasted: 0, actual: 0, categories: {} };
-          forecastsByMonth[month].forecasted += Number(f.forecasted_units || 0);
-          forecastsByMonth[month].actual += Number(f.actual_units || 0);
-          forecastsByMonth[month].categories[category] = (forecastsByMonth[month].categories[category] || 0) + Number(f.forecasted_units || 0);
+          if (granularity === 'monthly') {
+            if (!forecastsByProduct[f.product_sku].months[month]) forecastsByProduct[f.product_sku].months[month] = { forecasted: 0, actual: 0 };
+            forecastsByProduct[f.product_sku].months[month].forecasted += Number(f.forecasted_units || 0);
+            forecastsByProduct[f.product_sku].months[month].actual += Number(f.actual_units || 0);
+          } else if (granularity === 'weekly') {
+            if (!forecastsByProduct[f.product_sku].weeks[week]) forecastsByProduct[f.product_sku].weeks[week] = { forecasted: 0, actual: 0 };
+            forecastsByProduct[f.product_sku].weeks[week].forecasted += Number(f.forecasted_units || 0);
+            forecastsByProduct[f.product_sku].weeks[week].actual += Number(f.actual_units || 0);
+          } else {
+            if (!forecastsByProduct[f.product_sku].days[day]) forecastsByProduct[f.product_sku].days[day] = { forecasted: 0, actual: 0 };
+            forecastsByProduct[f.product_sku].days[day].forecasted += Number(f.forecasted_units || 0);
+            forecastsByProduct[f.product_sku].days[day].actual += Number(f.actual_units || 0);
+          }
+          
+          // By month (only monthly granularity)
+          if (granularity === 'monthly') {
+            if (!forecastsByMonth[month]) forecastsByMonth[month] = { forecasted: 0, actual: 0, categories: {} };
+            forecastsByMonth[month].forecasted += Number(f.forecasted_units || 0);
+            forecastsByMonth[month].actual += Number(f.actual_units || 0);
+            forecastsByMonth[month].categories[category] = (forecastsByMonth[month].categories[category] || 0) + Number(f.forecasted_units || 0);
+          }
+          
+          // By week
+          if (granularity === 'weekly') {
+            if (!forecastsByWeek[week]) forecastsByWeek[week] = { forecasted: 0, actual: 0, categories: {}, products: {} };
+            forecastsByWeek[week].forecasted += Number(f.forecasted_units || 0);
+            forecastsByWeek[week].actual += Number(f.actual_units || 0);
+            forecastsByWeek[week].categories[category] = (forecastsByWeek[week].categories[category] || 0) + Number(f.forecasted_units || 0);
+            forecastsByWeek[week].products[productName] = (forecastsByWeek[week].products[productName] || 0) + Number(f.forecasted_units || 0);
+          }
+          
+          // By day
+          if (granularity === 'daily') {
+            if (!forecastsByDay[day]) forecastsByDay[day] = { forecasted: 0, actual: 0, categories: {}, products: {} };
+            forecastsByDay[day].forecasted += Number(f.forecasted_units || 0);
+            forecastsByDay[day].actual += Number(f.actual_units || 0);
+            forecastsByDay[day].categories[category] = (forecastsByDay[day].categories[category] || 0) + Number(f.forecasted_units || 0);
+            forecastsByDay[day].products[productName] = (forecastsByDay[day].products[productName] || 0) + Number(f.forecasted_units || 0);
+          }
           
           // By store
           if (f.store_id && store.store_name) {
@@ -412,8 +474,10 @@ INVENTORY STATUS:
           seasonalByType[factor].push(p.product_name);
         });
         
-        // Sort months chronologically
+        // Sort time periods chronologically
         const sortedMonths = Object.keys(forecastsByMonth).sort();
+        const sortedWeeks = Object.keys(forecastsByWeek).sort();
+        const sortedDays = Object.keys(forecastsByDay).sort();
         
         dataContext = `
 DEMAND FORECASTING DATA SUMMARY:
@@ -422,80 +486,91 @@ DEMAND FORECASTING DATA SUMMARY:
 - Average MAPE: ${avgMAPE.toFixed(1)}%
 - Products tracked: ${products.length}
 - Categories: ${Object.keys(forecastsByCategory).length}
-- Time periods available: ${sortedMonths.join(', ')}
+- Time granularities available: Monthly (${sortedMonths.length}), Weekly (${sortedWeeks.length}), Daily (${sortedDays.length})
 
-FORECASTS BY CATEGORY (HIERARCHICAL DRILL-DOWN AVAILABLE):
+FORECASTS BY CATEGORY (HIERARCHICAL - DRILL TO SKU/WEEK/DAY):
 ${Object.entries(forecastsByCategory)
   .sort((a, b) => b[1].forecasted - a[1].forecasted)
   .map(([cat, data]) => {
     const accuracy = data.actual > 0 ? ((1 - Math.abs(data.forecasted - data.actual) / data.actual) * 100).toFixed(1) : 'N/A';
-    return `- ${cat}: ${data.forecasted.toLocaleString()} forecasted units, ${data.actual.toLocaleString()} actual units, ${accuracy}% accuracy
+    const monthlyBreakdown = Object.entries(data.months).slice(0, 3).map(([m, v]) => `${m}: ${v.toLocaleString()}`).join(', ');
+    const weeklyBreakdown = Object.entries(data.weeks).slice(0, 3).map(([w, v]) => `${w}: ${v.toLocaleString()}`).join(', ');
+    const dailyBreakdown = Object.entries(data.days).slice(0, 3).map(([d, v]) => `${d}: ${v.toLocaleString()}`).join(', ');
+    return `- ${cat}: ${data.forecasted.toLocaleString()} forecasted, ${data.actual.toLocaleString()} actual, ${accuracy}% accuracy
     Products: ${data.products.slice(0, 5).join(', ')}${data.products.length > 5 ? ` (+${data.products.length - 5} more)` : ''}
-    Monthly breakdown: ${Object.entries(data.months).slice(0, 4).map(([m, v]) => `${m}: ${v.toLocaleString()}`).join(', ')}`;
+    Monthly: ${monthlyBreakdown || 'N/A'}
+    Weekly: ${weeklyBreakdown || 'N/A'}
+    Daily: ${dailyBreakdown || 'N/A'}`;
   }).join('\n')}
 
-FORECASTS BY PRODUCT/SKU (DRILL DOWN TO SKU LEVEL):
+FORECASTS BY PRODUCT/SKU (DRILL TO WEEK/DAY/STORE):
 ${Object.entries(forecastsByProduct)
   .sort((a, b) => b[1].forecasted - a[1].forecasted)
-  .slice(0, 15)
+  .slice(0, 12)
   .map(([sku, data]) => {
     const accuracy = data.actual > 0 ? ((1 - Math.abs(data.forecasted - data.actual) / data.actual) * 100).toFixed(1) : 'N/A';
-    const monthlyTrend = Object.entries(data.months).slice(0, 3).map(([m, v]) => `${m}: ${v.forecasted}`).join(', ');
-    return `- ${data.name} (${sku}, ${data.category}): ${data.forecasted.toLocaleString()} forecasted, ${data.actual.toLocaleString()} actual, ${accuracy}% accuracy | Months: ${monthlyTrend}`;
+    const weeklyTrend = Object.entries(data.weeks).slice(0, 3).map(([w, v]) => `${w}: ${v.forecasted}`).join(', ');
+    const dailyTrend = Object.entries(data.days).slice(0, 4).map(([d, v]) => `${d}: ${v.forecasted}`).join(', ');
+    return `- ${data.name} (${sku}, ${data.category}): ${data.forecasted.toLocaleString()} total
+    Weekly: ${weeklyTrend || 'N/A'}
+    Daily: ${dailyTrend || 'N/A'}`;
   }).join('\n')}
 
-FORECASTS BY TIME PERIOD (MONTHLY/QUARTERLY):
+FORECASTS BY MONTH:
 ${sortedMonths.map(month => {
   const data = forecastsByMonth[month];
   const accuracy = data.actual > 0 ? ((1 - Math.abs(data.forecasted - data.actual) / data.actual) * 100).toFixed(1) : 'N/A';
   const topCategories = Object.entries(data.categories).sort((a, b) => b[1] - a[1]).slice(0, 3);
-  return `- ${month}: ${data.forecasted.toLocaleString()} forecasted, ${data.actual.toLocaleString()} actual, ${accuracy}% accuracy
-    Top categories: ${topCategories.map(([c, v]) => `${c}: ${v.toLocaleString()}`).join(', ')}`;
+  return `- ${month}: ${data.forecasted.toLocaleString()} forecasted, ${accuracy}% accuracy | Categories: ${topCategories.map(([c, v]) => `${c}: ${v.toLocaleString()}`).join(', ')}`;
+}).join('\n')}
+
+FORECASTS BY WEEK (WEEKLY GRANULARITY):
+${sortedWeeks.map(week => {
+  const data = forecastsByWeek[week];
+  const accuracy = data.actual > 0 ? ((1 - Math.abs(data.forecasted - data.actual) / data.actual) * 100).toFixed(1) : 'N/A';
+  const topProducts = Object.entries(data.products).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const topCategories = Object.entries(data.categories).sort((a, b) => b[1] - a[1]).slice(0, 2);
+  return `- ${week}: ${data.forecasted.toLocaleString()} forecasted, ${data.actual.toLocaleString()} actual, ${accuracy}% accuracy
+    Categories: ${topCategories.map(([c, v]) => `${c}: ${v.toLocaleString()}`).join(', ')}
+    Products: ${topProducts.map(([p, v]) => `${p}: ${v}`).join(', ')}`;
+}).join('\n')}
+
+FORECASTS BY DAY (DAILY GRANULARITY):
+${sortedDays.map(day => {
+  const data = forecastsByDay[day];
+  const accuracy = data.actual > 0 ? ((1 - Math.abs(data.forecasted - data.actual) / data.actual) * 100).toFixed(1) : 'N/A';
+  const topProducts = Object.entries(data.products).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  return `- ${day}: ${data.forecasted.toLocaleString()} forecasted, ${data.actual.toLocaleString()} actual, ${accuracy}% accuracy | Products: ${topProducts.map(([p, v]) => `${p}: ${v}`).join(', ')}`;
 }).join('\n')}
 
 FORECASTS BY STORE/REGION:
 ${Object.entries(forecastsByStore)
   .sort((a, b) => b[1].forecasted - a[1].forecasted)
-  .slice(0, 10)
+  .slice(0, 8)
   .map(([id, data]) => {
     const accuracy = data.actual > 0 ? ((1 - Math.abs(data.forecasted - data.actual) / data.actual) * 100).toFixed(1) : 'N/A';
-    return `- ${data.storeName} (${data.region}): ${data.forecasted.toLocaleString()} forecasted, ${data.actual.toLocaleString()} actual, ${accuracy}% accuracy`;
+    return `- ${data.storeName} (${data.region}): ${data.forecasted.toLocaleString()} forecasted, ${accuracy}% accuracy`;
   }).join('\n')}
 
-STOCKOUT RISK PRODUCTS (CRITICAL - USE THESE EXACT PRODUCT NAMES):
+STOCKOUT RISK PRODUCTS (CRITICAL):
 ${highRiskProducts.length > 0 
-  ? highRiskProducts.map((p: any) => `- ${p.name} (${p.sku}, ${p.category}): Stock ${p.stockLevel} units, Reorder Point ${p.reorderPoint}, Risk: ${p.risk}`).join('\n')
+  ? highRiskProducts.map((p: any) => `- ${p.name} (${p.sku}, ${p.category}): Stock ${p.stockLevel} units, Reorder at ${p.reorderPoint}`).join('\n')
   : '- No products currently at high stockout risk'}
 
-MEDIUM RISK PRODUCTS:
-${mediumRiskProducts.slice(0, 10).map((p: any) => `- ${p.name} (${p.category}): Stock ${p.stockLevel} units, Risk: ${p.risk}`).join('\n')}
-
-LOWEST STOCK ITEMS:
-${lowestStockItems.slice(0, 10).map((p: any) => `- ${p.name}: ${p.stockLevel} units in stock (reorder at ${p.reorderPoint})`).join('\n')}
-
 INVENTORY SUMMARY:
-- High stockout risk items: ${stockoutRiskHigh.length}
-- Medium stockout risk items: ${stockoutRiskMedium.length}
-- Items at/below reorder point: ${belowReorderPoint.length}
-- Total inventory records: ${inventory.length}
+- High stockout risk: ${stockoutRiskHigh.length} | Medium risk: ${stockoutRiskMedium.length}
+- Below reorder point: ${belowReorderPoint.length} | Total records: ${inventory.length}
 
 FORECAST MODEL ACCURACY:
 ${Object.entries(modelAccuracy).map(([model, data]) => `- ${model}: MAPE ${(data.sum / data.count).toFixed(1)}%`).join('\n')}
-
-FORECAST VS ACTUAL (Recent):
-${forecasts.filter((f: any) => f.actual_units).slice(0, 8).map((f: any) => {
-  const product = productLookup[f.product_sku] || {};
-  const variance = f.actual_units ? ((f.forecasted_units - f.actual_units) / f.actual_units * 100).toFixed(1) : 'N/A';
-  return `- ${product.product_name || f.product_sku}: Forecast ${f.forecasted_units}, Actual ${f.actual_units}, Variance ${variance}%`;
-}).join('\n')}
 
 SEASONAL PATTERNS:
 ${Object.entries(seasonalByType).map(([type, prods]) => `- ${type}: ${prods.slice(0, 5).join(', ')}${prods.length > 5 ? ` (+${prods.length - 5} more)` : ''}`).join('\n')}
 
 DRILL-DOWN PATHS AVAILABLE:
-- Category → Product/SKU → Store → Time Period (Month/Week/Day)
-- Time Period → Category → Product/SKU
-- Store/Region → Category → Product/SKU`;
+- Category → Product/SKU → Store → Month/Week/Day
+- Month → Week → Day → Category → Product/SKU
+- Store/Region → Category → Week/Day → Product/SKU`;
         break;
       }
       
