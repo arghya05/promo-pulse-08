@@ -12,7 +12,7 @@ const moduleContexts: Record<string, string> = {
   
   assortment: `You are an Assortment Planning AI for a $4B grocery retailer. Analyze product mix, category management, SKU rationalization, brand portfolio, new product performance, and private label opportunities. Use actual data from products, transactions, and inventory tables. NEVER mention promotions, ROI, or lift - focus ONLY on assortment metrics like SKU productivity, category gaps, brand mix.`,
   
-  demand: `You are a Demand Forecasting & Replenishment AI for a $4B grocery retailer. Analyze demand patterns, forecast accuracy, stockout risks, reorder points, safety stock levels, and seasonal trends. Use actual data from demand_forecasts, forecast_accuracy_tracking, and inventory_levels tables. NEVER mention promotions, ROI, or lift - focus ONLY on demand and inventory metrics.`,
+  demand: `You are a Demand Forecasting & Replenishment AI for a $4B grocery retailer. You MUST provide hierarchical forecasts from Category → Product/SKU → Store → Time Period (Month/Week/Day). When asked about forecasts by category or product, provide forecasted units, actual units, and accuracy for each level with drill-down capability. Analyze demand patterns, forecast accuracy, stockout risks, reorder points, and seasonal trends. Use actual data from demand_forecasts, forecast_accuracy_tracking, and inventory_levels tables. Your chartData MUST show forecasted values broken down by the requested dimension (category, SKU, month, etc.). NEVER mention promotions, ROI, or lift - focus ONLY on demand and inventory metrics.`,
   
   'supply-chain': `You are a Supply Chain AI for a $4B grocery retailer. Analyze supplier performance, lead times, on-time delivery, logistics costs, warehouse capacity, and distribution routes. Use actual data from suppliers, supplier_orders, and shipping_routes tables. NEVER mention promotions, ROI, or lift - focus ONLY on supply chain metrics.`,
   
@@ -307,7 +307,7 @@ INVENTORY STATUS:
       
       case 'demand': {
         const [forecastsRes, accuracyRes, inventoryRes] = await Promise.all([
-          supabase.from('demand_forecasts').select('*').limit(500),
+          supabase.from('demand_forecasts').select('*').limit(1000),
           supabase.from('forecast_accuracy_tracking').select('*').limit(200),
           supabase.from('inventory_levels').select('*').limit(500),
         ]);
@@ -318,6 +318,52 @@ INVENTORY STATUS:
         // Create product lookup for names
         const productLookup: Record<string, any> = {};
         products.forEach((p: any) => { productLookup[p.product_sku] = p; });
+        
+        // Create store lookup
+        const storeLookup: Record<string, any> = {};
+        stores.forEach((s: any) => { storeLookup[s.id] = s; });
+        
+        // Aggregate forecasts by category
+        const forecastsByCategory: Record<string, { forecasted: number; actual: number; products: string[]; months: Record<string, number> }> = {};
+        const forecastsByProduct: Record<string, { forecasted: number; actual: number; name: string; category: string; months: Record<string, { forecasted: number; actual: number }> }> = {};
+        const forecastsByMonth: Record<string, { forecasted: number; actual: number; categories: Record<string, number> }> = {};
+        const forecastsByStore: Record<string, { forecasted: number; actual: number; storeName: string; region: string }> = {};
+        
+        forecasts.forEach((f: any) => {
+          const product = productLookup[f.product_sku] || {};
+          const category = product.category || 'Unknown';
+          const productName = product.product_name || f.product_sku;
+          const store = storeLookup[f.store_id] || {};
+          const month = f.forecast_period_start ? f.forecast_period_start.substring(0, 7) : 'Unknown';
+          
+          // By category
+          if (!forecastsByCategory[category]) forecastsByCategory[category] = { forecasted: 0, actual: 0, products: [], months: {} };
+          forecastsByCategory[category].forecasted += Number(f.forecasted_units || 0);
+          forecastsByCategory[category].actual += Number(f.actual_units || 0);
+          if (!forecastsByCategory[category].products.includes(productName)) forecastsByCategory[category].products.push(productName);
+          forecastsByCategory[category].months[month] = (forecastsByCategory[category].months[month] || 0) + Number(f.forecasted_units || 0);
+          
+          // By product/SKU
+          if (!forecastsByProduct[f.product_sku]) forecastsByProduct[f.product_sku] = { forecasted: 0, actual: 0, name: productName, category, months: {} };
+          forecastsByProduct[f.product_sku].forecasted += Number(f.forecasted_units || 0);
+          forecastsByProduct[f.product_sku].actual += Number(f.actual_units || 0);
+          if (!forecastsByProduct[f.product_sku].months[month]) forecastsByProduct[f.product_sku].months[month] = { forecasted: 0, actual: 0 };
+          forecastsByProduct[f.product_sku].months[month].forecasted += Number(f.forecasted_units || 0);
+          forecastsByProduct[f.product_sku].months[month].actual += Number(f.actual_units || 0);
+          
+          // By month
+          if (!forecastsByMonth[month]) forecastsByMonth[month] = { forecasted: 0, actual: 0, categories: {} };
+          forecastsByMonth[month].forecasted += Number(f.forecasted_units || 0);
+          forecastsByMonth[month].actual += Number(f.actual_units || 0);
+          forecastsByMonth[month].categories[category] = (forecastsByMonth[month].categories[category] || 0) + Number(f.forecasted_units || 0);
+          
+          // By store
+          if (f.store_id && store.store_name) {
+            if (!forecastsByStore[f.store_id]) forecastsByStore[f.store_id] = { forecasted: 0, actual: 0, storeName: store.store_name, region: store.region || 'Unknown' };
+            forecastsByStore[f.store_id].forecasted += Number(f.forecasted_units || 0);
+            forecastsByStore[f.store_id].actual += Number(f.actual_units || 0);
+          }
+        });
         
         const forecastsWithAccuracy = forecasts.filter((f: any) => f.forecast_accuracy);
         const avgAccuracy = forecastsWithAccuracy.reduce((sum, f: any) => sum + Number(f.forecast_accuracy || 0), 0) / (forecastsWithAccuracy.length || 1);
@@ -366,12 +412,55 @@ INVENTORY STATUS:
           seasonalByType[factor].push(p.product_name);
         });
         
+        // Sort months chronologically
+        const sortedMonths = Object.keys(forecastsByMonth).sort();
+        
         dataContext = `
 DEMAND FORECASTING DATA SUMMARY:
 - Forecast records: ${forecasts.length}
 - Average forecast accuracy: ${avgAccuracy.toFixed(1)}%
 - Average MAPE: ${avgMAPE.toFixed(1)}%
 - Products tracked: ${products.length}
+- Categories: ${Object.keys(forecastsByCategory).length}
+- Time periods available: ${sortedMonths.join(', ')}
+
+FORECASTS BY CATEGORY (HIERARCHICAL DRILL-DOWN AVAILABLE):
+${Object.entries(forecastsByCategory)
+  .sort((a, b) => b[1].forecasted - a[1].forecasted)
+  .map(([cat, data]) => {
+    const accuracy = data.actual > 0 ? ((1 - Math.abs(data.forecasted - data.actual) / data.actual) * 100).toFixed(1) : 'N/A';
+    return `- ${cat}: ${data.forecasted.toLocaleString()} forecasted units, ${data.actual.toLocaleString()} actual units, ${accuracy}% accuracy
+    Products: ${data.products.slice(0, 5).join(', ')}${data.products.length > 5 ? ` (+${data.products.length - 5} more)` : ''}
+    Monthly breakdown: ${Object.entries(data.months).slice(0, 4).map(([m, v]) => `${m}: ${v.toLocaleString()}`).join(', ')}`;
+  }).join('\n')}
+
+FORECASTS BY PRODUCT/SKU (DRILL DOWN TO SKU LEVEL):
+${Object.entries(forecastsByProduct)
+  .sort((a, b) => b[1].forecasted - a[1].forecasted)
+  .slice(0, 15)
+  .map(([sku, data]) => {
+    const accuracy = data.actual > 0 ? ((1 - Math.abs(data.forecasted - data.actual) / data.actual) * 100).toFixed(1) : 'N/A';
+    const monthlyTrend = Object.entries(data.months).slice(0, 3).map(([m, v]) => `${m}: ${v.forecasted}`).join(', ');
+    return `- ${data.name} (${sku}, ${data.category}): ${data.forecasted.toLocaleString()} forecasted, ${data.actual.toLocaleString()} actual, ${accuracy}% accuracy | Months: ${monthlyTrend}`;
+  }).join('\n')}
+
+FORECASTS BY TIME PERIOD (MONTHLY/QUARTERLY):
+${sortedMonths.map(month => {
+  const data = forecastsByMonth[month];
+  const accuracy = data.actual > 0 ? ((1 - Math.abs(data.forecasted - data.actual) / data.actual) * 100).toFixed(1) : 'N/A';
+  const topCategories = Object.entries(data.categories).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  return `- ${month}: ${data.forecasted.toLocaleString()} forecasted, ${data.actual.toLocaleString()} actual, ${accuracy}% accuracy
+    Top categories: ${topCategories.map(([c, v]) => `${c}: ${v.toLocaleString()}`).join(', ')}`;
+}).join('\n')}
+
+FORECASTS BY STORE/REGION:
+${Object.entries(forecastsByStore)
+  .sort((a, b) => b[1].forecasted - a[1].forecasted)
+  .slice(0, 10)
+  .map(([id, data]) => {
+    const accuracy = data.actual > 0 ? ((1 - Math.abs(data.forecasted - data.actual) / data.actual) * 100).toFixed(1) : 'N/A';
+    return `- ${data.storeName} (${data.region}): ${data.forecasted.toLocaleString()} forecasted, ${data.actual.toLocaleString()} actual, ${accuracy}% accuracy`;
+  }).join('\n')}
 
 STOCKOUT RISK PRODUCTS (CRITICAL - USE THESE EXACT PRODUCT NAMES):
 ${highRiskProducts.length > 0 
@@ -401,7 +490,12 @@ ${forecasts.filter((f: any) => f.actual_units).slice(0, 8).map((f: any) => {
 }).join('\n')}
 
 SEASONAL PATTERNS:
-${Object.entries(seasonalByType).map(([type, prods]) => `- ${type}: ${prods.slice(0, 5).join(', ')}${prods.length > 5 ? ` (+${prods.length - 5} more)` : ''}`).join('\n')}`;
+${Object.entries(seasonalByType).map(([type, prods]) => `- ${type}: ${prods.slice(0, 5).join(', ')}${prods.length > 5 ? ` (+${prods.length - 5} more)` : ''}`).join('\n')}
+
+DRILL-DOWN PATHS AVAILABLE:
+- Category → Product/SKU → Store → Time Period (Month/Week/Day)
+- Time Period → Category → Product/SKU
+- Store/Region → Category → Product/SKU`;
         break;
       }
       
@@ -683,7 +777,12 @@ ${isCrossModule ? '9. Show CROSS-MODULE IMPACTS connecting effects across ' + de
 Focus areas for ${moduleId}:
 ${moduleId === 'pricing' ? 'pricing, margins, elasticity, competitor pricing, price changes' : 
   moduleId === 'assortment' ? 'SKU performance, category gaps, brand mix, product rationalization' :
-  moduleId === 'demand' ? 'demand forecasts, stockout risk BY PRODUCT NAME, inventory levels, forecast accuracy, reorder points' :
+  moduleId === 'demand' ? `HIERARCHICAL FORECASTING: Provide forecasts at Category → SKU → Store → Time Period levels. 
+    - If asked "forecast by category by month" show forecasted units BY CATEGORY broken down BY MONTH
+    - Chart data MUST show the requested dimension (categories, SKUs, months, stores) with forecasted values
+    - Include actual vs forecasted comparison with accuracy percentage
+    - Enable drill-down from category to SKU to store to time period
+    - Include stockout risk products BY NAME, inventory levels, reorder points` :
   moduleId === 'supply-chain' ? 'supplier performance, lead times, logistics, delivery rates' :
   moduleId === 'space' ? 'shelf space, planograms, sales per sqft, fixture utilization' : 
   isCrossModule ? 'relationships between modules, integrated impacts, trade-offs' : 'relevant metrics'}
