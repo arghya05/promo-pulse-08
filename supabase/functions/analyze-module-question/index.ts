@@ -1520,7 +1520,7 @@ Respond with a JSON object:
     const contextReference = buildContextReference();
     
     const conversationContextPrompt = conversationContext || (conversationHistory && conversationHistory.length > 0) ? `
-CONVERSATION CONTEXT (use this to provide continuity):
+CONVERSATION CONTEXT (MANDATORY - use this for continuity):
 - Previous category focus: ${conversationContext?.lastCategory || 'none'}
 - Previous product/promotion focus: ${conversationContext?.lastPromotion || 'none'}
 - Previous metric focus: ${conversationContext?.lastMetric || 'none'}
@@ -1528,17 +1528,24 @@ CONVERSATION CONTEXT (use this to provide continuity):
 - Drill-down path so far: ${drillPath.join(' → ') || 'top level'}
 - Current drill level: ${conversationContext?.drillLevel || 0}
 
-CRITICAL RESPONSE INSTRUCTION FOR CONVERSATION CONTINUITY:
-${contextReference ? `- START your "whatHappened" response with context like: "${contextReference}" to acknowledge what was previously discussed.` : ''}
-- If continuing a previous analysis, explicitly reference the previous entities (promotion names, categories, metrics).
+**MANDATORY CONTEXT REFERENCE INSTRUCTIONS** (MUST FOLLOW):
+${contextReference ? `
+1. You MUST START the FIRST bullet point in "whatHappened" with this EXACT phrase: "${contextReference}"
+2. This is NON-NEGOTIABLE - the response MUST begin by acknowledging what was previously discussed.
+3. Example: "${contextReference}Here's what I found about [current topic]..."
+` : ''}
+${!contextReference && conversationHistory && conversationHistory.length > 0 ? `
+1. START the FIRST bullet point with "Following up on our discussion, " or "Continuing our analysis, "
+2. Reference at least ONE element from the previous conversation
+` : ''}
 - Use phrases like "Building on your [X] analysis...", "Following up on [previous topic]...", "Continuing from [previous context]...".
 - Make clear connections between this answer and previous questions when relevant.
 - If the user is drilling deeper, acknowledge the drill-down with "Drilling into [entity]..." or "Looking more closely at [entity]...".
 
-${isDrillDown ? `DRILL-DOWN INSTRUCTIONS:
+${isDrillDown ? `DRILL-DOWN INSTRUCTIONS (MANDATORY):
 - This is a DRILL-DOWN request at level ${conversationContext?.drillLevel || 1}
 - User is exploring deeper from: ${drillPath[drillPath.length - 1] || 'top level'}
-- START response with "Drilling deeper into ${drillPath[drillPath.length - 1] || 'the data'}..."
+- START the FIRST bullet point with "Drilling deeper into ${drillPath[drillPath.length - 1] || 'the data'}..."
 - Provide MORE GRANULAR data than the previous response
 - Break down the metric/category into its components
 - Show the NEXT LEVEL of detail (e.g., category → products, store → regions, week → days)
@@ -1546,10 +1553,10 @@ ${isDrillDown ? `DRILL-DOWN INSTRUCTIONS:
 ` : ''}
 
 ${conversationHistory && conversationHistory.length > 0 ? `
-PREVIOUS CONVERSATION (reference these explicitly when relevant):
+PREVIOUS CONVERSATION (reference these EXPLICITLY):
 ${conversationHistory.slice(-4).map((m: any) => `${m.role.toUpperCase()}: ${m.content}`).join('\n')}
 
-Remember: Explicitly reference previous topics to make the conversation feel continuous.
+IMPORTANT: Your response MUST explicitly reference at least one element from the previous conversation.
 ` : ''}
 ` : '';
 
@@ -1608,8 +1615,8 @@ Remember: Explicitly reference previous topics to make the conversation feel con
       parsedResponse = generateModuleFallback(moduleId);
     }
 
-    // Ensure all required fields exist
-    parsedResponse = ensureCompleteResponse(parsedResponse, moduleId);
+    // Ensure all required fields exist and context is properly referenced
+    parsedResponse = ensureCompleteResponse(parsedResponse, moduleId, contextReference, drillPath);
 
     console.log(`[${moduleId}] Analysis complete`);
 
@@ -1689,7 +1696,32 @@ function generateModuleFallback(moduleId: string): any {
   };
 }
 
-function ensureCompleteResponse(response: any, moduleId: string): any {
+function ensureCompleteResponse(response: any, moduleId: string, contextReference?: string, drillPath?: string[]): any {
+  // Ensure context reference is prepended to first whatHappened if provided
+  if (contextReference && response.whatHappened && response.whatHappened.length > 0) {
+    const firstBullet = response.whatHappened[0];
+    const hasContextRef = 
+      firstBullet.toLowerCase().includes('building on') ||
+      firstBullet.toLowerCase().includes('following up') ||
+      firstBullet.toLowerCase().includes('continuing') ||
+      firstBullet.toLowerCase().includes('drilling') ||
+      firstBullet.toLowerCase().includes('as we discussed');
+    
+    if (!hasContextRef) {
+      response.whatHappened[0] = contextReference + firstBullet;
+    }
+  }
+  
+  // Ensure drill-down reference for drill requests
+  if (drillPath && drillPath.length > 0 && response.whatHappened && response.whatHappened.length > 0) {
+    const firstBullet = response.whatHappened[0];
+    const hasDrillRef = firstBullet.toLowerCase().includes('drilling') || firstBullet.toLowerCase().includes('looking more closely');
+    
+    if (!hasDrillRef && !firstBullet.toLowerCase().includes('building on')) {
+      response.whatHappened[0] = `Drilling into ${drillPath[drillPath.length - 1]}: ${firstBullet}`;
+    }
+  }
+  
   if (!response.causalDrivers || !Array.isArray(response.causalDrivers) || response.causalDrivers.length === 0) {
     response.causalDrivers = [
       { driver: 'Primary driver', impact: 'Significant', correlation: 0.75, direction: 'positive' },
