@@ -174,7 +174,7 @@ serve(async (req) => {
   }
 
   try {
-    const { question, moduleId, selectedKPIs, crossModules, conversationHistory, conversationContext } = await req.json();
+    const { question, moduleId, selectedKPIs, timePeriod, crossModules, conversationHistory, conversationContext } = await req.json();
     
     // Detect simulation and cross-module questions
     const isSimulation = isSimulationQuestion(question);
@@ -185,8 +185,21 @@ serve(async (req) => {
     const isDrillDown = conversationContext?.drillLevel > 0 || question.toLowerCase().includes('drill');
     const drillPath = conversationContext?.drillPath || [];
     
+    // Parse time period for date filtering
+    const getTimePeriodLabel = (period: string) => {
+      switch (period) {
+        case 'last_month': return 'last month (past 30 days)';
+        case 'last_quarter': return 'last quarter (past 90 days)';
+        case 'last_year': return 'last year (past 365 days)';
+        case 'ytd': return 'year to date (January 1 to present)';
+        default: return 'last month';
+      }
+    };
+    const timePeriodLabel = getTimePeriodLabel(timePeriod || 'last_month');
+    
     console.log(`[${moduleId}] Analyzing question: ${question}`);
     console.log(`[${moduleId}] Is simulation: ${isSimulation}, Cross-module: ${isCrossModule}, Drill-down: ${isDrillDown}, Drill level: ${conversationContext?.drillLevel || 0}`);
+    console.log(`[${moduleId}] Selected KPIs: ${selectedKPIs?.join(', ') || 'none'}, Time period: ${timePeriod || 'last_month'}`);
     console.log(`[${moduleId}] Conversation context:`, JSON.stringify(conversationContext || {}));
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -1479,9 +1492,20 @@ CROSS-MODULE ANALYSIS INSTRUCTIONS:
     const userPrompt = `
 Question: ${question}
 
+TIME PERIOD FILTER: ${timePeriodLabel}
+All analysis, metrics, and insights MUST be scoped to ${timePeriodLabel}. Reference this time period explicitly in your response.
+
+SELECTED KPIs TO FOCUS ON: ${selectedKPIs?.length > 0 ? selectedKPIs.join(', ') : 'All relevant KPIs'}
+${selectedKPIs?.length > 0 ? `CRITICAL: Your response MUST include specific calculated values for EACH of these selected KPIs:
+${selectedKPIs.map((kpi: string) => `- ${kpi}: Calculate and report the actual value for this KPI in the time period`).join('\n')}
+
+Include these KPI values in:
+1. The whatHappened section with specific numbers
+2. The kpis object with calculated values
+3. The chartData showing these metrics where applicable` : ''}
+
 ${dataContext}
 
-Selected KPIs: ${selectedKPIs?.join(', ') || 'All relevant KPIs'}
 ${simulationInstructions}
 ${crossModuleInstructions}
 
@@ -1493,8 +1517,10 @@ CRITICAL RULES - FOLLOW EXACTLY:
 5. If the question asks about stockout risk, LIST THE ACTUAL PRODUCTS with their stock levels.
 6. Every statement must reference specific products, categories, or metrics from the data.
 7. NO VAGUE STATEMENTS - be specific with product names, numbers, percentages.
-${isSimulation ? '8. Include SIMULATION RESULTS with baseline vs. projected values and confidence levels.' : ''}
-${isCrossModule ? '9. Show CROSS-MODULE IMPACTS connecting effects across ' + detectedModules.join(', ') + '.' : ''}
+8. ALL metrics and analysis must be for the time period: ${timePeriodLabel}
+${selectedKPIs?.length > 0 ? `9. MANDATORY: Include calculated values for ALL selected KPIs: ${selectedKPIs.join(', ')}` : ''}
+${isSimulation ? '10. Include SIMULATION RESULTS with baseline vs. projected values and confidence levels.' : ''}
+${isCrossModule ? '11. Show CROSS-MODULE IMPACTS connecting effects across ' + detectedModules.join(', ') + '.' : ''}
 
 Focus areas for ${moduleId}:
 ${moduleId === 'pricing' ? 'pricing, margins, elasticity, competitor pricing, price changes' : 
