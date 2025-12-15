@@ -6,6 +6,7 @@ import {
   TrendingUp, 
   Truck, 
   Grid3X3,
+  Crown,
   LucideIcon
 } from 'lucide-react';
 
@@ -20,6 +21,15 @@ export interface Module {
 }
 
 export const modules: Module[] = [
+  {
+    id: 'executive',
+    name: 'Executive Dashboard',
+    description: 'Strategic insights across all merchandising functions for C-level decision making',
+    icon: Crown,
+    color: 'text-amber-500',
+    gradient: 'from-amber-500/20 to-amber-600/10',
+    path: '/executive'
+  },
   {
     id: 'promotion',
     name: 'Promotion Intelligence',
@@ -262,7 +272,81 @@ const spaceQuestions: ModuleQuestion[] = [
 ];
 
 // Popular question IDs by module
+// Executive Strategic Questions - cross-functional merchandising analytics
+const executiveQuestions: ModuleQuestion[] = [
+  // Overall Business Performance
+  { id: 1, text: "How is overall merchandising performance this quarter vs last year?", tags: ['performance', 'yoy'], metricKey: 'total_revenue', chartType: 'bar', followUps: ['Which regions are outperforming?', 'What categories are driving growth?'] },
+  { id: 2, text: "What is our total revenue and margin by region?", tags: ['revenue', 'region'], metricKey: 'revenue', chartType: 'bar', followUps: ['Which stores are top performers?', 'What is the margin variance by region?'] },
+  { id: 3, text: "What are the top 10 categories by revenue contribution?", tags: ['category', 'contribution'], metricKey: 'category_revenue', chartType: 'bar', followUps: ['Which categories have highest margins?', 'What is the growth trajectory for each?'] },
+  { id: 4, text: "How does store performance vary across regions?", tags: ['store', 'regional'], metricKey: 'store_performance', chartType: 'bar', followUps: ['What drives regional differences?', 'Which stores need intervention?'] },
+  { id: 5, text: "What is the YoY growth rate by category and region?", tags: ['growth', 'yoy'], metricKey: 'growth_rate', chartType: 'bar', followUps: ['Which categories are declining?', 'What external factors affect growth?'] },
+  
+  // Pricing & Margin Strategic View
+  { id: 6, text: "What is our overall margin performance vs budget?", tags: ['margin', 'budget'], metricKey: 'margin_percent', chartType: 'bar', followUps: ['Which categories are below target?', 'What pricing actions are needed?'] },
+  { id: 7, text: "How does our pricing compare to key competitors across categories?", tags: ['competitive', 'pricing'], metricKey: 'competitive_index', chartType: 'bar', followUps: ['Where are we losing on price?', 'What is the revenue at risk?'] },
+  { id: 8, text: "What is the margin erosion by category this quarter?", tags: ['margin', 'erosion'], metricKey: 'margin_erosion', chartType: 'bar', followUps: ['What is causing margin decline?', 'Which SKUs need price review?'] },
+  { id: 9, text: "Which categories have the best pricing power and elasticity?", tags: ['elasticity', 'pricing-power'], metricKey: 'price_elasticity', chartType: 'bar', followUps: ['Where can we increase prices?', 'What is the volume risk?'] },
+  { id: 10, text: "What is the private label vs national brand margin comparison?", tags: ['private-label', 'margin'], metricKey: 'margin_comparison', chartType: 'bar', followUps: ['Where to expand private label?', 'What is customer preference trend?'] },
+  
+  // Promotion Strategic View
+  { id: 11, text: "What is the overall promotion ROI across all categories?", tags: ['promotion', 'roi'], metricKey: 'promo_roi', chartType: 'bar', followUps: ['Which promotion types work best?', 'What is the cannibalization impact?'] },
+  { id: 12, text: "How effective is our promotional spend vs competitors?", tags: ['promotion', 'competitive'], metricKey: 'promo_effectiveness', chartType: 'bar', followUps: ['Are we over/under-investing?', 'What is the optimal spend level?'] },
+  { id: 13, text: "What is the promotion lift by category and mechanic?", tags: ['promotion', 'lift'], metricKey: 'lift_percent', chartType: 'bar', followUps: ['Which mechanics drive best ROI?', 'Where should we shift spend?'] },
+  { id: 14, text: "Which promotions are cannibalizing regular sales?", tags: ['cannibalization', 'promotion'], metricKey: 'cannibalization', chartType: 'bar', followUps: ['What is the net impact?', 'How to reduce cannibalization?'] },
+  { id: 15, text: "What is the customer response rate to promotions by segment?", tags: ['customer', 'response'], metricKey: 'response_rate', chartType: 'bar', followUps: ['Which segments are most responsive?', 'How to improve targeting?'] },
+  
+  // Demand & Inventory Strategic View
+  { id: 16, text: "What is the overall forecast accuracy and bias?", tags: ['forecast', 'accuracy'], metricKey: 'forecast_accuracy', chartType: 'bar', followUps: ['Which categories have worst accuracy?', 'What is the cost of forecast error?'] },
+  { id: 17, text: "What is the total inventory investment and days of supply?", tags: ['inventory', 'investment'], metricKey: 'inventory_value', chartType: 'bar', followUps: ['Where is capital tied up?', 'Which categories are overstocked?'] },
+  { id: 18, text: "What is the stockout rate and revenue impact by category?", tags: ['stockout', 'impact'], metricKey: 'stockout_rate', chartType: 'bar', followUps: ['What products are most affected?', 'What is the root cause?'] },
+  { id: 19, text: "How does seasonality affect demand across categories?", tags: ['seasonality', 'demand'], metricKey: 'seasonal_index', chartType: 'area', followUps: ['How to prepare for peak seasons?', 'What inventory buildup is needed?'] },
+  { id: 20, text: "What is the inventory turnover by category and region?", tags: ['turnover', 'inventory'], metricKey: 'inventory_turnover', chartType: 'bar', followUps: ['Which categories have slow turns?', 'What markdown risk exists?'] },
+  
+  // Supply Chain Strategic View
+  { id: 21, text: "What is the overall supplier performance scorecard?", tags: ['supplier', 'performance'], metricKey: 'supplier_score', chartType: 'bar', followUps: ['Which suppliers need review?', 'What is the risk concentration?'] },
+  { id: 22, text: "What is the total logistics cost as % of revenue?", tags: ['logistics', 'cost'], metricKey: 'logistics_cost_pct', chartType: 'bar', followUps: ['Where are cost savings opportunities?', 'How does this compare to industry?'] },
+  { id: 23, text: "What is the on-time delivery rate across the network?", tags: ['delivery', 'otd'], metricKey: 'on_time_delivery', chartType: 'bar', followUps: ['Which routes are problematic?', 'What is the customer impact?'] },
+  { id: 24, text: "What is the supply chain risk exposure by category?", tags: ['risk', 'supply-chain'], metricKey: 'supply_risk', chartType: 'bar', followUps: ['What single-source risks exist?', 'How to mitigate?'] },
+  { id: 25, text: "How does lead time variability impact availability?", tags: ['lead-time', 'availability'], metricKey: 'lead_time_variance', chartType: 'bar', followUps: ['Which suppliers are inconsistent?', 'What safety stock is needed?'] },
+  
+  // Space & Store Strategic View
+  { id: 26, text: "What is the sales per square foot by category and region?", tags: ['sales-sqft', 'space'], metricKey: 'sales_per_sqft', chartType: 'bar', followUps: ['Which categories need more space?', 'What is the optimal allocation?'] },
+  { id: 27, text: "What is the store conversion rate by format and region?", tags: ['conversion', 'store'], metricKey: 'conversion_rate', chartType: 'bar', followUps: ['What drives conversion differences?', 'Which stores need layout changes?'] },
+  { id: 28, text: "How does planogram compliance affect store performance?", tags: ['planogram', 'compliance'], metricKey: 'compliance_impact', chartType: 'bar', followUps: ['Which regions have lowest compliance?', 'What is the revenue opportunity?'] },
+  { id: 29, text: "What is the average basket size trend by store type?", tags: ['basket', 'trend'], metricKey: 'basket_size', chartType: 'line', followUps: ['What drives basket growth?', 'Which stores are declining?'] },
+  { id: 30, text: "What is the foot traffic trend by region and day?", tags: ['traffic', 'trend'], metricKey: 'foot_traffic', chartType: 'area', followUps: ['How to optimize staffing?', 'What marketing drives traffic?'] },
+  
+  // Cross-Functional Strategic Questions
+  { id: 31, text: "What is the end-to-end P&L by category from sourcing to shelf?", tags: ['pnl', 'end-to-end'], metricKey: 'category_pnl', chartType: 'bar', followUps: ['Where is value leaking?', 'What is the true category profitability?'] },
+  { id: 32, text: "How does pricing strategy affect demand forecast accuracy?", tags: ['pricing', 'forecast'], metricKey: 'price_forecast_impact', chartType: 'bar', followUps: ['What pricing changes improve forecasts?', 'How to align pricing and planning?'] },
+  { id: 33, text: "What is the integrated view of promotion, price, and space ROI?", tags: ['integrated', 'roi'], metricKey: 'integrated_roi', chartType: 'bar', followUps: ['Where are synergies?', 'What is the optimal mix?'] },
+  { id: 34, text: "How does assortment depth impact supply chain costs?", tags: ['assortment', 'supply-chain'], metricKey: 'complexity_cost', chartType: 'bar', followUps: ['Where to simplify assortment?', 'What is the cost-to-serve?'] },
+  { id: 35, text: "What is the customer lifetime value by segment and category?", tags: ['clv', 'segment'], metricKey: 'customer_ltv', chartType: 'bar', followUps: ['Which segments are most valuable?', 'How to grow high-value customers?'] },
+  
+  // Performance Drill-Down Questions
+  { id: 36, text: "Show me the worst performing categories and their root causes", tags: ['underperformance', 'root-cause'], metricKey: 'performance_gap', chartType: 'bar', followUps: ['What actions are needed?', 'What is the timeline to recovery?'] },
+  { id: 37, text: "What are the top 10 SKUs driving revenue growth this quarter?", tags: ['growth-drivers', 'sku'], metricKey: 'sku_growth', chartType: 'bar', followUps: ['What is driving their success?', 'How to replicate across categories?'] },
+  { id: 38, text: "Which stores are below plan and what are the issues?", tags: ['stores', 'below-plan'], metricKey: 'store_variance', chartType: 'bar', followUps: ['What interventions are needed?', 'What is the recovery potential?'] },
+  { id: 39, text: "What is the brand performance summary across all categories?", tags: ['brand', 'summary'], metricKey: 'brand_performance', chartType: 'bar', followUps: ['Which brands are gaining/losing share?', 'What is driving brand shifts?'] },
+  { id: 40, text: "What is the executive summary of merchandising health metrics?", tags: ['summary', 'health'], metricKey: 'health_score', chartType: 'bar', followUps: ['What are the top priorities?', 'What resources are needed?'] },
+  
+  // Simulation & Scenario Questions
+  { id: 41, text: "What if we increase promotional spend by 10% in underperforming regions?", tags: ['simulation', 'promotion'], metricKey: 'scenario_impact', chartType: 'bar', followUps: ['What is the expected ROI?', 'What categories should we focus on?'] },
+  { id: 42, text: "What if we rationalize bottom 10% of SKUs across all categories?", tags: ['simulation', 'rationalization'], metricKey: 'sku_reduction_impact', chartType: 'bar', followUps: ['What is the margin improvement?', 'What is the customer impact?'] },
+  { id: 43, text: "What if we shift 5% of space from low to high performers?", tags: ['simulation', 'space'], metricKey: 'space_reallocation', chartType: 'bar', followUps: ['What revenue lift is expected?', 'Which categories should receive more space?'] },
+  { id: 44, text: "What if we reduce supplier count by consolidating volume?", tags: ['simulation', 'supplier'], metricKey: 'consolidation_impact', chartType: 'bar', followUps: ['What cost savings are possible?', 'What risks does this create?'] },
+  { id: 45, text: "What if we implement dynamic pricing in key categories?", tags: ['simulation', 'pricing'], metricKey: 'dynamic_pricing_impact', chartType: 'bar', followUps: ['What margin improvement is expected?', 'What is the implementation complexity?'] },
+  
+  // Competitive & Market Questions
+  { id: 46, text: "How does our market share trend compare to key competitors?", tags: ['market-share', 'competitive'], metricKey: 'market_share', chartType: 'line', followUps: ['Where are we gaining/losing?', 'What is driving share shifts?'] },
+  { id: 47, text: "What competitive threats should we address this quarter?", tags: ['competitive', 'threats'], metricKey: 'threat_assessment', chartType: 'bar', followUps: ['What is the revenue at risk?', 'What defensive actions are needed?'] },
+  { id: 48, text: "What market trends should inform our merchandising strategy?", tags: ['trends', 'strategy'], metricKey: 'market_trends', chartType: 'line', followUps: ['What categories will grow/decline?', 'How should we position?'] },
+  { id: 49, text: "What is our price image perception vs competitors by category?", tags: ['price-image', 'perception'], metricKey: 'price_perception', chartType: 'bar', followUps: ['Where do customers see us as expensive?', 'How to improve perception?'] },
+  { id: 50, text: "What new market opportunities should we pursue?", tags: ['opportunities', 'growth'], metricKey: 'opportunity_value', chartType: 'bar', followUps: ['What is the investment required?', 'What is the expected return?'] },
+];
+
 const modulePopularIds: Record<string, number[]> = {
+  executive: [1, 6, 11, 16, 21, 26, 31, 40],
   pricing: [1, 2, 4, 5, 7, 10, 12, 14],
   assortment: [1, 2, 4, 7, 10, 12, 14, 16],
   demand: [1, 2, 5, 6, 8, 10, 12, 14],
@@ -280,6 +364,12 @@ export const getModulePersonas = (moduleId: string) => {
   };
 
   switch (moduleId) {
+    case 'executive':
+      return {
+        executive: { label: 'C-Suite', description: 'Enterprise-wide strategic view', icon: '👑', categories: null },
+        consumables: { label: 'VP Merchandising - Consumables', description: 'Strategic view for grocery', icon: '🥛', categories: ['Dairy', 'Beverages', 'Snacks', 'Produce', 'Frozen', 'Bakery', 'Pantry'] },
+        non_consumables: { label: 'VP Merchandising - Non-Consumables', description: 'Strategic view for non-food', icon: '🧴', categories: ['Personal Care', 'Home Care', 'Household'] },
+      };
     case 'pricing':
       return {
         executive: baseExecutive,
@@ -322,6 +412,7 @@ export const getModulePersonas = (moduleId: string) => {
 // Get questions for a module
 export const getModuleQuestions = (moduleId: string): ModuleQuestion[] => {
   switch (moduleId) {
+    case 'executive': return executiveQuestions;
     case 'pricing': return pricingQuestions;
     case 'assortment': return assortmentQuestions;
     case 'demand': return demandQuestions;

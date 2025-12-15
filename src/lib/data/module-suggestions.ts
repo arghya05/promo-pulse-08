@@ -1,11 +1,62 @@
 // Module-specific search suggestions and templates
-import { TrendingUp, Calendar, BarChart3, Target, Clock, MapPin, Users, Package, Truck, DollarSign, ShoppingCart, Layers, Box, Warehouse, Route, Percent, Scale, Grid3X3, Sparkles } from "lucide-react";
+import { TrendingUp, Calendar, BarChart3, Target, Clock, MapPin, Users, Package, Truck, DollarSign, ShoppingCart, Layers, Box, Warehouse, Route, Percent, Scale, Grid3X3, Sparkles, Crown } from "lucide-react";
 
 export interface SuggestionTemplate {
   text: string;
   icon: any;
   variation: string;
 }
+
+// Executive module suggestions - strategic cross-functional
+export const executiveSuggestions: Record<string, SuggestionTemplate[]> = {
+  "top": [
+    { text: "Top {n} categories by revenue contribution", icon: DollarSign, variation: "revenue" },
+    { text: "Top {n} regions by YoY growth", icon: TrendingUp, variation: "growth" },
+    { text: "Top {n} stores by performance", icon: Target, variation: "stores" },
+    { text: "Top {n} brands by market share", icon: BarChart3, variation: "brands" },
+    { text: "Top {n} suppliers by reliability", icon: Truck, variation: "suppliers" },
+    { text: "Top {n} categories by margin %", icon: Percent, variation: "margin" },
+  ],
+  "what": [
+    { text: "What is overall merchandising performance this quarter?", icon: BarChart3, variation: "performance" },
+    { text: "What is our margin vs budget by category?", icon: DollarSign, variation: "margin" },
+    { text: "What is the total inventory investment?", icon: Warehouse, variation: "inventory" },
+    { text: "What is our competitive position by category?", icon: Target, variation: "competitive" },
+    { text: "What is the P&L by category end-to-end?", icon: DollarSign, variation: "pnl" },
+    { text: "What is our market share trend?", icon: TrendingUp, variation: "share" },
+  ],
+  "how": [
+    { text: "How is store performance varying by region?", icon: MapPin, variation: "regional" },
+    { text: "How does pricing affect demand forecasts?", icon: TrendingUp, variation: "pricing" },
+    { text: "How effective is our promotional spend?", icon: BarChart3, variation: "promo" },
+    { text: "How does assortment depth impact costs?", icon: Layers, variation: "assortment" },
+    { text: "How does supplier performance affect availability?", icon: Truck, variation: "supply" },
+  ],
+  "which": [
+    { text: "Which categories are underperforming?", icon: Target, variation: "underperform" },
+    { text: "Which stores need intervention?", icon: MapPin, variation: "stores" },
+    { text: "Which suppliers pose risk?", icon: Truck, variation: "risk" },
+    { text: "Which promotions have best ROI?", icon: TrendingUp, variation: "promo" },
+    { text: "Which SKUs drive growth?", icon: Package, variation: "sku" },
+  ],
+  "compare": [
+    { text: "Compare performance by region", icon: MapPin, variation: "region" },
+    { text: "Compare consumables vs non-consumables", icon: Package, variation: "category" },
+    { text: "Compare this quarter vs last year", icon: Calendar, variation: "yoy" },
+    { text: "Compare our pricing vs competitors", icon: BarChart3, variation: "competitive" },
+  ],
+  "forecast": [
+    { text: "Forecast next quarter revenue", icon: TrendingUp, variation: "revenue" },
+    { text: "Forecast demand by category", icon: Clock, variation: "demand" },
+    { text: "Forecast margin trajectory", icon: DollarSign, variation: "margin" },
+  ],
+  "simulate": [
+    { text: "What if we increase promo spend by 10%?", icon: Sparkles, variation: "promo" },
+    { text: "What if we rationalize bottom 10% SKUs?", icon: Package, variation: "sku" },
+    { text: "What if we implement dynamic pricing?", icon: DollarSign, variation: "pricing" },
+    { text: "What if we consolidate suppliers?", icon: Truck, variation: "supplier" },
+  ],
+};
 
 // Pricing module suggestions
 export const pricingSuggestions: Record<string, SuggestionTemplate[]> = {
@@ -271,6 +322,7 @@ export const promotionSuggestions: Record<string, SuggestionTemplate[]> = {
 
 export const getSuggestionsByModule = (moduleId: string): Record<string, SuggestionTemplate[]> => {
   switch (moduleId) {
+    case 'executive': return executiveSuggestions;
     case 'pricing': return pricingSuggestions;
     case 'supply-chain': return supplyChainSuggestions;
     case 'demand': return demandSuggestions;
@@ -290,6 +342,24 @@ export interface ModuleChatContent {
 }
 
 export const moduleChatContent: Record<string, ModuleChatContent> = {
+  executive: {
+    greeting: "Welcome to the Executive Dashboard! I provide strategic insights across all merchandising functions - pricing, promotions, demand, supply chain, and space planning - to support C-level decision making.",
+    capabilities: [
+      "I analyze cross-functional performance from region to SKU level across all merchandising domains",
+      "Ask about overall business performance, margin trends, competitive positioning, or strategic scenarios",
+      "I can drill down from enterprise view to category, region, store, brand, and SKU level",
+      "I simulate strategic what-if scenarios across pricing, promotions, assortment, and supply chain"
+    ],
+    quickStarts: [
+      { text: "Overall merchandising performance this quarter", icon: BarChart3, tag: "PERFORMANCE" },
+      { text: "Margin vs budget by category", icon: DollarSign, tag: "MARGIN" },
+      { text: "Total revenue and growth by region", icon: TrendingUp, tag: "REVENUE" },
+      { text: "Competitive position vs key competitors", icon: Target, tag: "COMPETITIVE" },
+      { text: "Inventory investment and stockout impact", icon: Warehouse, tag: "INVENTORY" },
+      { text: "End-to-end P&L by category", icon: DollarSign, tag: "P&L" },
+    ],
+    placeholder: "Ask strategic questions about merchandising performance, margins, regions, categories, competitive position..."
+  },
   pricing: {
     greeting: "Welcome! Let's optimize your pricing strategy - I can analyze margins, price elasticity, and competitive positioning.",
     capabilities: [
