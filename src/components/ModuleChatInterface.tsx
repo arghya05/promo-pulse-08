@@ -23,6 +23,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import DrillBreadcrumbs from './DrillBreadcrumbs';
 import ConversationContextPanel from './ConversationContextPanel';
+import CrossModuleNavigator from './CrossModuleNavigator';
+import { useGlobalSession, detectTargetModule } from '@/contexts/GlobalSessionContext';
 
 interface Message {
   id: string;
@@ -80,9 +82,21 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
   });
   const [sessionInsights, setSessionInsights] = useState<SessionInsight[]>([]);
   const [expandedDrillDowns, setExpandedDrillDowns] = useState<Record<string, boolean>>({});
+  const [crossModuleLink, setCrossModuleLink] = useState<ReturnType<typeof detectTargetModule>>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const Icon = module.icon;
+  
+  // Global session for cross-module persistence
+  const { 
+    addInsight, 
+    getModuleInsights, 
+    sharedContext, 
+    updateSharedContext,
+    addMemoryEntry,
+    getRecentMemory,
+    getSessionSummary
+  } = useGlobalSession();
   
   const chatContent = getModuleChatContent(module.id);
 
@@ -118,8 +132,15 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
     return { type: null };
   }, []);
 
-  // Generate session summary
-  const generateSessionSummary = useCallback((): string => {
+  // Generate session summary - now uses global session for cross-module insights
+  const generateSessionSummaryLocal = useCallback((): string => {
+    // First check global session for cross-module summary
+    const globalSummary = getSessionSummary();
+    if (globalSummary && globalSummary !== "No insights gathered yet in this session.") {
+      return globalSummary;
+    }
+    
+    // Fall back to local session insights
     if (sessionInsights.length === 0) {
       return "We haven't discussed any specific topics yet. Try asking a question to get started!";
     }
@@ -140,9 +161,9 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
     }
     
     return summaryParts.join('\n');
-  }, [sessionInsights, conversationContext]);
+  }, [sessionInsights, conversationContext, getSessionSummary]);
 
-  // Reset on module change
+  // Reset on module change - restore shared context
   useEffect(() => {
     const greeting: Message = {
       id: 'greeting',
@@ -151,13 +172,28 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       timestamp: new Date()
     };
     setMessages([greeting]);
+    
+    // Restore from shared context if available
     setConversationContext({
-      recentTopics: [],
+      lastCategory: sharedContext.lastCategory,
+      lastMetric: sharedContext.lastMetric,
+      lastTimePeriod: sharedContext.lastTimePeriod,
+      recentTopics: sharedContext.recentTopics || [],
       drillPath: [],
       currentDrillLevel: 0
     });
-    setSessionInsights([]);
-  }, [module, chatContent.greeting]);
+    
+    // Load previous insights for this module
+    const moduleInsights = getModuleInsights(module.id);
+    setSessionInsights(moduleInsights.map(i => ({
+      id: i.id,
+      question: i.question,
+      keyFinding: i.keyFinding,
+      timestamp: i.timestamp
+    })));
+    
+    setCrossModuleLink(null);
+  }, [module, chatContent.greeting, sharedContext, getModuleInsights]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -291,7 +327,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
     
     if (navResult.type === 'summary') {
       // Handle summary request locally
-      const summaryContent = generateSessionSummary();
+      const summaryContent = generateSessionSummaryLocal();
       const userMessage: Message = {
         id: `user-${Date.now()}`,
         role: 'user',
@@ -374,17 +410,63 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       const updatedContext = extractContextFromResponse(data, text);
       setConversationContext(updatedContext);
 
-      // Extract session insight from response
+      // Extract session insight from response and store globally
       if (data?.whatHappened?.length > 0 || data?.kpis) {
         const keyFinding = data.whatHappened?.[0] || 
           (data.kpis ? `Key metrics: ${Object.entries(data.kpis).slice(0, 2).map(([k, v]) => `${k}: ${v}`).join(', ')}` : 'Analysis complete');
         
-        setSessionInsights(prev => [...prev, {
+        const localInsight = {
           id: `insight-${Date.now()}`,
           question: text.length > 50 ? text.substring(0, 50) + '...' : text,
           keyFinding: keyFinding.length > 80 ? keyFinding.substring(0, 80) + '...' : keyFinding,
           timestamp: new Date()
-        }]);
+        };
+        
+        setSessionInsights(prev => [...prev, localInsight]);
+        
+        // Also add to global session for cross-module access
+        addInsight({
+          moduleId: module.id,
+          moduleName: module.name,
+          question: localInsight.question,
+          keyFinding: localInsight.keyFinding,
+          timestamp: new Date(),
+          context: {
+            category: updatedContext.lastCategory,
+            metric: updatedContext.lastMetric,
+            timePeriod: updatedContext.lastTimePeriod
+          }
+        });
+        
+        // Update shared context
+        updateSharedContext({
+          lastCategory: updatedContext.lastCategory,
+          lastMetric: updatedContext.lastMetric,
+          lastTimePeriod: updatedContext.lastTimePeriod,
+          recentTopics: updatedContext.recentTopics
+        });
+        
+        // Add to extended memory
+        addMemoryEntry({
+          moduleId: module.id,
+          role: 'user',
+          content: text,
+          timestamp: new Date(),
+          importance: 'high'
+        });
+        addMemoryEntry({
+          moduleId: module.id,
+          role: 'assistant',
+          content: keyFinding,
+          timestamp: new Date(),
+          importance: 'high'
+        });
+      }
+      
+      // Check for cross-module references in the question
+      const crossModule = detectTargetModule(text);
+      if (crossModule && crossModule.targetModuleId !== module.id) {
+        setCrossModuleLink(crossModule);
       }
 
       // Generate drill-down questions
@@ -549,6 +631,17 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       {/* Chat Area */}
       <div className="lg:col-span-3 flex flex-col">
         <Card className="flex-1 flex flex-col">
+          {/* Cross-Module Navigation */}
+          {crossModuleLink && (
+            <div className="px-4 pt-3">
+              <CrossModuleNavigator
+                link={crossModuleLink}
+                onDismiss={() => setCrossModuleLink(null)}
+                currentModuleId={module.id}
+              />
+            </div>
+          )}
+          
           {/* Drill Breadcrumbs */}
           {conversationContext.drillPath.length > 0 && (
             <div className="px-4 pt-3">
