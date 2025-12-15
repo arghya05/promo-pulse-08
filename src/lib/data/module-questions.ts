@@ -68,9 +68,9 @@ export const assortmentQuestions: ModuleQuestion[] = [
 
 export const assortmentPopularIds = [1, 2, 3, 4, 5, 17, 19];
 
-// Demand Forecasting Questions (16+)
+// Demand Forecasting & Replenishment Questions (30+)
 export const demandQuestions: ModuleQuestion[] = [
-  // Core Demand
+  // Core Demand Forecasting
   { id: 1, text: "What's the demand forecast for the next 4 weeks?", tags: ['forecast', 'demand'], metricKey: 'demand_forecast', chartType: 'line' },
   { id: 2, text: "Which products are at risk of stockout?", tags: ['stockout', 'risk'], metricKey: 'stockout_rate', chartType: 'bar' },
   { id: 3, text: "How accurate are our demand forecasts by category?", tags: ['accuracy', 'category'], metricKey: 'forecast_accuracy', chartType: 'bar' },
@@ -79,7 +79,8 @@ export const demandQuestions: ModuleQuestion[] = [
   { id: 6, text: "Which stores have the highest inventory turnover?", tags: ['turnover', 'store'], metricKey: 'inventory_turnover', chartType: 'bar' },
   { id: 7, text: "What's the optimal safety stock level by product?", tags: ['safety-stock', 'optimization'], metricKey: 'safety_stock', chartType: 'bar' },
   { id: 8, text: "How do promotions impact demand forecasting accuracy?", tags: ['promotions', 'accuracy'], metricKey: 'promo_forecast_impact', chartType: 'line' },
-  // Extended Demand
+  
+  // Extended Demand Forecasting
   { id: 9, text: "What's the demand trend for emerging vs declining categories?", tags: ['trend', 'category'], metricKey: 'category_trend', chartType: 'line' },
   { id: 10, text: "How does weather impact demand by category?", tags: ['weather', 'demand'], metricKey: 'weather_demand_impact', chartType: 'line' },
   { id: 11, text: "What's the bullwhip effect in our demand signal?", tags: ['bullwhip', 'variability'], metricKey: 'demand_variability', chartType: 'line' },
@@ -88,15 +89,39 @@ export const demandQuestions: ModuleQuestion[] = [
   { id: 14, text: "How does day-of-week affect demand patterns?", tags: ['day-of-week', 'pattern'], metricKey: 'dow_pattern', chartType: 'bar' },
   { id: 15, text: "What's the lead demand indicator for each category?", tags: ['leading', 'indicator'], metricKey: 'lead_indicator', chartType: 'line' },
   { id: 16, text: "How do local events impact store demand?", tags: ['events', 'local'], metricKey: 'event_impact', chartType: 'bar' },
+  { id: 17, text: "Why is the forecast higher this month compared to last month?", tags: ['forecast', 'reasoning', 'drivers'], metricKey: 'forecast_explanation', chartType: 'bar' },
+  { id: 18, text: "What external factors are driving current demand trends?", tags: ['external', 'drivers', 'signals'], metricKey: 'external_drivers', chartType: 'bar' },
+  
+  // Core Replenishment
+  { id: 19, text: "What products need to be reordered this week?", tags: ['replenishment', 'reorder', 'urgent'], metricKey: 'reorder_list', chartType: 'bar' },
+  { id: 20, text: "What's the days of supply analysis by category?", tags: ['dos', 'inventory', 'category'], metricKey: 'days_of_supply', chartType: 'bar' },
+  { id: 21, text: "Which products are below their reorder point?", tags: ['reorder-point', 'critical'], metricKey: 'below_rop', chartType: 'bar' },
+  { id: 22, text: "What's the optimal reorder quantity for each product?", tags: ['eoq', 'quantity', 'optimization'], metricKey: 'reorder_qty', chartType: 'bar' },
+  { id: 23, text: "When should each product be reordered based on lead times?", tags: ['timing', 'lead-time', 'schedule'], metricKey: 'reorder_schedule', chartType: 'line' },
+  { id: 24, text: "Which suppliers should we use for replenishment orders?", tags: ['supplier', 'selection', 'replenishment'], metricKey: 'supplier_recommendation', chartType: 'bar' },
+  { id: 25, text: "What's the replenishment schedule by product category?", tags: ['schedule', 'frequency', 'category'], metricKey: 'replenishment_schedule', chartType: 'bar' },
+  { id: 26, text: "Which orders need to be expedited to avoid stockouts?", tags: ['expedite', 'urgent', 'stockout'], metricKey: 'expedite_orders', chartType: 'bar' },
+  { id: 27, text: "What's the fill rate performance by supplier?", tags: ['fill-rate', 'supplier', 'performance'], metricKey: 'supplier_fill_rate', chartType: 'bar' },
+  { id: 28, text: "How much inventory investment is needed for next month?", tags: ['investment', 'inventory', 'planning'], metricKey: 'inventory_investment', chartType: 'bar' },
+  
+  // Safety Stock & Service Level
+  { id: 29, text: "What safety stock adjustments are needed for high-variability items?", tags: ['safety-stock', 'variability', 'adjustment'], metricKey: 'safety_stock_adj', chartType: 'bar' },
+  { id: 30, text: "What's our current service level by category?", tags: ['service-level', 'category', 'performance'], metricKey: 'service_level', chartType: 'bar' },
+  { id: 31, text: "Which products need safety stock increases to meet 98% service level?", tags: ['service-level', 'safety-stock', 'target'], metricKey: 'safety_stock_gap', chartType: 'bar' },
+  
   // Simulation
-  { id: 17, text: "What if demand increases by 20% during holiday season?", tags: ['simulation', 'holiday'], metricKey: 'simulated_inventory_need', chartType: 'line', isSimulation: true },
-  { id: 18, text: "What if we reduce safety stock by 15%?", tags: ['simulation', 'safety-stock'], metricKey: 'simulated_stockout_risk', chartType: 'bar', isSimulation: true },
+  { id: 32, text: "What if demand increases by 20% during holiday season?", tags: ['simulation', 'holiday'], metricKey: 'simulated_inventory_need', chartType: 'line', isSimulation: true },
+  { id: 33, text: "What if we reduce safety stock by 15%?", tags: ['simulation', 'safety-stock'], metricKey: 'simulated_stockout_risk', chartType: 'bar', isSimulation: true },
+  { id: 34, text: "What if supplier lead times increase by 3 days?", tags: ['simulation', 'lead-time'], metricKey: 'simulated_reorder_impact', chartType: 'bar', isSimulation: true },
+  { id: 35, text: "What if we switch to weekly replenishment cycles?", tags: ['simulation', 'frequency'], metricKey: 'simulated_inventory_cost', chartType: 'bar', isSimulation: true },
+  
   // Cross-module
-  { id: 19, text: "How does demand volatility impact supply chain costs?", tags: ['cross-module', 'supply-chain'], metricKey: 'demand_supply_cost', chartType: 'bar', crossModule: ['supply-chain'] },
-  { id: 20, text: "What's the relationship between demand forecast and space allocation?", tags: ['cross-module', 'space'], metricKey: 'demand_space_alignment', chartType: 'bar', crossModule: ['space'] },
+  { id: 36, text: "How does demand volatility impact supply chain costs?", tags: ['cross-module', 'supply-chain'], metricKey: 'demand_supply_cost', chartType: 'bar', crossModule: ['supply-chain'] },
+  { id: 37, text: "What's the relationship between demand forecast and space allocation?", tags: ['cross-module', 'space'], metricKey: 'demand_space_alignment', chartType: 'bar', crossModule: ['space'] },
+  { id: 38, text: "How do pricing changes impact replenishment requirements?", tags: ['cross-module', 'pricing'], metricKey: 'pricing_replenishment_impact', chartType: 'line', crossModule: ['pricing'] },
 ];
 
-export const demandPopularIds = [1, 2, 3, 5, 6, 17, 19];
+export const demandPopularIds = [1, 2, 3, 5, 19, 20, 23, 32];
 
 // Supply Chain Questions (16+)
 export const supplyChainQuestions: ModuleQuestion[] = [
