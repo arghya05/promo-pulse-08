@@ -343,22 +343,22 @@ export interface ModuleChatContent {
 
 export const moduleChatContent: Record<string, ModuleChatContent> = {
   executive: {
-    greeting: "Welcome to Executive Insights! I provide strategic 360-degree visibility across all merchandising functions - pricing, promotions, demand, supply chain, and space planning - with full drill-down from enterprise to SKU level.",
+    greeting: "Welcome to Executive Insights! I provide strategic 360-degree visibility across all merchandising functions with full drill-down from enterprise to SKU level. Ask about revenue, margins, market share, competitive positioning, or any strategic KPI.",
     capabilities: [
-      "I analyze cross-functional performance and business health from region to SKU level",
-      "Ask about EBITDA, margins, working capital, ROA, cash flow, or any financial KPI",
-      "I drill down from enterprise → region → store → category → brand → SKU",
-      "I simulate strategic what-if scenarios and assess cross-functional impacts"
+      "I analyze cross-functional business health: revenue, margins, EBITDA, working capital, ROA",
+      "Strategic insights across pricing, promotions, demand, supply chain, and space planning",
+      "Drill from enterprise → region → store → category → brand → SKU",
+      "Simulate strategic scenarios and assess cross-functional business impacts"
     ],
     quickStarts: [
-      { text: "Overall merchandising performance this quarter", icon: BarChart3, tag: "PERFORMANCE" },
-      { text: "Margin vs budget by category", icon: DollarSign, tag: "MARGIN" },
-      { text: "Total revenue and growth by region", icon: TrendingUp, tag: "REVENUE" },
-      { text: "Competitive position vs key competitors", icon: Target, tag: "COMPETITIVE" },
-      { text: "Inventory investment and stockout impact", icon: Warehouse, tag: "INVENTORY" },
-      { text: "End-to-end P&L by category", icon: DollarSign, tag: "P&L" },
+      { text: "What is overall merchandising performance this quarter vs last year?", icon: BarChart3, tag: "PERFORMANCE" },
+      { text: "What is our margin performance vs budget by category?", icon: DollarSign, tag: "MARGIN" },
+      { text: "What are the top 10 categories by revenue contribution?", icon: TrendingUp, tag: "REVENUE" },
+      { text: "How does our pricing compare to key competitors across categories?", icon: Target, tag: "COMPETITIVE" },
+      { text: "What is the executive summary of merchandising health metrics?", icon: Crown, tag: "HEALTH" },
+      { text: "Show me worst performing categories and their root causes", icon: Target, tag: "RISK" },
     ],
-    placeholder: "Ask strategic questions about merchandising performance, margins, regions, categories, competitive position..."
+    placeholder: "Ask strategic C-suite questions: revenue, margins, competitive position, category performance, business health..."
   },
   pricing: {
     greeting: "Welcome! Let's optimize your pricing strategy - I can analyze margins, price elasticity, and competitive positioning.",
