@@ -9,9 +9,18 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import VoiceRecorder from "./VoiceRecorder";
 import KPISelector from "./KPISelector";
 import DrillBreadcrumbs from "./DrillBreadcrumbs";
+import ConversationContextPanel from "./ConversationContextPanel";
 import { useToast } from "@/hooks/use-toast";
 import type { AnalyticsResult } from "@/lib/analytics";
 import { getSuggestedKPIs, KPI } from "@/lib/data/kpi-library";
+
+// Session insight for summary
+interface SessionInsight {
+  id: string;
+  question: string;
+  keyFinding: string;
+  timestamp: Date;
+}
 
 // Collapsible Section Component - Reusable
 interface CollapsibleSectionProps {
@@ -425,8 +434,75 @@ export default function ChatInterface({
   const [showRefinement, setShowRefinement] = useState<string | null>(null);
   const [progressIndex, setProgressIndex] = useState(0);
   const [conversationContext, setConversationContext] = useState<ConversationContext>({ recentTopics: [], drillPath: [], currentDrillLevel: 0 });
+  const [sessionInsights, setSessionInsights] = useState<SessionInsight[]>([]);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, CollapsedSections>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Topic navigation patterns
+  const topicNavigationPatterns = [
+    /go back to (?:the )?(.+?)(?:\s+analysis)?$/i,
+    /what did we (?:discuss|talk) about (.+?)\??$/i,
+    /return to (.+?)(?:\s+topic)?$/i,
+    /back to (.+?)$/i,
+    /show me (.+?) again$/i,
+    /summarize (?:what we discussed|our discussion|the session|key findings)/i,
+    /what were the (?:key )?findings\??$/i
+  ];
+
+  // Check if user is asking for topic navigation or session summary
+  const detectTopicNavigation = useCallback((text: string): { type: 'navigation' | 'summary' | null, topic?: string } => {
+    const lowerText = text.toLowerCase();
+    
+    // Check for summary request
+    if (lowerText.includes('summarize') || lowerText.includes('key findings') || 
+        lowerText.includes('what did we discuss') || lowerText.includes('recap')) {
+      return { type: 'summary' };
+    }
+    
+    // Check for navigation patterns
+    for (const pattern of topicNavigationPatterns) {
+      const match = text.match(pattern);
+      if (match && match[1]) {
+        return { type: 'navigation', topic: match[1].trim() };
+      }
+    }
+    
+    return { type: null };
+  }, []);
+
+  // Generate session summary
+  const generateSessionSummary = useCallback((): string => {
+    if (sessionInsights.length === 0) {
+      return "We haven't discussed any specific topics yet. Try asking a question to get started!";
+    }
+    
+    const summaryParts = [
+      `During our session, we explored ${sessionInsights.length} key area${sessionInsights.length > 1 ? 's' : ''}:\n`
+    ];
+    
+    sessionInsights.forEach((insight, i) => {
+      summaryParts.push(`${i + 1}. **${insight.question}**: ${insight.keyFinding}`);
+    });
+    
+    if (conversationContext.lastCategory) {
+      summaryParts.push(`\nMost recent focus: ${conversationContext.lastCategory}`);
+    }
+    if (conversationContext.lastMetric) {
+      summaryParts.push(`Key metric analyzed: ${conversationContext.lastMetric}`);
+    }
+    
+    return summaryParts.join('\n');
+  }, [sessionInsights, conversationContext]);
+
+  // Handle topic click from context panel
+  const handleTopicClick = useCallback((topic: string) => {
+    handleSuggestionClick(`Tell me more about ${topic} - what are the key insights?`);
+  }, []);
+
+  // Handle insight click from session summary
+  const handleInsightClick = useCallback((insight: SessionInsight) => {
+    handleSuggestionClick(`Go back to the analysis about: ${insight.question}`);
+  }, []);
 
   // Get collapsed state for a message
   const getCollapsedState = (messageId: string): CollapsedSections => {
@@ -490,6 +566,7 @@ export default function ChatInterface({
       setLastModuleId(moduleId);
       setMessageCount(0);
       setConversationContext({ recentTopics: [], drillPath: [], currentDrillLevel: 0 });
+      setSessionInsights([]);
     }
   }, [persona, moduleId, content]);
 
@@ -612,6 +689,17 @@ export default function ChatInterface({
         const kpiExploration = generateKPIExploration(lastMessage.content);
         
         updateContext(lastMessage.content, currentResult);
+        
+        // Extract session insight from result
+        const keyFinding = currentResult.whatHappened?.[0] || 
+          `Key metrics: ${Object.entries(currentResult.kpis).slice(0, 2).map(([k, v]) => `${k}: ${v}`).join(', ')}`;
+        
+        setSessionInsights(prev => [...prev, {
+          id: `insight-${Date.now()}`,
+          question: lastMessage.content.length > 50 ? lastMessage.content.substring(0, 50) + '...' : lastMessage.content,
+          keyFinding: keyFinding.length > 80 ? keyFinding.substring(0, 80) + '...' : keyFinding,
+          timestamp: new Date()
+        }]);
         
         setMessages(prev => [...prev, {
           id: Date.now().toString(),
@@ -737,8 +825,37 @@ export default function ChatInterface({
   const handleSend = async () => {
     if (!query.trim() || isLoading) return;
 
+    // Check for topic navigation or summary requests
+    const navResult = detectTopicNavigation(query);
+    
+    if (navResult.type === 'summary') {
+      // Handle summary request locally
+      const summaryContent = generateSessionSummary();
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: query,
+        timestamp: new Date()
+      };
+      const summaryMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: summaryContent,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, userMessage, summaryMessage]);
+      setQuery("");
+      return;
+    }
+
+    // Handle topic navigation by transforming the query
+    let processedQuery = query;
+    if (navResult.type === 'navigation' && navResult.topic) {
+      processedQuery = `Give me a detailed analysis of ${navResult.topic} - what are the key metrics and insights?`;
+    }
+
     // Check for clarification needs
-    const clarification = needsClarification(query);
+    const clarification = needsClarification(processedQuery);
     if (clarification.needs && clarification.options) {
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -762,7 +879,7 @@ export default function ChatInterface({
     }
 
     // Resolve contextual references
-    const resolvedQuestion = resolveContextualQuestion(query);
+    const resolvedQuestion = resolveContextualQuestion(processedQuery);
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -912,6 +1029,19 @@ export default function ChatInterface({
           </div>
         </div>
       )}
+      
+      {/* Conversation Context Panel - Collapsible */}
+      {(conversationContext.lastCategory || conversationContext.lastMetric || sessionInsights.length > 0) && (
+        <div className="px-6 py-3 border-b border-border bg-secondary/20">
+          <ConversationContextPanel
+            context={conversationContext}
+            sessionInsights={sessionInsights}
+            onTopicClick={handleTopicClick}
+            onInsightClick={handleInsightClick}
+          />
+        </div>
+      )}
+      
       {/* Drill Breadcrumbs */}
       {conversationContext.drillPath.length > 0 && (
         <div className="px-6 py-2 border-b border-border/50">
