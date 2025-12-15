@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Bot, User, Sparkles, ArrowRight, Lightbulb, TrendingUp, AlertTriangle, HelpCircle, Target, Compass, ChevronRight, ChevronDown, Zap, BarChart3, PieChart, Clock, Filter, ThumbsUp, ThumbsDown, RefreshCw, MessageSquare, Loader2, X, DollarSign, Package, Truck, Box, Grid3X3 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import VoiceRecorder from "./VoiceRecorder";
 import KPISelector from "./KPISelector";
+import DrillBreadcrumbs from "./DrillBreadcrumbs";
 import { useToast } from "@/hooks/use-toast";
 import type { AnalyticsResult } from "@/lib/analytics";
 import { getSuggestedKPIs, KPI } from "@/lib/data/kpi-library";
@@ -131,6 +132,8 @@ interface ConversationContext {
   lastTimePeriod?: string;
   lastPromotion?: string;
   recentTopics: string[];
+  drillPath: string[];
+  currentDrillLevel: number;
 }
 
 interface ChatInterfaceProps {
@@ -421,7 +424,7 @@ export default function ChatInterface({
   const [refinementInput, setRefinementInput] = useState("");
   const [showRefinement, setShowRefinement] = useState<string | null>(null);
   const [progressIndex, setProgressIndex] = useState(0);
-  const [conversationContext, setConversationContext] = useState<ConversationContext>({ recentTopics: [] });
+  const [conversationContext, setConversationContext] = useState<ConversationContext>({ recentTopics: [], drillPath: [], currentDrillLevel: 0 });
   const [collapsedSections, setCollapsedSections] = useState<Record<string, CollapsedSections>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -486,7 +489,7 @@ export default function ChatInterface({
       setLastPersona(persona);
       setLastModuleId(moduleId);
       setMessageCount(0);
-      setConversationContext({ recentTopics: [] });
+      setConversationContext({ recentTopics: [], drillPath: [], currentDrillLevel: 0 });
     }
   }, [persona, moduleId, content]);
 
@@ -696,6 +699,41 @@ export default function ChatInterface({
     return contextualPrompts.followUp.roi;
   };
 
+  // Handle drilling into a chart item
+  const handleDrillInto = useCallback((itemName: string) => {
+    setConversationContext(prev => ({
+      ...prev,
+      drillPath: [...prev.drillPath, itemName],
+      currentDrillLevel: prev.currentDrillLevel + 1
+    }));
+    
+    handleSuggestionClick(`Drill deeper into ${itemName} - show me the next level of detail`);
+  }, []);
+
+  // Navigate to a specific drill level via breadcrumbs
+  const handleBreadcrumbNavigate = useCallback((index: number) => {
+    const newPath = conversationContext.drillPath.slice(0, index + 1);
+    const targetItem = newPath[index];
+    
+    setConversationContext(prev => ({
+      ...prev,
+      drillPath: newPath,
+      currentDrillLevel: index + 1
+    }));
+    
+    handleSuggestionClick(`Show me details for ${targetItem}`);
+  }, [conversationContext.drillPath]);
+
+  // Reset drill path to overview
+  const handleDrillReset = useCallback(() => {
+    setConversationContext(prev => ({
+      ...prev,
+      drillPath: [],
+      currentDrillLevel: 0
+    }));
+    handleSuggestionClick(`Give me an overview of ${moduleName} metrics`);
+  }, [moduleName]);
+
   const handleSend = async () => {
     if (!query.trim() || isLoading) return;
 
@@ -874,6 +912,17 @@ export default function ChatInterface({
           </div>
         </div>
       )}
+      {/* Drill Breadcrumbs */}
+      {conversationContext.drillPath.length > 0 && (
+        <div className="px-6 py-2 border-b border-border/50">
+          <DrillBreadcrumbs
+            drillPath={conversationContext.drillPath}
+            onNavigate={handleBreadcrumbNavigate}
+            onReset={handleDrillReset}
+            currentLevel={conversationContext.currentDrillLevel}
+          />
+        </div>
+      )}
 
       {/* Messages Area */}
       <ScrollArea className="flex-1 px-6 py-4" ref={scrollRef}>
@@ -983,6 +1032,30 @@ export default function ChatInterface({
                         {btn.label}
                       </Button>
                     ))}
+                  </div>
+                )}
+
+                {/* Drillable Chart Items */}
+                {message.analyticsResult?.chartData && message.analyticsResult.chartData.length > 0 && (
+                  <div className="mt-3 border-t border-border/50 pt-2">
+                    <p className="text-[10px] text-muted-foreground mb-2 flex items-center gap-1">
+                      <Sparkles className="h-3 w-3 text-primary" />
+                      Click to drill deeper into specific items:
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {message.analyticsResult.chartData.slice(0, 6).map((item: any, i: number) => (
+                        <Button
+                          key={i}
+                          variant="outline"
+                          size="sm"
+                          className="text-[10px] h-6 px-2"
+                          onClick={() => handleDrillInto(item.name)}
+                          disabled={isLoading}
+                        >
+                          {item.name}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 )}
 

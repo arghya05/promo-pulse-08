@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import DrillBreadcrumbs from './DrillBreadcrumbs';
 
 interface Message {
   id: string;
@@ -339,6 +340,31 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
     });
   };
 
+  // Navigate to a specific drill level via breadcrumbs
+  const handleBreadcrumbNavigate = useCallback((index: number) => {
+    const newPath = conversationContext.drillPath.slice(0, index + 1);
+    const targetItem = newPath[index];
+    
+    setConversationContext(prev => ({
+      ...prev,
+      drillPath: newPath,
+      currentDrillLevel: index + 1
+    }));
+    
+    // Ask a question about the selected level
+    handleSend(`Show me details for ${targetItem} at level ${index + 1}`);
+  }, [conversationContext.drillPath]);
+
+  // Reset drill path to overview
+  const handleDrillReset = useCallback(() => {
+    setConversationContext(prev => ({
+      ...prev,
+      drillPath: [],
+      currentDrillLevel: 0
+    }));
+    handleSend(`Give me an overview of ${module.name} metrics`);
+  }, [module.name]);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-200px)]">
       {/* Sidebar - Quick Actions */}
@@ -423,6 +449,18 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       {/* Chat Area */}
       <div className="lg:col-span-3 flex flex-col">
         <Card className="flex-1 flex flex-col">
+          {/* Drill Breadcrumbs */}
+          {conversationContext.drillPath.length > 0 && (
+            <div className="px-4 pt-3">
+              <DrillBreadcrumbs
+                drillPath={conversationContext.drillPath}
+                onNavigate={handleBreadcrumbNavigate}
+                onReset={handleDrillReset}
+                currentLevel={conversationContext.currentDrillLevel}
+              />
+            </div>
+          )}
+          
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-4">
               {messages.map((message) => (
