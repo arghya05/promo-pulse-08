@@ -357,7 +357,32 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
 
   // Module-specific persona questions
   const getModulePersonaQuestions = useMemo(() => {
-    if (moduleId === 'promotion') {
+    if (moduleId === 'executive') {
+      return {
+        executive: [
+          { id: 'e1', question: "What is overall merchandising performance this quarter vs last year?", tag: "PERFORMANCE" },
+          { id: 'e2', question: "What is our margin performance vs budget by category?", tag: "MARGIN" },
+          { id: 'e3', question: "What are the top 10 categories by revenue contribution?", tag: "REVENUE" },
+          { id: 'e4', question: "How does our pricing compare to key competitors across categories?", tag: "COMPETITIVE" },
+          { id: 'e5', question: "What is the executive summary of merchandising health metrics?", tag: "HEALTH" },
+          { id: 'e6', question: "What is the total inventory investment and days of supply?", tag: "INVENTORY" },
+          { id: 'e7', question: "What is our overall supplier performance scorecard?", tag: "SUPPLIERS" },
+          { id: 'e8', question: "What is the end-to-end P&L by category?", tag: "P&L" },
+        ],
+        consumables: [
+          { id: 'c1', question: "What is consumables category performance vs plan?", tag: "PERFORMANCE" },
+          { id: 'c2', question: "Which grocery categories are underperforming and why?", tag: "RISK" },
+          { id: 'c3', question: "What is the gross margin trend for consumables this quarter?", tag: "MARGIN" },
+          { id: 'c4', question: "How do promotion, pricing, and space ROI compare across grocery?", tag: "INTEGRATED" },
+        ],
+        non_consumables: [
+          { id: 'n1', question: "What is non-consumables category performance vs plan?", tag: "PERFORMANCE" },
+          { id: 'n2', question: "Which non-food categories need intervention?", tag: "RISK" },
+          { id: 'n3', question: "Personal Care vs Home Care: which is driving growth?", tag: "COMPARISON" },
+          { id: 'n4', question: "What is the supply chain risk exposure for non-consumables?", tag: "SUPPLY-RISK" },
+        ],
+      };
+    } else if (moduleId === 'promotion') {
       return {
         executive: [
           { id: 'e1', question: "Executive scorecard: overall portfolio ROI across consumables & non-consumables?", tag: "SCORECARD" },

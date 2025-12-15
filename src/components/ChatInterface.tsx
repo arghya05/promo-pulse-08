@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Bot, User, Sparkles, ArrowRight, Lightbulb, TrendingUp, AlertTriangle, HelpCircle, Target, Compass, ChevronRight, ChevronDown, Zap, BarChart3, PieChart, Clock, Filter, ThumbsUp, ThumbsDown, RefreshCw, MessageSquare, Loader2, X, DollarSign, Package, Truck, Box, Grid3X3 } from "lucide-react";
+import { Send, Bot, User, Sparkles, ArrowRight, Lightbulb, TrendingUp, AlertTriangle, HelpCircle, Target, Compass, ChevronRight, ChevronDown, Zap, BarChart3, PieChart, Clock, Filter, ThumbsUp, ThumbsDown, RefreshCw, MessageSquare, Loader2, X, DollarSign, Package, Truck, Box, Grid3X3, Crown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -170,6 +170,30 @@ const moduleContent: Record<string, {
   tips: string[];
   placeholder: string;
 }> = {
+  executive: {
+    greetings: [
+      "Welcome to Executive Insights! I provide 360-degree strategic visibility across all merchandising functions - pricing, promotions, demand, supply chain, and space planning.",
+      "Hello! Ready to deliver enterprise-wide insights on revenue, margins, competitive position, and operational performance.",
+      "Hi! I analyze cross-functional business health from enterprise to SKU level with full drill-down capability.",
+    ],
+    quickStarts: [
+      { text: "What is overall merchandising performance this quarter vs last year?", icon: TrendingUp, tag: "PERFORMANCE", color: "text-primary" },
+      { text: "What is our margin performance vs budget by category?", icon: DollarSign, tag: "MARGIN", color: "text-status-good" },
+      { text: "What are the top 10 categories by revenue contribution?", icon: BarChart3, tag: "REVENUE", color: "text-status-good" },
+      { text: "Executive summary of merchandising health metrics", icon: Target, tag: "HEALTH", color: "text-status-warning" },
+    ],
+    exploration: [
+      { text: "Competitive position vs key competitors", icon: Target, tag: "COMPETITIVE" },
+      { text: "Supply chain risk exposure", icon: Truck, tag: "SUPPLY-RISK" },
+      { text: "End-to-end P&L by category", icon: DollarSign, tag: "P&L" },
+    ],
+    tips: [
+      "👑 Ask me about revenue, margins, EBITDA, ROA, working capital, or any financial KPI",
+      "📊 I analyze cross-functional performance from enterprise → region → store → category → SKU",
+      "🎯 I simulate strategic scenarios and assess business-wide impacts",
+    ],
+    placeholder: "Ask strategic questions: revenue, margins, competitive position, business health...",
+  },
   promotion: {
     greetings: [
       "Hello! Let's explore your promotion performance - ROI trends, category comparisons, and growth opportunities await.",
