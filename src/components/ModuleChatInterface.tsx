@@ -17,7 +17,8 @@ import {
   TrendingUp,
   ChevronDown,
   ChevronRight,
-  RefreshCw
+  RefreshCw,
+  Calendar
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +26,7 @@ import DrillBreadcrumbs from './DrillBreadcrumbs';
 import ConversationContextPanel from './ConversationContextPanel';
 import CrossModuleNavigator from './CrossModuleNavigator';
 import { useGlobalSession, detectTargetModule } from '@/contexts/GlobalSessionContext';
+import KPISelector from './KPISelector';
 
 interface Message {
   id: string;
@@ -83,6 +85,8 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
   const [sessionInsights, setSessionInsights] = useState<SessionInsight[]>([]);
   const [expandedDrillDowns, setExpandedDrillDowns] = useState<Record<string, boolean>>({});
   const [crossModuleLink, setCrossModuleLink] = useState<ReturnType<typeof detectTargetModule>>(null);
+  const [selectedKPIs, setSelectedKPIs] = useState<string[]>(kpis.slice(0, 4).map(k => k.id));
+  const [selectedTimePeriod, setSelectedTimePeriod] = useState<string>('last_quarter');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const Icon = module.icon;
@@ -391,7 +395,8 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
         body: { 
           question: resolvedText,
           moduleId: module.id,
-          selectedKPIs: kpis.slice(0, 4).map(k => k.id),
+          selectedKPIs: selectedKPIs,
+          timePeriod: selectedTimePeriod,
           conversationHistory,
           conversationContext: {
             lastCategory: conversationContext.lastCategory,
@@ -603,6 +608,44 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
           </CardContent>
         </Card>
 
+        {/* Time Period Filter */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Calendar className="h-4 w-4 text-primary" />
+              <span className="font-medium text-sm">Time Period</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {[
+                { value: 'last_week', label: 'Week' },
+                { value: 'last_month', label: 'Month' },
+                { value: 'last_quarter', label: 'Quarter' },
+                { value: 'ytd', label: 'YTD' },
+                { value: 'last_year', label: 'Year' }
+              ].map((period) => (
+                <Button
+                  key={period.value}
+                  variant={selectedTimePeriod === period.value ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setSelectedTimePeriod(period.value)}
+                >
+                  {period.label}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* KPI Selector */}
+        <KPISelector
+          question=""
+          selectedKPIs={selectedKPIs}
+          onKPIsChange={setSelectedKPIs}
+          isLoading={isLoading}
+          moduleId={module.id}
+        />
+
         {/* Enhanced Conversation Context Panel */}
         <ConversationContextPanel
           context={conversationContext}
@@ -610,22 +653,6 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
           onTopicClick={handleTopicClick}
           onInsightClick={handleInsightClick}
         />
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="h-4 w-4 text-primary" />
-              <span className="font-medium text-sm">Key KPIs</span>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {kpis.filter((_, i) => i >= 5).slice(0, 6).map((kpi) => (
-                <Badge key={kpi.id} variant="secondary" className="text-xs">
-                  {kpi.name}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Chat Area */}
