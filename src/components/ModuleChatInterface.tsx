@@ -22,6 +22,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import DrillBreadcrumbs from './DrillBreadcrumbs';
+import ConversationContextPanel from './ConversationContextPanel';
 
 interface Message {
   id: string;
@@ -31,6 +32,14 @@ interface Message {
   isLoading?: boolean;
   data?: any;
   drillContext?: DrillContext;
+}
+
+// Session insight for summary
+interface SessionInsight {
+  id: string;
+  question: string;
+  keyFinding: string;
+  timestamp: Date;
 }
 
 // Conversation context for drilling and continuity
@@ -69,12 +78,69 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
     drillPath: [],
     currentDrillLevel: 0
   });
+  const [sessionInsights, setSessionInsights] = useState<SessionInsight[]>([]);
   const [expandedDrillDowns, setExpandedDrillDowns] = useState<Record<string, boolean>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const Icon = module.icon;
   
   const chatContent = getModuleChatContent(module.id);
+
+  // Topic navigation patterns
+  const topicNavigationPatterns = [
+    /go back to (?:the )?(.+?)(?:\s+analysis)?$/i,
+    /what did we (?:discuss|talk) about (.+?)\??$/i,
+    /return to (.+?)(?:\s+topic)?$/i,
+    /back to (.+?)$/i,
+    /show me (.+?) again$/i,
+    /summarize (?:what we discussed|our discussion|the session|key findings)/i,
+    /what were the (?:key )?findings\??$/i
+  ];
+
+  // Check if user is asking for topic navigation or session summary
+  const detectTopicNavigation = useCallback((text: string): { type: 'navigation' | 'summary' | null, topic?: string } => {
+    const lowerText = text.toLowerCase();
+    
+    // Check for summary request
+    if (lowerText.includes('summarize') || lowerText.includes('key findings') || 
+        lowerText.includes('what did we discuss') || lowerText.includes('recap')) {
+      return { type: 'summary' };
+    }
+    
+    // Check for navigation patterns
+    for (const pattern of topicNavigationPatterns) {
+      const match = text.match(pattern);
+      if (match && match[1]) {
+        return { type: 'navigation', topic: match[1].trim() };
+      }
+    }
+    
+    return { type: null };
+  }, []);
+
+  // Generate session summary
+  const generateSessionSummary = useCallback((): string => {
+    if (sessionInsights.length === 0) {
+      return "We haven't discussed any specific topics yet. Try asking a question to get started!";
+    }
+    
+    const summaryParts = [
+      `During our session, we explored ${sessionInsights.length} key area${sessionInsights.length > 1 ? 's' : ''}:\n`
+    ];
+    
+    sessionInsights.forEach((insight, i) => {
+      summaryParts.push(`${i + 1}. **${insight.question}**: ${insight.keyFinding}`);
+    });
+    
+    if (conversationContext.lastCategory) {
+      summaryParts.push(`\nMost recent focus: ${conversationContext.lastCategory}`);
+    }
+    if (conversationContext.lastMetric) {
+      summaryParts.push(`Key metric analyzed: ${conversationContext.lastMetric}`);
+    }
+    
+    return summaryParts.join('\n');
+  }, [sessionInsights, conversationContext]);
 
   // Reset on module change
   useEffect(() => {
@@ -90,6 +156,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       drillPath: [],
       currentDrillLevel: 0
     });
+    setSessionInsights([]);
   }, [module, chatContent.greeting]);
 
   useEffect(() => {
@@ -219,8 +286,37 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
   const handleSend = async (text: string, drillContext?: DrillContext) => {
     if (!text.trim() || isLoading) return;
 
+    // Check for topic navigation or summary requests
+    const navResult = detectTopicNavigation(text);
+    
+    if (navResult.type === 'summary') {
+      // Handle summary request locally
+      const summaryContent = generateSessionSummary();
+      const userMessage: Message = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: text,
+        timestamp: new Date()
+      };
+      const summaryMessage: Message = {
+        id: `summary-${Date.now()}`,
+        role: 'assistant',
+        content: summaryContent,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, userMessage, summaryMessage]);
+      setInput('');
+      return;
+    }
+
     // Resolve contextual references like "same for..." or "compare to..."
     let resolvedText = text;
+    
+    // Handle topic navigation
+    if (navResult.type === 'navigation' && navResult.topic) {
+      resolvedText = `Give me a detailed analysis of ${navResult.topic} - what are the key metrics and insights?`;
+    }
+    
     if (text.toLowerCase().includes('same for') || text.toLowerCase().includes('same analysis')) {
       if (conversationContext.lastCategory) {
         resolvedText = text.replace(/same (for|analysis)/i, `analysis for ${conversationContext.lastCategory}`);
@@ -277,6 +373,19 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       // Update conversation context from response
       const updatedContext = extractContextFromResponse(data, text);
       setConversationContext(updatedContext);
+
+      // Extract session insight from response
+      if (data?.whatHappened?.length > 0 || data?.kpis) {
+        const keyFinding = data.whatHappened?.[0] || 
+          (data.kpis ? `Key metrics: ${Object.entries(data.kpis).slice(0, 2).map(([k, v]) => `${k}: ${v}`).join(', ')}` : 'Analysis complete');
+        
+        setSessionInsights(prev => [...prev, {
+          id: `insight-${Date.now()}`,
+          question: text.length > 50 ? text.substring(0, 50) + '...' : text,
+          keyFinding: keyFinding.length > 80 ? keyFinding.substring(0, 80) + '...' : keyFinding,
+          timestamp: new Date()
+        }]);
+      }
 
       // Generate drill-down questions
       const drillDownQuestions = generateDrillDownQuestions(data, module.id);
@@ -338,7 +447,18 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       drillPath: [],
       currentDrillLevel: 0
     });
+    setSessionInsights([]);
   };
+
+  // Handle topic click from context panel
+  const handleTopicClick = useCallback((topic: string) => {
+    handleSend(`Tell me more about ${topic} - what are the key insights?`);
+  }, []);
+
+  // Handle insight click from session summary
+  const handleInsightClick = useCallback((insight: { id: string; question: string; keyFinding: string; timestamp: Date }) => {
+    handleSend(`Go back to the analysis about: ${insight.question}`);
+  }, []);
 
   // Navigate to a specific drill level via breadcrumbs
   const handleBreadcrumbNavigate = useCallback((index: number) => {
@@ -401,33 +521,13 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
           </CardContent>
         </Card>
 
-        {/* Conversation Context Display */}
-        {(conversationContext.lastCategory || conversationContext.drillPath.length > 0) && (
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                <span className="font-medium text-sm">Current Context</span>
-              </div>
-              <div className="space-y-2 text-xs text-muted-foreground">
-                {conversationContext.lastCategory && (
-                  <div>Category: <span className="text-foreground">{conversationContext.lastCategory}</span></div>
-                )}
-                {conversationContext.lastMetric && (
-                  <div>Metric: <span className="text-foreground">{conversationContext.lastMetric}</span></div>
-                )}
-                {conversationContext.drillPath.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    <span>Drill path:</span>
-                    {conversationContext.drillPath.map((p, i) => (
-                      <Badge key={i} variant="secondary" className="text-[10px]">{p}</Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Enhanced Conversation Context Panel */}
+        <ConversationContextPanel
+          context={conversationContext}
+          sessionInsights={sessionInsights}
+          onTopicClick={handleTopicClick}
+          onInsightClick={handleInsightClick}
+        />
 
         <Card>
           <CardContent className="p-4">
