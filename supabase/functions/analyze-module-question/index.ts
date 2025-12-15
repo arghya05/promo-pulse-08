@@ -12,7 +12,20 @@ const moduleContexts: Record<string, string> = {
   
   assortment: `You are an Assortment Planning AI for a $4B grocery retailer. Analyze product mix, category management, SKU rationalization, brand portfolio, new product performance, and private label opportunities. Use actual data from products, transactions, and inventory tables. NEVER mention promotions, ROI, or lift - focus ONLY on assortment metrics like SKU productivity, category gaps, brand mix.`,
   
-  demand: `You are a Demand Forecasting & Replenishment AI for a $4B grocery retailer. You MUST provide hierarchical forecasts from Category → Product/SKU → Store → Time Period (Month/Week/Day). When asked WHY forecasts are what they are, you MUST explain using DEMAND DRIVERS and EXTERNAL SIGNALS: seasonal patterns, weather impact, promotional lift, competitor activity, economic factors, historical trends, and event impacts. Always reference specific driver data with correlations and impact levels. Use actual data from demand_forecasts, forecast_accuracy_tracking, inventory_levels, and third_party_data tables. NEVER mention promotions, ROI, or lift unless explaining promotional demand drivers.`,
+  demand: `You are a Demand Forecasting & Replenishment AI for a $4B grocery retailer. 
+
+FORECASTING: Provide hierarchical forecasts from Category → Product/SKU → Store → Time Period (Month/Week/Day). When explaining WHY forecasts are what they are, use DEMAND DRIVERS and EXTERNAL SIGNALS: seasonal patterns, weather impact, promotional lift, competitor activity, economic factors, historical trends, and event impacts. Reference specific driver data with correlations.
+
+REPLENISHMENT: Provide actionable replenishment recommendations including:
+- Reorder quantities based on forecasted demand and safety stock requirements
+- Optimal reorder timing considering supplier lead times
+- Days of Supply (DOS) analysis by product/category
+- Safety stock levels adjusted for demand variability and service level targets
+- Supplier selection based on lead time, reliability, and cost
+- Expediting recommendations for stockout risks
+- Replenishment scheduling (daily/weekly cycles)
+
+Use actual data from demand_forecasts, forecast_accuracy_tracking, inventory_levels, suppliers, supplier_orders, and third_party_data tables. NEVER mention promotions, ROI, or lift unless explaining promotional demand drivers.`,
   
   'supply-chain': `You are a Supply Chain AI for a $4B grocery retailer. Analyze supplier performance, lead times, on-time delivery, logistics costs, warehouse capacity, and distribution routes. Use actual data from suppliers, supplier_orders, and shipping_routes tables. NEVER mention promotions, ROI, or lift - focus ONLY on supply chain metrics.`,
   
@@ -306,13 +319,15 @@ INVENTORY STATUS:
       }
       
       case 'demand': {
-        const [forecastsRes, accuracyRes, inventoryRes, demandDriversRes, externalSignalsRes, competitorRes] = await Promise.all([
+        const [forecastsRes, accuracyRes, inventoryRes, demandDriversRes, externalSignalsRes, competitorRes, suppliersRes, ordersRes] = await Promise.all([
           supabase.from('demand_forecasts').select('*').limit(1000),
           supabase.from('forecast_accuracy_tracking').select('*').limit(200),
           supabase.from('inventory_levels').select('*').limit(500),
           supabase.from('third_party_data').select('*').eq('data_type', 'demand_driver').limit(100),
           supabase.from('third_party_data').select('*').in('data_type', ['weather', 'economic', 'market_share']).limit(100),
           supabase.from('competitor_data').select('*').limit(50),
+          supabase.from('suppliers').select('*').limit(100),
+          supabase.from('supplier_orders').select('*').limit(500),
         ]);
         const forecasts = forecastsRes.data || [];
         const accuracyTracking = accuracyRes.data || [];
@@ -320,6 +335,8 @@ INVENTORY STATUS:
         const demandDrivers = demandDriversRes.data || [];
         const externalSignals = externalSignalsRes.data || [];
         const competitorData = competitorRes.data || [];
+        const suppliers = suppliersRes.data || [];
+        const supplierOrders = ordersRes.data || [];
         
         // Create product lookup for names
         const productLookup: Record<string, any> = {};
@@ -600,11 +617,142 @@ When explaining WHY forecasts are what they are, reference:
 7. EVENT IMPACTS: Super Bowl, holidays, local events
 8. SUPPLY CONSTRAINTS: Shipping delays, supplier issues limiting availability
 
+===== REPLENISHMENT INTELLIGENCE =====
+
+SUPPLIER NETWORK:
+${suppliers.slice(0, 10).map((s: any) => `- ${s.supplier_name}: ${s.lead_time_days} day lead time, ${(Number(s.reliability_score || 0) * 100).toFixed(0)}% reliability, Min order: $${Number(s.minimum_order_value || 0).toFixed(0)}`).join('\n')}
+
+${(() => {
+  // Calculate replenishment metrics
+  const supplierLookup: Record<string, any> = {};
+  suppliers.forEach((s: any) => { supplierLookup[s.id] = s; });
+  
+  // Calculate daily demand rate per product from forecasts
+  const dailyDemandRate: Record<string, { rate: number; name: string; category: string }> = {};
+  Object.entries(forecastsByProduct).forEach(([sku, data]: [string, any]) => {
+    // Estimate daily rate from total forecast (assume 30-day period)
+    const daysInPeriod = 30;
+    dailyDemandRate[sku] = {
+      rate: data.forecasted / daysInPeriod,
+      name: data.name,
+      category: data.category
+    };
+  });
+  
+  // Calculate Days of Supply (DOS) for each inventory item
+  const dosAnalysis: { sku: string; name: string; category: string; stock: number; dos: number; dailyDemand: number; riskLevel: string; reorderQty: number; reorderDate: string }[] = [];
+  inventory.forEach((inv: any) => {
+    const product = productLookup[inv.product_sku] || {};
+    const demandData = dailyDemandRate[inv.product_sku];
+    const dailyDemand = demandData?.rate || 1;
+    const stock = Number(inv.stock_level || 0);
+    const dos = dailyDemand > 0 ? stock / dailyDemand : 999;
+    
+    // Find best supplier for this category
+    const avgLeadTime = suppliers.reduce((sum: number, s: any) => sum + Number(s.lead_time_days || 7), 0) / (suppliers.length || 1);
+    const safetyStockDays = 7; // 7 days safety stock
+    const reorderPoint = (avgLeadTime + safetyStockDays) * dailyDemand;
+    
+    // Determine when to reorder
+    const daysUntilReorder = Math.max(0, (stock - reorderPoint) / dailyDemand);
+    const reorderDate = new Date();
+    reorderDate.setDate(reorderDate.getDate() + Math.floor(daysUntilReorder));
+    
+    // Economic order quantity (simplified)
+    const eoq = Math.ceil(dailyDemand * 14); // 2-week supply
+    
+    let riskLevel = 'Low';
+    if (dos <= avgLeadTime) riskLevel = 'Critical';
+    else if (dos <= avgLeadTime + safetyStockDays) riskLevel = 'High';
+    else if (dos <= 14) riskLevel = 'Medium';
+    
+    dosAnalysis.push({
+      sku: inv.product_sku,
+      name: demandData?.name || product.product_name || inv.product_sku,
+      category: demandData?.category || product.category || 'Unknown',
+      stock,
+      dos: Math.round(dos * 10) / 10,
+      dailyDemand: Math.round(dailyDemand * 10) / 10,
+      riskLevel,
+      reorderQty: eoq,
+      reorderDate: reorderDate.toISOString().split('T')[0]
+    });
+  });
+  
+  // Sort by DOS (lowest first = most urgent)
+  const criticalItems = dosAnalysis.filter(d => d.riskLevel === 'Critical').sort((a, b) => a.dos - b.dos);
+  const highRiskItems = dosAnalysis.filter(d => d.riskLevel === 'High').sort((a, b) => a.dos - b.dos);
+  const mediumRiskItems = dosAnalysis.filter(d => d.riskLevel === 'Medium').sort((a, b) => a.dos - b.dos);
+  
+  // Recent orders for context
+  const pendingOrders = supplierOrders.filter((o: any) => o.status === 'pending' || o.status === 'in_transit');
+  const recentPendingOrders = pendingOrders.slice(0, 10).map((o: any) => {
+    const product = productLookup[o.product_sku] || {};
+    const supplier = supplierLookup[o.supplier_id] || {};
+    return {
+      product: product.product_name || o.product_sku,
+      supplier: supplier.supplier_name || 'Unknown',
+      quantity: o.quantity,
+      expected: o.expected_delivery_date
+    };
+  });
+  
+  // Calculate order recommendations by category
+  const categoryReplenishment: Record<string, { items: number; totalQty: number; urgentItems: string[] }> = {};
+  dosAnalysis.forEach(d => {
+    if (!categoryReplenishment[d.category]) categoryReplenishment[d.category] = { items: 0, totalQty: 0, urgentItems: [] };
+    if (d.riskLevel === 'Critical' || d.riskLevel === 'High') {
+      categoryReplenishment[d.category].items++;
+      categoryReplenishment[d.category].totalQty += d.reorderQty;
+      if (d.riskLevel === 'Critical') categoryReplenishment[d.category].urgentItems.push(d.name);
+    }
+  });
+  
+  return `
+DAYS OF SUPPLY (DOS) ANALYSIS - CRITICAL ITEMS (ORDER IMMEDIATELY):
+${criticalItems.slice(0, 10).map(d => `- ${d.name} (${d.category}): ${d.dos} days supply, ${d.stock} units on hand, ${d.dailyDemand}/day demand → ORDER ${d.reorderQty} units by ${d.reorderDate}`).join('\n') || '- No critical items'}
+
+HIGH RISK ITEMS (ORDER WITHIN 3-5 DAYS):
+${highRiskItems.slice(0, 8).map(d => `- ${d.name}: ${d.dos} days supply, ${d.stock} units → Recommend ${d.reorderQty} units`).join('\n') || '- No high risk items'}
+
+MEDIUM RISK ITEMS (MONITOR):
+${mediumRiskItems.slice(0, 6).map(d => `- ${d.name}: ${d.dos} days supply, ${d.stock} units`).join('\n') || '- No medium risk items'}
+
+REPLENISHMENT RECOMMENDATIONS BY CATEGORY:
+${Object.entries(categoryReplenishment)
+  .filter(([_, data]) => data.items > 0)
+  .sort((a, b) => b[1].items - a[1].items)
+  .map(([cat, data]) => `- ${cat}: ${data.items} items need replenishment, ${data.totalQty} total units${data.urgentItems.length > 0 ? ` (URGENT: ${data.urgentItems.join(', ')})` : ''}`)
+  .join('\n') || '- All categories adequately stocked'}
+
+PENDING ORDERS IN TRANSIT:
+${recentPendingOrders.map(o => `- ${o.product} from ${o.supplier}: ${o.quantity} units expected ${o.expected}`).join('\n') || '- No pending orders'}
+
+REPLENISHMENT METRICS:
+- Total inventory items: ${inventory.length}
+- Critical (≤ lead time DOS): ${criticalItems.length}
+- High risk (≤ lead time + safety stock): ${highRiskItems.length}
+- Medium risk (≤ 14 days): ${mediumRiskItems.length}
+- Average DOS across portfolio: ${(dosAnalysis.reduce((s, d) => s + d.dos, 0) / (dosAnalysis.length || 1)).toFixed(1)} days
+- Target service level: 98%
+- Safety stock policy: 7 days
+
+SUPPLIER LEAD TIMES FOR PLANNING:
+${suppliers.slice(0, 8).map((s: any) => `- ${s.supplier_name}: ${s.lead_time_days} days (${(Number(s.reliability_score || 0) * 100).toFixed(0)}% on-time)`).join('\n')}
+
+REPLENISHMENT SCHEDULING GUIDANCE:
+- Daily replenishment cycle: Fresh products (Dairy, Produce, Bakery)
+- Weekly replenishment cycle: Shelf-stable products (Pantry, Snacks, Beverages)
+- Bi-weekly cycle: Non-consumables (Personal Care, Home Care)
+- Safety stock multiplier: 1.5x for high-variability items, 1.0x for stable items`;
+})()}
+
 DRILL-DOWN PATHS AVAILABLE:
 - Category → Product/SKU → Store → Month/Week/Day
 - Month → Week → Day → Category → Product/SKU
 - Store/Region → Category → Week/Day → Product/SKU
-- Forecast → Drivers → External Signals → Historical Comparison`;
+- Forecast → Drivers → External Signals → Historical Comparison
+- Inventory → DOS Analysis → Reorder Recommendations → Supplier Selection`;
         break;
       }
       
