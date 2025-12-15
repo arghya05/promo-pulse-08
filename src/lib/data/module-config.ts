@@ -23,8 +23,8 @@ export interface Module {
 export const modules: Module[] = [
   {
     id: 'executive',
-    name: 'Executive Dashboard',
-    description: 'Strategic insights across all merchandising functions for C-level decision making',
+    name: 'Executive Insights',
+    description: 'Strategic C-suite analytics across pricing, promotion, demand, supply chain & space planning',
     icon: Crown,
     color: 'text-amber-500',
     gradient: 'from-amber-500/20 to-amber-600/10',

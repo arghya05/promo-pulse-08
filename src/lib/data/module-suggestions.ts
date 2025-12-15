@@ -343,12 +343,12 @@ export interface ModuleChatContent {
 
 export const moduleChatContent: Record<string, ModuleChatContent> = {
   executive: {
-    greeting: "Welcome to the Executive Dashboard! I provide strategic insights across all merchandising functions - pricing, promotions, demand, supply chain, and space planning - to support C-level decision making.",
+    greeting: "Welcome to Executive Insights! I provide strategic 360-degree visibility across all merchandising functions - pricing, promotions, demand, supply chain, and space planning - with full drill-down from enterprise to SKU level.",
     capabilities: [
-      "I analyze cross-functional performance from region to SKU level across all merchandising domains",
-      "Ask about overall business performance, margin trends, competitive positioning, or strategic scenarios",
-      "I can drill down from enterprise view to category, region, store, brand, and SKU level",
-      "I simulate strategic what-if scenarios across pricing, promotions, assortment, and supply chain"
+      "I analyze cross-functional performance and business health from region to SKU level",
+      "Ask about EBITDA, margins, working capital, ROA, cash flow, or any financial KPI",
+      "I drill down from enterprise → region → store → category → brand → SKU",
+      "I simulate strategic what-if scenarios and assess cross-functional impacts"
     ],
     quickStarts: [
       { text: "Overall merchandising performance this quarter", icon: BarChart3, tag: "PERFORMANCE" },
