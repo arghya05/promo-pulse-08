@@ -10,9 +10,11 @@ import VoiceRecorder from "./VoiceRecorder";
 import KPISelector from "./KPISelector";
 import DrillBreadcrumbs from "./DrillBreadcrumbs";
 import ConversationContextPanel from "./ConversationContextPanel";
+import CrossModuleNavigator from "./CrossModuleNavigator";
 import { useToast } from "@/hooks/use-toast";
 import type { AnalyticsResult } from "@/lib/analytics";
 import { getSuggestedKPIs, KPI } from "@/lib/data/kpi-library";
+import { useGlobalSession, detectTargetModule } from "@/contexts/GlobalSessionContext";
 
 // Session insight for summary
 interface SessionInsight {
@@ -435,8 +437,19 @@ export default function ChatInterface({
   const [progressIndex, setProgressIndex] = useState(0);
   const [conversationContext, setConversationContext] = useState<ConversationContext>({ recentTopics: [], drillPath: [], currentDrillLevel: 0 });
   const [sessionInsights, setSessionInsights] = useState<SessionInsight[]>([]);
+  const [crossModuleLink, setCrossModuleLink] = useState<ReturnType<typeof detectTargetModule>>(null);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, CollapsedSections>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // Global session for cross-module persistence
+  const { 
+    addInsight, 
+    getModuleInsights, 
+    sharedContext, 
+    updateSharedContext,
+    addMemoryEntry,
+    getSessionSummary: getGlobalSessionSummary
+  } = useGlobalSession();
 
   // Topic navigation patterns
   const topicNavigationPatterns = [
@@ -470,8 +483,14 @@ export default function ChatInterface({
     return { type: null };
   }, []);
 
-  // Generate session summary
+  // Generate session summary - uses global session for cross-module insights
   const generateSessionSummary = useCallback((): string => {
+    // First check global session for cross-module summary
+    const globalSummary = getGlobalSessionSummary();
+    if (globalSummary && globalSummary !== "No insights gathered yet in this session.") {
+      return globalSummary;
+    }
+    
     if (sessionInsights.length === 0) {
       return "We haven't discussed any specific topics yet. Try asking a question to get started!";
     }
@@ -492,7 +511,7 @@ export default function ChatInterface({
     }
     
     return summaryParts.join('\n');
-  }, [sessionInsights, conversationContext]);
+  }, [sessionInsights, conversationContext, getGlobalSessionSummary]);
 
   // Handle topic click from context panel
   const handleTopicClick = useCallback((topic: string) => {
@@ -549,7 +568,7 @@ export default function ChatInterface({
     }
   }, [isLoading]);
 
-  // Initialize with greeting - reset when persona or module changes
+  // Initialize with greeting - reset when persona or module changes, restore shared context
   useEffect(() => {
     if (messages.length === 0 || persona !== lastPersona || moduleId !== lastModuleId) {
       const greeting = content.greetings[Math.floor(Math.random() * content.greetings.length)];
@@ -565,10 +584,23 @@ export default function ChatInterface({
       setLastPersona(persona);
       setLastModuleId(moduleId);
       setMessageCount(0);
-      setConversationContext({ recentTopics: [], drillPath: [], currentDrillLevel: 0 });
-      setSessionInsights([]);
+      // Restore from shared context
+      setConversationContext({ 
+        lastCategory: sharedContext.lastCategory,
+        lastMetric: sharedContext.lastMetric,
+        lastTimePeriod: sharedContext.lastTimePeriod,
+        recentTopics: sharedContext.recentTopics || [], 
+        drillPath: [], 
+        currentDrillLevel: 0 
+      });
+      // Load previous module insights
+      const moduleInsights = getModuleInsights(moduleId);
+      setSessionInsights(moduleInsights.map(i => ({
+        id: i.id, question: i.question, keyFinding: i.keyFinding, timestamp: i.timestamp
+      })));
+      setCrossModuleLink(null);
     }
-  }, [persona, moduleId, content]);
+  }, [persona, moduleId, content, sharedContext, getModuleInsights]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
