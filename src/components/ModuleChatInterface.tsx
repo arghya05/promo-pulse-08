@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Module } from '@/lib/data/modules';
 import { ModuleQuestion } from '@/lib/data/module-questions';
 import { ModuleKPI } from '@/lib/data/module-kpis';
-import { getModuleChatContent, ModuleChatContent } from '@/lib/data/module-suggestions';
+import { getModuleChatContent } from '@/lib/data/module-suggestions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,13 +10,14 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Send, 
-  Bot, 
   User, 
   Sparkles, 
   Loader2,
   Lightbulb,
   TrendingUp,
-  BarChart3
+  ChevronDown,
+  ChevronRight,
+  RefreshCw
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -28,6 +29,27 @@ interface Message {
   timestamp: Date;
   isLoading?: boolean;
   data?: any;
+  drillContext?: DrillContext;
+}
+
+// Conversation context for drilling and continuity
+interface ConversationContext {
+  lastCategory?: string;
+  lastProduct?: string;
+  lastMetric?: string;
+  lastTimePeriod?: string;
+  lastSupplier?: string;
+  lastPlanogram?: string;
+  recentTopics: string[];
+  drillPath: string[];
+  currentDrillLevel: number;
+}
+
+interface DrillContext {
+  dimension: string;
+  value: string;
+  level: number;
+  parentContext?: string;
 }
 
 interface ModuleChatInterfaceProps {
@@ -41,15 +63,20 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationContext, setConversationContext] = useState<ConversationContext>({
+    recentTopics: [],
+    drillPath: [],
+    currentDrillLevel: 0
+  });
+  const [expandedDrillDowns, setExpandedDrillDowns] = useState<Record<string, boolean>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const Icon = module.icon;
   
-  // Get module-specific chat content
   const chatContent = getModuleChatContent(module.id);
 
+  // Reset on module change
   useEffect(() => {
-    // Module-specific greeting
     const greeting: Message = {
       id: 'greeting',
       role: 'assistant',
@@ -57,20 +84,159 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       timestamp: new Date()
     };
     setMessages([greeting]);
+    setConversationContext({
+      recentTopics: [],
+      drillPath: [],
+      currentDrillLevel: 0
+    });
   }, [module, chatContent.greeting]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = async (text: string) => {
+  // Extract context from response for conversation continuity
+  const extractContextFromResponse = useCallback((data: any, question: string) => {
+    const newContext: Partial<ConversationContext> = {};
+    
+    // Extract category from chart data or answer
+    if (data?.chartData?.length > 0) {
+      const firstItem = data.chartData[0];
+      if (firstItem.name) {
+        const categories = ['Dairy', 'Produce', 'Beverages', 'Snacks', 'Bakery', 'Pantry', 'Frozen', 'Personal Care', 'Home Care'];
+        if (categories.some(c => firstItem.name.includes(c))) {
+          newContext.lastCategory = firstItem.name;
+        }
+      }
+    }
+    
+    // Extract product from whatHappened
+    if (data?.whatHappened) {
+      const productPatterns = /(?:product|sku|item):\s*([A-Za-z0-9\s-]+)/gi;
+      const match = data.whatHappened.join(' ').match(productPatterns);
+      if (match) newContext.lastProduct = match[0];
+    }
+    
+    // Extract time period from question
+    const timePeriods = ['this month', 'last month', 'this quarter', 'last quarter', 'this year', 'YTD', 'last year'];
+    const foundPeriod = timePeriods.find(p => question.toLowerCase().includes(p));
+    if (foundPeriod) newContext.lastTimePeriod = foundPeriod;
+    
+    // Extract metrics mentioned
+    const metrics = ['ROI', 'margin', 'revenue', 'sales', 'volume', 'units', 'forecast', 'accuracy', 'lead time', 'reliability'];
+    const foundMetric = metrics.find(m => question.toLowerCase().includes(m.toLowerCase()));
+    if (foundMetric) newContext.lastMetric = foundMetric;
+    
+    // Add topic to recent topics
+    const topics = question.split(' ').filter(w => w.length > 4).slice(0, 3);
+    
+    return {
+      ...conversationContext,
+      ...newContext,
+      recentTopics: [...conversationContext.recentTopics.slice(-5), ...topics]
+    };
+  }, [conversationContext]);
+
+  // Build conversation history for AI context
+  const buildConversationHistory = useCallback(() => {
+    return messages
+      .filter(m => !m.isLoading && m.id !== 'greeting')
+      .slice(-6) // Last 6 messages for context
+      .map(m => ({
+        role: m.role,
+        content: m.role === 'user' ? m.content : 
+          m.data?.whatHappened?.join(' ') || m.content,
+        context: m.data ? {
+          kpis: m.data.kpis,
+          chartDataSummary: m.data.chartData?.slice(0, 3).map((c: any) => c.name).join(', ')
+        } : undefined
+      }));
+  }, [messages]);
+
+  // Generate drill-down questions based on response data
+  const generateDrillDownQuestions = useCallback((data: any, moduleId: string): string[] => {
+    const drillQuestions: string[] = [];
+    
+    if (!data) return drillQuestions;
+    
+    // Add next questions from AI
+    if (data.nextQuestions?.length > 0) {
+      drillQuestions.push(...data.nextQuestions.slice(0, 2));
+    }
+    
+    // Generate contextual drill-downs based on chart data
+    if (data.chartData?.length > 0) {
+      const topItem = data.chartData[0];
+      const bottomItem = data.chartData[data.chartData.length - 1];
+      
+      switch (moduleId) {
+        case 'pricing':
+          if (topItem.name) drillQuestions.push(`Drill into ${topItem.name} pricing - what products drive the margin?`);
+          if (conversationContext.lastCategory) drillQuestions.push(`What competitor pricing affects ${conversationContext.lastCategory}?`);
+          break;
+        case 'demand':
+          if (topItem.name) drillQuestions.push(`Break down ${topItem.name} forecast by week - what drives demand?`);
+          drillQuestions.push(`Which specific products in ${topItem.name || 'this category'} have stockout risk?`);
+          break;
+        case 'supply-chain':
+          if (topItem.name) drillQuestions.push(`What orders from ${topItem.name} are at risk of being late?`);
+          drillQuestions.push(`What's the cost breakdown for this supplier/route?`);
+          break;
+        case 'assortment':
+          if (topItem.name) drillQuestions.push(`Which SKUs in ${topItem.name} should we discontinue?`);
+          drillQuestions.push(`What brand portfolio changes would improve ${topItem.name || 'category'} performance?`);
+          break;
+        case 'space':
+          if (topItem.name) drillQuestions.push(`What planogram changes would optimize ${topItem.name}?`);
+          drillQuestions.push(`Which fixtures need reallocation for better productivity?`);
+          break;
+      }
+    }
+    
+    // Add causal driver drill-down
+    if (data.causalDrivers?.length > 0) {
+      const topDriver = data.causalDrivers[0];
+      drillQuestions.push(`Explain more about ${topDriver.driver} - how can we act on this?`);
+    }
+    
+    return drillQuestions.slice(0, 4);
+  }, [conversationContext.lastCategory]);
+
+  // Handle drilling into specific data point
+  const handleDrillInto = useCallback((dimension: string, value: string, level: number = 1) => {
+    const drillQuestion = `Drill deeper into ${value} - show me the next level of detail for ${dimension}`;
+    
+    setConversationContext(prev => ({
+      ...prev,
+      drillPath: [...prev.drillPath, value],
+      currentDrillLevel: level
+    }));
+    
+    handleSend(drillQuestion, { dimension, value, level, parentContext: conversationContext.lastCategory });
+  }, [conversationContext.lastCategory]);
+
+  const handleSend = async (text: string, drillContext?: DrillContext) => {
     if (!text.trim() || isLoading) return;
+
+    // Resolve contextual references like "same for..." or "compare to..."
+    let resolvedText = text;
+    if (text.toLowerCase().includes('same for') || text.toLowerCase().includes('same analysis')) {
+      if (conversationContext.lastCategory) {
+        resolvedText = text.replace(/same (for|analysis)/i, `analysis for ${conversationContext.lastCategory}`);
+      }
+    }
+    if (text.toLowerCase().includes('last month') && !text.toLowerCase().includes('compared to')) {
+      if (conversationContext.lastTimePeriod) {
+        resolvedText += ` (previously analyzed ${conversationContext.lastTimePeriod})`;
+      }
+    }
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: 'user',
       content: text,
-      timestamp: new Date()
+      timestamp: new Date(),
+      drillContext
     };
 
     const loadingMessage: Message = {
@@ -86,22 +252,45 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
     setIsLoading(true);
 
     try {
+      const conversationHistory = buildConversationHistory();
+      
       const { data, error } = await supabase.functions.invoke('analyze-module-question', {
         body: { 
-          question: text,
+          question: resolvedText,
           moduleId: module.id,
-          selectedKPIs: kpis.slice(0, 4).map(k => k.id)
+          selectedKPIs: kpis.slice(0, 4).map(k => k.id),
+          conversationHistory,
+          conversationContext: {
+            lastCategory: conversationContext.lastCategory,
+            lastProduct: conversationContext.lastProduct,
+            lastMetric: conversationContext.lastMetric,
+            lastTimePeriod: conversationContext.lastTimePeriod,
+            drillPath: conversationContext.drillPath,
+            drillLevel: drillContext?.level || conversationContext.currentDrillLevel
+          }
         }
       });
 
       if (error) throw error;
 
+      // Update conversation context from response
+      const updatedContext = extractContextFromResponse(data, text);
+      setConversationContext(updatedContext);
+
+      // Generate drill-down questions
+      const drillDownQuestions = generateDrillDownQuestions(data, module.id);
+      
       const responseMessage: Message = {
         id: `response-${Date.now()}`,
         role: 'assistant',
         content: data?.whatHappened?.join(' ') || data?.answer || 'I analyzed your question. Here are the insights based on the available data.',
         timestamp: new Date(),
-        data: data
+        data: {
+          ...data,
+          drillDownQuestions,
+          conversationContext: updatedContext
+        },
+        drillContext
       };
 
       setMessages(prev => prev.filter(m => !m.isLoading).concat(responseMessage));
@@ -110,7 +299,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
         role: 'assistant',
-        content: `I encountered an issue analyzing your question. This module is being set up with the necessary analytics. Please try a different question or check back soon.`,
+        content: `I encountered an issue analyzing your question. Please try rephrasing or ask a different question.`,
         timestamp: new Date()
       };
       setMessages(prev => prev.filter(m => !m.isLoading).concat(errorMessage));
@@ -128,15 +317,44 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
     handleSend(question.text);
   };
 
+  const toggleDrillExpand = (messageId: string) => {
+    setExpandedDrillDowns(prev => ({
+      ...prev,
+      [messageId]: !prev[messageId]
+    }));
+  };
+
+  const resetConversation = () => {
+    const greeting: Message = {
+      id: 'greeting',
+      role: 'assistant',
+      content: chatContent.greeting,
+      timestamp: new Date()
+    };
+    setMessages([greeting]);
+    setConversationContext({
+      recentTopics: [],
+      drillPath: [],
+      currentDrillLevel: 0
+    });
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-200px)]">
       {/* Sidebar - Quick Actions */}
       <div className="lg:col-span-1 space-y-4">
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Lightbulb className="h-4 w-4 text-yellow-500" />
-              <span className="font-medium text-sm">Quick Start</span>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Lightbulb className="h-4 w-4 text-yellow-500" />
+                <span className="font-medium text-sm">Quick Start</span>
+              </div>
+              {messages.length > 1 && (
+                <Button variant="ghost" size="sm" onClick={resetConversation} className="h-6 px-2">
+                  <RefreshCw className="h-3 w-3" />
+                </Button>
+              )}
             </div>
             <div className="space-y-2">
               {chatContent.quickStarts.map((qs, idx) => (
@@ -156,6 +374,34 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
             </div>
           </CardContent>
         </Card>
+
+        {/* Conversation Context Display */}
+        {(conversationContext.lastCategory || conversationContext.drillPath.length > 0) && (
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                <span className="font-medium text-sm">Current Context</span>
+              </div>
+              <div className="space-y-2 text-xs text-muted-foreground">
+                {conversationContext.lastCategory && (
+                  <div>Category: <span className="text-foreground">{conversationContext.lastCategory}</span></div>
+                )}
+                {conversationContext.lastMetric && (
+                  <div>Metric: <span className="text-foreground">{conversationContext.lastMetric}</span></div>
+                )}
+                {conversationContext.drillPath.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    <span>Drill path:</span>
+                    {conversationContext.drillPath.map((p, i) => (
+                      <Badge key={i} variant="secondary" className="text-[10px]">{p}</Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardContent className="p-4">
@@ -185,7 +431,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                   className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {message.role === 'assistant' && (
-                    <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient}`}>
+                    <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit`}>
                       <Icon className={`h-4 w-4 ${module.color}`} />
                     </div>
                   )}
@@ -199,12 +445,29 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                     {message.isLoading ? (
                       <div className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-sm">Analyzing...</span>
+                        <span className="text-sm">Analyzing {module.name}...</span>
                       </div>
                     ) : (
                       <>
+                        {/* Drill level indicator */}
+                        {message.drillContext && (
+                          <Badge variant="outline" className="mb-2 text-[10px]">
+                            Level {message.drillContext.level}: {message.drillContext.value}
+                          </Badge>
+                        )}
+                        
                         <p className="text-sm">{message.content}</p>
-                        {message.data?.kpis && (
+                        
+                        {/* Why section */}
+                        {message.data?.why && message.data.why.length > 0 && (
+                          <div className="mt-3 p-2 bg-background/50 rounded text-xs">
+                            <span className="font-medium">Why: </span>
+                            {message.data.why.slice(0, 2).join(' ')}
+                          </div>
+                        )}
+                        
+                        {/* KPIs */}
+                        {message.data?.kpis && Object.keys(message.data.kpis).length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-2">
                             {Object.entries(message.data.kpis).slice(0, 4).map(([key, value]) => (
                               <Badge key={key} variant="outline" className="text-xs">
@@ -213,18 +476,61 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                             ))}
                           </div>
                         )}
-                        {message.data?.nextQuestions && (
-                          <div className="mt-3 space-y-1">
-                            {message.data.nextQuestions.map((q: string, i: number) => (
+                        
+                        {/* Drill-Down Section - Expandable */}
+                        {message.data?.chartData && message.data.chartData.length > 0 && (
+                          <div className="mt-3 border-t pt-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleDrillExpand(message.id)}
+                              className="w-full justify-between text-xs h-7 px-2"
+                            >
+                              <span className="flex items-center gap-1">
+                                <Sparkles className="h-3 w-3 text-primary" />
+                                Drill into specific items ({message.data.chartData.length})
+                              </span>
+                              {expandedDrillDowns[message.id] ? 
+                                <ChevronDown className="h-3 w-3" /> : 
+                                <ChevronRight className="h-3 w-3" />
+                              }
+                            </Button>
+                            
+                            {expandedDrillDowns[message.id] && (
+                              <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                                {message.data.chartData.slice(0, 6).map((item: any, i: number) => (
+                                  <Button
+                                    key={i}
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full justify-between text-left h-auto py-1.5 px-2 text-xs"
+                                    onClick={() => handleDrillInto('item', item.name, (message.drillContext?.level || 0) + 1)}
+                                    disabled={isLoading}
+                                  >
+                                    <span className="truncate">{item.name}</span>
+                                    <span className="text-muted-foreground ml-2">{item.value}</span>
+                                  </Button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Follow-up Questions - More prominent */}
+                        {(message.data?.drillDownQuestions || message.data?.nextQuestions) && (
+                          <div className="mt-3 space-y-1.5 border-t pt-3">
+                            <span className="text-xs text-muted-foreground font-medium">Continue exploring:</span>
+                            {(message.data.drillDownQuestions || message.data.nextQuestions).slice(0, 3).map((q: string, i: number) => (
                               <Button
                                 key={i}
-                                variant="ghost"
+                                variant="secondary"
                                 size="sm"
-                                className="w-full justify-start text-left h-auto py-1 px-2 text-xs"
+                                className="w-full justify-start text-left h-auto py-2 px-3 text-xs hover:bg-primary/10"
                                 onClick={() => handleSend(q)}
+                                disabled={isLoading}
                               >
-                                <Sparkles className="h-3 w-3 mr-2 text-primary" />
-                                {q}
+                                <ChevronRight className="h-3 w-3 mr-2 text-primary flex-shrink-0" />
+                                <span className="line-clamp-2">{q}</span>
                               </Button>
                             ))}
                           </div>
@@ -233,7 +539,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                     )}
                   </div>
                   {message.role === 'user' && (
-                    <div className="p-2 rounded-lg bg-primary/10">
+                    <div className="p-2 rounded-lg bg-primary/10 h-fit">
                       <User className="h-4 w-4 text-primary" />
                     </div>
                   )}
@@ -249,7 +555,9 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={chatContent.placeholder}
+                placeholder={conversationContext.lastCategory 
+                  ? `Continue asking about ${conversationContext.lastCategory}...` 
+                  : chatContent.placeholder}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend(input)}
                 disabled={isLoading}
                 className="flex-1"
