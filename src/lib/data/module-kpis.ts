@@ -102,8 +102,45 @@ export const promotionKPIs: ModuleKPI[] = [
   { id: 'halo_effect', name: 'Halo Effect', category: 'promotion', dataSource: 'transactions', format: 'percent' },
 ];
 
+// Executive Strategic KPIs - cross-functional
+export const executiveKPIs: ModuleKPI[] = [
+  ...sharedKPIs,
+  // Overall Performance
+  { id: 'total_revenue', name: 'Total Revenue', category: 'financial', dataSource: 'transactions', format: 'currency' },
+  { id: 'yoy_growth', name: 'YoY Growth %', category: 'growth', dataSource: 'transactions', format: 'percent' },
+  { id: 'gross_margin', name: 'Gross Margin %', category: 'financial', dataSource: 'transactions', format: 'percent' },
+  { id: 'operating_margin', name: 'Operating Margin %', category: 'financial', dataSource: 'transactions', format: 'percent' },
+  // Pricing & Competitive
+  { id: 'competitive_index', name: 'Competitive Price Index', category: 'pricing', dataSource: 'competitor_prices', format: 'ratio' },
+  { id: 'price_perception', name: 'Price Perception Score', category: 'pricing', dataSource: 'competitor_data', format: 'ratio' },
+  { id: 'margin_vs_budget', name: 'Margin vs Budget', category: 'financial', dataSource: 'transactions', format: 'percent' },
+  // Promotion
+  { id: 'promo_roi', name: 'Promotion ROI', category: 'promotion', dataSource: 'promotions', format: 'ratio' },
+  { id: 'promo_spend_pct', name: 'Promo Spend % of Revenue', category: 'promotion', dataSource: 'promotions', format: 'percent' },
+  { id: 'promo_lift', name: 'Average Promo Lift %', category: 'promotion', dataSource: 'transactions', format: 'percent' },
+  // Demand & Inventory
+  { id: 'forecast_accuracy', name: 'Forecast Accuracy', category: 'demand', dataSource: 'demand_forecasts', format: 'percent' },
+  { id: 'inventory_value', name: 'Inventory Investment', category: 'inventory', dataSource: 'inventory_levels', format: 'currency' },
+  { id: 'stockout_rate', name: 'Stockout Rate', category: 'inventory', dataSource: 'inventory_levels', format: 'percent' },
+  { id: 'inventory_turnover', name: 'Inventory Turnover', category: 'inventory', dataSource: 'inventory_levels', format: 'ratio' },
+  { id: 'days_of_supply', name: 'Days of Supply', category: 'inventory', dataSource: 'inventory_levels', format: 'number' },
+  // Supply Chain
+  { id: 'on_time_delivery', name: 'On-Time Delivery %', category: 'logistics', dataSource: 'supplier_orders', format: 'percent' },
+  { id: 'supplier_reliability', name: 'Supplier Reliability', category: 'supplier', dataSource: 'suppliers', format: 'percent' },
+  { id: 'logistics_cost_pct', name: 'Logistics Cost % Revenue', category: 'cost', dataSource: 'shipping_routes', format: 'percent' },
+  // Space & Store
+  { id: 'sales_per_sqft', name: 'Sales per Sq Ft', category: 'space', dataSource: 'shelf_allocations', format: 'currency' },
+  { id: 'store_conversion', name: 'Store Conversion Rate', category: 'store', dataSource: 'store_performance', format: 'percent' },
+  { id: 'basket_size', name: 'Average Basket Size', category: 'store', dataSource: 'store_performance', format: 'currency' },
+  { id: 'foot_traffic', name: 'Foot Traffic Index', category: 'store', dataSource: 'store_performance', format: 'number' },
+  // Customer
+  { id: 'customer_ltv', name: 'Customer LTV', category: 'customer', dataSource: 'customers', format: 'currency' },
+  { id: 'market_share', name: 'Market Share %', category: 'competitive', dataSource: 'competitor_data', format: 'percent' },
+];
+
 export const getKPIsByModule = (moduleId: string): ModuleKPI[] => {
   switch (moduleId) {
+    case 'executive': return executiveKPIs;
     case 'promotion': return promotionKPIs;
     case 'pricing': return pricingKPIs;
     case 'assortment': return assortmentKPIs;
