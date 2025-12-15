@@ -216,27 +216,49 @@ const spaceQuestions: ModuleQuestion[] = [
   { id: 1, text: "Which categories generate the highest sales per square foot?", tags: ['sales', 'space'], metricKey: 'sales_per_sqft', chartType: 'bar', followUps: ['Which categories are underperforming their space?', 'How does performance vary by store format?'] },
   { id: 2, text: "What is the GMROI by category and shelf position?", tags: ['gmroi', 'position'], metricKey: 'gmroi', chartType: 'bar', followUps: ['Which shelf positions are most valuable?', 'How should we price premium positions?'] },
   { id: 3, text: "Which products are underperforming their allocated space?", tags: ['underperformance', 'space'], metricKey: 'sales_per_sqft', chartType: 'bar', followUps: ['Should we reduce their space?', 'What should replace them?'] },
+  { id: 4, text: "What is the revenue per linear foot by department?", tags: ['revenue', 'linear-foot'], metricKey: 'revenue_per_foot', chartType: 'bar', followUps: ['Which departments need space reallocation?', 'What is the optimal revenue target per foot?'] },
   
   // Planogram Optimization
-  { id: 4, text: "How should we allocate shelf space across categories?", tags: ['allocation', 'category'], metricKey: 'category_space_share', chartType: 'pie', followUps: ['Which categories need more space?', 'What is the optimal category adjacency?'] },
-  { id: 5, text: "What's the optimal number of facings for top products?", tags: ['facings', 'optimization'], metricKey: 'facings_per_sku', chartType: 'bar', followUps: ['Which products are under-spaced?', 'How do facings impact sales velocity?'] },
-  { id: 6, text: "How does planogram compliance impact sales?", tags: ['planogram', 'compliance'], metricKey: 'planogram_compliance', chartType: 'bar', followUps: ['Which stores have lowest compliance?', 'What is the sales lift from 100% compliance?'] },
-  { id: 7, text: "Which planograms need updating based on sales data?", tags: ['planogram', 'update'], metricKey: 'planogram_compliance', chartType: 'bar', followUps: ['What changes would improve sales?', 'When was the last planogram reset?'] },
+  { id: 5, text: "How should we allocate shelf space across categories?", tags: ['allocation', 'category'], metricKey: 'category_space_share', chartType: 'pie', followUps: ['Which categories need more space?', 'What is the optimal category adjacency?'] },
+  { id: 6, text: "What's the optimal number of facings for top products?", tags: ['facings', 'optimization'], metricKey: 'facings_per_sku', chartType: 'bar', followUps: ['Which products are under-spaced?', 'How do facings impact sales velocity?'] },
+  { id: 7, text: "How does planogram compliance impact sales?", tags: ['planogram', 'compliance'], metricKey: 'planogram_compliance', chartType: 'bar', followUps: ['Which stores have lowest compliance?', 'What is the sales lift from 100% compliance?'] },
+  { id: 8, text: "Which planograms need updating based on sales data?", tags: ['planogram', 'update'], metricKey: 'planogram_compliance', chartType: 'bar', followUps: ['What changes would improve sales?', 'When was the last planogram reset?'] },
+  { id: 9, text: "What is the planogram reset schedule by category?", tags: ['planogram', 'reset'], metricKey: 'reset_schedule', chartType: 'bar', followUps: ['Which categories are overdue for reset?', 'What is the cost of planogram reset?'] },
   
-  // Shelf Position
-  { id: 8, text: "How does eye-level placement impact product sales?", tags: ['eye-level', 'placement'], metricKey: 'eye_level_performance', chartType: 'bar', followUps: ['Which products should be at eye level?', 'What is the premium for eye level?'] },
-  { id: 9, text: "What is the out-of-shelf rate by category?", tags: ['out-of-shelf', 'availability'], metricKey: 'out_of_shelf', chartType: 'bar', followUps: ['What causes out-of-shelf?', 'What is the revenue impact?'] },
-  { id: 10, text: "What shelf capacity utilization do we have by aisle?", tags: ['capacity', 'utilization'], metricKey: 'shelf_capacity_utilization', chartType: 'bar', followUps: ['Which aisles are overcrowded?', 'Where can we add products?'] },
+  // Shelf Position & Placement
+  { id: 10, text: "How does eye-level placement impact product sales?", tags: ['eye-level', 'placement'], metricKey: 'eye_level_performance', chartType: 'bar', followUps: ['Which products should be at eye level?', 'What is the premium for eye level?'] },
+  { id: 11, text: "What is the out-of-shelf rate by category?", tags: ['out-of-shelf', 'availability'], metricKey: 'out_of_shelf', chartType: 'bar', followUps: ['What causes out-of-shelf?', 'What is the revenue impact?'] },
+  { id: 12, text: "What shelf capacity utilization do we have by aisle?", tags: ['capacity', 'utilization'], metricKey: 'shelf_capacity_utilization', chartType: 'bar', followUps: ['Which aisles are overcrowded?', 'Where can we add products?'] },
+  { id: 13, text: "How should we position private label vs national brands?", tags: ['private-label', 'positioning'], metricKey: 'brand_position', chartType: 'bar', followUps: ['Does position affect private label sales?', 'What is optimal national brand adjacency?'] },
+  { id: 14, text: "What is the vertical vs horizontal blocking impact on sales?", tags: ['blocking', 'merchandising'], metricKey: 'blocking_impact', chartType: 'bar', followUps: ['Which categories benefit from vertical blocking?', 'How does blocking affect customer navigation?'] },
   
-  // Store Layout
-  { id: 11, text: "Which store layouts drive the highest conversion?", tags: ['layout', 'conversion'], metricKey: 'store_conversion', chartType: 'bar', followUps: ['What layout elements drive conversion?', 'How does traffic flow impact sales?'] },
-  { id: 12, text: "How do endcap displays impact category sales?", tags: ['endcap', 'impact'], metricKey: 'endcap_lift', chartType: 'bar', followUps: ['Which products perform best on endcaps?', 'What is the optimal endcap rotation?'] },
-  { id: 13, text: "What is the optimal fixture type for each category?", tags: ['fixtures', 'category'], metricKey: 'fixture_performance', chartType: 'bar', followUps: ['Which fixtures need replacement?', 'What is the ROI of new fixtures?'] },
+  // Store Layout & Traffic
+  { id: 15, text: "Which store layouts drive the highest conversion?", tags: ['layout', 'conversion'], metricKey: 'store_conversion', chartType: 'bar', followUps: ['What layout elements drive conversion?', 'How does traffic flow impact sales?'] },
+  { id: 16, text: "How do endcap displays impact category sales?", tags: ['endcap', 'impact'], metricKey: 'endcap_lift', chartType: 'bar', followUps: ['Which products perform best on endcaps?', 'What is the optimal endcap rotation?'] },
+  { id: 17, text: "What is the optimal fixture type for each category?", tags: ['fixtures', 'category'], metricKey: 'fixture_performance', chartType: 'bar', followUps: ['Which fixtures need replacement?', 'What is the ROI of new fixtures?'] },
+  { id: 18, text: "How does aisle traffic pattern affect category sales?", tags: ['traffic', 'aisle'], metricKey: 'aisle_traffic', chartType: 'bar', followUps: ['Which aisles have low traffic?', 'How can we improve traffic flow?'] },
+  { id: 19, text: "What is the power aisle performance by store?", tags: ['power-aisle', 'performance'], metricKey: 'power_aisle_sales', chartType: 'bar', followUps: ['How to optimize power aisle placement?', 'What products drive power aisle traffic?'] },
   
   // Cross-Selling & Impulse
-  { id: 14, text: "What's the optimal product adjacency for cross-selling?", tags: ['adjacency', 'cross-sell'], metricKey: 'adjacency_impact', chartType: 'bar', followUps: ['Which product pairs drive basket size?', 'How should we organize for cross-sell?'] },
-  { id: 15, text: "What is the impulse purchase rate by checkout position?", tags: ['impulse', 'checkout'], metricKey: 'impulse_purchase_rate', chartType: 'bar', followUps: ['Which products work best at checkout?', 'How can we increase impulse sales?'] },
-  { id: 16, text: "How does aisle traffic pattern affect category sales?", tags: ['traffic', 'aisle'], metricKey: 'aisle_traffic', chartType: 'bar', followUps: ['Which aisles have low traffic?', 'How can we improve traffic flow?'] },
+  { id: 20, text: "What's the optimal product adjacency for cross-selling?", tags: ['adjacency', 'cross-sell'], metricKey: 'adjacency_impact', chartType: 'bar', followUps: ['Which product pairs drive basket size?', 'How should we organize for cross-sell?'] },
+  { id: 21, text: "What is the impulse purchase rate by checkout position?", tags: ['impulse', 'checkout'], metricKey: 'impulse_purchase_rate', chartType: 'bar', followUps: ['Which products work best at checkout?', 'How can we increase impulse sales?'] },
+  { id: 22, text: "How do promotional displays impact regular shelf sales?", tags: ['promotional', 'display'], metricKey: 'display_cannibalization', chartType: 'bar', followUps: ['Is there display cannibalization?', 'What is the optimal display frequency?'] },
+  { id: 23, text: "What basket affinity insights should inform adjacencies?", tags: ['basket', 'affinity'], metricKey: 'basket_affinity', chartType: 'bar', followUps: ['Which products are frequently bought together?', 'How to optimize checkout impulse zones?'] },
+  
+  // Seasonal & Event Planning
+  { id: 24, text: "How should we plan seasonal space transitions?", tags: ['seasonal', 'transition'], metricKey: 'seasonal_space', chartType: 'line', followUps: ['When to start seasonal resets?', 'What is the optimal transition timeline?'] },
+  { id: 25, text: "What is the holiday endcap strategy by category?", tags: ['holiday', 'endcap'], metricKey: 'holiday_performance', chartType: 'bar', followUps: ['Which holiday displays perform best?', 'When to install holiday merchandising?'] },
+  
+  // Simulation Questions
+  { id: 26, text: "What if we increase Dairy shelf space by 20%?", tags: ['simulation', 'dairy'], metricKey: 'space_simulation', chartType: 'bar', followUps: ['What categories should we reduce?', 'What is the margin impact?'] },
+  { id: 27, text: "What if we move Snacks to eye-level positioning?", tags: ['simulation', 'eye-level'], metricKey: 'position_simulation', chartType: 'bar', followUps: ['What is the expected sales lift?', 'Which products should move down?'] },
+  { id: 28, text: "What if we add 2 facings for top-selling SKUs?", tags: ['simulation', 'facings'], metricKey: 'facing_simulation', chartType: 'bar', followUps: ['What is the inventory impact?', 'What products lose space?'] },
+  { id: 29, text: "What if we consolidate endcap displays to 4-week rotation?", tags: ['simulation', 'endcap'], metricKey: 'rotation_simulation', chartType: 'line', followUps: ['Will sales fatigue decrease?', 'What is the labor savings?'] },
+  
+  // Cross-Module Questions
+  { id: 30, text: "How does shelf position impact demand forecasting accuracy?", tags: ['cross-module', 'demand'], metricKey: 'forecast_accuracy', chartType: 'bar', followUps: ['Should we adjust safety stock for eye-level items?', 'How does position affect velocity?'] },
+  { id: 31, text: "How should assortment changes inform planogram updates?", tags: ['cross-module', 'assortment'], metricKey: 'assortment_space', chartType: 'bar', followUps: ['What new products need shelf placement?', 'Which discontinued SKUs free up space?'] },
+  { id: 32, text: "How do pricing tiers affect optimal shelf positioning?", tags: ['cross-module', 'pricing'], metricKey: 'price_position', chartType: 'bar', followUps: ['Should premium products be at eye level?', 'How does price elasticity vary by position?'] },
 ];
 
 // Popular question IDs by module
@@ -245,7 +267,7 @@ const modulePopularIds: Record<string, number[]> = {
   assortment: [1, 2, 4, 7, 10, 12, 14, 16],
   demand: [1, 2, 5, 6, 8, 10, 12, 14],
   'supply-chain': [1, 2, 5, 8, 11, 12, 14, 16],
-  space: [1, 2, 4, 5, 6, 8, 11, 14],
+  space: [1, 2, 5, 7, 10, 15, 16, 20],
 };
 
 // Module-specific personas

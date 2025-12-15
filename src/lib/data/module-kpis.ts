@@ -80,6 +80,14 @@ export const spaceKPIs: ModuleKPI[] = [
   { id: 'out_of_shelf', name: 'Out of Shelf Rate', category: 'space', dataSource: 'inventory_levels', format: 'percent' },
   { id: 'impulse_purchase_rate', name: 'Impulse Purchase Rate', category: 'space', dataSource: 'transactions', format: 'percent' },
   { id: 'eye_level_performance', name: 'Eye-Level Performance', category: 'space', dataSource: 'shelf_allocations', format: 'percent' },
+  { id: 'revenue_per_linear_foot', name: 'Revenue per Linear Foot', category: 'space', dataSource: 'shelf_allocations', format: 'currency' },
+  { id: 'fixture_utilization', name: 'Fixture Utilization', category: 'space', dataSource: 'fixtures', format: 'percent' },
+  { id: 'endcap_lift', name: 'Endcap Sales Lift', category: 'space', dataSource: 'store_performance', format: 'percent' },
+  { id: 'aisle_traffic_index', name: 'Aisle Traffic Index', category: 'space', dataSource: 'store_performance', format: 'ratio' },
+  { id: 'cross_sell_rate', name: 'Cross-Sell Rate', category: 'space', dataSource: 'transactions', format: 'percent' },
+  { id: 'shelf_replenishment_frequency', name: 'Replenishment Frequency', category: 'space', dataSource: 'inventory_levels', format: 'number' },
+  { id: 'space_to_sales_index', name: 'Space-to-Sales Index', category: 'space', dataSource: 'shelf_allocations', format: 'ratio' },
+  { id: 'vertical_blocking_score', name: 'Blocking Score', category: 'space', dataSource: 'planograms', format: 'ratio' },
 ];
 
 // Promotion-specific KPIs (existing module)

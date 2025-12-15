@@ -171,34 +171,55 @@ export const spaceSuggestions: Record<string, SuggestionTemplate[]> = {
     { text: "Top {n} products for endcap placement", icon: Grid3X3, variation: "endcap" },
     { text: "Top {n} planograms by compliance", icon: Target, variation: "compliance" },
     { text: "Top {n} fixtures by utilization", icon: Warehouse, variation: "fixture" },
+    { text: "Top {n} SKUs for eye-level placement", icon: Target, variation: "eyelevel" },
+    { text: "Top {n} aisles by traffic index", icon: TrendingUp, variation: "traffic" },
   ],
   "what": [
     { text: "What's the optimal shelf allocation?", icon: Grid3X3, variation: "shelf" },
     { text: "What's our planogram compliance?", icon: Target, variation: "compliance" },
     { text: "What's the GMROI by shelf position?", icon: DollarSign, variation: "gmroi" },
     { text: "What's the optimal number of facings?", icon: Layers, variation: "facings" },
+    { text: "What's the revenue per linear foot?", icon: DollarSign, variation: "revenue" },
+    { text: "What's our out-of-shelf rate?", icon: Box, variation: "oos" },
+    { text: "What's the space-to-sales index?", icon: BarChart3, variation: "index" },
   ],
   "which": [
     { text: "Which categories need more space?", icon: Package, variation: "space" },
     { text: "Which layouts drive highest conversion?", icon: TrendingUp, variation: "layout" },
     { text: "Which endcaps perform best?", icon: Grid3X3, variation: "endcap" },
     { text: "Which products belong at eye level?", icon: Target, variation: "eyelevel" },
+    { text: "Which planograms need reset?", icon: Calendar, variation: "reset" },
+    { text: "Which aisles have lowest traffic?", icon: Route, variation: "traffic" },
+    { text: "Which fixtures are underperforming?", icon: Warehouse, variation: "fixture" },
   ],
   "how": [
     { text: "How should we allocate shelf space?", icon: Grid3X3, variation: "allocate" },
     { text: "How do endcaps impact category sales?", icon: TrendingUp, variation: "endcap" },
     { text: "How effective is our planogram?", icon: Target, variation: "planogram" },
     { text: "How can we optimize cross-selling?", icon: ShoppingCart, variation: "crosssell" },
+    { text: "How does eye-level placement boost sales?", icon: TrendingUp, variation: "eyelevel" },
+    { text: "How does vertical blocking affect sales?", icon: Layers, variation: "blocking" },
+    { text: "How do seasonal resets impact performance?", icon: Calendar, variation: "seasonal" },
   ],
   "compare": [
     { text: "Compare sales per sqft by category", icon: BarChart3, variation: "category" },
     { text: "Compare fixture performance", icon: Grid3X3, variation: "fixture" },
     { text: "Compare eye-level vs other positions", icon: Layers, variation: "position" },
+    { text: "Compare power aisle vs regular aisle", icon: Route, variation: "aisle" },
+    { text: "Compare planogram versions", icon: Target, variation: "version" },
   ],
   "optimize": [
     { text: "Optimize shelf space allocation", icon: Grid3X3, variation: "space" },
     { text: "Optimize product adjacency", icon: Package, variation: "adjacency" },
     { text: "Optimize planogram for sales per sqft", icon: DollarSign, variation: "sales" },
+    { text: "Optimize checkout impulse zone", icon: ShoppingCart, variation: "impulse" },
+    { text: "Optimize endcap rotation schedule", icon: Calendar, variation: "rotation" },
+  ],
+  "simulate": [
+    { text: "What if we increase Dairy space by 20%?", icon: Sparkles, variation: "dairy" },
+    { text: "What if we add 2 facings for top SKUs?", icon: Layers, variation: "facings" },
+    { text: "What if we move Snacks to eye level?", icon: Target, variation: "snacks" },
+    { text: "What if we consolidate endcap rotation?", icon: Calendar, variation: "endcap" },
   ],
 };
 
@@ -326,18 +347,21 @@ export const moduleChatContent: Record<string, ModuleChatContent> = {
     placeholder: "Ask about SKUs, categories, brands, assortment depth..."
   },
   space: {
-    greeting: "Welcome! Let's optimize your space planning - I can analyze shelf allocation and planogram performance.",
+    greeting: "Welcome to Space Planning Intelligence! I can help optimize your shelf allocation, planogram compliance, fixture utilization, and store layouts to maximize sales per square foot.",
     capabilities: [
-      "I can analyze sales per sqft, planogram compliance, and fixture performance",
-      "Ask me about shelf allocation, endcap performance, or cross-selling opportunities"
+      "I can analyze sales/sqft, GMROI by position, planogram compliance, and fixture performance",
+      "Ask about optimal facings, eye-level placement, endcap strategy, or cross-sell adjacencies",
+      "I can simulate shelf space changes and forecast impact on category performance"
     ],
     quickStarts: [
-      { text: "Categories with highest sales per sqft", icon: DollarSign, tag: "SALES" },
-      { text: "Planogram compliance rate analysis", icon: Target, tag: "COMPLIANCE" },
+      { text: "Categories with highest sales per sqft", icon: DollarSign, tag: "SALES/SQFT" },
+      { text: "Eye-level placement impact on sales", icon: Target, tag: "EYE-LEVEL" },
+      { text: "Planogram compliance by store", icon: Target, tag: "COMPLIANCE" },
       { text: "Optimal shelf space allocation", icon: Grid3X3, tag: "ALLOCATE" },
       { text: "Endcap display performance", icon: TrendingUp, tag: "ENDCAP" },
+      { text: "Cross-sell adjacency opportunities", icon: ShoppingCart, tag: "CROSS-SELL" },
     ],
-    placeholder: "Ask about shelf space, planograms, layouts, fixtures..."
+    placeholder: "Ask about shelf space, planograms, eye-level, endcaps, fixtures, adjacencies..."
   },
   promotion: {
     greeting: "Welcome! Let's analyze your promotion performance - I can help with ROI, lift, and optimization.",
