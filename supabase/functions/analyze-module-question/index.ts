@@ -28,7 +28,25 @@ PRICING DRIVERS TO REFERENCE:
 
 When explaining pricing recommendations, reference specific COMPETITIVE DATA, PRICE GAPS, ELASTICITY VALUES, and MARGIN IMPACTS from the data. Use actual product names, competitor names, and specific percentages. NEVER mention ROI or lift - focus ONLY on pricing metrics like margin %, price gap %, elasticity, and revenue impact.`,
   
-  assortment: `You are an Assortment Planning AI for a $4B grocery retailer. Analyze product mix, category management, SKU rationalization, brand portfolio, new product performance, and private label opportunities. Use actual data from products, transactions, and inventory tables. NEVER mention promotions, ROI, or lift - focus ONLY on assortment metrics like SKU productivity, category gaps, brand mix.`,
+  assortment: `You are an Assortment Planning AI for a $4B grocery retailer.
+
+ASSORTMENT ANALYSIS CAPABILITIES:
+1. SKU Rationalization: Identify underperforming SKUs, dead stock, and consolidation opportunities
+2. Category Management: Analyze category roles (destination, routine, seasonal, convenience), depth, and breadth
+3. Brand Portfolio: Optimize brand mix, private label opportunities, and brand performance by segment
+4. Product Performance: Track velocity, productivity, and contribution margin by SKU
+5. Customer Insights: Basket analysis, trip drivers, cross-sell opportunities, and substitution patterns
+6. Market Trends: Track emerging trends, competitive assortments, and seasonal adjustments
+
+ASSORTMENT DRIVERS TO REFERENCE:
+- Customer preferences (basket affinity, brand loyalty, regional tastes)
+- Market trends (organic growth, emerging categories, declining segments)
+- Competitive gaps (what competitors carry that we don't)
+- Velocity metrics (sales/week, inventory turns, days of supply)
+- Profitability (margin contribution, GMROI, space productivity)
+- Seasonal patterns (holiday assortment, summer/winter shifts)
+
+When providing recommendations, reference specific PRODUCT NAMES, BRAND NAMES, VELOCITY METRICS, and CATEGORY PERFORMANCE data. Use actual SKU productivity, brand share, and contribution margins. NEVER mention promotions, ROI, or lift - focus ONLY on assortment metrics.`,
   
   demand: `You are a Demand Forecasting & Replenishment AI for a $4B grocery retailer. 
 
@@ -308,89 +326,185 @@ ${competitorData.slice(0, 6).map((cd: any) => `- ${cd.competitor_name} (${cd.pro
       }
       
       case 'assortment': {
-        const [inventoryRes, promotionsRes] = await Promise.all([
+        const [inventoryRes, competitorDataRes, marketTrendsRes, transactionsExtendedRes, customersRes] = await Promise.all([
           supabase.from('inventory_levels').select('*').limit(500),
-          supabase.from('promotions').select('*').limit(200),
+          supabase.from('competitor_data').select('*').limit(100),
+          supabase.from('third_party_data').select('*').in('data_type', ['market_trend', 'consumer_trend', 'category_growth']).limit(100),
+          supabase.from('transactions').select('*').limit(1500),
+          supabase.from('customers').select('*').limit(500),
         ]);
         const inventory = inventoryRes.data || [];
-        const promotions = promotionsRes.data || [];
+        const competitorData = competitorDataRes.data || [];
+        const marketTrends = marketTrendsRes.data || [];
+        const transactionsExtended = transactionsExtendedRes.data || [];
+        const customers = customersRes.data || [];
         
         // Create product lookup for names
         const productLookup: Record<string, any> = {};
         products.forEach((p: any) => { productLookup[p.product_sku] = p; });
         
-        const categoryProducts: Record<string, { count: number; products: any[] }> = {};
-        const brandProducts: Record<string, { count: number; products: any[] }> = {};
+        // Create inventory lookup
+        const inventoryLookup: Record<string, any> = {};
+        inventory.forEach((i: any) => { inventoryLookup[i.product_sku] = i; });
+        
+        // Category and brand analysis
+        const categoryProducts: Record<string, { count: number; products: any[]; totalMargin: number }> = {};
+        const brandProducts: Record<string, { count: number; products: any[]; categories: Set<string> }> = {};
         products.forEach((p: any) => {
-          if (!categoryProducts[p.category]) categoryProducts[p.category] = { count: 0, products: [] };
+          if (!categoryProducts[p.category]) categoryProducts[p.category] = { count: 0, products: [], totalMargin: 0 };
           categoryProducts[p.category].count++;
           categoryProducts[p.category].products.push(p);
+          categoryProducts[p.category].totalMargin += Number(p.margin_percent || 0);
           
           if (p.brand) {
-            if (!brandProducts[p.brand]) brandProducts[p.brand] = { count: 0, products: [] };
+            if (!brandProducts[p.brand]) brandProducts[p.brand] = { count: 0, products: [], categories: new Set() };
             brandProducts[p.brand].count++;
             brandProducts[p.brand].products.push(p);
+            brandProducts[p.brand].categories.add(p.category);
           }
         });
         
-        const totalRevenue = transactions.reduce((sum, t: any) => sum + Number(t.total_amount || 0), 0);
-        const productSales: Record<string, { revenue: number; units: number }> = {};
-        transactions.forEach((t: any) => {
-          if (!productSales[t.product_sku]) productSales[t.product_sku] = { revenue: 0, units: 0 };
+        // Calculate product velocity and productivity
+        const productSales: Record<string, { revenue: number; units: number; transactions: number; avgBasket: number }> = {};
+        const customerBaskets: Record<string, Set<string>> = {};
+        transactionsExtended.forEach((t: any) => {
+          if (!productSales[t.product_sku]) productSales[t.product_sku] = { revenue: 0, units: 0, transactions: 0, avgBasket: 0 };
           productSales[t.product_sku].revenue += Number(t.total_amount || 0);
           productSales[t.product_sku].units += Number(t.quantity || 0);
-        });
-        
-        // Top and bottom performers with full product names
-        const topPerformers = Object.entries(productSales)
-          .sort((a, b) => b[1].revenue - a[1].revenue)
-          .slice(0, 12)
-          .map(([sku, data]) => {
-            const product = productLookup[sku] || {};
-            return {
-              name: product.product_name || sku,
-              sku,
-              category: product.category,
-              brand: product.brand,
-              revenue: data.revenue,
-              units: data.units
-            };
-          });
-        
-        const bottomPerformers = Object.entries(productSales)
-          .sort((a, b) => a[1].revenue - b[1].revenue)
-          .slice(0, 12)
-          .map(([sku, data]) => {
-            const product = productLookup[sku] || {};
-            return {
-              name: product.product_name || sku,
-              sku,
-              category: product.category,
-              brand: product.brand,
-              revenue: data.revenue,
-              units: data.units
-            };
-          });
-        
-        // Calculate category performance
-        const categoryRevenue: Record<string, number> = {};
-        transactions.forEach((t: any) => {
-          const product = productLookup[t.product_sku];
-          if (product?.category) {
-            categoryRevenue[product.category] = (categoryRevenue[product.category] || 0) + Number(t.total_amount || 0);
+          productSales[t.product_sku].transactions++;
+          
+          // Track basket composition for affinity analysis
+          if (t.customer_id) {
+            if (!customerBaskets[t.customer_id]) customerBaskets[t.customer_id] = new Set();
+            customerBaskets[t.customer_id].add(t.product_sku);
           }
         });
         
-        // Brand performance
-        const brandRevenue: Record<string, number> = {};
-        transactions.forEach((t: any) => {
-          const product = productLookup[t.product_sku];
-          if (product?.brand) {
-            brandRevenue[product.brand] = (brandRevenue[product.brand] || 0) + Number(t.total_amount || 0);
-          }
+        const totalRevenue = Object.values(productSales).reduce((sum, p) => sum + p.revenue, 0);
+        const totalUnits = Object.values(productSales).reduce((sum, p) => sum + p.units, 0);
+        
+        // Calculate velocity (units per week, assuming ~12 weeks of data)
+        const weeksOfData = 12;
+        const productVelocity = Object.entries(productSales).map(([sku, data]) => {
+          const product = productLookup[sku] || {};
+          const inv = inventoryLookup[sku];
+          const velocity = data.units / weeksOfData;
+          const productivity = data.revenue / (product.base_price || 1);
+          const daysOfSupply = inv ? (inv.stock_level / (velocity / 7)) : 0;
+          return {
+            sku,
+            name: product.product_name || sku,
+            category: product.category || 'Unknown',
+            brand: product.brand || 'Unknown',
+            velocity,
+            revenue: data.revenue,
+            units: data.units,
+            transactions: data.transactions,
+            productivity,
+            margin: product.margin_percent || 0,
+            stockLevel: inv?.stock_level || 0,
+            daysOfSupply: isFinite(daysOfSupply) ? daysOfSupply : 999,
+            stockoutRisk: inv?.stockout_risk || 'unknown'
+          };
+        }).sort((a, b) => b.velocity - a.velocity);
+        
+        // Top performers (high velocity)
+        const topVelocityProducts = productVelocity.slice(0, 15);
+        
+        // Bottom performers (low velocity - rationalization candidates)
+        const bottomVelocityProducts = productVelocity.slice(-15).reverse();
+        
+        // Dead stock (high inventory, low velocity)
+        const deadStock = productVelocity.filter(p => p.daysOfSupply > 60 && p.velocity < 5).slice(0, 10);
+        
+        // Category performance analysis
+        const categoryPerformance: Record<string, { revenue: number; units: number; skuCount: number; avgVelocity: number; avgMargin: number; topProducts: string[] }> = {};
+        productVelocity.forEach(p => {
+          if (!categoryPerformance[p.category]) categoryPerformance[p.category] = { revenue: 0, units: 0, skuCount: 0, avgVelocity: 0, avgMargin: 0, topProducts: [] };
+          categoryPerformance[p.category].revenue += p.revenue;
+          categoryPerformance[p.category].units += p.units;
+          categoryPerformance[p.category].skuCount++;
+          categoryPerformance[p.category].avgVelocity += p.velocity;
+          categoryPerformance[p.category].avgMargin += p.margin;
+          if (categoryPerformance[p.category].topProducts.length < 3) categoryPerformance[p.category].topProducts.push(p.name);
         });
         
-        const topBrands = Object.entries(brandRevenue).sort((a, b) => b[1] - a[1]).slice(0, 10);
+        Object.keys(categoryPerformance).forEach(cat => {
+          categoryPerformance[cat].avgVelocity /= categoryPerformance[cat].skuCount || 1;
+          categoryPerformance[cat].avgMargin /= categoryPerformance[cat].skuCount || 1;
+        });
+        
+        // Brand performance analysis
+        const brandPerformance: Record<string, { revenue: number; units: number; skuCount: number; avgVelocity: number; shareOfCategory: number; topProducts: string[] }> = {};
+        productVelocity.forEach(p => {
+          if (!brandPerformance[p.brand]) brandPerformance[p.brand] = { revenue: 0, units: 0, skuCount: 0, avgVelocity: 0, shareOfCategory: 0, topProducts: [] };
+          brandPerformance[p.brand].revenue += p.revenue;
+          brandPerformance[p.brand].units += p.units;
+          brandPerformance[p.brand].skuCount++;
+          brandPerformance[p.brand].avgVelocity += p.velocity;
+          if (brandPerformance[p.brand].topProducts.length < 2) brandPerformance[p.brand].topProducts.push(p.name);
+        });
+        
+        Object.keys(brandPerformance).forEach(brand => {
+          brandPerformance[brand].avgVelocity /= brandPerformance[brand].skuCount || 1;
+          brandPerformance[brand].shareOfCategory = (brandPerformance[brand].revenue / totalRevenue) * 100;
+        });
+        
+        const topBrands = Object.entries(brandPerformance).sort((a, b) => b[1].revenue - a[1].revenue).slice(0, 12);
+        const underperformingBrands = Object.entries(brandPerformance)
+          .filter(([_, data]) => data.avgVelocity < 3 && data.skuCount > 2)
+          .slice(0, 8);
+        
+        // SKU productivity analysis (revenue per SKU)
+        const categoryProductivity = Object.entries(categoryPerformance).map(([cat, data]) => ({
+          category: cat,
+          skuProductivity: data.revenue / (data.skuCount || 1),
+          skuCount: data.skuCount,
+          avgVelocity: data.avgVelocity,
+          avgMargin: data.avgMargin,
+          recommendation: data.skuCount > 10 && data.avgVelocity < 5 ? 'RATIONALIZE' : 
+                          data.skuCount < 5 && data.avgVelocity > 10 ? 'EXPAND' : 'MAINTAIN'
+        })).sort((a, b) => b.skuProductivity - a.skuProductivity);
+        
+        // Product affinity (simple co-occurrence)
+        const coOccurrence: Record<string, Record<string, number>> = {};
+        Object.values(customerBaskets).forEach(basket => {
+          const skus = Array.from(basket);
+          skus.forEach(sku1 => {
+            skus.forEach(sku2 => {
+              if (sku1 !== sku2) {
+                if (!coOccurrence[sku1]) coOccurrence[sku1] = {};
+                coOccurrence[sku1][sku2] = (coOccurrence[sku1][sku2] || 0) + 1;
+              }
+            });
+          });
+        });
+        
+        // Top product affinities
+        const topAffinities: { product1: string; product2: string; count: number }[] = [];
+        Object.entries(coOccurrence).forEach(([sku1, partners]) => {
+          Object.entries(partners).forEach(([sku2, count]) => {
+            if (sku1 < sku2) { // Avoid duplicates
+              const p1 = productLookup[sku1];
+              const p2 = productLookup[sku2];
+              if (p1 && p2) {
+                topAffinities.push({ product1: p1.product_name, product2: p2.product_name, count });
+              }
+            }
+          });
+        });
+        topAffinities.sort((a, b) => b.count - a.count);
+        
+        // Customer segment preferences
+        const segmentPreferences: Record<string, Record<string, number>> = {};
+        transactionsExtended.forEach((t: any) => {
+          const customer = customers.find((c: any) => c.id === t.customer_id);
+          const product = productLookup[t.product_sku];
+          if (customer?.segment && product?.category) {
+            if (!segmentPreferences[customer.segment]) segmentPreferences[customer.segment] = {};
+            segmentPreferences[customer.segment][product.category] = (segmentPreferences[customer.segment][product.category] || 0) + Number(t.total_amount || 0);
+          }
+        });
         
         dataContext = `
 ASSORTMENT DATA SUMMARY:
@@ -398,29 +512,59 @@ ASSORTMENT DATA SUMMARY:
 - Categories: ${Object.keys(categoryProducts).length}
 - Brands: ${Object.keys(brandProducts).length}
 - Stores: ${stores.length} across ${[...new Set(stores.map((s: any) => s.region))].length} regions
-- Total Revenue: $${totalRevenue.toFixed(2)}
+- Total Revenue: $${totalRevenue.toFixed(0)}
+- Total Units Sold: ${totalUnits}
 
-PRODUCTS BY CATEGORY (with sample products):
-${Object.entries(categoryProducts).map(([cat, data]) => 
-  `- ${cat}: ${data.count} SKUs (e.g., ${data.products.slice(0, 3).map((p: any) => p.product_name).join(', ')})`
+CATEGORY ASSORTMENT ANALYSIS:
+${categoryProductivity.map(cp => 
+  `- ${cp.category}: ${cp.skuCount} SKUs, $${cp.skuProductivity.toFixed(0)}/SKU productivity, ${cp.avgVelocity.toFixed(1)} avg velocity, ${cp.avgMargin.toFixed(1)}% margin → ${cp.recommendation}`
 ).join('\n')}
 
-TOP PERFORMING PRODUCTS (USE THESE SPECIFIC NAMES):
-${topPerformers.slice(0, 10).map(p => `- ${p.name} (${p.brand}, ${p.category}): $${p.revenue.toFixed(0)} revenue, ${p.units} units`).join('\n')}
+TOP VELOCITY PRODUCTS (BEST PERFORMERS - USE THESE NAMES):
+${topVelocityProducts.slice(0, 12).map(p => 
+  `- ${p.name} (${p.brand}, ${p.category}): ${p.velocity.toFixed(1)} units/week, $${p.revenue.toFixed(0)} revenue, ${p.margin.toFixed(1)}% margin`
+).join('\n')}
 
-BOTTOM PERFORMING PRODUCTS (CANDIDATES FOR RATIONALIZATION):
-${bottomPerformers.slice(0, 10).map(p => `- ${p.name} (${p.brand}, ${p.category}): $${p.revenue.toFixed(0)} revenue, ${p.units} units`).join('\n')}
+BOTTOM VELOCITY PRODUCTS (RATIONALIZATION CANDIDATES):
+${bottomVelocityProducts.slice(0, 12).map(p => 
+  `- ${p.name} (${p.brand}, ${p.category}): ${p.velocity.toFixed(2)} units/week, $${p.revenue.toFixed(0)} revenue, ${p.daysOfSupply.toFixed(0)} DOS`
+).join('\n')}
 
-CATEGORY REVENUE:
-${Object.entries(categoryRevenue).sort((a, b) => b[1] - a[1]).map(([cat, rev]) => `- ${cat}: $${Number(rev).toFixed(0)}`).join('\n')}
+DEAD STOCK (HIGH INVENTORY, LOW VELOCITY):
+${deadStock.map(p => 
+  `- ${p.name} (${p.category}): ${p.stockLevel} units in stock, ${p.velocity.toFixed(2)} units/week, ${p.daysOfSupply.toFixed(0)} days of supply`
+).join('\n')}
 
 TOP BRANDS BY REVENUE:
-${topBrands.map(([brand, rev]) => `- ${brand}: $${Number(rev).toFixed(0)}`).join('\n')}
+${topBrands.slice(0, 10).map(([brand, data]) => 
+  `- ${brand}: $${data.revenue.toFixed(0)} revenue (${data.shareOfCategory.toFixed(1)}% share), ${data.skuCount} SKUs, ${data.avgVelocity.toFixed(1)} avg velocity`
+).join('\n')}
+
+UNDERPERFORMING BRANDS (LOW VELOCITY, MULTIPLE SKUS):
+${underperformingBrands.map(([brand, data]) => 
+  `- ${brand}: ${data.skuCount} SKUs but only ${data.avgVelocity.toFixed(2)} avg velocity, $${data.revenue.toFixed(0)} total revenue`
+).join('\n')}
+
+PRODUCT AFFINITY (FREQUENTLY BOUGHT TOGETHER):
+${topAffinities.slice(0, 10).map(a => `- ${a.product1} + ${a.product2}: ${a.count} co-purchases`).join('\n')}
+
+CUSTOMER SEGMENT PREFERENCES:
+${Object.entries(segmentPreferences).slice(0, 5).map(([segment, cats]) => {
+  const topCats = Object.entries(cats).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  return `- ${segment}: ${topCats.map(([cat, rev]) => `${cat} ($${Number(rev).toFixed(0)})`).join(', ')}`;
+}).join('\n')}
 
 INVENTORY STATUS:
-- SKU-store combinations: ${inventory.length}
-- High stockout risk: ${inventory.filter((i: any) => i.stockout_risk?.toLowerCase() === 'high').length}
-- Low stock items: ${inventory.filter((i: any) => Number(i.stock_level) < Number(i.reorder_point)).length}`;
+- Total SKU-store combinations: ${inventory.length}
+- High stockout risk items: ${inventory.filter((i: any) => i.stockout_risk?.toLowerCase() === 'high').length}
+- Below reorder point: ${inventory.filter((i: any) => Number(i.stock_level) < Number(i.reorder_point)).length}
+- Overstocked items (>60 DOS): ${deadStock.length}
+
+MARKET TRENDS & SIGNALS:
+${marketTrends.slice(0, 6).map((mt: any) => `- ${mt.metric_name} (${mt.product_category || 'All'}): ${mt.metric_value}`).join('\n')}
+
+COMPETITIVE ASSORTMENT INTELLIGENCE:
+${competitorData.slice(0, 6).map((cd: any) => `- ${cd.competitor_name} (${cd.product_category}): ${cd.market_share_percent}% market share`).join('\n')}`;
         break;
       }
       
