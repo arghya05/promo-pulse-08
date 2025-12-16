@@ -337,42 +337,47 @@ const CausalExplainability = ({ moduleId, moduleName = 'Module' }: CausalExplain
               </p>
               
               <div className="space-y-4">
-                {analysis.counterfactuals.map((cf, idx) => (
-                  <div key={idx} className="p-4 rounded-lg border border-border bg-card">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Zap className="h-4 w-4 text-primary" />
-                        <span className="font-medium">{cf.scenario}</span>
+                {analysis.counterfactuals.map((cf, idx) => {
+                  const diff = Number(cf.difference) || 0;
+                  const predicted = Number(cf.predictedOutcome) || 0;
+                  const actual = Number(cf.actualOutcome) || 0;
+                  return (
+                    <div key={idx} className="p-4 rounded-lg border border-border bg-card">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Zap className="h-4 w-4 text-primary" />
+                          <span className="font-medium">{cf.scenario}</span>
+                        </div>
+                        <Badge 
+                          variant={diff > 0 ? 'default' : 'destructive'}
+                          className="text-xs"
+                        >
+                          {diff > 0 ? '+' : ''}{diff.toFixed(1)}% vs actual
+                        </Badge>
                       </div>
-                      <Badge 
-                        variant={cf.difference > 0 ? 'default' : 'destructive'}
-                        className="text-xs"
-                      >
-                        {cf.difference > 0 ? '+' : ''}{cf.difference.toFixed(1)}% vs actual
-                      </Badge>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4 mb-3">
-                      <div className="bg-secondary/50 rounded-lg p-3">
-                        <div className="text-xs text-muted-foreground mb-1">Predicted Outcome</div>
-                        <div className="text-lg font-bold text-primary">
-                          {cf.predictedOutcome.toLocaleString()}
+                      
+                      <div className="grid grid-cols-2 gap-4 mb-3">
+                        <div className="bg-secondary/50 rounded-lg p-3">
+                          <div className="text-xs text-muted-foreground mb-1">Predicted Outcome</div>
+                          <div className="text-lg font-bold text-primary">
+                            {predicted.toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="bg-secondary/50 rounded-lg p-3">
+                          <div className="text-xs text-muted-foreground mb-1">Actual Outcome</div>
+                          <div className="text-lg font-bold">
+                            {actual.toLocaleString()}
+                          </div>
                         </div>
                       </div>
-                      <div className="bg-secondary/50 rounded-lg p-3">
-                        <div className="text-xs text-muted-foreground mb-1">Actual Outcome</div>
-                        <div className="text-lg font-bold">
-                          {cf.actualOutcome.toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
 
-                    <div className="flex items-start gap-2 text-sm bg-primary/5 rounded-lg p-3">
-                      <Lightbulb className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                      <span className="text-muted-foreground">{cf.recommendation}</span>
+                      <div className="flex items-start gap-2 text-sm bg-primary/5 rounded-lg p-3">
+                        <Lightbulb className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                        <span className="text-muted-foreground">{cf.recommendation}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </Card>
           </div>
