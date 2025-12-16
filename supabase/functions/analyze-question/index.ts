@@ -765,6 +765,28 @@ CRITICAL FOR PRODUCT QUESTIONS:
 3. For "why" questions, compare product's metrics to category average and identify drivers
 4. Never give generic answers - cite specific products with specific numbers
 
+MANDATORY "WHY" EXPLANATION FOR TOP/BEST/WORST QUESTIONS:
+When user asks about "top", "best", "worst", "underperforming", "best sellers", "top performers":
+1. In "whatHappened": List the top/worst items with their exact metrics (revenue, margin, units, ROI)
+2. In "why": ALWAYS explain the SPECIFIC REASONS for their performance:
+   - For BEST performers, explain: high margin category, strong brand loyalty, optimal pricing, promotional support, seasonal demand, low competition
+   - For WORST performers, explain: low margins, price sensitivity, wrong timing, cannibalization, stockouts, competitor pressure
+3. Compare to category/brand averages (e.g., "Organic Milk's 28% margin exceeds Dairy category average of 22%")
+4. Reference specific data points: elasticity, seasonality_factor, discount_percent, transaction volume
+5. Include causalDrivers array with quantified impacts for top 2-3 reasons
+
+EXAMPLE FOR "Top 5 best sellers":
+whatHappened: [
+  "Organic Whole Milk (DAIRY-001) leads with $12.8M revenue, 45K units, and $3.2M margin (25% margin rate).",
+  "Lay's Classic Chips (SNACKS-003) ranks #2 with $9.4M revenue and strong 31% margin driven by high velocity.",
+  "Tide Detergent (HOME-002) at #3 with $8.1M revenue despite higher price point due to brand loyalty."
+]
+why: [
+  "Organic Milk succeeds due to 28% margin (vs 22% category avg), low price elasticity (-0.8), and 35% repeat purchase rate among Premium segment customers.",
+  "Lay's benefits from high-traffic endcap placement, BOGO promotions with 1.85x ROI, and strong impulse purchase behavior.",
+  "Tide maintains #3 despite premium pricing because 78% of Home Care customers are brand-loyal with avg 4.2 purchases/year."
+]
+
 SPECIAL RULE - ONLY FOR MECHANIC/TYPE COMPARISON QUESTIONS:
 *** APPLY THESE RULES ONLY when the question asks about "best mechanic", "promotion type comparison", "which mechanic", "BOGO vs percentage_off", etc. ***
 *** DO NOT apply these rules to other question types like "top promotions", "category performance", "ROI analysis", etc. ***
