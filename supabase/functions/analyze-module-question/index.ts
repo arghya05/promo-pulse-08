@@ -168,6 +168,68 @@ function detectCrossModuleQuestion(question: string): string[] {
   return detectedModules;
 }
 
+// Detect KPIs from question text
+function detectKPIsFromQuestion(question: string): string[] {
+  const q = question.toLowerCase();
+  const detectedKPIs: string[] = [];
+  
+  // KPI keyword mappings
+  const kpiPatterns: Record<string, string[]> = {
+    'roi': ['roi', 'return on investment', 'return on spend'],
+    'lift_pct': ['lift', 'sales lift', 'volume lift', 'uplift'],
+    'incremental_margin': ['incremental margin', 'incremental profit', 'added margin'],
+    'promo_spend': ['spend', 'promotional spend', 'investment', 'cost of promotion'],
+    'revenue': ['revenue', 'sales', 'total sales'],
+    'gross_margin': ['margin', 'gross margin', 'profit margin'],
+    'margin_pct': ['margin %', 'margin percent', 'margin rate'],
+    'units_sold': ['units', 'volume', 'quantity', 'items sold'],
+    'discount_depth': ['discount', 'discount depth', 'price reduction'],
+    'redemption_rate': ['redemption', 'coupon redemption', 'redemption rate'],
+    'customer_count': ['customers', 'customer count', 'number of customers'],
+    'clv': ['clv', 'lifetime value', 'customer value'],
+    'retention_rate': ['retention', 'customer retention'],
+    'conversion_rate': ['conversion', 'conversion rate'],
+    'stock_level': ['stock', 'inventory', 'stock level'],
+    'stockout_risk': ['stockout', 'out of stock', 'stock risk'],
+    'market_share': ['market share', 'share of market'],
+    'price_index': ['price index', 'competitive price', 'price vs competitor'],
+    'foot_traffic': ['foot traffic', 'traffic', 'store visits'],
+    'basket_size': ['basket', 'basket size', 'items per transaction'],
+    'price_elasticity': ['elasticity', 'price sensitivity', 'price elasticity'],
+    'halo_effect': ['halo', 'halo effect', 'cross-sell'],
+    'cannibalization': ['cannibalization', 'cannibalize'],
+    'forecast_accuracy': ['forecast accuracy', 'mape', 'accuracy'],
+    'lead_time': ['lead time', 'delivery time'],
+    'on_time_delivery': ['on-time', 'on time delivery', 'otd'],
+    'shelf_space': ['shelf space', 'facing', 'facings']
+  };
+  
+  for (const [kpiId, patterns] of Object.entries(kpiPatterns)) {
+    if (patterns.some(pattern => q.includes(pattern))) {
+      detectedKPIs.push(kpiId);
+    }
+  }
+  
+  // Context-based KPI suggestions
+  if (q.includes('top') || q.includes('best') || q.includes('performer')) {
+    if (!detectedKPIs.includes('roi')) detectedKPIs.push('roi');
+    if (!detectedKPIs.includes('lift_pct')) detectedKPIs.push('lift_pct');
+    if (!detectedKPIs.includes('incremental_margin')) detectedKPIs.push('incremental_margin');
+  }
+  
+  if (q.includes('worst') || q.includes('underperform') || q.includes('loss') || q.includes('lost money')) {
+    if (!detectedKPIs.includes('roi')) detectedKPIs.push('roi');
+    if (!detectedKPIs.includes('promo_spend')) detectedKPIs.push('promo_spend');
+  }
+  
+  if (q.includes('working') || q.includes('not working') || q.includes('effective')) {
+    if (!detectedKPIs.includes('roi')) detectedKPIs.push('roi');
+    if (!detectedKPIs.includes('lift_pct')) detectedKPIs.push('lift_pct');
+  }
+  
+  return detectedKPIs;
+}
+
 // Detect time period from question text
 function detectTimePeriodFromQuestion(question: string): string | null {
   const q = question.toLowerCase();
@@ -217,6 +279,12 @@ serve(async (req) => {
     const detectedTimePeriod = detectTimePeriodFromQuestion(question);
     const effectiveTimePeriod = detectedTimePeriod || timePeriod || 'last_month';
     
+    // Detect KPIs from question text - merge with UI selections
+    const detectedKPIs = detectKPIsFromQuestion(question);
+    const effectiveKPIs = detectedKPIs.length > 0 
+      ? [...new Set([...detectedKPIs, ...(selectedKPIs || [])])]
+      : selectedKPIs;
+    
     // Detect simulation and cross-module questions
     const isSimulation = isSimulationQuestion(question);
     const detectedModules = detectCrossModuleQuestion(question);
@@ -239,9 +307,10 @@ serve(async (req) => {
     const timePeriodLabel = getTimePeriodLabel(effectiveTimePeriod);
     
     console.log(`[${moduleId}] Analyzing question: ${question}`);
-    console.log(`[${moduleId}] Detected time period from question: ${detectedTimePeriod}, UI time period: ${timePeriod}, Effective: ${effectiveTimePeriod}`);
+    console.log(`[${moduleId}] Detected time period: ${detectedTimePeriod}, UI time period: ${timePeriod}, Effective: ${effectiveTimePeriod}`);
+    console.log(`[${moduleId}] Detected KPIs: ${detectedKPIs?.join(', ') || 'none'}, UI KPIs: ${selectedKPIs?.join(', ') || 'none'}`);
+    console.log(`[${moduleId}] Effective KPIs: ${effectiveKPIs?.join(', ') || 'none'}`);
     console.log(`[${moduleId}] Is simulation: ${isSimulation}, Cross-module: ${isCrossModule}, Drill-down: ${isDrillDown}, Drill level: ${conversationContext?.drillLevel || 0}`);
-    console.log(`[${moduleId}] Selected KPIs: ${selectedKPIs?.join(', ') || 'none'}, Time period: ${effectiveTimePeriod}`);
     console.log(`[${moduleId}] Conversation context:`, JSON.stringify(conversationContext || {}));
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;

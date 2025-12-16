@@ -23,6 +23,64 @@ function normalizeQuestion(q: string): string {
   return q.toLowerCase().trim().replace(/[?!.,]/g, '').replace(/\s+/g, ' ');
 }
 
+// Detect KPIs from question text
+function detectKPIsFromQuestion(question: string): string[] {
+  const q = question.toLowerCase();
+  const detectedKPIs: string[] = [];
+  
+  // KPI keyword mappings
+  const kpiPatterns: Record<string, string[]> = {
+    'roi': ['roi', 'return on investment', 'return on spend'],
+    'lift_pct': ['lift', 'sales lift', 'volume lift', 'uplift'],
+    'incremental_margin': ['incremental margin', 'incremental profit', 'added margin'],
+    'promo_spend': ['spend', 'promotional spend', 'investment', 'cost of promotion'],
+    'revenue': ['revenue', 'sales', 'total sales'],
+    'gross_margin': ['margin', 'gross margin', 'profit margin'],
+    'margin_pct': ['margin %', 'margin percent', 'margin rate'],
+    'units_sold': ['units', 'volume', 'quantity', 'items sold'],
+    'discount_depth': ['discount', 'discount depth', 'price reduction'],
+    'redemption_rate': ['redemption', 'coupon redemption', 'redemption rate'],
+    'customer_count': ['customers', 'customer count', 'number of customers'],
+    'clv': ['clv', 'lifetime value', 'customer value'],
+    'retention_rate': ['retention', 'customer retention'],
+    'conversion_rate': ['conversion', 'conversion rate'],
+    'stock_level': ['stock', 'inventory', 'stock level'],
+    'stockout_risk': ['stockout', 'out of stock', 'stock risk'],
+    'market_share': ['market share', 'share of market'],
+    'price_index': ['price index', 'competitive price', 'price vs competitor'],
+    'foot_traffic': ['foot traffic', 'traffic', 'store visits'],
+    'basket_size': ['basket', 'basket size', 'items per transaction'],
+    'price_elasticity': ['elasticity', 'price sensitivity', 'price elasticity'],
+    'halo_effect': ['halo', 'halo effect', 'cross-sell'],
+    'cannibalization': ['cannibalization', 'cannibalize']
+  };
+  
+  for (const [kpiId, patterns] of Object.entries(kpiPatterns)) {
+    if (patterns.some(pattern => q.includes(pattern))) {
+      detectedKPIs.push(kpiId);
+    }
+  }
+  
+  // Context-based KPI suggestions
+  if (q.includes('top') || q.includes('best') || q.includes('performer')) {
+    if (!detectedKPIs.includes('roi')) detectedKPIs.push('roi');
+    if (!detectedKPIs.includes('lift_pct')) detectedKPIs.push('lift_pct');
+    if (!detectedKPIs.includes('incremental_margin')) detectedKPIs.push('incremental_margin');
+  }
+  
+  if (q.includes('worst') || q.includes('underperform') || q.includes('loss') || q.includes('lost money')) {
+    if (!detectedKPIs.includes('roi')) detectedKPIs.push('roi');
+    if (!detectedKPIs.includes('promo_spend')) detectedKPIs.push('promo_spend');
+  }
+  
+  if (q.includes('working') || q.includes('not working') || q.includes('effective')) {
+    if (!detectedKPIs.includes('roi')) detectedKPIs.push('roi');
+    if (!detectedKPIs.includes('lift_pct')) detectedKPIs.push('lift_pct');
+  }
+  
+  return detectedKPIs;
+}
+
 // Detect time period from question text
 function detectTimePeriodFromQuestion(question: string): string | null {
   const q = question.toLowerCase();
@@ -77,9 +135,18 @@ serve(async (req) => {
     const detectedTimePeriod = detectTimePeriodFromQuestion(question);
     const effectiveTimePeriod = detectedTimePeriod || timePeriod;
     
+    // Detect KPIs from question text - merge with UI selections
+    const detectedKPIs = detectKPIsFromQuestion(question);
+    const effectiveKPIs = detectedKPIs.length > 0 
+      ? [...new Set([...detectedKPIs, ...(selectedKPIs || [])])]
+      : selectedKPIs;
+    
     console.log('Detected time period from question:', detectedTimePeriod);
     console.log('UI time period:', timePeriod);
     console.log('Effective time period:', effectiveTimePeriod);
+    console.log('Detected KPIs from question:', detectedKPIs);
+    console.log('UI selected KPIs:', selectedKPIs);
+    console.log('Effective KPIs:', effectiveKPIs);
 
     // Calculate date range based on effective time period
     const now = new Date();
@@ -99,7 +166,7 @@ serve(async (req) => {
     console.log('Processing question:', question);
     console.log('Persona:', persona);
     console.log('Categories filter:', categories);
-    console.log('Selected KPIs:', selectedKPIs);
+    console.log('Effective KPIs:', effectiveKPIs);
     console.log('Time period:', effectiveTimePeriod, '| Date filter:', dateFilter);
 
     // Query ALL actual data from database for rich context
@@ -110,7 +177,7 @@ serve(async (req) => {
 
     // === CACHE CHECK ===
     const normalizedQuestion = normalizeQuestion(question);
-    const kpiSuffix = selectedKPIs && selectedKPIs.length > 0 ? '|' + selectedKPIs.sort().join(',') : '';
+    const kpiSuffix = effectiveKPIs && effectiveKPIs.length > 0 ? '|' + effectiveKPIs.sort().join(',') : '';
     const timeSuffix = effectiveTimePeriod ? '|' + effectiveTimePeriod : '';
     const questionHash = simpleHash(normalizedQuestion + '|' + persona + kpiSuffix + timeSuffix);
     
