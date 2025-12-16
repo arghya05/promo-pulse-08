@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,13 @@ import {
   Zap,
   AlertTriangle,
   CheckCircle2,
-  HelpCircle
+  HelpCircle,
+  Clock,
+  Sparkles,
+  BarChart3,
+  Users,
+  Package,
+  DollarSign
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -57,14 +63,200 @@ interface CausalExplainabilityProps {
   moduleName?: string;
 }
 
+interface Suggestion {
+  text: string;
+  category: string;
+  icon: 'trend' | 'dollar' | 'users' | 'package' | 'chart' | 'clock';
+  popularity?: 'high' | 'medium';
+}
+
 const CausalExplainability = ({ moduleId, moduleName = 'Module' }: CausalExplainabilityProps) => {
   const { toast } = useToast();
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [analysis, setAnalysis] = useState<CausalAnalysis | null>(null);
   const [selectedDriver, setSelectedDriver] = useState<CausalDriver | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  // Module-specific example queries
+  // Rich suggestion library per module
+  const suggestionLibrary: Record<string, Suggestion[]> = {
+    promotion: [
+      { text: "Why did ROI drop for Dairy promotions last month?", category: "ROI Analysis", icon: "trend", popularity: "high" },
+      { text: "Why did BOGO promotions outperform percentage discounts?", category: "Mechanics Analysis", icon: "chart", popularity: "high" },
+      { text: "What caused the spike in redemption rates for Snacks?", category: "Redemption", icon: "trend" },
+      { text: "Why is Snacks category underperforming vs competitors?", category: "Competitive", icon: "users" },
+      { text: "What caused margin erosion in Beverages promotions?", category: "Margin Analysis", icon: "dollar" },
+      { text: "Why did promotional lift decline in Q3?", category: "Lift Analysis", icon: "trend" },
+      { text: "What factors drove customer response rate changes?", category: "Customer Response", icon: "users" },
+      { text: "Why are basket sizes smaller during promotions?", category: "Basket Analysis", icon: "package" },
+      { text: "What caused cannibalization in Personal Care promos?", category: "Cannibalization", icon: "chart" },
+      { text: "Why did seasonal promotions underperform expectations?", category: "Seasonal", icon: "clock" },
+      { text: "What drove halo effects in Frozen category?", category: "Halo Effects", icon: "trend", popularity: "medium" },
+      { text: "Why is promotion fatigue increasing for loyal customers?", category: "Customer Behavior", icon: "users" },
+    ],
+    pricing: [
+      { text: "Why did margin decline after the price increase?", category: "Margin Impact", icon: "dollar", popularity: "high" },
+      { text: "What caused competitor price gap to widen?", category: "Competitive Gap", icon: "users", popularity: "high" },
+      { text: "Why is price elasticity higher for Beverages?", category: "Elasticity", icon: "chart" },
+      { text: "What factors drove volume decline after repricing?", category: "Volume Impact", icon: "trend" },
+      { text: "Why did premium tier sales increase?", category: "Tier Analysis", icon: "dollar" },
+      { text: "What caused price perception to shift negatively?", category: "Price Perception", icon: "users" },
+      { text: "Why is markdown effectiveness declining?", category: "Markdown", icon: "dollar" },
+      { text: "What drove competitor pricing changes in Dairy?", category: "Competitive Intel", icon: "users" },
+    ],
+    demand: [
+      { text: "Why did forecast accuracy drop in Q3?", category: "Accuracy", icon: "chart", popularity: "high" },
+      { text: "What caused the demand spike for Frozen foods?", category: "Demand Spike", icon: "trend", popularity: "high" },
+      { text: "Why are stockout rates increasing in Northeast?", category: "Stockouts", icon: "package" },
+      { text: "What factors drove seasonal demand shift?", category: "Seasonality", icon: "clock" },
+      { text: "Why is demand variability increasing for Dairy?", category: "Variability", icon: "chart" },
+      { text: "What caused the forecast bias for new products?", category: "Bias Analysis", icon: "trend" },
+      { text: "Why did replenishment lead times increase?", category: "Lead Time", icon: "clock" },
+      { text: "What drove safety stock insufficiency?", category: "Safety Stock", icon: "package" },
+    ],
+    'supply-chain': [
+      { text: "Why did supplier on-time delivery decline?", category: "Delivery", icon: "clock", popularity: "high" },
+      { text: "What caused shipping costs to increase 15%?", category: "Costs", icon: "dollar", popularity: "high" },
+      { text: "Why is lead time variance growing?", category: "Variance", icon: "chart" },
+      { text: "What factors drove supplier quality issues?", category: "Quality", icon: "package" },
+      { text: "Why did transportation efficiency drop?", category: "Efficiency", icon: "trend" },
+      { text: "What caused warehouse utilization to decline?", category: "Warehouse", icon: "package" },
+      { text: "Why are expedited shipments increasing?", category: "Expediting", icon: "clock" },
+      { text: "What drove carbon footprint increase?", category: "Sustainability", icon: "chart" },
+    ],
+    space: [
+      { text: "Why did shelf productivity drop for Personal Care?", category: "Productivity", icon: "chart", popularity: "high" },
+      { text: "What caused eye-level allocation to change?", category: "Allocation", icon: "package", popularity: "high" },
+      { text: "Why is fixture utilization declining in Store 5?", category: "Utilization", icon: "trend" },
+      { text: "What factors drove planogram compliance issues?", category: "Compliance", icon: "chart" },
+      { text: "Why did sales per square foot decrease?", category: "Sales Density", icon: "dollar" },
+      { text: "What caused category adjacency problems?", category: "Adjacency", icon: "package" },
+      { text: "Why is out-of-stock visibility low for Beverages?", category: "OOS Visibility", icon: "package" },
+      { text: "What drove impulse purchase decline at checkout?", category: "Impulse", icon: "users" },
+    ],
+    assortment: [
+      { text: "Why did SKU velocity decrease for Home Care?", category: "Velocity", icon: "trend", popularity: "high" },
+      { text: "What caused brand share shifts in Pantry?", category: "Brand Share", icon: "chart", popularity: "high" },
+      { text: "Why is product mix efficiency declining?", category: "Mix Efficiency", icon: "chart" },
+      { text: "What factors drove new product failure rate?", category: "New Products", icon: "package" },
+      { text: "Why did private label performance improve?", category: "Private Label", icon: "dollar" },
+      { text: "What caused SKU rationalization challenges?", category: "Rationalization", icon: "package" },
+      { text: "Why is category growth slowing in Snacks?", category: "Category Growth", icon: "trend" },
+      { text: "What drove substitution patterns in Dairy?", category: "Substitution", icon: "users" },
+    ],
+    executive: [
+      { text: "Why did overall margin drop this quarter?", category: "Margin", icon: "dollar", popularity: "high" },
+      { text: "What caused the revenue variance vs budget?", category: "Revenue", icon: "trend", popularity: "high" },
+      { text: "Why is market share declining in Southwest?", category: "Market Share", icon: "users" },
+      { text: "What factors drove EBITDA decline?", category: "EBITDA", icon: "dollar" },
+      { text: "Why did same-store sales decrease?", category: "Comp Sales", icon: "trend" },
+      { text: "What caused customer traffic decline?", category: "Traffic", icon: "users" },
+      { text: "Why is inventory turnover slowing?", category: "Turnover", icon: "package" },
+      { text: "What drove working capital increase?", category: "Working Capital", icon: "dollar" },
+    ]
+  };
+
+  // Get filtered suggestions based on query
+  const getFilteredSuggestions = (): Suggestion[] => {
+    const moduleSuggestions = suggestionLibrary[moduleId] || suggestionLibrary.promotion;
+    if (!query.trim()) return moduleSuggestions.slice(0, 6);
+    
+    const lowerQuery = query.toLowerCase();
+    return moduleSuggestions
+      .filter(s => s.text.toLowerCase().includes(lowerQuery))
+      .slice(0, 8);
+  };
+
+  const filteredSuggestions = getFilteredSuggestions();
+
+  // Highlight matching text in suggestion
+  const highlightMatch = (text: string, query: string) => {
+    if (!query.trim()) return text;
+    const lowerText = text.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+    const index = lowerText.indexOf(lowerQuery);
+    
+    if (index === -1) return text;
+    
+    return (
+      <>
+        {text.slice(0, index)}
+        <span className="font-semibold text-primary">{text.slice(index, index + query.length)}</span>
+        {text.slice(index + query.length)}
+      </>
+    );
+  };
+
+  const getSuggestionIcon = (icon: Suggestion['icon']) => {
+    switch (icon) {
+      case 'trend': return <TrendingUp className="h-4 w-4 text-primary" />;
+      case 'dollar': return <DollarSign className="h-4 w-4 text-status-good" />;
+      case 'users': return <Users className="h-4 w-4 text-chart-2" />;
+      case 'package': return <Package className="h-4 w-4 text-chart-3" />;
+      case 'chart': return <BarChart3 className="h-4 w-4 text-chart-4" />;
+      case 'clock': return <Clock className="h-4 w-4 text-chart-5" />;
+      default: return <Search className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSuggestions) {
+      if (e.key === 'Enter') handleAnalyze();
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex(prev => Math.min(prev + 1, filteredSuggestions.length - 1));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex(prev => Math.max(prev - 1, -1));
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedIndex >= 0 && filteredSuggestions[selectedIndex]) {
+          selectSuggestion(filteredSuggestions[selectedIndex].text);
+        } else {
+          handleAnalyze();
+        }
+        break;
+      case 'Escape':
+        setShowSuggestions(false);
+        setSelectedIndex(-1);
+        break;
+    }
+  };
+
+  const selectSuggestion = (text: string) => {
+    setQuery(text);
+    setShowSuggestions(false);
+    setSelectedIndex(-1);
+    handleAnalyze(text);
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        suggestionsRef.current && 
+        !suggestionsRef.current.contains(e.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(e.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Module-specific example queries (for the chips below)
   const exampleQueries: Record<string, string[]> = {
     promotion: [
       "Why did ROI drop for Dairy promotions last month?",
@@ -107,6 +299,7 @@ const CausalExplainability = ({ moduleId, moduleName = 'Module' }: CausalExplain
     const questionToAnalyze = questionText || query;
     if (!questionToAnalyze.trim()) return;
 
+    setShowSuggestions(false);
     setIsLoading(true);
     setAnalysis(null);
     setSelectedDriver(null);
@@ -167,19 +360,98 @@ const CausalExplainability = ({ moduleId, moduleName = 'Module' }: CausalExplain
         </Badge>
       </div>
 
-      {/* Search Card */}
+      {/* Search Card with Rich Suggestions */}
       <Card className="p-6">
         <div className="space-y-4">
           <div className="flex gap-3">
             <div className="relative flex-1">
-              <HelpCircle className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <HelpCircle className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
               <Input
+                ref={inputRef}
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setShowSuggestions(true);
+                  setSelectedIndex(-1);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onKeyDown={handleKeyDown}
                 placeholder="Ask 'Why did...?' or 'What caused...?' questions"
                 className="pl-12 h-12 text-lg"
-                onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
+                autoComplete="off"
               />
+              
+              {/* Rich Suggestions Dropdown */}
+              {showSuggestions && filteredSuggestions.length > 0 && (
+                <div 
+                  ref={suggestionsRef}
+                  className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-lg z-50 overflow-hidden"
+                >
+                  {/* Header */}
+                  <div className="px-4 py-2 border-b border-border bg-muted/30">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Sparkles className="h-3 w-3" />
+                      <span>Suggested causal questions for {moduleName}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Suggestions List */}
+                  <div className="max-h-[400px] overflow-y-auto">
+                    {filteredSuggestions.map((suggestion, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => selectSuggestion(suggestion.text)}
+                        className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                          idx === selectedIndex 
+                            ? 'bg-accent' 
+                            : 'hover:bg-accent/50'
+                        } ${idx !== filteredSuggestions.length - 1 ? 'border-b border-border/50' : ''}`}
+                      >
+                        {/* Icon */}
+                        <div className="mt-0.5 shrink-0">
+                          {getSuggestionIcon(suggestion.icon)}
+                        </div>
+                        
+                        {/* Text & Category */}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-foreground leading-snug">
+                            {highlightMatch(suggestion.text, query)}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                              {suggestion.category}
+                            </Badge>
+                            {suggestion.popularity === 'high' && (
+                              <span className="flex items-center gap-1 text-[10px] text-primary">
+                                <TrendingUp className="h-2.5 w-2.5" />
+                                Popular
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Arrow */}
+                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Footer hint */}
+                  <div className="px-4 py-2 border-t border-border bg-muted/30">
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                      <span>
+                        <kbd className="px-1.5 py-0.5 bg-background rounded border border-border text-[9px]">↑</kbd>
+                        <kbd className="px-1.5 py-0.5 bg-background rounded border border-border text-[9px] ml-1">↓</kbd>
+                        <span className="ml-1.5">to navigate</span>
+                      </span>
+                      <span>
+                        <kbd className="px-1.5 py-0.5 bg-background rounded border border-border text-[9px]">Enter</kbd>
+                        <span className="ml-1.5">to select</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <Button 
               onClick={() => handleAnalyze()} 
@@ -200,16 +472,19 @@ const CausalExplainability = ({ moduleId, moduleName = 'Module' }: CausalExplain
             </Button>
           </div>
 
-          {/* Example Queries */}
+          {/* Quick Example Chips */}
           <div className="space-y-2">
-            <span className="text-sm text-muted-foreground">Try asking:</span>
+            <span className="text-sm text-muted-foreground flex items-center gap-2">
+              <Lightbulb className="h-4 w-4" />
+              Try asking:
+            </span>
             <div className="flex flex-wrap gap-2">
               {(exampleQueries[moduleId] || exampleQueries.promotion).map((q, idx) => (
                 <Button
                   key={idx}
                   variant="outline"
                   size="sm"
-                  className="text-xs"
+                  className="text-xs hover:bg-primary/10 hover:border-primary/50 transition-colors"
                   onClick={() => {
                     setQuery(q);
                     handleAnalyze(q);
