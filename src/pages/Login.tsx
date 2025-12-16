@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import algonomyLogo from "@/assets/algonomy-logo.png";
 
 const Login = () => {
   const [userId, setUserId] = useState("");
@@ -48,12 +49,7 @@ const Login = () => {
         <CardHeader className="text-center space-y-4 pb-2">
           {/* Algonomy Logo */}
           <div className="flex justify-center">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-xl">A</span>
-              </div>
-              <span className="text-2xl font-bold text-foreground">algonomy</span>
-            </div>
+            <img src={algonomyLogo} alt="Algonomy" className="h-10 object-contain" />
           </div>
           
           <div className="space-y-1">
