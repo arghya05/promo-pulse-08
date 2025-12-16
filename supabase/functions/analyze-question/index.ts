@@ -23,6 +23,43 @@ function normalizeQuestion(q: string): string {
   return q.toLowerCase().trim().replace(/[?!.,]/g, '').replace(/\s+/g, ' ');
 }
 
+// Detect time period from question text
+function detectTimePeriodFromQuestion(question: string): string | null {
+  const q = question.toLowerCase();
+  
+  // Year-based patterns
+  if (q.includes('this year') || q.includes('previous year') || q.includes('last year') || 
+      q.includes('year over year') || q.includes('yoy') || q.includes('yearly') ||
+      q.includes('annual') || q.includes('12 month') || q.includes('twelve month') ||
+      /\b202[0-9]\b/.test(q) || // Year references like 2024, 2023
+      q.includes('full year') || q.includes('fiscal year')) {
+    return 'last_year';
+  }
+  
+  // Quarter-based patterns
+  if (q.includes('this quarter') || q.includes('last quarter') || q.includes('quarterly') ||
+      q.includes('q1') || q.includes('q2') || q.includes('q3') || q.includes('q4') ||
+      q.includes('quarter over quarter') || q.includes('qoq') || q.includes('3 month') ||
+      q.includes('three month') || q.includes('90 day')) {
+    return 'last_quarter';
+  }
+  
+  // Month-based patterns
+  if (q.includes('this month') || q.includes('last month') || q.includes('monthly') ||
+      q.includes('month over month') || q.includes('mom') || q.includes('30 day') ||
+      q.includes('past month') || q.includes('recent month') ||
+      /\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(q)) {
+    return 'last_month';
+  }
+  
+  // YTD patterns
+  if (q.includes('year to date') || q.includes('ytd') || q.includes('so far this year')) {
+    return 'ytd';
+  }
+  
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -36,16 +73,24 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Calculate date range based on time period
+    // Detect time period from question text - override UI selection if question explicitly mentions time
+    const detectedTimePeriod = detectTimePeriodFromQuestion(question);
+    const effectiveTimePeriod = detectedTimePeriod || timePeriod;
+    
+    console.log('Detected time period from question:', detectedTimePeriod);
+    console.log('UI time period:', timePeriod);
+    console.log('Effective time period:', effectiveTimePeriod);
+
+    // Calculate date range based on effective time period
     const now = new Date();
     let startDate: Date | null = null;
-    if (timePeriod === 'last_month') {
+    if (effectiveTimePeriod === 'last_month') {
       startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-    } else if (timePeriod === 'last_quarter') {
+    } else if (effectiveTimePeriod === 'last_quarter') {
       startDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
-    } else if (timePeriod === 'last_year') {
+    } else if (effectiveTimePeriod === 'last_year') {
       startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-    } else if (timePeriod === 'ytd') {
+    } else if (effectiveTimePeriod === 'ytd') {
       startDate = new Date(now.getFullYear(), 0, 1);
     }
     
@@ -55,7 +100,7 @@ serve(async (req) => {
     console.log('Persona:', persona);
     console.log('Categories filter:', categories);
     console.log('Selected KPIs:', selectedKPIs);
-    console.log('Time period:', timePeriod, '| Date filter:', dateFilter);
+    console.log('Time period:', effectiveTimePeriod, '| Date filter:', dateFilter);
 
     // Query ALL actual data from database for rich context
     const supabaseClient = createClient(
@@ -66,7 +111,7 @@ serve(async (req) => {
     // === CACHE CHECK ===
     const normalizedQuestion = normalizeQuestion(question);
     const kpiSuffix = selectedKPIs && selectedKPIs.length > 0 ? '|' + selectedKPIs.sort().join(',') : '';
-    const timeSuffix = timePeriod ? '|' + timePeriod : '';
+    const timeSuffix = effectiveTimePeriod ? '|' + effectiveTimePeriod : '';
     const questionHash = simpleHash(normalizedQuestion + '|' + persona + kpiSuffix + timeSuffix);
     
     console.log('Checking cache for hash:', questionHash);

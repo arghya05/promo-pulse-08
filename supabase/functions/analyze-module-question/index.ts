@@ -168,6 +168,43 @@ function detectCrossModuleQuestion(question: string): string[] {
   return detectedModules;
 }
 
+// Detect time period from question text
+function detectTimePeriodFromQuestion(question: string): string | null {
+  const q = question.toLowerCase();
+  
+  // Year-based patterns
+  if (q.includes('this year') || q.includes('previous year') || q.includes('last year') || 
+      q.includes('year over year') || q.includes('yoy') || q.includes('yearly') ||
+      q.includes('annual') || q.includes('12 month') || q.includes('twelve month') ||
+      /\b202[0-9]\b/.test(q) || // Year references like 2024, 2023
+      q.includes('full year') || q.includes('fiscal year')) {
+    return 'last_year';
+  }
+  
+  // Quarter-based patterns
+  if (q.includes('this quarter') || q.includes('last quarter') || q.includes('quarterly') ||
+      q.includes('q1') || q.includes('q2') || q.includes('q3') || q.includes('q4') ||
+      q.includes('quarter over quarter') || q.includes('qoq') || q.includes('3 month') ||
+      q.includes('three month') || q.includes('90 day')) {
+    return 'last_quarter';
+  }
+  
+  // Month-based patterns
+  if (q.includes('this month') || q.includes('last month') || q.includes('monthly') ||
+      q.includes('month over month') || q.includes('mom') || q.includes('30 day') ||
+      q.includes('past month') || q.includes('recent month') ||
+      /\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(q)) {
+    return 'last_month';
+  }
+  
+  // YTD patterns
+  if (q.includes('year to date') || q.includes('ytd') || q.includes('so far this year')) {
+    return 'ytd';
+  }
+  
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -175,6 +212,10 @@ serve(async (req) => {
 
   try {
     const { question, moduleId, selectedKPIs, timePeriod, crossModules, conversationHistory, conversationContext } = await req.json();
+    
+    // Detect time period from question text - override UI selection if question explicitly mentions time
+    const detectedTimePeriod = detectTimePeriodFromQuestion(question);
+    const effectiveTimePeriod = detectedTimePeriod || timePeriod || 'last_month';
     
     // Detect simulation and cross-module questions
     const isSimulation = isSimulationQuestion(question);
@@ -195,11 +236,12 @@ serve(async (req) => {
         default: return 'last month';
       }
     };
-    const timePeriodLabel = getTimePeriodLabel(timePeriod || 'last_month');
+    const timePeriodLabel = getTimePeriodLabel(effectiveTimePeriod);
     
     console.log(`[${moduleId}] Analyzing question: ${question}`);
+    console.log(`[${moduleId}] Detected time period from question: ${detectedTimePeriod}, UI time period: ${timePeriod}, Effective: ${effectiveTimePeriod}`);
     console.log(`[${moduleId}] Is simulation: ${isSimulation}, Cross-module: ${isCrossModule}, Drill-down: ${isDrillDown}, Drill level: ${conversationContext?.drillLevel || 0}`);
-    console.log(`[${moduleId}] Selected KPIs: ${selectedKPIs?.join(', ') || 'none'}, Time period: ${timePeriod || 'last_month'}`);
+    console.log(`[${moduleId}] Selected KPIs: ${selectedKPIs?.join(', ') || 'none'}, Time period: ${effectiveTimePeriod}`);
     console.log(`[${moduleId}] Conversation context:`, JSON.stringify(conversationContext || {}));
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
