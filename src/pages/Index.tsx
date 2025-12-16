@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, TrendingUp, AlertTriangle, CheckCircle2, ChevronDown, User, MessageSquare, LayoutGrid, Calendar, Clock, Filter, SlidersHorizontal, RefreshCw, Zap, Target, Settings2, ArrowLeft, Home } from "lucide-react";
+import { Search, TrendingUp, AlertTriangle, CheckCircle2, ChevronDown, User, MessageSquare, LayoutGrid, Calendar, Clock, Filter, SlidersHorizontal, RefreshCw, Zap, Target, Settings2, ArrowLeft, Home, Brain } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import IntelligentDrillDown from "@/components/IntelligentDrillDown";
 import KPISelector from "@/components/KPISelector";
 import ChatInterface from "@/components/ChatInterface";
 import SearchSuggestions from "@/components/SearchSuggestions";
+import CausalExplainability from "@/components/CausalExplainability";
 import { getModuleById, getModulePersonas, getModuleQuestions, getModulePopularIds, getModuleEdgeFunction, Module } from "@/lib/data/module-config";
 
 type Persona = 'executive' | 'consumables' | 'non_consumables';
@@ -569,7 +570,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
 
       <div className="max-w-[1600px] mx-auto px-8 py-8">
         <Tabs defaultValue="chat" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-8">
+          <TabsList className="grid w-full grid-cols-5 mb-8">
             <TabsTrigger value="chat" className="gap-2">
               <MessageSquare className="h-4 w-4" />
               Chat Assistant
@@ -577,6 +578,10 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
             <TabsTrigger value="classic" className="gap-2">
               <LayoutGrid className="h-4 w-4" />
               Classic View
+            </TabsTrigger>
+            <TabsTrigger value="causal" className="gap-2">
+              <Brain className="h-4 w-4" />
+              Causal AI
             </TabsTrigger>
             <TabsTrigger value="data">Data Management</TabsTrigger>
             <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
@@ -1338,6 +1343,10 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
             </div>
           </div>
           )}
+          </TabsContent>
+
+          <TabsContent value="causal">
+            <CausalExplainability moduleId={moduleId} moduleName={module?.name} />
           </TabsContent>
 
           <TabsContent value="data">
