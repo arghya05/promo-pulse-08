@@ -378,6 +378,135 @@ serve(async (req) => {
         dataContextMessage += `- ${promo.name} (${promo.type}, ${promo.discount}): ROI=${promo.roi.toFixed(2)}, Revenue=$${promo.revenue.toFixed(2)}, Margin=$${promo.margin.toFixed(2)}, Units=${promo.units}, Spend=$${promo.spend.toFixed(2)}\n`;
       });
       
+      // === PRODUCT/SKU LEVEL ANALYTICS (for best sellers, top products, worst performers) ===
+      dataContextMessage += `\n\n=== PRODUCT/SKU PERFORMANCE ANALYTICS ===\n`;
+      
+      // Calculate product-level metrics from transactions
+      const productPerformance: Record<string, { 
+        productName: string; 
+        category: string; 
+        subcategory: string;
+        brand: string;
+        revenue: number; 
+        units: number; 
+        cost: number;
+        discount: number;
+        txnCount: number;
+        avgPrice: number;
+        basePrice: number;
+      }> = {};
+      
+      transactionsResult.data?.forEach((txn: any) => {
+        const sku = txn.product_sku;
+        const product = productsResult.data?.find((p: any) => p.product_sku === sku);
+        
+        if (!productPerformance[sku]) {
+          productPerformance[sku] = {
+            productName: product?.product_name || txn.product_name || sku,
+            category: product?.category || 'Unknown',
+            subcategory: product?.subcategory || 'Unknown',
+            brand: product?.brand || 'Unknown',
+            revenue: 0,
+            units: 0,
+            cost: 0,
+            discount: 0,
+            txnCount: 0,
+            avgPrice: 0,
+            basePrice: product?.base_price || 0
+          };
+        }
+        
+        productPerformance[sku].revenue += parseFloat(txn.total_amount || 0);
+        productPerformance[sku].units += parseInt(txn.quantity || 0);
+        productPerformance[sku].discount += parseFloat(txn.discount_amount || 0);
+        productPerformance[sku].txnCount++;
+        productPerformance[sku].cost += (product?.cost || 0) * parseInt(txn.quantity || 0);
+      });
+      
+      // Calculate derived metrics and sort by revenue
+      const productMetrics = Object.entries(productPerformance).map(([sku, stats]) => {
+        const margin = stats.revenue - stats.cost - stats.discount;
+        const marginPct = stats.revenue > 0 ? (margin / stats.revenue * 100) : 0;
+        const avgSellingPrice = stats.units > 0 ? stats.revenue / stats.units : 0;
+        const scaledRevenue = stats.revenue * revenueScaleFactor;
+        const scaledUnits = stats.units * revenueScaleFactor;
+        const scaledMargin = margin * revenueScaleFactor;
+        
+        return {
+          sku,
+          productName: stats.productName,
+          category: stats.category,
+          subcategory: stats.subcategory,
+          brand: stats.brand,
+          revenue: stats.revenue,
+          scaledRevenue,
+          units: stats.units,
+          scaledUnits,
+          margin,
+          scaledMargin,
+          marginPct,
+          avgSellingPrice,
+          basePrice: stats.basePrice,
+          txnCount: stats.txnCount
+        };
+      }).sort((a, b) => b.scaledRevenue - a.scaledRevenue);
+      
+      // TOP 15 BEST SELLING PRODUCTS (by revenue)
+      dataContextMessage += `\nTOP 15 BEST SELLING PRODUCTS (by Revenue - Scaled to $4B retailer):\n`;
+      productMetrics.slice(0, 15).forEach((p, idx) => {
+        dataContextMessage += `${idx + 1}. ${p.productName} (${p.sku}): Revenue=$${(p.scaledRevenue/1000000).toFixed(2)}M, `;
+        dataContextMessage += `Units=${(p.scaledUnits/1000).toFixed(0)}K, Margin=$${(p.scaledMargin/1000000).toFixed(2)}M (${p.marginPct.toFixed(1)}%), `;
+        dataContextMessage += `Category=${p.category}, Brand=${p.brand}, Avg Price=$${p.avgSellingPrice.toFixed(2)}\n`;
+      });
+      
+      // TOP 15 PRODUCTS BY UNITS SOLD
+      const byUnits = [...productMetrics].sort((a, b) => b.scaledUnits - a.scaledUnits);
+      dataContextMessage += `\nTOP 15 PRODUCTS BY UNITS SOLD:\n`;
+      byUnits.slice(0, 15).forEach((p, idx) => {
+        dataContextMessage += `${idx + 1}. ${p.productName} (${p.sku}): Units=${(p.scaledUnits/1000).toFixed(0)}K, `;
+        dataContextMessage += `Revenue=$${(p.scaledRevenue/1000000).toFixed(2)}M, Category=${p.category}, Brand=${p.brand}\n`;
+      });
+      
+      // TOP 15 PRODUCTS BY MARGIN
+      const byMargin = [...productMetrics].sort((a, b) => b.scaledMargin - a.scaledMargin);
+      dataContextMessage += `\nTOP 15 MOST PROFITABLE PRODUCTS (by Margin):\n`;
+      byMargin.slice(0, 15).forEach((p, idx) => {
+        dataContextMessage += `${idx + 1}. ${p.productName} (${p.sku}): Margin=$${(p.scaledMargin/1000000).toFixed(2)}M (${p.marginPct.toFixed(1)}%), `;
+        dataContextMessage += `Revenue=$${(p.scaledRevenue/1000000).toFixed(2)}M, Category=${p.category}, Brand=${p.brand}\n`;
+      });
+      
+      // WORST PERFORMING PRODUCTS (lowest margin)
+      const worstByMargin = [...productMetrics].sort((a, b) => a.scaledMargin - b.scaledMargin);
+      dataContextMessage += `\nWORST PERFORMING PRODUCTS (lowest/negative margin):\n`;
+      worstByMargin.slice(0, 10).forEach((p, idx) => {
+        dataContextMessage += `${idx + 1}. ${p.productName} (${p.sku}): Margin=$${(p.scaledMargin/1000).toFixed(0)}K (${p.marginPct.toFixed(1)}%), `;
+        dataContextMessage += `Revenue=$${(p.scaledRevenue/1000000).toFixed(2)}M, Units=${(p.scaledUnits/1000).toFixed(0)}K, Category=${p.category}\n`;
+      });
+      
+      // SLOWEST MOVING PRODUCTS (lowest units)
+      const slowest = [...productMetrics].sort((a, b) => a.scaledUnits - b.scaledUnits);
+      dataContextMessage += `\nSLOWEST MOVING PRODUCTS (lowest units sold):\n`;
+      slowest.slice(0, 10).forEach((p, idx) => {
+        dataContextMessage += `${idx + 1}. ${p.productName} (${p.sku}): Units=${(p.scaledUnits/1000).toFixed(0)}K, `;
+        dataContextMessage += `Revenue=$${(p.scaledRevenue/1000000).toFixed(2)}M, Category=${p.category}, Brand=${p.brand}\n`;
+      });
+      
+      // PRODUCT PERFORMANCE BY CATEGORY
+      dataContextMessage += `\nPRODUCT PERFORMANCE BY CATEGORY (aggregated):\n`;
+      const categoryProducts: Record<string, { count: number; topProducts: string[] }> = {};
+      productMetrics.forEach(p => {
+        if (!categoryProducts[p.category]) {
+          categoryProducts[p.category] = { count: 0, topProducts: [] };
+        }
+        categoryProducts[p.category].count++;
+        if (categoryProducts[p.category].topProducts.length < 3) {
+          categoryProducts[p.category].topProducts.push(p.productName);
+        }
+      });
+      Object.entries(categoryProducts).forEach(([cat, data]) => {
+        dataContextMessage += `- ${cat}: ${data.count} products, Top sellers: ${data.topProducts.join(', ')}\n`;
+      });
+      
       // === END PRE-COMPUTED ANALYTICS ===
       
       // Transactions summary
@@ -617,6 +746,24 @@ QUESTION-TO-DATA MAPPING EXAMPLES:
 - "Best promotion mechanic for Snacks" → Compare PERFORMANCE BY PROMOTION TYPE filtered to Snacks category
 - "Store performance comparison" → Use PERFORMANCE BY REGION data
 - "Customer segment analysis" → Use PERFORMANCE BY CUSTOMER SEGMENT data
+
+PRODUCT/SKU LEVEL QUESTION MAPPINGS (CRITICAL - USE FOR BEST SELLERS, TOP PRODUCTS, ETC.):
+- "Best sellers" or "Top selling products" → Use TOP 15 BEST SELLING PRODUCTS section - return EXACT product names and SKUs
+- "Top N products by revenue" → Use TOP 15 BEST SELLING PRODUCTS - return exactly N products with their revenue, units, margin
+- "Top products by units" or "Most sold products" → Use TOP 15 PRODUCTS BY UNITS SOLD section
+- "Most profitable products" or "Top margin products" → Use TOP 15 MOST PROFITABLE PRODUCTS section
+- "Worst performers" or "Underperforming products" → Use WORST PERFORMING PRODUCTS section - list products with low/negative margin
+- "Slow moving products" or "Poor sellers" → Use SLOWEST MOVING PRODUCTS section
+- "Best sellers in [Category]" → Filter product data by category, return top products in that category
+- "Top [Brand] products" → Filter by brand, return performance metrics
+- "Why is [Product] performing well/poorly?" → Find product in data, analyze its margin %, units, category performance, compare to peers
+- "Product performance comparison" → Use PRODUCT PERFORMANCE BY CATEGORY with top sellers per category
+
+CRITICAL FOR PRODUCT QUESTIONS:
+1. ALWAYS return EXACT product names and SKU codes from the database
+2. Include specific metrics: Revenue ($M), Units (K), Margin ($M and %), Category, Brand
+3. For "why" questions, compare product's metrics to category average and identify drivers
+4. Never give generic answers - cite specific products with specific numbers
 
 SPECIAL RULE - ONLY FOR MECHANIC/TYPE COMPARISON QUESTIONS:
 *** APPLY THESE RULES ONLY when the question asks about "best mechanic", "promotion type comparison", "which mechanic", "BOGO vs percentage_off", etc. ***
