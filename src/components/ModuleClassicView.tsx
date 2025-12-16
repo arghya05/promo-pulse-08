@@ -48,6 +48,7 @@ import {
 import SearchSuggestions from './SearchSuggestions';
 import MultiLevelDrillDown from './MultiLevelDrillDown';
 import KPISelector from './KPISelector';
+import ProductDrillDown from './ProductDrillDown';
 
 interface ModuleClassicViewProps {
   module: Module;
@@ -83,6 +84,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
   const [result, setResult] = useState<any>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [drillDownData, setDrillDownData] = useState<any>(null);
+  const [productDrillData, setProductDrillData] = useState<any>(null);
   const [selectedKPIs, setSelectedKPIs] = useState<string[]>([]);
   const [selectedTimePeriod, setSelectedTimePeriod] = useState<string>('last_month');
   const [lastAnalyzedQuestion, setLastAnalyzedQuestion] = useState<string>('');
@@ -105,11 +107,35 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
 
   const handleChartClick = (data: any) => {
     if (data && data.name) {
-      setDrillDownData({
-        name: data.name,
-        roi: data.value || 1.5,
-        margin: data.margin || data.value * 1000 || 50000
-      });
+      // Check if this looks like a product/SKU (contains SKU pattern or has product-level metrics)
+      const isProductLevel = data.sku || 
+        data.name.includes('(SKU') || 
+        data.name.match(/\([A-Z]{2,4}-\d+\)/) ||
+        (result?.chartData?.[0]?.sku) ||
+        (lastAnalyzedQuestion?.toLowerCase().includes('product') ||
+         lastAnalyzedQuestion?.toLowerCase().includes('seller') ||
+         lastAnalyzedQuestion?.toLowerCase().includes('sku') ||
+         lastAnalyzedQuestion?.toLowerCase().includes('item'));
+      
+      if (isProductLevel) {
+        // Extract SKU from name if present
+        const skuMatch = data.name.match(/\(([A-Z0-9-]+)\)/);
+        setProductDrillData({
+          name: data.name.replace(/\s*\([^)]*\)/, '').trim(),
+          sku: data.sku || skuMatch?.[1] || data.name,
+          category: data.category,
+          brand: data.brand,
+          revenue: data.value || data.revenue,
+          margin: data.margin,
+          units: data.units
+        });
+      } else {
+        setDrillDownData({
+          name: data.name,
+          roi: data.value || 1.5,
+          margin: data.margin || data.value * 1000 || 50000
+        });
+      }
     }
   };
 
@@ -607,6 +633,14 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                     initialData={drillDownData}
                     drillPath={drillPath}
                     onClose={() => setDrillDownData(null)}
+                  />
+                )}
+
+                {/* Product Drill Down Panel */}
+                {productDrillData && (
+                  <ProductDrillDown
+                    product={productDrillData}
+                    onClose={() => setProductDrillData(null)}
                   />
                 )}
 
