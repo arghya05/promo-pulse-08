@@ -49,7 +49,7 @@ const Login = () => {
         <CardHeader className="text-center space-y-4 pb-2">
           {/* Algonomy Logo */}
           <div className="flex justify-center">
-            <img src={algonomyLogo} alt="Algonomy" className="h-10 object-contain" />
+            <img src={algonomyLogo} alt="Algonomy" className="h-16 object-contain" />
           </div>
           
           <div className="space-y-1">
