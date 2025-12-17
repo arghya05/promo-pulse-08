@@ -1175,6 +1175,8 @@ export default function ChatInterface({
       /\bover\s+the\s+(past|last)\s+/i,
       /\bduring\s+/i,
       /\bin\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i,
+      /\bby\s+(year|quarter|month|week|day|annually|quarterly|monthly|weekly|daily)\b/i, // "by year", "by quarter", etc.
+      /\b(annual|yearly|quarterly|monthly|weekly|daily)\b/i, // annual, yearly, etc.
     ];
     
     const hasTimePeriod = timePeriodPatterns.some(p => p.test(queryLower));
