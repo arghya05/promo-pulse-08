@@ -163,16 +163,29 @@ interface AmbiguityCheck {
 function detectAmbiguousTerms(question: string, moduleId: string): AmbiguityCheck {
   const q = question.toLowerCase();
   
-  // Ambiguous term mappings with clarification options
-  const ambiguousTerms: Record<string, { prompt: string; options: ClarificationOption[] }> = {
+  // Entity-ambiguous terms: ALWAYS ask what type of entity regardless of metric
+  // (e.g., "top seller by revenue" still needs clarification: product, vendor, or store?)
+  const entityAmbiguousTerms: Record<string, { prompt: string; options: ClarificationOption[] }> = {
     'seller': {
       prompt: 'When you say "seller", do you mean:',
       options: [
-        { label: 'Products/SKUs', description: 'Top performing products by sales', refinedQuestion: question.replace(/seller/gi, 'product') },
-        { label: 'Vendors/Suppliers', description: 'Suppliers by sales volume', refinedQuestion: question.replace(/seller/gi, 'supplier') },
-        { label: 'Stores', description: 'Store locations by revenue', refinedQuestion: question.replace(/seller/gi, 'store') }
+        { label: 'Products/SKUs', description: 'Top performing products by sales', refinedQuestion: question.replace(/seller/gi, 'selling product') },
+        { label: 'Vendors/Suppliers', description: 'Suppliers by sales volume', refinedQuestion: question.replace(/seller/gi, 'vendor by sales') },
+        { label: 'Stores', description: 'Store locations by revenue', refinedQuestion: question.replace(/seller/gi, 'store by sales') }
       ]
     },
+    'moving': {
+      prompt: 'When you say "moving" items, do you mean:',
+      options: [
+        { label: 'Products/SKUs', description: 'Products by velocity', refinedQuestion: question.replace(/moving/gi, 'selling product') },
+        { label: 'Categories', description: 'Categories by turnover', refinedQuestion: question.replace(/moving/gi, 'performing category') }
+      ]
+    }
+  };
+  
+  // Metric-ambiguous terms: only ask if no metric context provided
+  // (e.g., "best performer" needs clarification on which metric, but "best performer by ROI" doesn't)
+  const metricAmbiguousTerms: Record<string, { prompt: string; options: ClarificationOption[] }> = {
     'performer': {
       prompt: 'When you say "performer", what do you want to measure by:',
       options: [
@@ -205,14 +218,35 @@ function detectAmbiguousTerms(question: string, moduleId: string): AmbiguityChec
         { label: 'Margin Performance', description: 'Profitability metrics', refinedQuestion: question.replace(/performance/gi, 'margin performance') },
         { label: 'Promotion Performance', description: 'ROI and lift from promotions', refinedQuestion: question.replace(/performance/gi, 'promotion performance by ROI') }
       ]
+    },
+    'trending': {
+      prompt: 'What kind of trend are you interested in:',
+      options: [
+        { label: 'Sales Trending Up', description: 'Products/categories with increasing sales', refinedQuestion: question.replace(/trending/gi, 'with increasing revenue') },
+        { label: 'Sales Trending Down', description: 'Products/categories with declining sales', refinedQuestion: question.replace(/trending/gi, 'with declining revenue') },
+        { label: 'Growth Rate', description: 'Fastest growing products', refinedQuestion: question.replace(/trending/gi, 'by growth rate') }
+      ]
     }
   };
   
-  // Check for ambiguous terms only if question lacks specific metric context
+  // Check for entity ambiguity FIRST - these always need clarification
+  const hasEntityContext = /\b(product|sku|vendor|supplier|store|brand|category)\b/i.test(q);
+  
+  for (const [term, config] of Object.entries(entityAmbiguousTerms)) {
+    if (q.includes(term) && !hasEntityContext) {
+      return {
+        needsClarification: true,
+        ambiguousTerm: term,
+        clarificationPrompt: config.prompt,
+        options: config.options
+      };
+    }
+  }
+  
+  // Check for metric ambiguity only if no metric context
   const hasMetricContext = /\b(revenue|margin|roi|sales|units|lift|spend|profit|growth)\b/i.test(q);
   
-  for (const [term, config] of Object.entries(ambiguousTerms)) {
-    // Only flag as ambiguous if the term exists AND there's no metric context
+  for (const [term, config] of Object.entries(metricAmbiguousTerms)) {
     if (q.includes(term) && !hasMetricContext) {
       return {
         needsClarification: true,
