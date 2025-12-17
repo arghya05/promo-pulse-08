@@ -889,6 +889,68 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                     </div>
                   </Card>
 
+                  {/* Ambiguous Term Quick Options */}
+                  {(() => {
+                    const q = query.toLowerCase();
+                    const hasEntityContext = /\b(product|sku|vendor|supplier|store|brand|category)\b/i.test(q);
+                    
+                    // Define ambiguous terms and their options
+                    const ambiguousOptions: { term: RegExp; label: string; options: { label: string; replacement: string }[] }[] = [
+                      { 
+                        term: /sell[ea]?[r]+s?|sel+ers?/i, 
+                        label: 'seller',
+                        options: [
+                          { label: '📦 Products', replacement: 'selling product' },
+                          { label: '🏭 Vendors', replacement: 'vendor by sales' },
+                          { label: '🏪 Stores', replacement: 'store by sales' }
+                        ]
+                      },
+                      { 
+                        term: /\bmoving\b/i,
+                        label: 'moving',
+                        options: [
+                          { label: '📦 Products', replacement: 'selling product' },
+                          { label: '📁 Categories', replacement: 'performing category' }
+                        ]
+                      },
+                      { 
+                        term: /\bmover\b/i,
+                        label: 'mover',
+                        options: [
+                          { label: '📦 Products', replacement: 'selling product' },
+                          { label: '📁 Categories', replacement: 'performing category' }
+                        ]
+                      }
+                    ];
+                    
+                    const matchedTerm = ambiguousOptions.find(a => a.term.test(q) && !hasEntityContext);
+                    
+                    if (!matchedTerm || !query.trim()) return null;
+                    
+                    return (
+                      <div className="flex items-center gap-2 flex-wrap bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg p-3">
+                        <span className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+                          "{matchedTerm.label}" could mean:
+                        </span>
+                        {matchedTerm.options.map((opt, idx) => (
+                          <Button
+                            key={idx}
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50"
+                            onClick={() => {
+                              const newQuery = query.replace(matchedTerm.term, opt.replacement);
+                              setQuery(newQuery);
+                              handleAsk(newQuery);
+                            }}
+                          >
+                            {opt.label}
+                          </Button>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
                   {/* KPI Selector */}
                   <KPISelector
                     question={query}
