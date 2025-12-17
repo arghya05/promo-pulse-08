@@ -363,28 +363,31 @@ function detectKPIsFromQuestion(question: string): string[] {
 function detectTimePeriodFromQuestion(question: string): string | null {
   const q = question.toLowerCase();
   
-  // Year-based patterns
+  // Year-based patterns - including "by year", "per year", "annually"
   if (q.includes('this year') || q.includes('previous year') || q.includes('last year') || 
       q.includes('year over year') || q.includes('yoy') || q.includes('yearly') ||
-      q.includes('annual') || q.includes('12 month') || q.includes('twelve month') ||
+      q.includes('annual') || q.includes('annually') || q.includes('12 month') || q.includes('twelve month') ||
       /\b202[0-9]\b/.test(q) || // Year references like 2024, 2023
-      q.includes('full year') || q.includes('fiscal year')) {
+      q.includes('full year') || q.includes('fiscal year') ||
+      /\bby\s+year\b/.test(q) || /\bper\s+year\b/.test(q)) { // "by year" or "per year"
     return 'last_year';
   }
   
-  // Quarter-based patterns
+  // Quarter-based patterns - including "by quarter", "per quarter"
   if (q.includes('this quarter') || q.includes('last quarter') || q.includes('quarterly') ||
       q.includes('q1') || q.includes('q2') || q.includes('q3') || q.includes('q4') ||
       q.includes('quarter over quarter') || q.includes('qoq') || q.includes('3 month') ||
-      q.includes('three month') || q.includes('90 day')) {
+      q.includes('three month') || q.includes('90 day') ||
+      /\bby\s+quarter\b/.test(q) || /\bper\s+quarter\b/.test(q)) {
     return 'last_quarter';
   }
   
-  // Month-based patterns
+  // Month-based patterns - including "by month", "per month"
   if (q.includes('this month') || q.includes('last month') || q.includes('monthly') ||
       q.includes('month over month') || q.includes('mom') || q.includes('30 day') ||
       q.includes('past month') || q.includes('recent month') ||
-      /\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(q)) {
+      /\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(q) ||
+      /\bby\s+month\b/.test(q) || /\bper\s+month\b/.test(q)) {
     return 'last_month';
   }
   
