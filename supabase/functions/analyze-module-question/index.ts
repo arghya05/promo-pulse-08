@@ -317,15 +317,15 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Common data queries - include all entities for cross-module analysis
+    // Common data queries - OPTIMIZED for speed
     const [productsRes, storesRes, transactionsRes, competitorPricesRes, suppliersRes, planogramsRes, promotionsRes] = await Promise.all([
-      supabase.from('products').select('*').limit(100),
-      supabase.from('stores').select('*').limit(50),
-      supabase.from('transactions').select('*').limit(500),
-      supabase.from('competitor_prices').select('*').limit(200),
-      supabase.from('suppliers').select('*').limit(50),
-      supabase.from('planograms').select('*').limit(50),
-      supabase.from('promotions').select('*').limit(100),
+      supabase.from('products').select('*').limit(50),
+      supabase.from('stores').select('*').limit(20),
+      supabase.from('transactions').select('*').limit(200),
+      supabase.from('competitor_prices').select('*').limit(100),
+      supabase.from('suppliers').select('*').limit(25),
+      supabase.from('planograms').select('*').limit(25),
+      supabase.from('promotions').select('*').limit(55),
     ]);
     
     const products = productsRes.data || [];
@@ -350,11 +350,11 @@ serve(async (req) => {
     switch (moduleId) {
       case 'pricing': {
         const [priceChangesRes, competitorPricesRes, competitorDataRes, pricingDriversRes, transactionsExtendedRes] = await Promise.all([
-          supabase.from('price_change_history').select('*').limit(500),
-          supabase.from('competitor_prices').select('*').limit(500),
-          supabase.from('competitor_data').select('*').limit(200),
-          supabase.from('third_party_data').select('*').in('data_type', ['pricing_driver', 'economic', 'commodity', 'inflation']).limit(100),
-          supabase.from('transactions').select('*').limit(1000),
+          supabase.from('price_change_history').select('*').limit(150),
+          supabase.from('competitor_prices').select('*').limit(150),
+          supabase.from('competitor_data').select('*').limit(50),
+          supabase.from('third_party_data').select('*').in('data_type', ['pricing_driver', 'economic', 'commodity', 'inflation']).limit(30),
+          supabase.from('transactions').select('*').limit(300),
         ]);
         const priceChanges = priceChangesRes.data || [];
         const competitorPrices = competitorPricesRes.data || [];
@@ -536,11 +536,11 @@ ${competitorData.slice(0, 6).map((cd: any) => `- ${cd.competitor_name} (${cd.pro
       
       case 'assortment': {
         const [inventoryRes, competitorDataRes, marketTrendsRes, transactionsExtendedRes, customersRes] = await Promise.all([
-          supabase.from('inventory_levels').select('*').limit(500),
-          supabase.from('competitor_data').select('*').limit(100),
-          supabase.from('third_party_data').select('*').in('data_type', ['market_trend', 'consumer_trend', 'category_growth']).limit(100),
-          supabase.from('transactions').select('*').limit(1500),
-          supabase.from('customers').select('*').limit(500),
+          supabase.from('inventory_levels').select('*').limit(150),
+          supabase.from('competitor_data').select('*').limit(30),
+          supabase.from('third_party_data').select('*').in('data_type', ['market_trend', 'consumer_trend', 'category_growth']).limit(30),
+          supabase.from('transactions').select('*').limit(400),
+          supabase.from('customers').select('*').limit(150),
         ]);
         const inventory = inventoryRes.data || [];
         const competitorData = competitorDataRes.data || [];
@@ -779,14 +779,14 @@ ${competitorData.slice(0, 6).map((cd: any) => `- ${cd.competitor_name} (${cd.pro
       
       case 'demand': {
         const [forecastsRes, accuracyRes, inventoryRes, demandDriversRes, externalSignalsRes, competitorRes, suppliersRes, ordersRes] = await Promise.all([
-          supabase.from('demand_forecasts').select('*').limit(1000),
-          supabase.from('forecast_accuracy_tracking').select('*').limit(200),
-          supabase.from('inventory_levels').select('*').limit(500),
-          supabase.from('third_party_data').select('*').eq('data_type', 'demand_driver').limit(100),
-          supabase.from('third_party_data').select('*').in('data_type', ['weather', 'economic', 'market_share']).limit(100),
-          supabase.from('competitor_data').select('*').limit(50),
-          supabase.from('suppliers').select('*').limit(100),
-          supabase.from('supplier_orders').select('*').limit(500),
+          supabase.from('demand_forecasts').select('*').limit(300),
+          supabase.from('forecast_accuracy_tracking').select('*').limit(50),
+          supabase.from('inventory_levels').select('*').limit(150),
+          supabase.from('third_party_data').select('*').eq('data_type', 'demand_driver').limit(30),
+          supabase.from('third_party_data').select('*').in('data_type', ['weather', 'economic', 'market_share']).limit(30),
+          supabase.from('competitor_data').select('*').limit(20),
+          supabase.from('suppliers').select('*').limit(30),
+          supabase.from('supplier_orders').select('*').limit(150),
         ]);
         const forecasts = forecastsRes.data || [];
         const accuracyTracking = accuracyRes.data || [];
@@ -1217,11 +1217,11 @@ DRILL-DOWN PATHS AVAILABLE:
       
       case 'supply-chain': {
         const [suppliersRes, ordersRes, routesRes, inventoryRes, supplyChainSignalsRes] = await Promise.all([
-          supabase.from('suppliers').select('*').limit(100),
-          supabase.from('supplier_orders').select('*').limit(1000),
-          supabase.from('shipping_routes').select('*').limit(200),
-          supabase.from('inventory_levels').select('*').limit(500),
-          supabase.from('third_party_data').select('*').in('data_type', ['supply_chain', 'logistics', 'freight']).limit(50),
+          supabase.from('suppliers').select('*').limit(30),
+          supabase.from('supplier_orders').select('*').limit(300),
+          supabase.from('shipping_routes').select('*').limit(50),
+          supabase.from('inventory_levels').select('*').limit(150),
+          supabase.from('third_party_data').select('*').in('data_type', ['supply_chain', 'logistics', 'freight']).limit(20),
         ]);
         const suppliers = suppliersRes.data || [];
         const orders = ordersRes.data || [];
@@ -1460,10 +1460,10 @@ ${supplyChainSignals.slice(0, 5).map((s: any) => `- ${s.metric_name}: ${s.metric
       
       case 'space': {
         const [planogramsRes, allocationsRes, fixturesRes, storePerfRes] = await Promise.all([
-          supabase.from('planograms').select('*').limit(200),
-          supabase.from('shelf_allocations').select('*').limit(500),
-          supabase.from('fixtures').select('*').limit(200),
-          supabase.from('store_performance').select('*').limit(300),
+          supabase.from('planograms').select('*').limit(50),
+          supabase.from('shelf_allocations').select('*').limit(150),
+          supabase.from('fixtures').select('*').limit(50),
+          supabase.from('store_performance').select('*').limit(100),
         ]);
         const planograms = planogramsRes.data || [];
         const allocations = allocationsRes.data || [];
