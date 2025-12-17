@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.analyze-module-question]
 verify_jwt = false
+
+[functions.test-question-alignment]
+verify_jwt = false
+
+[functions.analyze-causal]
+verify_jwt = false
