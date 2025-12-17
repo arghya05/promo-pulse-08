@@ -26,6 +26,7 @@ import KPISelector from "./KPISelector";
 import DrillBreadcrumbs from "./DrillBreadcrumbs";
 import ConversationContextPanel from "./ConversationContextPanel";
 import CrossModuleNavigator from "./CrossModuleNavigator";
+import FormattedInsight from "./FormattedInsight";
 import { useToast } from "@/hooks/use-toast";
 import type { AnalyticsResult } from "@/lib/analytics";
 import { getSuggestedKPIs, KPI } from "@/lib/data/kpi-library";
@@ -1203,7 +1204,11 @@ export default function ChatInterface({
                     ? 'bg-destructive/10 text-foreground border border-destructive/30 rounded-bl-md'
                     : 'bg-secondary/50 text-foreground rounded-bl-md'
                 }`}>
-                  <p className="text-sm leading-relaxed">{message.content}</p>
+                  {message.type === 'user' || message.isError ? (
+                    <p className="text-sm leading-relaxed">{message.content}</p>
+                  ) : (
+                    <FormattedInsight content={message.content} />
+                  )}
                 </div>
 
                 {/* Clarification Options */}

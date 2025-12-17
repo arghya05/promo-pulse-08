@@ -21,6 +21,7 @@ import {
   Calendar,
   BarChart3
 } from 'lucide-react';
+import FormattedInsight from './FormattedInsight';
 import {
   BarChart,
   Bar,
@@ -738,19 +739,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                             </Badge>
                           )}
                           
-                          <div 
-                            className="text-sm prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>ul]:my-2 [&>ol]:my-2 [&>li]:my-0.5 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm [&>strong]:font-semibold"
-                            dangerouslySetInnerHTML={{ 
-                              __html: message.content
-                                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                                .replace(/`(.*?)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-xs">$1</code>')
-                                .replace(/^- (.+)$/gm, '<li>$1</li>')
-                                .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
-                                .replace(/(<li>.*<\/li>)/s, '<ul class="list-disc pl-4">$1</ul>')
-                                .replace(/\n/g, '<br />')
-                            }}
-                          />
+                          <FormattedInsight content={message.content} />
                           
                           {/* Why section */}
                           {message.data?.why && message.data.why.length > 0 && (
