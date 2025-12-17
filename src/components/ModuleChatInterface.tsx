@@ -88,6 +88,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
   const [selectedKPIs, setSelectedKPIs] = useState<string[]>(kpis.slice(0, 4).map(k => k.id));
   const [selectedTimePeriod, setSelectedTimePeriod] = useState<string>('last_quarter');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const Icon = module.icon;
   
@@ -199,9 +200,23 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
     setCrossModuleLink(null);
   }, [module, chatContent.greeting, sharedContext, getModuleInsights]);
 
+  // Auto-scroll to bottom when messages change or loading state changes
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    const scrollToBottom = () => {
+      if (scrollAreaRef.current) {
+        const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if (scrollContainer) {
+          scrollContainer.scrollTo({
+            top: scrollContainer.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      }
+    };
+    // Small delay to ensure content is rendered
+    const timeoutId = setTimeout(scrollToBottom, 100);
+    return () => clearTimeout(timeoutId);
+  }, [messages, isLoading]);
 
   // Extract context from response for conversation continuity
   const extractContextFromResponse = useCallback((data: any, question: string) => {
@@ -681,143 +696,145 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
             </div>
           )}
           
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  {message.role === 'assistant' && (
-                    <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit`}>
-                      <Icon className={`h-4 w-4 ${module.color}`} />
-                    </div>
-                  )}
+          <div ref={scrollAreaRef} className="flex-1 min-h-0">
+            <ScrollArea className="h-full p-4" style={{ height: 'calc(100vh - 280px)' }}>
+              <div className="space-y-4">
+                {messages.map((message) => (
                   <div
-                    className={`max-w-[80%] rounded-lg p-4 ${
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
-                    }`}
+                    key={message.id}
+                    className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    {message.isLoading ? (
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-sm">Analyzing {module.name}...</span>
+                    {message.role === 'assistant' && (
+                      <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit`}>
+                        <Icon className={`h-4 w-4 ${module.color}`} />
                       </div>
-                    ) : (
-                      <>
-                        {/* Drill level indicator */}
-                        {message.drillContext && (
-                          <Badge variant="outline" className="mb-2 text-[10px]">
-                            Level {message.drillContext.level}: {message.drillContext.value}
-                          </Badge>
-                        )}
-                        
-                        <div 
-                          className="text-sm prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>ul]:my-2 [&>ol]:my-2 [&>li]:my-0.5 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm [&>strong]:font-semibold"
-                          dangerouslySetInnerHTML={{ 
-                            __html: message.content
-                              .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                              .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                              .replace(/`(.*?)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-xs">$1</code>')
-                              .replace(/^- (.+)$/gm, '<li>$1</li>')
-                              .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
-                              .replace(/(<li>.*<\/li>)/s, '<ul class="list-disc pl-4">$1</ul>')
-                              .replace(/\n/g, '<br />')
-                          }}
-                        />
-                        
-                        {/* Why section */}
-                        {message.data?.why && message.data.why.length > 0 && (
-                          <div className="mt-3 p-2 bg-background/50 rounded text-xs">
-                            <span className="font-medium">Why: </span>
-                            {message.data.why.slice(0, 2).join(' ')}
-                          </div>
-                        )}
-                        
-                        {/* KPIs */}
-                        {message.data?.kpis && Object.keys(message.data.kpis).length > 0 && (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {Object.entries(message.data.kpis).slice(0, 4).map(([key, value]) => (
-                              <Badge key={key} variant="outline" className="text-xs">
-                                {key}: {String(value)}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                        
-                        {/* Drill-Down Section - Expandable */}
-                        {message.data?.chartData && message.data.chartData.length > 0 && (
-                          <div className="mt-3 border-t pt-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => toggleDrillExpand(message.id)}
-                              className="w-full justify-between text-xs h-7 px-2"
-                            >
-                              <span className="flex items-center gap-1">
-                                <Sparkles className="h-3 w-3 text-primary" />
-                                Drill into specific items ({message.data.chartData.length})
-                              </span>
-                              {expandedDrillDowns[message.id] ? 
-                                <ChevronDown className="h-3 w-3" /> : 
-                                <ChevronRight className="h-3 w-3" />
-                              }
-                            </Button>
-                            
-                            {expandedDrillDowns[message.id] && (
-                              <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
-                                {message.data.chartData.slice(0, 6).map((item: any, i: number) => (
-                                  <Button
-                                    key={i}
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full justify-between text-left h-auto py-1.5 px-2 text-xs"
-                                    onClick={() => handleDrillInto('item', item.name, (message.drillContext?.level || 0) + 1)}
-                                    disabled={isLoading}
-                                  >
-                                    <span className="truncate">{item.name}</span>
-                                    <span className="text-muted-foreground ml-2">{item.value}</span>
-                                  </Button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        
-                        {/* Follow-up Questions - More prominent */}
-                        {(message.data?.drillDownQuestions || message.data?.nextQuestions) && (
-                          <div className="mt-3 space-y-1.5 border-t pt-3">
-                            <span className="text-xs text-muted-foreground font-medium">Continue exploring:</span>
-                            {(message.data.drillDownQuestions || message.data.nextQuestions).slice(0, 3).map((q: string, i: number) => (
+                    )}
+                    <div
+                      className={`max-w-[80%] rounded-lg p-4 ${
+                        message.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted'
+                      }`}
+                    >
+                      {message.isLoading ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="text-sm">Analyzing {module.name}...</span>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Drill level indicator */}
+                          {message.drillContext && (
+                            <Badge variant="outline" className="mb-2 text-[10px]">
+                              Level {message.drillContext.level}: {message.drillContext.value}
+                            </Badge>
+                          )}
+                          
+                          <div 
+                            className="text-sm prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>ul]:my-2 [&>ol]:my-2 [&>li]:my-0.5 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm [&>strong]:font-semibold"
+                            dangerouslySetInnerHTML={{ 
+                              __html: message.content
+                                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                .replace(/`(.*?)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-xs">$1</code>')
+                                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                                .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
+                                .replace(/(<li>.*<\/li>)/s, '<ul class="list-disc pl-4">$1</ul>')
+                                .replace(/\n/g, '<br />')
+                            }}
+                          />
+                          
+                          {/* Why section */}
+                          {message.data?.why && message.data.why.length > 0 && (
+                            <div className="mt-3 p-2 bg-background/50 rounded text-xs">
+                              <span className="font-medium">Why: </span>
+                              {message.data.why.slice(0, 2).join(' ')}
+                            </div>
+                          )}
+                          
+                          {/* KPIs */}
+                          {message.data?.kpis && Object.keys(message.data.kpis).length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {Object.entries(message.data.kpis).slice(0, 4).map(([key, value]) => (
+                                <Badge key={key} variant="outline" className="text-xs">
+                                  {key}: {String(value)}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Drill-Down Section - Expandable */}
+                          {message.data?.chartData && message.data.chartData.length > 0 && (
+                            <div className="mt-3 border-t pt-2">
                               <Button
-                                key={i}
-                                variant="secondary"
+                                variant="ghost"
                                 size="sm"
-                                className="w-full justify-start text-left h-auto py-2 px-3 text-xs hover:bg-primary/10"
-                                onClick={() => handleSend(q)}
-                                disabled={isLoading}
+                                onClick={() => toggleDrillExpand(message.id)}
+                                className="w-full justify-between text-xs h-7 px-2"
                               >
-                                <ChevronRight className="h-3 w-3 mr-2 text-primary flex-shrink-0" />
-                                <span className="line-clamp-2">{q}</span>
+                                <span className="flex items-center gap-1">
+                                  <Sparkles className="h-3 w-3 text-primary" />
+                                  Drill into specific items ({message.data.chartData.length})
+                                </span>
+                                {expandedDrillDowns[message.id] ? 
+                                  <ChevronDown className="h-3 w-3" /> : 
+                                  <ChevronRight className="h-3 w-3" />
+                                }
                               </Button>
-                            ))}
-                          </div>
-                        )}
-                      </>
+                              
+                              {expandedDrillDowns[message.id] && (
+                                <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                                  {message.data.chartData.slice(0, 6).map((item: any, i: number) => (
+                                    <Button
+                                      key={i}
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full justify-between text-left h-auto py-1.5 px-2 text-xs"
+                                      onClick={() => handleDrillInto('item', item.name, (message.drillContext?.level || 0) + 1)}
+                                      disabled={isLoading}
+                                    >
+                                      <span className="truncate">{item.name}</span>
+                                      <span className="text-muted-foreground ml-2">{item.value}</span>
+                                    </Button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Follow-up Questions - More prominent */}
+                          {(message.data?.drillDownQuestions || message.data?.nextQuestions) && (
+                            <div className="mt-3 space-y-1.5 border-t pt-3">
+                              <span className="text-xs text-muted-foreground font-medium">Continue exploring:</span>
+                              {(message.data.drillDownQuestions || message.data.nextQuestions).slice(0, 3).map((q: string, i: number) => (
+                                <Button
+                                  key={i}
+                                  variant="secondary"
+                                  size="sm"
+                                  className="w-full justify-start text-left h-auto py-2 px-3 text-xs hover:bg-primary/10"
+                                  onClick={() => handleSend(q)}
+                                  disabled={isLoading}
+                                >
+                                  <ChevronRight className="h-3 w-3 mr-2 text-primary flex-shrink-0" />
+                                  <span className="line-clamp-2">{q}</span>
+                                </Button>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    {message.role === 'user' && (
+                      <div className="p-2 rounded-lg bg-primary/10 h-fit">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
                     )}
                   </div>
-                  {message.role === 'user' && (
-                    <div className="p-2 rounded-lg bg-primary/10 h-fit">
-                      <User className="h-4 w-4 text-primary" />
-                    </div>
-                  )}
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-          </ScrollArea>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
+          </div>
 
           {/* Input Area */}
           <div className="p-4 border-t">
