@@ -1289,57 +1289,7 @@ export default function ChatInterface({
                   </div>
                 )}
 
-                {/* SYNC: Same Chart as Classic View */}
-                {message.analyticsResult?.chartData && message.analyticsResult.chartData.length > 0 && (
-                  <div className="mt-3 border-t border-border/50 pt-3">
-                    <p className="text-[10px] text-muted-foreground mb-2 flex items-center gap-1">
-                      <BarChart3 className="h-3 w-3 text-primary" />
-                      Chart (click bars to drill down)
-                    </p>
-                    <div className="h-[250px] w-full">
-                      {(() => {
-                        const data = message.analyticsResult!.chartData;
-                        const sampleItem = data[0] || {};
-                        const barKeys = Object.keys(sampleItem).filter(k => 
-                          k !== 'name' && 
-                          typeof sampleItem[k] === 'number' && 
-                          !['id', 'index'].includes(k)
-                        );
-                        const primaryKey = barKeys.includes('value') ? 'value' : 
-                                          barKeys.includes('revenue') ? 'revenue' : 
-                                          barKeys[0] || 'value';
-                        
-                        return (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data} onClick={(e) => e?.activePayload?.[0] && handleDrillInto(e.activePayload[0].payload.name)}>
-                              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                              <XAxis dataKey="name" className="text-xs" tick={{ fontSize: 10 }} />
-                              <YAxis className="text-xs" tick={{ fontSize: 10 }} tickFormatter={(v) => v >= 1000 ? `$${(v/1000).toFixed(1)}K` : `$${v}`} />
-                              <Tooltip formatter={(value: number) => value >= 1000 ? `$${(value/1000).toFixed(1)}K` : `$${Number(value).toFixed(2)}`} />
-                              <Legend wrapperStyle={{ fontSize: '10px' }} />
-                              <Bar dataKey={primaryKey} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} className="cursor-pointer" name={primaryKey.charAt(0).toUpperCase() + primaryKey.slice(1)} />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        );
-                      })()}
-                    </div>
-                    {/* Drill buttons below chart */}
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {message.analyticsResult.chartData.slice(0, 6).map((item: any, i: number) => (
-                        <Button
-                          key={i}
-                          variant="outline"
-                          size="sm"
-                          className="text-[10px] h-6 px-2"
-                          onClick={() => handleDrillInto(item.name)}
-                          disabled={isLoading}
-                        >
-                          {item.name}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* Charts are displayed in the right panel - no duplication needed */}
 
                 {/* Inline Refinement Input - Feature #3 */}
                 {message.analyticsResult && (
