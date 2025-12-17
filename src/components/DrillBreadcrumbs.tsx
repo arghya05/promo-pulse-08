@@ -1,4 +1,4 @@
-import { ChevronRight, Home, Layers } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Home, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -12,8 +12,28 @@ interface DrillBreadcrumbsProps {
 const DrillBreadcrumbs = ({ drillPath, onNavigate, onReset, currentLevel }: DrillBreadcrumbsProps) => {
   if (drillPath.length === 0) return null;
 
+  const handleBack = () => {
+    if (drillPath.length === 1) {
+      onReset();
+    } else {
+      onNavigate(drillPath.length - 2);
+    }
+  };
+
   return (
     <div className="flex items-center gap-1 px-3 py-2 bg-secondary/30 border border-border/50 rounded-lg overflow-x-auto">
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-6 px-2 text-xs flex items-center gap-1 bg-background hover:bg-accent"
+        onClick={handleBack}
+      >
+        <ChevronLeft className="h-3 w-3" />
+        <span>Back</span>
+      </Button>
+      
+      <div className="w-px h-4 bg-border mx-1" />
+      
       <Button
         variant="ghost"
         size="sm"
