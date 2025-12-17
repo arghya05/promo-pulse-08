@@ -922,7 +922,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                 )}
 
                 {/* Clarification Options */}
-                {clarification && !isLoading && (
+                {clarification && clarification.options && !isLoading && (
                   <Card className="p-6 bg-card border-primary/30">
                     <h3 className="font-semibold text-foreground mb-4">{clarification.prompt}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
