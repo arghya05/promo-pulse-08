@@ -203,6 +203,12 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
   // Auto-scroll to bottom when messages change or loading state changes
   useEffect(() => {
     const scrollToBottom = () => {
+      // Try multiple scroll methods for reliability
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+      
+      // Also try scrolling the viewport directly
       if (scrollAreaRef.current) {
         const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
         if (scrollContainer) {
@@ -213,9 +219,17 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
         }
       }
     };
-    // Small delay to ensure content is rendered
-    const timeoutId = setTimeout(scrollToBottom, 100);
-    return () => clearTimeout(timeoutId);
+    
+    // Multiple delays to catch content render timing
+    const timeoutId1 = setTimeout(scrollToBottom, 50);
+    const timeoutId2 = setTimeout(scrollToBottom, 200);
+    const timeoutId3 = setTimeout(scrollToBottom, 500);
+    
+    return () => {
+      clearTimeout(timeoutId1);
+      clearTimeout(timeoutId2);
+      clearTimeout(timeoutId3);
+    };
   }, [messages, isLoading]);
 
   // Extract context from response for conversation continuity
