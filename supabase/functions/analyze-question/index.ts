@@ -1683,6 +1683,62 @@ Now analyze and provide a 100% accurate, data-driven answer to the question abov
           return item;
         });
         
+        // Check if chartData has all zero values - common AI issue
+        const hasAllZeroValues = analysisResult.chartData.length > 0 && 
+          analysisResult.chartData.every((item: any) => !item.value || item.value === 0);
+        
+        if (hasAllZeroValues) {
+          console.log('Chart items have all zero values, generating from category breakdown...');
+          
+          // Calculate category breakdown from transactions
+          const categoryRevenue: Record<string, { revenue: number, margin: number, count: number }> = {};
+          transactionsResult.data?.forEach((t: any) => {
+            const prod = productsResult.data?.find((p: any) => p.product_sku === t.product_sku);
+            const category = prod?.category || 'Other';
+            if (!categoryRevenue[category]) {
+              categoryRevenue[category] = { revenue: 0, margin: 0, count: 0 };
+            }
+            const revenue = parseFloat(t.total_amount || 0);
+            const cost = (prod?.cost || 0) * parseInt(t.quantity || 0);
+            categoryRevenue[category].revenue += revenue;
+            categoryRevenue[category].margin += revenue - cost;
+            categoryRevenue[category].count++;
+          });
+          
+          // Try to match AI's category names with calculated data
+          const categoryLookup: Record<string, any> = {};
+          Object.entries(categoryRevenue).forEach(([cat, data]) => {
+            categoryLookup[cat.toLowerCase()] = { name: cat, ...data };
+          });
+          
+          analysisResult.chartData = analysisResult.chartData.map((item: any) => {
+            const matchedCat = categoryLookup[item.name.toLowerCase()];
+            if (matchedCat) {
+              return {
+                name: item.name,
+                value: Math.round(matchedCat.revenue),
+                margin: Math.round(matchedCat.margin),
+                roi: matchedCat.margin > 0 ? parseFloat((matchedCat.margin / matchedCat.revenue * 2).toFixed(2)) : 0
+              };
+            }
+            return item;
+          });
+          
+          // If still all zeros, use sorted category breakdown
+          const stillHasZeros = analysisResult.chartData.every((item: any) => !item.value || item.value === 0);
+          if (stillHasZeros && Object.keys(categoryRevenue).length > 0) {
+            analysisResult.chartData = Object.entries(categoryRevenue)
+              .sort((a, b) => b[1].revenue - a[1].revenue)
+              .slice(0, 6)
+              .map(([name, data]) => ({
+                name,
+                value: Math.round(data.revenue),
+                margin: Math.round(data.margin),
+                roi: data.margin > 0 ? parseFloat((data.margin / data.revenue * 2).toFixed(2)) : 0
+              }));
+          }
+        }
+        
         console.log('Verified chartData:', analysisResult.chartData.length, 'items');
       }
       
@@ -1690,8 +1746,8 @@ Now analyze and provide a 100% accurate, data-driven answer to the question abov
       if (analysisResult.kpis) {
         const kpis = analysisResult.kpis;
         
-        // ALWAYS set liftPct from actual data if null/undefined/NaN
-        if (kpis.liftPct === null || kpis.liftPct === undefined || isNaN(kpis.liftPct)) {
+        // ALWAYS set liftPct from actual data if null/undefined/NaN/zero
+        if (kpis.liftPct === null || kpis.liftPct === undefined || isNaN(kpis.liftPct) || kpis.liftPct === 0) {
           kpis.liftPct = parseFloat(actualLiftPct.toFixed(1));
           console.log('Set liftPct from actual data:', kpis.liftPct);
         } else if (Math.abs(kpis.liftPct) > 100) {
@@ -1699,20 +1755,20 @@ Now analyze and provide a 100% accurate, data-driven answer to the question abov
           console.log('Corrected extreme liftPct to:', kpis.liftPct);
         }
         
-        // ALWAYS set ROI from actual data if null/undefined/NaN or unrealistic
-        if (kpis.roi === null || kpis.roi === undefined || isNaN(kpis.roi) || Math.abs(kpis.roi) > 10) {
+        // ALWAYS set ROI from actual data if null/undefined/NaN/zero or unrealistic
+        if (kpis.roi === null || kpis.roi === undefined || isNaN(kpis.roi) || kpis.roi === 0 || Math.abs(kpis.roi) > 10) {
           kpis.roi = parseFloat(actualROI.toFixed(2));
           console.log('Set ROI from actual data:', kpis.roi);
         }
         
-        // ALWAYS set spend from actual data if null/undefined or unrealistic
-        if (kpis.spend === null || kpis.spend === undefined || kpis.spend < 0 || kpis.spend > actualKPIs.totalSpend * 2) {
+        // ALWAYS set spend from actual data if null/undefined/zero or unrealistic
+        if (kpis.spend === null || kpis.spend === undefined || kpis.spend === 0 || kpis.spend < 0 || kpis.spend > actualKPIs.totalSpend * 2) {
           kpis.spend = Math.round(actualKPIs.totalSpend);
           console.log('Set spend from actual data:', kpis.spend);
         }
         
-        // ALWAYS set margin from actual data if null/undefined or unrealistic
-        if (kpis.incrementalMargin === null || kpis.incrementalMargin === undefined || Math.abs(kpis.incrementalMargin) > actualMargin * 3) {
+        // ALWAYS set margin from actual data if null/undefined/zero or unrealistic
+        if (kpis.incrementalMargin === null || kpis.incrementalMargin === undefined || kpis.incrementalMargin === 0 || Math.abs(kpis.incrementalMargin) > actualMargin * 3) {
           kpis.incrementalMargin = Math.round(actualMargin);
           console.log('Set incrementalMargin from actual data:', kpis.incrementalMargin);
         }
