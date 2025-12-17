@@ -273,6 +273,19 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
       }
 
       const analyticsResult = await response.json();
+      
+      // Check if clarification is needed
+      if (analyticsResult.needsClarification) {
+        setClarification({
+          needsClarification: true,
+          prompt: analyticsResult.clarificationPrompt,
+          options: analyticsResult.options,
+          originalQuestion: analyticsResult.originalQuestion
+        });
+        setIsLoading(false);
+        return null;
+      }
+      
       setResult(analyticsResult);
       
       // Extract context from response and add to history
@@ -1031,7 +1044,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                       </CollapsibleTrigger>
                       <CollapsibleContent className="mt-4">
                         <div className="space-y-4">
-                          {result.whatHappened.map((point, idx) => (
+                          {(result.whatHappened || []).map((point, idx) => (
                             <div key={idx} className="flex gap-3">
                               <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
                               <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
@@ -1051,7 +1064,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                       </CollapsibleTrigger>
                       <CollapsibleContent className="mt-4">
                         <div className="space-y-4">
-                          {result.why.map((point, idx) => (
+                          {(result.why || []).map((point, idx) => (
                             <div key={idx} className="flex gap-3">
                               <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-chart-3 flex-shrink-0" />
                               <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
@@ -1071,7 +1084,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                       </CollapsibleTrigger>
                       <CollapsibleContent className="mt-4">
                         <div className="space-y-4">
-                          {result.whatToDo.map((point, idx) => (
+                          {(result.whatToDo || []).map((point, idx) => (
                             <div key={idx} className="flex gap-3">
                               <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-status-good flex-shrink-0" />
                               <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
@@ -1267,6 +1280,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
               </Card>
 
               {/* Follow-up Questions */}
+              {result.nextQuestions && result.nextQuestions.length > 0 && (
               <div className="flex flex-col gap-2">
                 <span className="text-sm font-medium text-muted-foreground">Next questions to explore:</span>
                 <div className="flex gap-2">
@@ -1283,6 +1297,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                   ))}
                 </div>
               </div>
+              )}
 
               {/* Sources */}
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
