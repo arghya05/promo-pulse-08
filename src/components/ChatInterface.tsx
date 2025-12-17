@@ -1,11 +1,26 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Bot, User, Sparkles, ArrowRight, Lightbulb, TrendingUp, AlertTriangle, HelpCircle, Target, Compass, ChevronRight, ChevronDown, Zap, BarChart3, PieChart, Clock, Filter, ThumbsUp, ThumbsDown, RefreshCw, MessageSquare, Loader2, X, DollarSign, Package, Truck, Box, Grid3X3, Crown } from "lucide-react";
+import { Send, Bot, User, Sparkles, ArrowRight, Lightbulb, TrendingUp, AlertTriangle, HelpCircle, Target, Compass, ChevronRight, ChevronDown, Zap, BarChart3, PieChart as PieChartIcon, Clock, Filter, ThumbsUp, ThumbsDown, RefreshCw, MessageSquare, Loader2, X, DollarSign, Package, Truck, Box, Grid3X3, Crown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts';
 import VoiceRecorder from "./VoiceRecorder";
 import KPISelector from "./KPISelector";
 import DrillBreadcrumbs from "./DrillBreadcrumbs";
@@ -15,6 +30,8 @@ import { useToast } from "@/hooks/use-toast";
 import type { AnalyticsResult } from "@/lib/analytics";
 import { getSuggestedKPIs, KPI } from "@/lib/data/kpi-library";
 import { useGlobalSession, detectTargetModule } from "@/contexts/GlobalSessionContext";
+
+const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
 // Session insight for summary
 interface SessionInsight {
@@ -1272,14 +1289,42 @@ export default function ChatInterface({
                   </div>
                 )}
 
-                {/* Drillable Chart Items */}
+                {/* SYNC: Same Chart as Classic View */}
                 {message.analyticsResult?.chartData && message.analyticsResult.chartData.length > 0 && (
-                  <div className="mt-3 border-t border-border/50 pt-2">
+                  <div className="mt-3 border-t border-border/50 pt-3">
                     <p className="text-[10px] text-muted-foreground mb-2 flex items-center gap-1">
-                      <Sparkles className="h-3 w-3 text-primary" />
-                      Click to drill deeper into specific items:
+                      <BarChart3 className="h-3 w-3 text-primary" />
+                      Chart (click bars to drill down)
                     </p>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="h-[250px] w-full">
+                      {(() => {
+                        const data = message.analyticsResult!.chartData;
+                        const sampleItem = data[0] || {};
+                        const barKeys = Object.keys(sampleItem).filter(k => 
+                          k !== 'name' && 
+                          typeof sampleItem[k] === 'number' && 
+                          !['id', 'index'].includes(k)
+                        );
+                        const primaryKey = barKeys.includes('value') ? 'value' : 
+                                          barKeys.includes('revenue') ? 'revenue' : 
+                                          barKeys[0] || 'value';
+                        
+                        return (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={data} onClick={(e) => e?.activePayload?.[0] && handleDrillInto(e.activePayload[0].payload.name)}>
+                              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                              <XAxis dataKey="name" className="text-xs" tick={{ fontSize: 10 }} />
+                              <YAxis className="text-xs" tick={{ fontSize: 10 }} tickFormatter={(v) => v >= 1000 ? `$${(v/1000).toFixed(1)}K` : `$${v}`} />
+                              <Tooltip formatter={(value: number) => value >= 1000 ? `$${(value/1000).toFixed(1)}K` : `$${Number(value).toFixed(2)}`} />
+                              <Legend wrapperStyle={{ fontSize: '10px' }} />
+                              <Bar dataKey={primaryKey} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} className="cursor-pointer" name={primaryKey.charAt(0).toUpperCase() + primaryKey.slice(1)} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        );
+                      })()}
+                    </div>
+                    {/* Drill buttons below chart */}
+                    <div className="flex flex-wrap gap-1 mt-2">
                       {message.analyticsResult.chartData.slice(0, 6).map((item: any, i: number) => (
                         <Button
                           key={i}
