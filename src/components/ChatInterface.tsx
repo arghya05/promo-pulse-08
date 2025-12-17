@@ -1057,7 +1057,33 @@ export default function ChatInterface({
 
     // Check for KPI-ambiguous questions (top N, best, worst without metric specified)
     const kpiAmbiguousPattern = /\b(top\s*\d+|best|worst|highest|lowest|leading|lagging|underperforming|overperforming)\b/i;
-    const hasExplicitKPI = /\b(revenue|margin|roi|sales|profit|units|spend|lift|volume|price|cost|elasticity|forecast|accuracy|compliance|utilization)\b/i.test(queryLower);
+    
+    // Comprehensive KPI detection - includes common typos and variations
+    const explicitKPIPatterns = [
+      /\b(revenue|revnue|reven|revenues)\b/i,
+      /\b(margin|margins|margin%|gross.margin|net.margin)\b/i,
+      /\b(roi|return.on.investment)\b/i,
+      /\b(sales|sale|sold)\b/i,
+      /\b(profit|profits|profitability|profitable)\b/i,
+      /\b(units|unit|quantity|qty|volume)\b/i,
+      /\b(spend|spending|cost|costs)\b/i,
+      /\b(lift|lift%|uplift)\b/i,
+      /\b(price|prices|pricing)\b/i,
+      /\b(elasticity|elastic)\b/i,
+      /\b(forecast|forecasted|forecasting)\b/i,
+      /\b(accuracy|accurate)\b/i,
+      /\b(compliance|compliant)\b/i,
+      /\b(utilization|utilized)\b/i,
+      /\b(ebitda|ebit)\b/i,
+      /\b(growth|growing)\b/i,
+      /\b(velocity|turnover)\b/i,
+      /\b(stockout|stock.out|oos|out.of.stock)\b/i,
+      /\b(lead.time|leadtime)\b/i,
+      /\b(on.time|ontime|otif)\b/i,
+      /\b(market.share|share)\b/i,
+      /\bby\s+(revenue|margin|roi|sales|profit|units|spend|lift|volume|price|cost|growth|value)\b/i, // "by X" pattern
+    ];
+    const hasExplicitKPI = explicitKPIPatterns.some(p => p.test(queryLower));
     
     // Module-specific KPI options
     const moduleKPIOptions: Record<string, { label: string; emoji: string; suffix: string }[]> = {
@@ -1153,19 +1179,21 @@ export default function ChatInterface({
     
     const hasTimePeriod = timePeriodPatterns.some(p => p.test(queryLower));
     
-    // Questions that typically need a time frame
+    // Questions that REQUIRE a time frame - NOT simple rankings like "top 5 by revenue"
+    // Only ask for time period on temporal/comparative questions
     const needsTimeFramePatterns = [
       /\b(trend|trending|growth|decline|change|changed|increased|decreased|improved|worsened)\b/i,
-      /\b(compare|comparison|vs|versus|difference|gap)\b/i,
-      /\b(performance|performing|performed)\b/i,
+      /\b(compare|comparison|versus|difference|gap)\s+(to|with|against|between)/i, // only when comparing to something
+      /\b(yoy|year.over.year|mom|month.over.month|qoq|quarter.over.quarter)\b/i,
       /\b(forecast|predict|projection)\b/i,
-      /\b(average|total|sum|count)\b/i,
-      /\bhow\s+(much|many|did|has|have|is|are|was|were)\b/i,
-      /\bwhat\s+(is|are|was|were)\s+(the|our|my)\b/i,
-      /\bshow\s+(me|all|the)\b/i,
+      /\bhow\s+(much|many)\s+(did|has|have)\s+(we|it|they)\s+(grow|decline|change|increase|decrease)/i,
+      /\bwhat\s+(was|were)\s+(the|our)\s+.*(last|previous|prior)/i,
     ];
     
-    const needsTimeFrame = needsTimeFramePatterns.some(p => p.test(queryLower));
+    // Simple ranking/listing questions don't need time clarification
+    const isSimpleRankingQuestion = /\b(top\s*\d+|best|worst|highest|lowest)\b/i.test(queryLower) && hasExplicitKPI;
+    
+    const needsTimeFrame = needsTimeFramePatterns.some(p => p.test(queryLower)) && !isSimpleRankingQuestion;
     
     // Time period options
     const timePeriodOptions = [
