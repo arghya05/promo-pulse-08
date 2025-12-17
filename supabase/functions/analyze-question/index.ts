@@ -948,12 +948,12 @@ VALIDATION CHECK: Before finalizing, verify EACH of these KPIs appears with a nu
 `
       : '';
 
-    const timePeriodContext = timePeriod ? `
-TIME PERIOD FILTER: Analysis is scoped to ${timePeriod === 'last_month' ? 'the last month (past 30 days)' : 
-  timePeriod === 'last_quarter' ? 'the last quarter (past 3 months)' : 
-  timePeriod === 'last_year' ? 'the last year (past 12 months)' : 
+    const timePeriodContext = effectiveTimePeriod ? `
+TIME PERIOD FILTER: Analysis is scoped to ${effectiveTimePeriod === 'last_month' ? 'the last month (past 30 days)' : 
+  effectiveTimePeriod === 'last_quarter' ? 'the last quarter (past 3 months)' : 
+  effectiveTimePeriod === 'last_year' ? 'the last year (past 12 months)' : 
   'year-to-date'}.
-When presenting results, explicitly mention this time scope in your analysis (e.g., "In the last quarter...", "Over the past 3 months...").
+When presenting results, explicitly mention this time scope in your analysis (e.g., "In the last year...", "Over the past 12 months...").
 The transaction data has already been filtered to this time period.
 ` : '';
 
