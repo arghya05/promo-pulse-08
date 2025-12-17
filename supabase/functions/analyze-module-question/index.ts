@@ -2502,14 +2502,19 @@ function isCategoryQuestion(question: string): boolean {
          q.includes('top 5 cat') || q.includes('top 10 cat') ||
          q.includes('best categor') || q.includes('worst categor') ||
          q.includes('by category') || q.includes('per category') ||
-         q.includes('category breakdown') || q.includes('category performance');
+         q.includes('category breakdown') || q.includes('category performance') ||
+         q.includes('selling category') || q.includes('performing category') ||
+         q.includes('revenue category') || q.includes('margin category');
 }
 
 // Detect if question is asking about products/top sellers
 function isProductQuestion(question: string): boolean {
   const q = question.toLowerCase();
-  // Exclude if asking about stores, promotions, or categories specifically
-  if (q.includes('store') || q.includes('promotion') || q.includes('categor')) return false;
+  // Exclude if asking about stores, promotions, categories, suppliers, or planograms specifically
+  if (q.includes('store') || q.includes('promotion') || q.includes('categor') || 
+      q.includes('supplier') || q.includes('planogram')) return false;
+  // Also exclude if it has "selling" but followed by "category"
+  if (q.includes('selling') && q.includes('category')) return false;
   return q.includes('product') || q.includes('seller') || 
          q.includes('sku') || q.includes('item');
 }
