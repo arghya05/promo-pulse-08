@@ -1179,21 +1179,21 @@ export default function ChatInterface({
     
     const hasTimePeriod = timePeriodPatterns.some(p => p.test(queryLower));
     
-    // Questions that REQUIRE a time frame - NOT simple rankings like "top 5 by revenue"
-    // Only ask for time period on temporal/comparative questions
+    // Questions that benefit from time period context - including ranking questions
+    // Ranking questions (top 5, best, worst) need time context to be meaningful
     const needsTimeFramePatterns = [
       /\b(trend|trending|growth|decline|change|changed|increased|decreased|improved|worsened)\b/i,
-      /\b(compare|comparison|versus|difference|gap)\s+(to|with|against|between)/i, // only when comparing to something
+      /\b(compare|comparison|versus|difference|gap)\b/i,
       /\b(yoy|year.over.year|mom|month.over.month|qoq|quarter.over.quarter)\b/i,
       /\b(forecast|predict|projection)\b/i,
       /\bhow\s+(much|many)\s+(did|has|have)\s+(we|it|they)\s+(grow|decline|change|increase|decrease)/i,
       /\bwhat\s+(was|were)\s+(the|our)\s+.*(last|previous|prior)/i,
+      /\b(top\s*\d+|best|worst|highest|lowest|leading|bottom)\b/i, // Ranking questions need time context
+      /\bperform/i, // performance questions
+      /\bsell/i, // selling/seller questions
     ];
     
-    // Simple ranking/listing questions don't need time clarification
-    const isSimpleRankingQuestion = /\b(top\s*\d+|best|worst|highest|lowest)\b/i.test(queryLower) && hasExplicitKPI;
-    
-    const needsTimeFrame = needsTimeFramePatterns.some(p => p.test(queryLower)) && !isSimpleRankingQuestion;
+    const needsTimeFrame = needsTimeFramePatterns.some(p => p.test(queryLower));
     
     // Time period options
     const timePeriodOptions = [
