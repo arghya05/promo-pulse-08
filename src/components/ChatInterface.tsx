@@ -701,43 +701,73 @@ export default function ChatInterface({
     const questionLower = question.toLowerCase();
     
     // Questions with explicit KPIs - NO clarification needed
-    const hasExplicitKPI = [
+    const explicitKPIs = [
       'revenue', 'sales', 'roi', 'margin', 'lift', 'profit', 'units', 'volume', 
       'spend', 'cost', 'price', 'elasticity', 'forecast', 'accuracy', 'stockout',
-      'inventory', 'lead time', 'on-time', 'compliance', 'sqft', 'square foot'
-    ].some(kpi => questionLower.includes(kpi));
+      'inventory', 'lead time', 'on-time', 'compliance', 'sqft', 'square foot',
+      'gmroi', 'turnover', 'velocity', 'conversion', 'basket', 'traffic',
+      'fill rate', 'shrink', 'waste', 'markdown', 'penetration', 'share'
+    ];
     
+    const hasExplicitKPI = explicitKPIs.some(kpi => questionLower.includes(kpi));
     if (hasExplicitKPI) {
       return { needs: false };
     }
     
-    // Questions with industry-standard implied KPIs - NO clarification needed
-    // "top sellers" / "best sellers" = revenue is the standard
-    // "worst performers" could be ambiguous but "sellers" implies revenue
-    const hasImpliedKPI = (
-      questionLower.includes('seller') || // sellers implies revenue
-      questionLower.includes('selling') || // selling implies revenue
-      questionLower.includes('sold') || // sold implies units/revenue
-      questionLower.includes('stockout') || // stockout is its own metric
-      questionLower.includes('forecast') || // forecast accuracy
-      questionLower.includes('supplier') || // supplier performance
-      questionLower.includes('planogram') || // space planning metrics
-      questionLower.includes('compliance') // compliance %
-    );
+    // Domain-specific implied KPIs - question structure implies the metric
+    const impliedKPIPatterns = [
+      // Sales/Revenue implied
+      { pattern: /seller|selling|sold/, metric: 'revenue' },
+      { pattern: /moving\s*(item|product|sku)/, metric: 'velocity' },
+      { pattern: /fast(est)?.*mov/, metric: 'velocity' },
+      { pattern: /slow(est)?.*mov/, metric: 'velocity' },
+      
+      // Margin implied
+      { pattern: /profitable|profitability/, metric: 'margin' },
+      { pattern: /earning|gross/, metric: 'margin' },
+      
+      // Inventory/Supply implied
+      { pattern: /stockout|out.of.stock|oos/, metric: 'stockout' },
+      { pattern: /overstock|excess/, metric: 'inventory' },
+      { pattern: /days.of.supply|dos/, metric: 'dos' },
+      { pattern: /reorder|replenish/, metric: 'inventory' },
+      
+      // Supplier implied
+      { pattern: /supplier|vendor/, metric: 'supplier_performance' },
+      { pattern: /lead.time|delivery/, metric: 'lead_time' },
+      { pattern: /on.time|otif/, metric: 'on_time_rate' },
+      
+      // Space planning implied
+      { pattern: /planogram|pog/, metric: 'compliance' },
+      { pattern: /shelf|facing|fixture/, metric: 'space' },
+      { pattern: /eye.level/, metric: 'placement' },
+      
+      // Demand implied
+      { pattern: /forecast|predict/, metric: 'forecast_accuracy' },
+      { pattern: /seasonal|trend/, metric: 'demand' },
+      
+      // Pricing implied
+      { pattern: /elastic|sensitivity/, metric: 'elasticity' },
+      { pattern: /competitor|competitive|gap/, metric: 'price_gap' },
+      { pattern: /premium|discount depth/, metric: 'pricing' },
+      
+      // Customer implied
+      { pattern: /loyal|loyalty|tier/, metric: 'loyalty' },
+      { pattern: /segment|cohort/, metric: 'segment' },
+      { pattern: /lifetime|ltv|clv/, metric: 'ltv' },
+      
+      // Performance implied
+      { pattern: /performer|performing/, metric: 'performance' },
+      { pattern: /underperform|laggard/, metric: 'performance' },
+      { pattern: /leader|winner/, metric: 'performance' },
+    ];
     
+    const hasImpliedKPI = impliedKPIPatterns.some(({ pattern }) => pattern.test(questionLower));
     if (hasImpliedKPI) {
       return { needs: false };
     }
     
-    // Questions with time periods mentioned - NO time clarification needed
-    const hasTimePeriod = [
-      'month', 'quarter', 'year', 'week', 'ytd', 'year to date', 'last', 'this', 
-      'previous', 'q1', 'q2', 'q3', 'q4', 'january', 'february', 'march', 'april',
-      'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'
-    ].some(period => questionLower.includes(period));
-    
     // Only ask for clarification on truly vague "best/top" questions without any context
-    // e.g., "top promotions" without any metric or context
     if ((questionLower.includes('best') || questionLower.includes('top') || questionLower.includes('worst')) 
         && !hasExplicitKPI && !hasImpliedKPI) {
       // Check if it's a genuinely ambiguous case (e.g., "top promotions" without context)
