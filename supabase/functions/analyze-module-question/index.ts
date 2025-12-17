@@ -1698,20 +1698,46 @@ Respond with a JSON object:
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     
     // Build conversation context for AI - ONLY when truly relevant
-    // Detect if this is a follow-up question that references previous context
+    // Detect if this is a REAL follow-up question that explicitly references previous context
+    // Be VERY conservative - only match explicit references, not common words
     const isFollowUpQuestion = (q: string): boolean => {
-      const followUpPatterns = [
-        'same for', 'same analysis', 'compare to', 'what about', 'how about',
-        'drill', 'more detail', 'break down', 'show me more', 'tell me more',
-        'why is', 'why does', 'explain', 'this', 'that', 'it', 'them', 'those',
-        'previous', 'earlier', 'we discussed', 'you mentioned', 'last'
+      const lowerQ = q.toLowerCase().trim();
+      
+      // Explicit follow-up patterns that clearly reference previous conversation
+      const explicitFollowUpPatterns = [
+        'same for', 'same analysis for', 'same question for', 'now for',
+        'compare that to', 'compare this to', 'how does that compare',
+        'what about that', 'how about that', 'and for', 'also for',
+        'drill into', 'drill down', 'more detail on', 'more details on',
+        'break that down', 'break this down', 'show me more about',
+        'tell me more about', 'expand on', 'elaborate on',
+        'we discussed', 'you mentioned', 'you said', 'as you said',
+        'earlier you', 'before you', 'go back to', 'return to'
       ];
-      const lowerQ = q.toLowerCase();
-      return followUpPatterns.some(p => lowerQ.includes(p));
+      
+      // Check for explicit patterns
+      if (explicitFollowUpPatterns.some(p => lowerQ.includes(p))) {
+        return true;
+      }
+      
+      // Pronouns at start of question that reference previous context
+      // e.g., "Why is that happening?" vs "Why is Dairy performing well?"
+      const pronounStartPatterns = [
+        /^(why is|why are|why does|what about|how about) (it|that|this|those|they|them)\b/,
+        /^(tell me|show me|explain) (more|that|this)\b/,
+        /^(and|also|now) (what|why|how|show|tell)/
+      ];
+      
+      if (pronounStartPatterns.some(p => p.test(lowerQ))) {
+        return true;
+      }
+      
+      return false;
     };
     
-    const needsConversationContext = isDrillDown || isFollowUpQuestion(question) || 
-      (conversationContext?.drillLevel && conversationContext.drillLevel > 0);
+    // Only add context for drill-downs or EXPLICIT follow-up questions
+    // Ignore drillLevel from conversationContext unless it's a genuine drill
+    const needsConversationContext = isDrillDown || isFollowUpQuestion(question);
     
     // Only build context reference for actual follow-ups
     const buildContextReference = () => {
