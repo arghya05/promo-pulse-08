@@ -1060,17 +1060,17 @@ export default function ChatInterface({
     
     // Comprehensive KPI detection - includes common typos and variations
     const explicitKPIPatterns = [
-      /\b(revenue|revnue|reven|revenues)\b/i,
-      /\b(margin|margins|margin%|gross.margin|net.margin)\b/i,
+      /\b(rev[en]{1,3}u?e?s?|revenues?)\b/i, // revenue with various typos: revnue, revneue, reven, etc.
+      /\b(marg[ia]n|margins?|margin%|gross.margin|net.margin)\b/i,
       /\b(roi|return.on.investment)\b/i,
-      /\b(sales|sale|sold)\b/i,
+      /\b(sales?|sold|selling)\b/i,
       /\b(profit|profits|profitability|profitable)\b/i,
-      /\b(units|unit|quantity|qty|volume)\b/i,
-      /\b(spend|spending|cost|costs)\b/i,
+      /\b(units?|quantity|qty|volume)\b/i,
+      /\b(spend|spending|costs?)\b/i,
       /\b(lift|lift%|uplift)\b/i,
-      /\b(price|prices|pricing)\b/i,
+      /\b(prices?|pricing)\b/i,
       /\b(elasticity|elastic)\b/i,
-      /\b(forecast|forecasted|forecasting)\b/i,
+      /\b(forecas?t|forecasted|forecasting)\b/i,
       /\b(accuracy|accurate)\b/i,
       /\b(compliance|compliant)\b/i,
       /\b(utilization|utilized)\b/i,
@@ -1081,7 +1081,7 @@ export default function ChatInterface({
       /\b(lead.time|leadtime)\b/i,
       /\b(on.time|ontime|otif)\b/i,
       /\b(market.share|share)\b/i,
-      /\bby\s+(revenue|margin|roi|sales|profit|units|spend|lift|volume|price|cost|growth|value)\b/i, // "by X" pattern
+      /\bby\s+\w+/i, // "by X" pattern - any "by something" indicates metric specified
     ];
     const hasExplicitKPI = explicitKPIPatterns.some(p => p.test(queryLower));
     
