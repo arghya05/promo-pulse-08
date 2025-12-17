@@ -706,11 +706,17 @@ export default function ChatInterface({
       'spend', 'cost', 'price', 'elasticity', 'forecast', 'accuracy', 'stockout',
       'inventory', 'lead time', 'on-time', 'compliance', 'sqft', 'square foot',
       'gmroi', 'turnover', 'velocity', 'conversion', 'basket', 'traffic',
-      'fill rate', 'shrink', 'waste', 'markdown', 'penetration', 'share'
+      'fill rate', 'shrink', 'waste', 'markdown', 'penetration', 'share',
+      'growth', 'decline', 'increase', 'decrease', 'change', 'variance',
+      'ytd', 'yoy', 'mom', 'qoq', 'budget', 'target', 'goal', 'benchmark',
+      'average', 'median', 'total', 'sum', 'count', 'rate', 'ratio', 'index',
+      'contribution', 'allocation', 'efficiency', 'productivity', 'utilization',
+      'frequency', 'recency', 'churn', 'retention', 'acquisition', 'attrition'
     ];
     
     const hasExplicitKPI = explicitKPIs.some(kpi => questionLower.includes(kpi));
     if (hasExplicitKPI) {
+      console.log(`[Clarification] Skipped - explicit KPI found in: "${question}"`);
       return { needs: false };
     }
     
@@ -718,61 +724,90 @@ export default function ChatInterface({
     const impliedKPIPatterns = [
       // Sales/Revenue implied
       { pattern: /seller|selling|sold/, metric: 'revenue' },
-      { pattern: /moving\s*(item|product|sku)/, metric: 'velocity' },
+      { pattern: /moving\s*(item|product|sku)?/, metric: 'velocity' },
       { pattern: /fast(est)?.*mov/, metric: 'velocity' },
       { pattern: /slow(est)?.*mov/, metric: 'velocity' },
+      { pattern: /high(est)?\s*(volume|demand)/, metric: 'volume' },
+      { pattern: /low(est)?\s*(volume|demand)/, metric: 'volume' },
       
-      // Margin implied
+      // Margin/Profit implied
       { pattern: /profitable|profitability/, metric: 'margin' },
       { pattern: /earning|gross/, metric: 'margin' },
+      { pattern: /loss|losing|lost money/, metric: 'margin' },
       
       // Inventory/Supply implied
       { pattern: /stockout|out.of.stock|oos/, metric: 'stockout' },
-      { pattern: /overstock|excess/, metric: 'inventory' },
+      { pattern: /overstock|excess|surplus/, metric: 'inventory' },
       { pattern: /days.of.supply|dos/, metric: 'dos' },
-      { pattern: /reorder|replenish/, metric: 'inventory' },
+      { pattern: /reorder|replenish|refill/, metric: 'inventory' },
+      { pattern: /safety.stock|buffer/, metric: 'inventory' },
       
       // Supplier implied
       { pattern: /supplier|vendor/, metric: 'supplier_performance' },
       { pattern: /lead.time|delivery/, metric: 'lead_time' },
-      { pattern: /on.time|otif/, metric: 'on_time_rate' },
+      { pattern: /on.time|otif|late/, metric: 'on_time_rate' },
+      { pattern: /reliable|reliability/, metric: 'reliability' },
       
       // Space planning implied
       { pattern: /planogram|pog/, metric: 'compliance' },
       { pattern: /shelf|facing|fixture/, metric: 'space' },
       { pattern: /eye.level/, metric: 'placement' },
+      { pattern: /endcap|display|aisle/, metric: 'space' },
       
       // Demand implied
       { pattern: /forecast|predict/, metric: 'forecast_accuracy' },
-      { pattern: /seasonal|trend/, metric: 'demand' },
+      { pattern: /seasonal|trend|pattern/, metric: 'demand' },
+      { pattern: /peak|trough|spike/, metric: 'demand' },
       
       // Pricing implied
       { pattern: /elastic|sensitivity/, metric: 'elasticity' },
       { pattern: /competitor|competitive|gap/, metric: 'price_gap' },
       { pattern: /premium|discount depth/, metric: 'pricing' },
+      { pattern: /promo.*price|price.*promo/, metric: 'pricing' },
       
       // Customer implied
       { pattern: /loyal|loyalty|tier/, metric: 'loyalty' },
       { pattern: /segment|cohort/, metric: 'segment' },
       { pattern: /lifetime|ltv|clv/, metric: 'ltv' },
+      { pattern: /customer|shopper|buyer/, metric: 'customer' },
       
       // Performance implied
       { pattern: /performer|performing/, metric: 'performance' },
-      { pattern: /underperform|laggard/, metric: 'performance' },
-      { pattern: /leader|winner/, metric: 'performance' },
+      { pattern: /underperform|laggard|poor/, metric: 'performance' },
+      { pattern: /leader|winner|champion/, metric: 'performance' },
+      { pattern: /success|successful/, metric: 'performance' },
+      { pattern: /fail|failure|failing/, metric: 'performance' },
+      
+      // Category/Product implied
+      { pattern: /category|department|class/, metric: 'category' },
+      { pattern: /brand|manufacturer/, metric: 'brand' },
+      { pattern: /sku|product|item/, metric: 'product' },
+      { pattern: /store|location|region/, metric: 'store' },
+      
+      // Comparison/Analysis implied
+      { pattern: /compare|comparison|versus|vs/, metric: 'comparison' },
+      { pattern: /rank|ranking|ranked/, metric: 'ranking' },
+      { pattern: /why|reason|driver|cause/, metric: 'causal' },
+      { pattern: /impact|effect|influence/, metric: 'impact' },
+      { pattern: /opportunity|potential|upside/, metric: 'opportunity' },
+      { pattern: /risk|threat|concern|issue/, metric: 'risk' },
     ];
     
-    const hasImpliedKPI = impliedKPIPatterns.some(({ pattern }) => pattern.test(questionLower));
-    if (hasImpliedKPI) {
+    const matchedPattern = impliedKPIPatterns.find(({ pattern }) => pattern.test(questionLower));
+    if (matchedPattern) {
+      console.log(`[Clarification] Skipped - implied KPI '${matchedPattern.metric}' from pattern in: "${question}"`);
       return { needs: false };
     }
     
     // Only ask for clarification on truly vague "best/top" questions without any context
-    if ((questionLower.includes('best') || questionLower.includes('top') || questionLower.includes('worst')) 
-        && !hasExplicitKPI && !hasImpliedKPI) {
+    if ((questionLower.includes('best') || questionLower.includes('top') || questionLower.includes('worst'))) {
       // Check if it's a genuinely ambiguous case (e.g., "top promotions" without context)
-      const isAmbiguous = questionLower.includes('promotion') || questionLower.includes('campaign');
+      const isAmbiguous = (questionLower.includes('promotion') || questionLower.includes('campaign')) 
+        && !questionLower.includes('promo') // "promo" often has context
+        && questionLower.split(' ').length < 5; // Very short questions might be ambiguous
+        
       if (isAmbiguous) {
+        console.log(`[Clarification] TRIGGERED for ambiguous question: "${question}"`);
         return {
           needs: true,
           options: [
@@ -784,6 +819,7 @@ export default function ChatInterface({
       }
     }
     
+    console.log(`[Clarification] Skipped - no ambiguity detected in: "${question}"`);
     return { needs: false };
   };
 
