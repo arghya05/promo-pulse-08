@@ -165,23 +165,33 @@ function detectAmbiguousTerms(question: string, moduleId: string): AmbiguityChec
   
   // Entity-ambiguous terms: ALWAYS ask what type of entity regardless of metric
   // (e.g., "top seller by revenue" still needs clarification: product, vendor, or store?)
-  const entityAmbiguousTerms: Record<string, { prompt: string; options: ClarificationOption[] }> = {
-    'seller': {
+  // Using regex patterns to handle common typos
+  const entityAmbiguousTerms: Array<{ 
+    pattern: RegExp; 
+    term: string;
+    prompt: string; 
+    options: ClarificationOption[] 
+  }> = [
+    {
+      pattern: /sell[ea]?[r]+s?|sel+ers?/i, // matches seller, sellers, sellar, seleler, etc.
+      term: 'seller',
       prompt: 'When you say "seller", do you mean:',
       options: [
-        { label: 'Products/SKUs', description: 'Top performing products by sales', refinedQuestion: question.replace(/seller/gi, 'selling product') },
-        { label: 'Vendors/Suppliers', description: 'Suppliers by sales volume', refinedQuestion: question.replace(/seller/gi, 'vendor by sales') },
-        { label: 'Stores', description: 'Store locations by revenue', refinedQuestion: question.replace(/seller/gi, 'store by sales') }
+        { label: 'Products/SKUs', description: 'Top performing products by sales', refinedQuestion: question.replace(/sell[ea]?[r]+s?|sel+ers?/gi, 'selling product') },
+        { label: 'Vendors/Suppliers', description: 'Suppliers by sales volume', refinedQuestion: question.replace(/sell[ea]?[r]+s?|sel+ers?/gi, 'vendor by sales') },
+        { label: 'Stores', description: 'Store locations by revenue', refinedQuestion: question.replace(/sell[ea]?[r]+s?|sel+ers?/gi, 'store by sales') }
       ]
     },
-    'moving': {
+    {
+      pattern: /moving/i,
+      term: 'moving',
       prompt: 'When you say "moving" items, do you mean:',
       options: [
         { label: 'Products/SKUs', description: 'Products by velocity', refinedQuestion: question.replace(/moving/gi, 'selling product') },
         { label: 'Categories', description: 'Categories by turnover', refinedQuestion: question.replace(/moving/gi, 'performing category') }
       ]
     }
-  };
+  ];
   
   // Metric-ambiguous terms: only ask if no metric context provided
   // (e.g., "best performer" needs clarification on which metric, but "best performer by ROI" doesn't)
@@ -232,11 +242,12 @@ function detectAmbiguousTerms(question: string, moduleId: string): AmbiguityChec
   // Check for entity ambiguity FIRST - these always need clarification
   const hasEntityContext = /\b(product|sku|vendor|supplier|store|brand|category)\b/i.test(q);
   
-  for (const [term, config] of Object.entries(entityAmbiguousTerms)) {
-    if (q.includes(term) && !hasEntityContext) {
+  for (const config of entityAmbiguousTerms) {
+    if (config.pattern.test(q) && !hasEntityContext) {
+      console.log(`Entity ambiguity detected: "${config.term}" in question`);
       return {
         needsClarification: true,
-        ambiguousTerm: term,
+        ambiguousTerm: config.term,
         clarificationPrompt: config.prompt,
         options: config.options
       };
