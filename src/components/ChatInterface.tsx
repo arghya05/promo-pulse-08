@@ -663,36 +663,10 @@ export default function ChatInterface({
     setConversationContext(newContext);
   };
 
-  // Resolve context-dependent questions (conversation memory)
+  // SYNC FIX: Pass question unchanged to match Classic View exactly
+  // Context resolution removed to ensure identical API calls and cache keys
   const resolveContextualQuestion = (question: string): string => {
-    const questionLower = question.toLowerCase();
-    
-    // Check for context-dependent phrases
-    if (questionLower.includes('same for') || questionLower.includes('show me the same')) {
-      // User wants to apply previous analysis to new context
-      const lastTopic = conversationContext.recentTopics[0] || '';
-      return question;
-    }
-    
-    if (questionLower.includes('that category') || questionLower.includes('this category')) {
-      if (conversationContext.lastCategory) {
-        return question.replace(/that category|this category/gi, conversationContext.lastCategory);
-      }
-    }
-    
-    if (questionLower.includes('that promotion') || questionLower.includes('this promotion')) {
-      if (conversationContext.lastPromotion) {
-        return question.replace(/that promotion|this promotion/gi, `"${conversationContext.lastPromotion}"`);
-      }
-    }
-    
-    if (questionLower === 'compare to last year' || questionLower === 'show last year') {
-      const lastQuestion = conversationContext.recentTopics[0];
-      if (lastQuestion) {
-        return `${lastQuestion} compared to last year`;
-      }
-    }
-    
+    // Return question UNCHANGED to match Classic View behavior
     return question;
   };
 
@@ -870,28 +844,13 @@ export default function ChatInterface({
     }
   }, [currentResult]);
 
+  // SYNC FIX: Display ALL whatHappened items exactly like Classic View
   const generateConversationalResponse = (result: AnalyticsResult): string => {
-    const hasGoodROI = result.kpis.roi >= 1.5;
-    const hasBadROI = result.kpis.roi < 1;
-    const hasLift = result.kpis.liftPct && result.kpis.liftPct > 15;
-    
-    // Format all whatHappened items as bullet points to match Classic View
-    const formattedFindings = result.whatHappened && result.whatHappened.length > 0
-      ? result.whatHappened.map(item => `• ${item}`).join('\n\n')
-      : 'Analysis complete.';
-    
-    let intro = '';
-    if (hasBadROI) {
-      intro = `⚠️ I found some areas that need attention:\n\n`;
-    } else if (hasGoodROI && hasLift) {
-      intro = `🎉 Great news! Here's what I found:\n\n`;
-    } else if (hasGoodROI) {
-      intro = `✅ Here's what I found:\n\n`;
-    } else {
-      intro = `📊 Here's my analysis:\n\n`;
+    // Simply format ALL whatHappened items as bullet points - no intro, no truncation
+    if (result.whatHappened && result.whatHappened.length > 0) {
+      return result.whatHappened.map(item => `• ${item}`).join('\n\n');
     }
-    
-    return intro + formattedFindings;
+    return 'Analysis complete.';
   };
 
   const generateContextualTip = (result: AnalyticsResult, count: number): string | undefined => {
@@ -999,11 +958,8 @@ export default function ChatInterface({
       return;
     }
 
-    // Handle topic navigation by transforming the query
+    // SYNC FIX: Use original query without transformation to match Classic View
     let processedQuery = query;
-    if (navResult.type === 'navigation' && navResult.topic) {
-      processedQuery = `Give me a detailed analysis of ${navResult.topic} - what are the key metrics and insights?`;
-    }
 
     // Check for clarification needs
     const clarification = needsClarification(processedQuery);
