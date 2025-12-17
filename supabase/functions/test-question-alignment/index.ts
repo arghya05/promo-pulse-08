@@ -375,6 +375,351 @@ const testCases: TestCase[] = [
       { type: 'noEmpty', field: 'chartData' },
     ]
   },
+
+  // ADDITIONAL COMPARISON QUESTIONS
+  {
+    id: 'compare-q1-q2',
+    question: 'Compare Q1 vs Q2 performance',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'comparison',
+    validations: [
+      { type: 'chartDataCount', minCount: 2 },
+      { type: 'noEmpty', field: 'chartData' },
+      { type: 'noEmpty', field: 'why' },
+    ]
+  },
+  {
+    id: 'compare-brands',
+    question: 'Compare brand performance in Dairy category',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'comparison',
+    validations: [
+      { type: 'chartDataCount', minCount: 2 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+  {
+    id: 'compare-promotion-types',
+    question: 'Compare BOGO vs percentage discount promotions',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'comparison',
+    validations: [
+      { type: 'chartDataCount', minCount: 2 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+  {
+    id: 'compare-channels',
+    question: 'Compare online vs in-store performance',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'comparison',
+    validations: [
+      { type: 'chartDataCount', minCount: 1 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+
+  // WHY QUESTIONS - EXPANDED
+  {
+    id: 'why-roi-low',
+    question: 'Why is the ROI low for recent promotions?',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'why',
+    validations: [
+      { type: 'noEmpty', field: 'why' },
+      { type: 'noEmpty', field: 'causalDrivers' },
+      { type: 'chartDataCount', minCount: 1 },
+    ]
+  },
+  {
+    id: 'why-category-underperform',
+    question: 'Why is the Dairy category underperforming?',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'why',
+    validations: [
+      { type: 'noEmpty', field: 'why' },
+      { type: 'noEmpty', field: 'causalDrivers' },
+    ]
+  },
+  {
+    id: 'why-margin-declining',
+    question: 'Why are margins declining this quarter?',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'why',
+    validations: [
+      { type: 'noEmpty', field: 'why' },
+      { type: 'noEmpty', field: 'causalDrivers' },
+    ]
+  },
+  {
+    id: 'why-store-outperform',
+    question: 'Why is Manhattan store outperforming others?',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'why',
+    validations: [
+      { type: 'noEmpty', field: 'why' },
+      { type: 'noEmpty', field: 'causalDrivers' },
+    ]
+  },
+  {
+    id: 'why-pricing-elasticity',
+    question: 'Why do some products have high price elasticity?',
+    moduleId: 'pricing',
+    persona: 'executive',
+    expectedPattern: 'why',
+    validations: [
+      { type: 'noEmpty', field: 'why' },
+      { type: 'noEmpty', field: 'causalDrivers' },
+    ]
+  },
+
+  // FORECAST QUESTIONS
+  {
+    id: 'forecast-sales-next-quarter',
+    question: 'What is the sales forecast for next quarter?',
+    moduleId: 'demand',
+    persona: 'executive',
+    expectedPattern: 'forecast',
+    validations: [
+      { type: 'noEmpty', field: 'chartData' },
+      { type: 'noEmpty', field: 'whatHappened' },
+      { type: 'noEmpty', field: 'predictions' },
+    ]
+  },
+  {
+    id: 'forecast-demand-seasonal',
+    question: 'What is the seasonal demand forecast?',
+    moduleId: 'demand',
+    persona: 'executive',
+    expectedPattern: 'forecast',
+    validations: [
+      { type: 'noEmpty', field: 'chartData' },
+      { type: 'noEmpty', field: 'whatHappened' },
+    ]
+  },
+  {
+    id: 'forecast-inventory-needs',
+    question: 'What inventory levels will we need next month?',
+    moduleId: 'demand',
+    persona: 'executive',
+    expectedPattern: 'forecast',
+    validations: [
+      { type: 'noEmpty', field: 'chartData' },
+      { type: 'noEmpty', field: 'whatHappened' },
+    ]
+  },
+  {
+    id: 'forecast-revenue-trend',
+    question: 'What is the revenue trend forecast?',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'forecast',
+    validations: [
+      { type: 'noEmpty', field: 'chartData' },
+      { type: 'noEmpty', field: 'whatHappened' },
+    ]
+  },
+
+  // HALO & CANNIBALIZATION QUESTIONS
+  {
+    id: 'halo-effect',
+    question: 'What is the halo effect of Dairy promotions?',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'halo',
+    validations: [
+      { type: 'noEmpty', field: 'chartData' },
+      { type: 'noEmpty', field: 'whatHappened' },
+      { type: 'noEmpty', field: 'why' },
+    ]
+  },
+  {
+    id: 'cannibalization-analysis',
+    question: 'Is there cannibalization between similar products?',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'cannibalization',
+    validations: [
+      { type: 'noEmpty', field: 'chartData' },
+      { type: 'noEmpty', field: 'whatHappened' },
+      { type: 'noEmpty', field: 'why' },
+    ]
+  },
+  {
+    id: 'halo-cross-category',
+    question: 'What categories benefit from Beverages promotions?',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'halo',
+    validations: [
+      { type: 'noEmpty', field: 'chartData' },
+      { type: 'noEmpty', field: 'whatHappened' },
+    ]
+  },
+  {
+    id: 'cannibalization-brands',
+    question: 'Which brands are cannibalizing each other?',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'cannibalization',
+    validations: [
+      { type: 'noEmpty', field: 'chartData' },
+      { type: 'noEmpty', field: 'whatHappened' },
+    ]
+  },
+
+  // TREND QUESTIONS
+  {
+    id: 'trend-monthly',
+    question: 'What is the monthly sales trend?',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'trend',
+    validations: [
+      { type: 'noEmpty', field: 'chartData' },
+      { type: 'noEmpty', field: 'whatHappened' },
+    ]
+  },
+  {
+    id: 'trend-yoy',
+    question: 'How does this year compare to last year?',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'trend',
+    validations: [
+      { type: 'noEmpty', field: 'chartData' },
+      { type: 'noEmpty', field: 'whatHappened' },
+    ]
+  },
+
+  // SUPPLY CHAIN ADDITIONAL
+  {
+    id: 'supply-late-orders',
+    question: 'Which suppliers have the most late deliveries?',
+    moduleId: 'supply-chain',
+    persona: 'executive',
+    expectedPattern: 'top_n',
+    validations: [
+      { type: 'chartDataCount', minCount: 1 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+  {
+    id: 'supply-lead-time',
+    question: 'Top 5 suppliers by lead time',
+    moduleId: 'supply-chain',
+    persona: 'executive',
+    expectedPattern: 'top_n',
+    validations: [
+      { type: 'chartDataCount', expectedCount: 5 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+
+  // SPACE ADDITIONAL
+  {
+    id: 'space-eye-level',
+    question: 'Which products have eye-level placement?',
+    moduleId: 'space',
+    persona: 'executive',
+    expectedPattern: 'top_n',
+    validations: [
+      { type: 'chartDataCount', minCount: 1 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+  {
+    id: 'space-sales-sqft',
+    question: 'Top 5 categories by sales per square foot',
+    moduleId: 'space',
+    persona: 'executive',
+    expectedPattern: 'top_n',
+    validations: [
+      { type: 'chartDataCount', expectedCount: 5 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+
+  // PRICING ADDITIONAL
+  {
+    id: 'pricing-gap-analysis',
+    question: 'What products have the largest price gap vs competitors?',
+    moduleId: 'pricing',
+    persona: 'executive',
+    expectedPattern: 'top_n',
+    validations: [
+      { type: 'chartDataCount', minCount: 1 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+  {
+    id: 'pricing-margin-optimization',
+    question: 'Which products need price optimization?',
+    moduleId: 'pricing',
+    persona: 'executive',
+    expectedPattern: 'top_n',
+    validations: [
+      { type: 'chartDataCount', minCount: 1 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+
+  // ASSORTMENT ADDITIONAL
+  {
+    id: 'assortment-sku-rationalization',
+    question: 'Which SKUs should be discontinued?',
+    moduleId: 'assortment',
+    persona: 'executive',
+    expectedPattern: 'top_n',
+    validations: [
+      { type: 'chartDataCount', minCount: 1 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+  {
+    id: 'assortment-category-gaps',
+    question: 'What category gaps exist in our assortment?',
+    moduleId: 'assortment',
+    persona: 'executive',
+    expectedPattern: 'analysis',
+    validations: [
+      { type: 'noEmpty', field: 'chartData' },
+      { type: 'noEmpty', field: 'whatHappened' },
+    ]
+  },
+
+  // EXECUTIVE INSIGHTS
+  {
+    id: 'executive-summary',
+    question: 'Give me an executive summary of performance',
+    moduleId: 'executive',
+    persona: 'executive',
+    expectedPattern: 'summary',
+    validations: [
+      { type: 'noEmpty', field: 'chartData' },
+      { type: 'noEmpty', field: 'whatHappened' },
+      { type: 'noEmpty', field: 'kpis' },
+    ]
+  },
+  {
+    id: 'executive-risks',
+    question: 'What are the key business risks?',
+    moduleId: 'executive',
+    persona: 'executive',
+    expectedPattern: 'analysis',
+    validations: [
+      { type: 'noEmpty', field: 'whatHappened' },
+      { type: 'noEmpty', field: 'why' },
+    ]
+  },
 ];
 
 function validateResponse(testCase: TestCase, response: any): string[] {
