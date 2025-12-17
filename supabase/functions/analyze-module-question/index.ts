@@ -2471,6 +2471,24 @@ function verifyAndCleanResponse(response: any, validEntities: any, dataContext: 
   return response;
 }
 
+// Detect requested count from question (e.g., "top 5" returns 5, "top 10" returns 10)
+function detectRequestedCount(question: string): number {
+  const q = question.toLowerCase();
+  
+  // Match patterns like "top 5", "top 10", "best 5", "worst 10", etc.
+  const countMatch = q.match(/(?:top|best|worst|bottom|first|last)\s*(\d+)/);
+  if (countMatch) {
+    return Math.min(parseInt(countMatch[1], 10), 20); // Cap at 20
+  }
+  
+  // Default count based on question type
+  if (q.includes('top') || q.includes('best') || q.includes('worst')) {
+    return 5; // Default to 5 for ranking questions
+  }
+  
+  return 6; // Default for general questions
+}
+
 // Detect if question is asking about categories
 function isCategoryQuestion(question: string): boolean {
   const q = question.toLowerCase();
@@ -2568,66 +2586,96 @@ function ensureCompleteResponse(
   if (!response.why) response.why = ['Analysis based on current data patterns.'];
   if (!response.whatToDo) response.whatToDo = ['Continue monitoring key metrics.'];
   
-  // CRITICAL: Force chartData based on question type - ALWAYS ensure charts exist
+  // CRITICAL: Detect requested count and force chartData to match
+  const requestedCount = question ? detectRequestedCount(question) : 6;
   const shouldUseCategories = question ? isCategoryQuestion(question) : false;
   const shouldUseProducts = question ? isProductQuestion(question) : true;
   
-  // Always ensure chartData exists and has valid data
-  if (!response.chartData || response.chartData.length === 0 || 
+  console.log(`[ChartData] Requested count: ${requestedCount}, Categories: ${shouldUseCategories}, Products: ${shouldUseProducts}`);
+  
+  // Always ensure chartData exists and has the requested count
+  if (!response.chartData || response.chartData.length < requestedCount || 
       (response.chartData.length === 1 && response.chartData[0].name === 'Category 1')) {
     if (shouldUseCategories && calculatedKPIs?.categoryBreakdown && calculatedKPIs.categoryBreakdown.length > 0) {
-      // For category questions, use category breakdown
-      response.chartData = calculatedKPIs.categoryBreakdown.slice(0, 8).map((cat: any) => ({
+      // For category questions, use category breakdown with requested count
+      response.chartData = calculatedKPIs.categoryBreakdown.slice(0, requestedCount).map((cat: any) => ({
         name: cat.name,
         value: Math.round(cat.value),
         revenue: cat.revenue
       }));
-      console.log(`[ChartData] Forced category breakdown for category question: ${response.chartData.length} categories`);
+      console.log(`[ChartData] Forced ${response.chartData.length} categories for category question`);
     } else if (calculatedKPIs?.topProducts && calculatedKPIs.topProducts.length > 0) {
-      // For product/general questions, use top products FIRST
-      response.chartData = calculatedKPIs.topProducts.slice(0, 6).map((prod: any) => ({
+      // For product/general questions, use top products with requested count
+      response.chartData = calculatedKPIs.topProducts.slice(0, requestedCount).map((prod: any) => ({
         name: prod.name,
         value: Math.round(prod.value),
         revenue: prod.revenue
       }));
-      console.log(`[ChartData] Forced top products: ${response.chartData.length} products`);
+      console.log(`[ChartData] Forced ${response.chartData.length} products`);
     } else if (calculatedKPIs?.categoryBreakdown && calculatedKPIs.categoryBreakdown.length > 0) {
-      // Final fallback to categories if no products
-      response.chartData = calculatedKPIs.categoryBreakdown.slice(0, 6).map((cat: any) => ({
+      // Fallback to categories
+      response.chartData = calculatedKPIs.categoryBreakdown.slice(0, requestedCount).map((cat: any) => ({
         name: cat.name,
         value: Math.round(cat.value),
         revenue: cat.revenue
       }));
-      console.log(`[ChartData] Fallback to category breakdown: ${response.chartData.length} categories`);
+      console.log(`[ChartData] Fallback to ${response.chartData.length} categories`);
     }
   }
   
-  // Even if chartData exists, override for category questions to ensure correct data
+  // Force override for category questions to ensure correct count
   if (shouldUseCategories && calculatedKPIs?.categoryBreakdown && calculatedKPIs.categoryBreakdown.length > 0) {
-    response.chartData = calculatedKPIs.categoryBreakdown.slice(0, 8).map((cat: any) => ({
+    response.chartData = calculatedKPIs.categoryBreakdown.slice(0, requestedCount).map((cat: any) => ({
       name: cat.name,
       value: Math.round(cat.value),
       revenue: cat.revenue
     }));
-    console.log(`[ChartData] Overrode with category breakdown for category question`);
+    console.log(`[ChartData] Override: ${response.chartData.length} categories for category question`);
   }
   
-  // Final safety check - if still no chartData, generate from products directly
+  // Final safety check
   if (!response.chartData || response.chartData.length === 0) {
     if (products && products.length > 0) {
-      response.chartData = products.slice(0, 6).map(p => ({
+      response.chartData = products.slice(0, requestedCount).map(p => ({
         name: p.product_name || p.product_sku,
         value: Math.round(Number(p.base_price || 10) * 100),
         category: p.category
       }));
-      console.log(`[ChartData] Final fallback from products: ${response.chartData.length} items`);
-    } else {
-      response.chartData = [
-        { name: 'Data Point 1', value: 100 },
-        { name: 'Data Point 2', value: 85 },
-        { name: 'Data Point 3', value: 70 }
-      ];
-      console.log(`[ChartData] Ultimate fallback with placeholder data`);
+      console.log(`[ChartData] Final fallback: ${response.chartData.length} products`);
+    }
+  }
+  
+  // CRITICAL: Generate proper whatHappened text listing ALL items from chartData for ranking questions
+  if (response.chartData && response.chartData.length > 0 && question) {
+    const q = question.toLowerCase();
+    const isRanking = q.includes('top') || q.includes('best') || q.includes('worst') || q.includes('bottom');
+    
+    if (isRanking) {
+      const items = response.chartData;
+      const actualCount = Math.min(items.length, requestedCount);
+      
+      // Generate a proper numbered list of items
+      const itemsList = items.slice(0, actualCount).map((item: any, idx: number) => {
+        const revenue = item.revenue >= 1000 
+          ? `$${(item.revenue / 1000).toFixed(1)}K`
+          : `$${Number(item.revenue || item.value).toFixed(2)}`;
+        return `${idx + 1}. ${item.name} (${revenue})`;
+      }).join(', ');
+      
+      const rankType = q.includes('worst') || q.includes('bottom') ? 'bottom' : 'top';
+      const entityType = shouldUseCategories ? 'categories' : 'products/items';
+      
+      // ALWAYS generate proper ranking list - override whatever AI returned
+      const summaryBullet = `The ${rankType} ${actualCount} ${entityType} by revenue are: ${itemsList}`;
+      
+      // Set the first whatHappened to our generated list - ALWAYS override
+      if (!response.whatHappened || response.whatHappened.length === 0) {
+        response.whatHappened = [summaryBullet];
+      } else {
+        response.whatHappened[0] = summaryBullet;
+      }
+      
+      console.log(`[Response] Generated ranking list: ${actualCount} ${entityType}`);
     }
   }
   
