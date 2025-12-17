@@ -1289,7 +1289,35 @@ export default function ChatInterface({
                   </div>
                 )}
 
-                {/* Charts are displayed in the right panel - no duplication needed */}
+                {/* Charts are displayed in the right panel - Drill-down buttons for data exploration */}
+                {message.analyticsResult?.chartData && message.analyticsResult.chartData.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <span className="text-xs text-muted-foreground font-medium">Drill into data:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {message.analyticsResult.chartData.slice(0, 6).map((item: any, idx: number) => {
+                        const name = item.name || item.label || item.category || `Item ${idx + 1}`;
+                        const value = item.value || item.revenue || item.roi || item.margin;
+                        return (
+                          <Button
+                            key={idx}
+                            variant="outline"
+                            size="sm"
+                            className="h-auto py-1.5 px-3 text-xs hover:bg-primary/10 hover:border-primary"
+                            onClick={() => handleDrillInto(name)}
+                          >
+                            <TrendingUp className="h-3 w-3 mr-1.5 text-primary" />
+                            <span className="font-medium">{name}</span>
+                            {value !== undefined && (
+                              <Badge variant="secondary" className="ml-2 text-[10px] h-4">
+                                {typeof value === 'number' ? (value > 1000 ? `$${(value/1000).toFixed(1)}K` : value.toFixed(1)) : value}
+                              </Badge>
+                            )}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Inline Refinement Input - Feature #3 */}
                 {message.analyticsResult && (
