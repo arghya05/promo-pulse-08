@@ -1034,7 +1034,6 @@ export default function ChatInterface({
         timestamp: new Date(),
       };
       
-      // Store the original query and matched pattern for the clarification options
       const clarifyMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
@@ -1044,10 +1043,89 @@ export default function ChatInterface({
         clarificationOptions: matchedEntityPattern.options.map(opt => 
           `${opt.emoji} ${opt.label}`
         ),
-        // Store the replacements in actionButtons format for handling
         actionButtons: matchedEntityPattern.options.map(opt => ({
           label: `${opt.emoji} ${opt.label}`,
           question: query.replace(matchedEntityPattern.pattern, opt.replacement),
+          icon: 'arrow'
+        }))
+      };
+      
+      setMessages(prev => [...prev, userMessage, clarifyMessage]);
+      setQuery("");
+      return;
+    }
+
+    // Check for KPI-ambiguous questions (top N, best, worst without metric specified)
+    const kpiAmbiguousPattern = /\b(top\s*\d+|best|worst|highest|lowest|leading|lagging|underperforming|overperforming)\b/i;
+    const hasExplicitKPI = /\b(revenue|margin|roi|sales|profit|units|spend|lift|volume|price|cost|elasticity|forecast|accuracy|compliance|utilization)\b/i.test(queryLower);
+    
+    // Module-specific KPI options
+    const moduleKPIOptions: Record<string, { label: string; emoji: string; suffix: string }[]> = {
+      promotion: [
+        { label: 'Revenue', emoji: '💰', suffix: 'by revenue' },
+        { label: 'ROI', emoji: '📈', suffix: 'by ROI' },
+        { label: 'Margin', emoji: '💵', suffix: 'by margin' },
+        { label: 'Units Sold', emoji: '📦', suffix: 'by units sold' },
+        { label: 'Lift %', emoji: '🚀', suffix: 'by lift percentage' }
+      ],
+      pricing: [
+        { label: 'Revenue', emoji: '💰', suffix: 'by revenue' },
+        { label: 'Margin', emoji: '💵', suffix: 'by margin' },
+        { label: 'Price Elasticity', emoji: '📊', suffix: 'by price elasticity' },
+        { label: 'Competitive Gap', emoji: '🎯', suffix: 'by competitive price gap' }
+      ],
+      demand: [
+        { label: 'Forecast Accuracy', emoji: '🎯', suffix: 'by forecast accuracy' },
+        { label: 'Demand Volume', emoji: '📦', suffix: 'by demand volume' },
+        { label: 'Stockout Risk', emoji: '⚠️', suffix: 'by stockout risk' },
+        { label: 'Days of Supply', emoji: '📅', suffix: 'by days of supply' }
+      ],
+      'supply-chain': [
+        { label: 'On-Time Rate', emoji: '⏱️', suffix: 'by on-time delivery rate' },
+        { label: 'Lead Time', emoji: '📅', suffix: 'by lead time' },
+        { label: 'Cost', emoji: '💰', suffix: 'by cost' },
+        { label: 'Reliability Score', emoji: '⭐', suffix: 'by reliability score' }
+      ],
+      'space-planning': [
+        { label: 'Sales per Sqft', emoji: '📊', suffix: 'by sales per square foot' },
+        { label: 'Space Utilization', emoji: '📐', suffix: 'by space utilization' },
+        { label: 'Compliance', emoji: '✅', suffix: 'by planogram compliance' }
+      ],
+      assortment: [
+        { label: 'Revenue', emoji: '💰', suffix: 'by revenue' },
+        { label: 'Margin', emoji: '💵', suffix: 'by margin contribution' },
+        { label: 'Velocity', emoji: '🚀', suffix: 'by sales velocity' },
+        { label: 'Market Share', emoji: '🎯', suffix: 'by market share' }
+      ],
+      executive: [
+        { label: 'Revenue', emoji: '💰', suffix: 'by revenue' },
+        { label: 'EBITDA', emoji: '📈', suffix: 'by EBITDA' },
+        { label: 'Margin', emoji: '💵', suffix: 'by margin' },
+        { label: 'ROI', emoji: '🎯', suffix: 'by ROI' },
+        { label: 'Growth', emoji: '📊', suffix: 'by growth rate' }
+      ]
+    };
+
+    const currentModuleKPIs = moduleKPIOptions[moduleId || 'promotion'] || moduleKPIOptions.promotion;
+    
+    if (kpiAmbiguousPattern.test(queryLower) && !hasExplicitKPI) {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: query,
+        timestamp: new Date(),
+      };
+      
+      const clarifyMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: `📊 Which metric would you like to rank by?`,
+        timestamp: new Date(),
+        needsClarification: true,
+        clarificationOptions: currentModuleKPIs.map(kpi => `${kpi.emoji} ${kpi.label}`),
+        actionButtons: currentModuleKPIs.map(kpi => ({
+          label: `${kpi.emoji} ${kpi.label}`,
+          question: `${query} ${kpi.suffix}`,
           icon: 'arrow'
         }))
       };
