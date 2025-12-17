@@ -378,24 +378,8 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       return;
     }
 
-    // Resolve contextual references like "same for..." or "compare to..."
-    let resolvedText = text;
-    
-    // Handle topic navigation
-    if (navResult.type === 'navigation' && navResult.topic) {
-      resolvedText = `Give me a detailed analysis of ${navResult.topic} - what are the key metrics and insights?`;
-    }
-    
-    if (text.toLowerCase().includes('same for') || text.toLowerCase().includes('same analysis')) {
-      if (conversationContext.lastCategory) {
-        resolvedText = text.replace(/same (for|analysis)/i, `analysis for ${conversationContext.lastCategory}`);
-      }
-    }
-    if (text.toLowerCase().includes('last month') && !text.toLowerCase().includes('compared to')) {
-      if (conversationContext.lastTimePeriod) {
-        resolvedText += ` (previously analyzed ${conversationContext.lastTimePeriod})`;
-      }
-    }
+    // SYNC FIX: Use original text without transformation to match Classic View exactly
+    const resolvedText = text;
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
