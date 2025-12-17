@@ -118,6 +118,121 @@ function detectTimePeriodFromQuestion(question: string): string | null {
   return null;
 }
 
+// Detect ambiguous terms that need clarification
+interface ClarificationOption {
+  label: string;
+  description: string;
+  refinedQuestion: string;
+}
+
+interface AmbiguityCheck {
+  needsClarification: boolean;
+  ambiguousTerm?: string;
+  clarificationPrompt?: string;
+  options?: ClarificationOption[];
+}
+
+function detectAmbiguousTerms(question: string): AmbiguityCheck {
+  const q = question.toLowerCase();
+  
+  // Entity-ambiguous terms: ALWAYS ask what type of entity regardless of metric
+  const entityAmbiguousTerms: Array<{ 
+    pattern: RegExp; 
+    term: string;
+    prompt: string; 
+    options: ClarificationOption[] 
+  }> = [
+    {
+      pattern: /sell[ea]?[r]+s?|sel+ers?/i,
+      term: 'seller',
+      prompt: 'When you say "seller", do you mean:',
+      options: [
+        { label: 'Products/SKUs', description: 'Top performing products by sales', refinedQuestion: question.replace(/sell[ea]?[r]+s?|sel+ers?/gi, 'selling product') },
+        { label: 'Vendors/Suppliers', description: 'Suppliers by sales volume', refinedQuestion: question.replace(/sell[ea]?[r]+s?|sel+ers?/gi, 'vendor by sales') },
+        { label: 'Stores', description: 'Store locations by revenue', refinedQuestion: question.replace(/sell[ea]?[r]+s?|sel+ers?/gi, 'store by sales') }
+      ]
+    },
+    {
+      pattern: /moving/i,
+      term: 'moving',
+      prompt: 'When you say "moving" items, do you mean:',
+      options: [
+        { label: 'Products/SKUs', description: 'Products by velocity', refinedQuestion: question.replace(/moving/gi, 'selling product') },
+        { label: 'Categories', description: 'Categories by turnover', refinedQuestion: question.replace(/moving/gi, 'performing category') }
+      ]
+    }
+  ];
+  
+  // Metric-ambiguous terms: only ask if no metric context provided
+  const metricAmbiguousTerms: Record<string, { prompt: string; options: ClarificationOption[] }> = {
+    'performer': {
+      prompt: 'What metric should I use to measure performance:',
+      options: [
+        { label: 'Revenue', description: 'Total sales generated', refinedQuestion: question.replace(/performer/gi, 'product by revenue') },
+        { label: 'ROI', description: 'Return on promotional investment', refinedQuestion: question.replace(/performer/gi, 'product by ROI') },
+        { label: 'Margin', description: 'Profit margin generated', refinedQuestion: question.replace(/performer/gi, 'product by margin') },
+        { label: 'Units Sold', description: 'Volume of items sold', refinedQuestion: question.replace(/performer/gi, 'product by units sold') }
+      ]
+    },
+    'best': {
+      prompt: 'What defines "best" for your analysis:',
+      options: [
+        { label: 'Highest Revenue', description: 'Products generating most sales', refinedQuestion: question.replace(/best/gi, 'highest revenue') },
+        { label: 'Best ROI', description: 'Best return on investment', refinedQuestion: question.replace(/best/gi, 'best ROI') },
+        { label: 'Highest Margin', description: 'Most profitable products', refinedQuestion: question.replace(/best/gi, 'highest margin') }
+      ]
+    },
+    'worst': {
+      prompt: 'What defines "worst" for your analysis:',
+      options: [
+        { label: 'Lowest Revenue', description: 'Products with lowest sales', refinedQuestion: question.replace(/worst/gi, 'lowest revenue') },
+        { label: 'Negative ROI', description: 'Loss-making items', refinedQuestion: question.replace(/worst/gi, 'negative ROI') },
+        { label: 'Lowest Margin', description: 'Least profitable products', refinedQuestion: question.replace(/worst/gi, 'lowest margin') }
+      ]
+    },
+    'performance': {
+      prompt: 'Which aspect of performance do you want to analyze:',
+      options: [
+        { label: 'Revenue Performance', description: 'Sales and revenue trends', refinedQuestion: question.replace(/performance/gi, 'revenue performance') },
+        { label: 'ROI Performance', description: 'Return on investment', refinedQuestion: question.replace(/performance/gi, 'ROI performance') },
+        { label: 'Margin Performance', description: 'Profitability analysis', refinedQuestion: question.replace(/performance/gi, 'margin performance') }
+      ]
+    }
+  };
+  
+  // Check for entity ambiguity FIRST - these always need clarification
+  const hasEntityContext = /\b(product|sku|vendor|supplier|store|brand|category)\b/i.test(q);
+  
+  for (const config of entityAmbiguousTerms) {
+    if (config.pattern.test(q) && !hasEntityContext) {
+      console.log(`Entity ambiguity detected: "${config.term}" in question`);
+      return {
+        needsClarification: true,
+        ambiguousTerm: config.term,
+        clarificationPrompt: config.prompt,
+        options: config.options
+      };
+    }
+  }
+  
+  // Check for metric ambiguity only if no metric context
+  const hasMetricContext = /\b(revenue|margin|roi|sales|units|lift|spend|profit|growth)\b/i.test(q);
+  
+  for (const [term, config] of Object.entries(metricAmbiguousTerms)) {
+    if (q.includes(term) && !hasMetricContext) {
+      console.log(`Metric ambiguity detected: "${term}" in question`);
+      return {
+        needsClarification: true,
+        ambiguousTerm: term,
+        clarificationPrompt: config.prompt,
+        options: config.options
+      };
+    }
+  }
+  
+  return { needsClarification: false };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -125,6 +240,22 @@ serve(async (req) => {
 
   try {
     const { question, persona = 'executive', categories = null, selectedKPIs = null, timePeriod = null } = await req.json();
+    
+    // Check for ambiguous terms that need clarification FIRST - BEFORE any other processing
+    const ambiguityCheck = detectAmbiguousTerms(question);
+    console.log(`Ambiguity check result:`, JSON.stringify(ambiguityCheck));
+    
+    if (ambiguityCheck.needsClarification) {
+      console.log(`RETURNING CLARIFICATION for term: "${ambiguityCheck.ambiguousTerm}"`);
+      return new Response(JSON.stringify({
+        needsClarification: true,
+        clarificationPrompt: ambiguityCheck.clarificationPrompt,
+        options: ambiguityCheck.options,
+        originalQuestion: question
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     if (!LOVABLE_API_KEY) {

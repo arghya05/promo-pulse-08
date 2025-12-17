@@ -106,6 +106,14 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
   const [roiThreshold, setRoiThreshold] = useState([1.0]);
   const [liftThreshold, setLiftThreshold] = useState([15]);
   
+  // Clarification state
+  const [clarification, setClarification] = useState<{
+    needsClarification: boolean;
+    prompt: string;
+    options: Array<{ label: string; description: string; refinedQuestion: string }>;
+    originalQuestion: string;
+  } | null>(null);
+  
   const resultsRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
 
@@ -148,6 +156,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
     setResult(null);
     setCacheHit(false);
     setResponseTime(null);
+    setClarification(null); // Clear any previous clarification
     
     const startTime = Date.now();
     
@@ -186,6 +195,19 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
       }
 
       const analyticsResult = await response.json();
+      
+      // Check if clarification is needed
+      if (analyticsResult.needsClarification) {
+        setClarification({
+          needsClarification: true,
+          prompt: analyticsResult.clarificationPrompt,
+          options: analyticsResult.options,
+          originalQuestion: analyticsResult.originalQuestion
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       setResult(analyticsResult);
       
       if (cacheHeader === 'HIT') {
@@ -897,6 +919,29 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                       </div>
                     </Card>
                   </div>
+                )}
+
+                {/* Clarification Options */}
+                {clarification && !isLoading && (
+                  <Card className="p-6 bg-card border-primary/30">
+                    <h3 className="font-semibold text-foreground mb-4">{clarification.prompt}</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {clarification.options.map((option, idx) => (
+                        <Button
+                          key={idx}
+                          variant="outline"
+                          className="h-auto p-4 flex flex-col items-start text-left hover:bg-primary/10 hover:border-primary"
+                          onClick={() => {
+                            setClarification(null);
+                            handleAsk(option.refinedQuestion);
+                          }}
+                        >
+                          <span className="font-semibold text-foreground">{option.label}</span>
+                          <span className="text-xs text-muted-foreground">{option.description}</span>
+                        </Button>
+                      ))}
+                    </div>
+                  </Card>
                 )}
 
                 {result ? (
