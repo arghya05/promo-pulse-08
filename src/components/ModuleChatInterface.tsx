@@ -40,6 +40,12 @@ import CrossModuleNavigator from './CrossModuleNavigator';
 import { useGlobalSession, detectTargetModule } from '@/contexts/GlobalSessionContext';
 import KPISelector from './KPISelector';
 
+interface ClarificationOption {
+  label: string;
+  description: string;
+  refinedQuestion: string;
+}
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -48,6 +54,8 @@ interface Message {
   isLoading?: boolean;
   data?: any;
   drillContext?: DrillContext;
+  clarificationOptions?: ClarificationOption[];
+  originalQuestion?: string;
 }
 
 // Session insight for summary
@@ -426,6 +434,21 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
 
       if (error) throw error;
 
+      // Handle clarification request - show options to user
+      if (data?.needsClarification) {
+        const clarificationMessage: Message = {
+          id: `clarify-${Date.now()}`,
+          role: 'assistant',
+          content: data.clarificationPrompt || 'I need a bit more context to answer accurately:',
+          timestamp: new Date(),
+          clarificationOptions: data.options,
+          originalQuestion: data.originalQuestion
+        };
+        setMessages(prev => prev.filter(m => !m.isLoading).concat(clarificationMessage));
+        setIsLoading(false);
+        return;
+      }
+
       // Update conversation context from response
       const updatedContext = extractContextFromResponse(data, text);
       setConversationContext(updatedContext);
@@ -729,6 +752,26 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           <span className="text-sm">Analyzing {module.name}...</span>
+                        </div>
+                      ) : message.clarificationOptions ? (
+                        <div className="space-y-3">
+                          <p className="text-sm font-medium">{message.content}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {message.clarificationOptions.map((option, idx) => (
+                              <Button
+                                key={idx}
+                                variant="outline"
+                                size="sm"
+                                className="h-auto py-2 px-3 text-left hover:bg-primary/10 hover:border-primary"
+                                onClick={() => handleSend(option.refinedQuestion)}
+                              >
+                                <div className="flex flex-col items-start">
+                                  <span className="font-medium text-sm">{option.label}</span>
+                                  <span className="text-xs text-muted-foreground">{option.description}</span>
+                                </div>
+                              </Button>
+                            ))}
+                          </div>
                         </div>
                       ) : (
                         <>
