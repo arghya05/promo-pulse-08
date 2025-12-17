@@ -771,57 +771,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                             </div>
                           )}
                           
-                          {/* SYNC: Same Chart as Classic View */}
-                          {message.data?.chartData && message.data.chartData.length > 0 && (
-                            <div className="mt-3 border-t pt-3">
-                              <p className="text-[10px] text-muted-foreground mb-2 flex items-center gap-1">
-                                <BarChart3 className="h-3 w-3 text-primary" />
-                                Chart (click bars to drill down)
-                              </p>
-                              <div className="h-[200px] w-full">
-                                {(() => {
-                                  const data = message.data!.chartData;
-                                  const sampleItem = data[0] || {};
-                                  const barKeys = Object.keys(sampleItem).filter(k => 
-                                    k !== 'name' && 
-                                    typeof sampleItem[k] === 'number' && 
-                                    !['id', 'index'].includes(k)
-                                  );
-                                  const primaryKey = barKeys.includes('value') ? 'value' : 
-                                                    barKeys.includes('revenue') ? 'revenue' : 
-                                                    barKeys[0] || 'value';
-                                  
-                                  return (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                      <BarChart data={data} onClick={(e) => e?.activePayload?.[0] && handleDrillInto('item', e.activePayload[0].payload.name, (message.drillContext?.level || 0) + 1)}>
-                                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                                        <XAxis dataKey="name" className="text-xs" tick={{ fontSize: 9 }} />
-                                        <YAxis className="text-xs" tick={{ fontSize: 9 }} tickFormatter={(v) => v >= 1000 ? `$${(v/1000).toFixed(1)}K` : `$${v}`} />
-                                        <Tooltip formatter={(value: number) => value >= 1000 ? `$${(value/1000).toFixed(1)}K` : `$${Number(value).toFixed(2)}`} />
-                                        <Legend wrapperStyle={{ fontSize: '9px' }} />
-                                        <Bar dataKey={primaryKey} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} className="cursor-pointer" name={primaryKey.charAt(0).toUpperCase() + primaryKey.slice(1)} />
-                                      </BarChart>
-                                    </ResponsiveContainer>
-                                  );
-                                })()}
-                              </div>
-                              {/* Drill buttons below chart */}
-                              <div className="flex flex-wrap gap-1 mt-2">
-                                {message.data.chartData.slice(0, 6).map((item: any, i: number) => (
-                                  <Button
-                                    key={i}
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-[10px] h-6 px-2"
-                                    onClick={() => handleDrillInto('item', item.name, (message.drillContext?.level || 0) + 1)}
-                                    disabled={isLoading}
-                                  >
-                                    {item.name}
-                                  </Button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                          {/* Charts are displayed in the right panel - no duplication needed */}
                           
                           {/* Follow-up Questions - More prominent */}
                           {(message.data?.drillDownQuestions || message.data?.nextQuestions) && (
