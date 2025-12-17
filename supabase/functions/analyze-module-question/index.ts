@@ -1697,9 +1697,25 @@ Respond with a JSON object:
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     
-    // Build conversation context for AI
-    // Build explicit context reference for conversational continuity
+    // Build conversation context for AI - ONLY when truly relevant
+    // Detect if this is a follow-up question that references previous context
+    const isFollowUpQuestion = (q: string): boolean => {
+      const followUpPatterns = [
+        'same for', 'same analysis', 'compare to', 'what about', 'how about',
+        'drill', 'more detail', 'break down', 'show me more', 'tell me more',
+        'why is', 'why does', 'explain', 'this', 'that', 'it', 'them', 'those',
+        'previous', 'earlier', 'we discussed', 'you mentioned', 'last'
+      ];
+      const lowerQ = q.toLowerCase();
+      return followUpPatterns.some(p => lowerQ.includes(p));
+    };
+    
+    const needsConversationContext = isDrillDown || isFollowUpQuestion(question) || 
+      (conversationContext?.drillLevel && conversationContext.drillLevel > 0);
+    
+    // Only build context reference for actual follow-ups
     const buildContextReference = () => {
+      if (!needsConversationContext) return '';
       if (!conversationContext && (!conversationHistory || conversationHistory.length === 0)) {
         return '';
       }
@@ -1720,48 +1736,29 @@ Respond with a JSON object:
     
     const contextReference = buildContextReference();
     
-    const conversationContextPrompt = conversationContext || (conversationHistory && conversationHistory.length > 0) ? `
-CONVERSATION CONTEXT (MANDATORY - use this for continuity):
-- Previous category focus: ${conversationContext?.lastCategory || 'none'}
-- Previous product/promotion focus: ${conversationContext?.lastPromotion || 'none'}
-- Previous metric focus: ${conversationContext?.lastMetric || 'none'}
-- Previous time period: ${conversationContext?.lastTimePeriod || 'none'}
-- Drill-down path so far: ${drillPath.join(' → ') || 'top level'}
-- Current drill level: ${conversationContext?.drillLevel || 0}
+    // ONLY add conversation context for follow-up questions or drill-downs
+    // Standalone questions (like "top 3 selling categories") get clean prompts
+    let conversationContextPrompt = '';
+    
+    if (needsConversationContext && (conversationContext || (conversationHistory && conversationHistory.length > 0))) {
+      conversationContextPrompt = `
+CONVERSATION CONTEXT (use for continuity):
+- Previous category: ${conversationContext?.lastCategory || 'none'}
+- Previous product/promotion: ${conversationContext?.lastPromotion || 'none'}
+- Previous metric: ${conversationContext?.lastMetric || 'none'}
+- Drill level: ${conversationContext?.drillLevel || 0}
 
-**MANDATORY CONTEXT REFERENCE INSTRUCTIONS** (MUST FOLLOW):
-${contextReference ? `
-1. You MUST START the FIRST bullet point in "whatHappened" with this EXACT phrase: "${contextReference}"
-2. This is NON-NEGOTIABLE - the response MUST begin by acknowledging what was previously discussed.
-3. Example: "${contextReference}Here's what I found about [current topic]..."
-` : ''}
-${!contextReference && conversationHistory && conversationHistory.length > 0 ? `
-1. START the FIRST bullet point with "Following up on our discussion, " or "Continuing our analysis, "
-2. Reference at least ONE element from the previous conversation
-` : ''}
-- Use phrases like "Building on your [X] analysis...", "Following up on [previous topic]...", "Continuing from [previous context]...".
-- Make clear connections between this answer and previous questions when relevant.
-- If the user is drilling deeper, acknowledge the drill-down with "Drilling into [entity]..." or "Looking more closely at [entity]...".
+${contextReference ? `Start your first bullet with: "${contextReference}"` : ''}
 
-${isDrillDown ? `DRILL-DOWN INSTRUCTIONS (MANDATORY):
-- This is a DRILL-DOWN request at level ${conversationContext?.drillLevel || 1}
-- User is exploring deeper from: ${drillPath[drillPath.length - 1] || 'top level'}
-- START the FIRST bullet point with "Drilling deeper into ${drillPath[drillPath.length - 1] || 'the data'}..."
-- Provide MORE GRANULAR data than the previous response
-- Break down the metric/category into its components
-- Show the NEXT LEVEL of detail (e.g., category → products, store → regions, week → days)
-- Suggest further drill-down options at the end
-` : ''}
+${isDrillDown ? `DRILL-DOWN: Provide more granular detail than before. Start with "Drilling into ${drillPath[drillPath.length - 1] || 'the data'}..."` : ''}
 
-${conversationHistory && conversationHistory.length > 0 ? `
-PREVIOUS CONVERSATION (reference these EXPLICITLY):
-${conversationHistory.slice(-4).map((m: any) => `${m.role.toUpperCase()}: ${m.content}`).join('\n')}
+${conversationHistory && conversationHistory.length > 0 ? `Recent context:\n${conversationHistory.slice(-2).map((m: any) => `${m.role}: ${m.content.substring(0, 100)}...`).join('\n')}` : ''}
+`;
+    }
+    
+    console.log(`[${moduleId}] Needs conversation context: ${needsConversationContext}, isDrillDown: ${isDrillDown}`);
 
-IMPORTANT: Your response MUST explicitly reference at least one element from the previous conversation.
-` : ''}
-` : '';
-
-    const enhancedUserPrompt = conversationContextPrompt + '\n\n' + userPrompt;
+    const enhancedUserPrompt = conversationContextPrompt + userPrompt;
     
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
