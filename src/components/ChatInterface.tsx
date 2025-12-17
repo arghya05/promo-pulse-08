@@ -700,30 +700,58 @@ export default function ChatInterface({
   const needsClarification = (question: string): { needs: boolean; options?: string[] } => {
     const questionLower = question.toLowerCase();
     
-    // Vague questions that need time period
-    if ((questionLower.includes('performance') || questionLower.includes('how') || questionLower.includes('show')) 
-        && !questionLower.includes('month') && !questionLower.includes('quarter') && !questionLower.includes('year')) {
-      return {
-        needs: true,
-        options: [
-          `${question} for last month`,
-          `${question} for last quarter`,
-          `${question} for last year`,
-        ]
-      };
+    // Questions with explicit KPIs - NO clarification needed
+    const hasExplicitKPI = [
+      'revenue', 'sales', 'roi', 'margin', 'lift', 'profit', 'units', 'volume', 
+      'spend', 'cost', 'price', 'elasticity', 'forecast', 'accuracy', 'stockout',
+      'inventory', 'lead time', 'on-time', 'compliance', 'sqft', 'square foot'
+    ].some(kpi => questionLower.includes(kpi));
+    
+    if (hasExplicitKPI) {
+      return { needs: false };
     }
     
-    // Generic "best" or "top" without metric
-    if ((questionLower.includes('best') || questionLower.includes('top')) 
-        && !questionLower.includes('roi') && !questionLower.includes('margin') && !questionLower.includes('lift')) {
-      return {
-        needs: true,
-        options: [
-          `${question} by ROI`,
-          `${question} by margin`,
-          `${question} by lift percentage`,
-        ]
-      };
+    // Questions with industry-standard implied KPIs - NO clarification needed
+    // "top sellers" / "best sellers" = revenue is the standard
+    // "worst performers" could be ambiguous but "sellers" implies revenue
+    const hasImpliedKPI = (
+      questionLower.includes('seller') || // sellers implies revenue
+      questionLower.includes('selling') || // selling implies revenue
+      questionLower.includes('sold') || // sold implies units/revenue
+      questionLower.includes('stockout') || // stockout is its own metric
+      questionLower.includes('forecast') || // forecast accuracy
+      questionLower.includes('supplier') || // supplier performance
+      questionLower.includes('planogram') || // space planning metrics
+      questionLower.includes('compliance') // compliance %
+    );
+    
+    if (hasImpliedKPI) {
+      return { needs: false };
+    }
+    
+    // Questions with time periods mentioned - NO time clarification needed
+    const hasTimePeriod = [
+      'month', 'quarter', 'year', 'week', 'ytd', 'year to date', 'last', 'this', 
+      'previous', 'q1', 'q2', 'q3', 'q4', 'january', 'february', 'march', 'april',
+      'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'
+    ].some(period => questionLower.includes(period));
+    
+    // Only ask for clarification on truly vague "best/top" questions without any context
+    // e.g., "top promotions" without any metric or context
+    if ((questionLower.includes('best') || questionLower.includes('top') || questionLower.includes('worst')) 
+        && !hasExplicitKPI && !hasImpliedKPI) {
+      // Check if it's a genuinely ambiguous case (e.g., "top promotions" without context)
+      const isAmbiguous = questionLower.includes('promotion') || questionLower.includes('campaign');
+      if (isAmbiguous) {
+        return {
+          needs: true,
+          options: [
+            `${question} by ROI`,
+            `${question} by margin`,
+            `${question} by revenue`,
+          ]
+        };
+      }
     }
     
     return { needs: false };
