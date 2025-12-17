@@ -991,8 +991,73 @@ export default function ChatInterface({
 
     // SYNC FIX: Use original query without transformation to match Classic View
     let processedQuery = query;
+    const queryLower = query.toLowerCase();
 
-    // Check for clarification needs
+    // Check for entity-ambiguous terms (seller, mover, etc.) - show clickable entity options
+    const entityAmbiguousPatterns: { pattern: RegExp; label: string; options: { label: string; emoji: string; replacement: string }[] }[] = [
+      { 
+        pattern: /sell[ea]?[r]+s?|sel+ers?/i, 
+        label: 'seller',
+        options: [
+          { label: 'Products/SKUs', emoji: '📦', replacement: 'selling product' },
+          { label: 'Vendors/Suppliers', emoji: '🏭', replacement: 'vendor by sales' },
+          { label: 'Stores', emoji: '🏪', replacement: 'store by sales' }
+        ]
+      },
+      { 
+        pattern: /\bmoving\b|\bmover\b/i,
+        label: 'moving/mover',
+        options: [
+          { label: 'Products/SKUs', emoji: '📦', replacement: 'selling product' },
+          { label: 'Categories', emoji: '📁', replacement: 'performing category' }
+        ]
+      },
+      { 
+        pattern: /\bperformer\b/i,
+        label: 'performer',
+        options: [
+          { label: 'Products/SKUs', emoji: '📦', replacement: 'performing product' },
+          { label: 'Categories', emoji: '📁', replacement: 'performing category' },
+          { label: 'Stores', emoji: '🏪', replacement: 'performing store' }
+        ]
+      }
+    ];
+    
+    const hasEntityContext = /\b(product|sku|vendor|supplier|store|brand|category)\b/i.test(queryLower);
+    const matchedEntityPattern = !hasEntityContext ? entityAmbiguousPatterns.find(a => a.pattern.test(queryLower)) : null;
+    
+    if (matchedEntityPattern) {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: query,
+        timestamp: new Date(),
+      };
+      
+      // Store the original query and matched pattern for the clarification options
+      const clarifyMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: `🤔 When you say "${matchedEntityPattern.label}", do you mean:`,
+        timestamp: new Date(),
+        needsClarification: true,
+        clarificationOptions: matchedEntityPattern.options.map(opt => 
+          `${opt.emoji} ${opt.label}`
+        ),
+        // Store the replacements in actionButtons format for handling
+        actionButtons: matchedEntityPattern.options.map(opt => ({
+          label: `${opt.emoji} ${opt.label}`,
+          question: query.replace(matchedEntityPattern.pattern, opt.replacement),
+          icon: 'arrow'
+        }))
+      };
+      
+      setMessages(prev => [...prev, userMessage, clarifyMessage]);
+      setQuery("");
+      return;
+    }
+
+    // Check for clarification needs (metric clarification)
     const clarification = needsClarification(processedQuery);
     if (clarification.needs && clarification.options) {
       const userMessage: Message = {
@@ -1227,20 +1292,24 @@ export default function ChatInterface({
                 {/* Clarification Options */}
                 {message.needsClarification && message.clarificationOptions && (
                   <div className="mt-2 space-y-2">
-                    <p className="text-[10px] text-muted-foreground">Choose an option or type your own:</p>
+                    <p className="text-[10px] text-muted-foreground">Choose an option:</p>
                     <div className="flex flex-wrap gap-2">
-                      {message.clarificationOptions.map((option, idx) => (
-                        <Button
-                          key={idx}
-                          variant="outline"
-                          size="sm"
-                          className="text-xs h-7"
-                          onClick={() => handleSuggestionClick(option)}
-                          disabled={isLoading}
-                        >
-                          {option}
-                        </Button>
-                      ))}
+                      {message.clarificationOptions.map((option, idx) => {
+                        // If actionButtons exist, use the refined question from there
+                        const refinedQuestion = message.actionButtons?.[idx]?.question;
+                        return (
+                          <Button
+                            key={idx}
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-8 px-3 border-primary/30 hover:bg-primary/10 hover:border-primary"
+                            onClick={() => handleSuggestionClick(refinedQuestion || option)}
+                            disabled={isLoading}
+                          >
+                            {option}
+                          </Button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
