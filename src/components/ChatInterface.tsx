@@ -1135,6 +1135,77 @@ export default function ChatInterface({
       return;
     }
 
+    // Check for time period ambiguity - questions that need a time frame
+    const timePeriodPatterns = [
+      // Explicit time references - don't need clarification
+      /\b(today|yesterday|this week|last week|this month|last month|this quarter|last quarter|this year|last year|ytd|year.to.date|mtd|month.to.date|qtd|quarter.to.date)\b/i,
+      /\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/i,
+      /\b(q1|q2|q3|q4|h1|h2)\b/i,
+      /\b(2024|2025|2023|2022)\b/i,
+      /\b(past|last|previous|recent|current|next)\s*(day|week|month|quarter|year|period)/i,
+      /\b(\d+)\s*(days?|weeks?|months?|quarters?|years?)\s*(ago|back|prior)/i,
+      /\bsince\s+/i,
+      /\bfrom\s+\w+\s+to\s+/i,
+      /\bover\s+the\s+(past|last)\s+/i,
+      /\bduring\s+/i,
+      /\bin\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i,
+    ];
+    
+    const hasTimePeriod = timePeriodPatterns.some(p => p.test(queryLower));
+    
+    // Questions that typically need a time frame
+    const needsTimeFramePatterns = [
+      /\b(trend|trending|growth|decline|change|changed|increased|decreased|improved|worsened)\b/i,
+      /\b(compare|comparison|vs|versus|difference|gap)\b/i,
+      /\b(performance|performing|performed)\b/i,
+      /\b(forecast|predict|projection)\b/i,
+      /\b(average|total|sum|count)\b/i,
+      /\bhow\s+(much|many|did|has|have|is|are|was|were)\b/i,
+      /\bwhat\s+(is|are|was|were)\s+(the|our|my)\b/i,
+      /\bshow\s+(me|all|the)\b/i,
+    ];
+    
+    const needsTimeFrame = needsTimeFramePatterns.some(p => p.test(queryLower));
+    
+    // Time period options
+    const timePeriodOptions = [
+      { label: 'This Month', emoji: '📅', suffix: 'this month' },
+      { label: 'Last Month', emoji: '📆', suffix: 'last month' },
+      { label: 'This Quarter', emoji: '📊', suffix: 'this quarter' },
+      { label: 'Last Quarter', emoji: '📈', suffix: 'last quarter' },
+      { label: 'Year to Date', emoji: '📅', suffix: 'year to date' },
+      { label: 'Last Year', emoji: '🗓️', suffix: 'last year' },
+      { label: 'Last 30 Days', emoji: '⏱️', suffix: 'in the last 30 days' },
+      { label: 'Last 90 Days', emoji: '⏰', suffix: 'in the last 90 days' },
+    ];
+    
+    if (needsTimeFrame && !hasTimePeriod) {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: query,
+        timestamp: new Date(),
+      };
+      
+      const clarifyMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: `📅 What time period would you like to analyze?`,
+        timestamp: new Date(),
+        needsClarification: true,
+        clarificationOptions: timePeriodOptions.map(tp => `${tp.emoji} ${tp.label}`),
+        actionButtons: timePeriodOptions.map(tp => ({
+          label: `${tp.emoji} ${tp.label}`,
+          question: `${query} ${tp.suffix}`,
+          icon: 'arrow'
+        }))
+      };
+      
+      setMessages(prev => [...prev, userMessage, clarifyMessage]);
+      setQuery("");
+      return;
+    }
+
     // Check for clarification needs (metric clarification)
     const clarification = needsClarification(processedQuery);
     if (clarification.needs && clarification.options) {
