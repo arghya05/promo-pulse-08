@@ -241,10 +241,14 @@ function detectAmbiguousTerms(question: string, moduleId: string): AmbiguityChec
   
   // Check for entity ambiguity FIRST - these always need clarification
   const hasEntityContext = /\b(product|sku|vendor|supplier|store|brand|category)\b/i.test(q);
+  console.log(`Entity context check: hasEntityContext=${hasEntityContext}, question="${q}"`);
   
   for (const config of entityAmbiguousTerms) {
-    if (config.pattern.test(q) && !hasEntityContext) {
-      console.log(`Entity ambiguity detected: "${config.term}" in question`);
+    const patternMatches = config.pattern.test(q);
+    console.log(`Checking term "${config.term}": pattern=${config.pattern}, matches=${patternMatches}, noEntityContext=${!hasEntityContext}`);
+    
+    if (patternMatches && !hasEntityContext) {
+      console.log(`ENTITY AMBIGUITY DETECTED: "${config.term}" in question`);
       return {
         needsClarification: true,
         ambiguousTerm: config.term,
@@ -400,10 +404,14 @@ serve(async (req) => {
   try {
     const { question, moduleId, selectedKPIs, timePeriod, crossModules, conversationHistory, conversationContext } = await req.json();
     
-    // Check for ambiguous terms that need clarification FIRST
+    console.log(`[${moduleId}] Received question: "${question}"`);
+    
+    // Check for ambiguous terms that need clarification FIRST - BEFORE any other processing
     const ambiguityCheck = detectAmbiguousTerms(question, moduleId);
+    console.log(`[${moduleId}] Ambiguity check result:`, JSON.stringify(ambiguityCheck));
+    
     if (ambiguityCheck.needsClarification) {
-      console.log(`[${moduleId}] Ambiguous term detected: "${ambiguityCheck.ambiguousTerm}"`);
+      console.log(`[${moduleId}] RETURNING CLARIFICATION for term: "${ambiguityCheck.ambiguousTerm}"`);
       return new Response(JSON.stringify({
         needsClarification: true,
         clarificationPrompt: ambiguityCheck.clarificationPrompt,
@@ -413,6 +421,8 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    
+    console.log(`[${moduleId}] No clarification needed, proceeding with analysis`);
     
     // Detect time period from question text - override UI selection if question explicitly mentions time
     const detectedTimePeriod = detectTimePeriodFromQuestion(question);
