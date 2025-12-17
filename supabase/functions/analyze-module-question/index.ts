@@ -2502,10 +2502,22 @@ function isCategoryQuestion(question: string): boolean {
 // Detect if question is asking about products/top sellers
 function isProductQuestion(question: string): boolean {
   const q = question.toLowerCase();
+  // Exclude if asking about stores, promotions, or categories specifically
+  if (q.includes('store') || q.includes('promotion') || q.includes('categor')) return false;
   return q.includes('product') || q.includes('seller') || 
-         q.includes('top 5') || q.includes('top 10') ||
-         q.includes('best') || q.includes('worst') ||
-         q.includes('performing') || q.includes('revenue');
+         q.includes('sku') || q.includes('item');
+}
+
+// Detect if question is asking about stores
+function isStoreQuestion(question: string): boolean {
+  const q = question.toLowerCase();
+  return q.includes('store') || q.includes('location') || q.includes('branch');
+}
+
+// Detect if question is asking about promotions
+function isPromotionQuestion(question: string): boolean {
+  const q = question.toLowerCase();
+  return q.includes('promotion') || q.includes('promo') || q.includes('campaign') || q.includes('deal');
 }
 
 function ensureCompleteResponse(
