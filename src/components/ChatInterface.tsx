@@ -875,22 +875,23 @@ export default function ChatInterface({
     const hasBadROI = result.kpis.roi < 1;
     const hasLift = result.kpis.liftPct && result.kpis.liftPct > 15;
     
+    // Format all whatHappened items as bullet points to match Classic View
+    const formattedFindings = result.whatHappened && result.whatHappened.length > 0
+      ? result.whatHappened.map(item => `• ${item}`).join('\n\n')
+      : 'Analysis complete.';
+    
+    let intro = '';
     if (hasBadROI) {
-      return `⚠️ I found some areas that need attention. ${result.whatHappened[0]} Would you like me to help identify what's causing this and how to fix it?`;
-    }
-    if (hasGoodROI && hasLift) {
-      return `🎉 Great news! ${result.whatHappened[0]} This is performing well - let me help you understand why and how to replicate it.`;
-    }
-    if (hasGoodROI) {
-      return `✅ Here's what I found: ${result.whatHappened[0]} Want me to dive deeper into any specific aspect?`;
+      intro = `⚠️ I found some areas that need attention:\n\n`;
+    } else if (hasGoodROI && hasLift) {
+      intro = `🎉 Great news! Here's what I found:\n\n`;
+    } else if (hasGoodROI) {
+      intro = `✅ Here's what I found:\n\n`;
+    } else {
+      intro = `📊 Here's my analysis:\n\n`;
     }
     
-    const responses = [
-      `📊 Here's my analysis: ${result.whatHappened[0]} I can help you explore this further - just ask!`,
-      `🔍 Based on the data: ${result.whatHappened[0]} Would you like to drill down into specifics?`,
-      `💡 Interesting findings: ${result.whatHappened[0]} Let me know if you want more details on any part.`,
-    ];
-    return responses[Math.floor(Math.random() * responses.length)];
+    return intro + formattedFindings;
   };
 
   const generateContextualTip = (result: AnalyticsResult, count: number): string | undefined => {

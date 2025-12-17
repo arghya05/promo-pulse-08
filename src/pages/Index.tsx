@@ -207,7 +207,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
     }
   };
 
-  // Callback for ChatInterface
+  // Callback for ChatInterface - Use EXACT same parameters as handleAsk for consistent responses
   const handleChatAsk = useCallback(async (questionText: string, kpis: string[]): Promise<AnalyticsResult | null> => {
     setQuery(questionText);
     setSelectedKPIs(kpis);
@@ -217,20 +217,11 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
     
     const startTime = Date.now();
     
-    // Add user message to conversation history
-    const userHistoryEntry = {
-      role: 'user' as const,
-      content: questionText,
-    };
-    
     try {
       // Log what we're sending for debugging
       console.log('Chat sending question with KPIs:', { question: questionText, kpis });
       
-      // Build conversation context from history
-      const lastAssistantMessage = conversationHistory.filter(m => m.role === 'assistant').slice(-1)[0];
-      const conversationContext = lastAssistantMessage?.context || {};
-      
+      // Use EXACT same parameters as handleAsk to ensure identical cache keys and responses
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${edgeFunctionName}`,
         {
@@ -244,14 +235,8 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
             categories: personaConfig[persona].categories,
             selectedKPIs: kpis.length > 0 ? kpis : null,
             timePeriod: timePeriod !== 'custom' ? timePeriod : null,
-            moduleId: moduleId,
-            // Pass conversation history for context continuity
-            conversationHistory: conversationHistory.slice(-6),
-            conversationContext: {
-              lastCategory: conversationContext.categoryMentioned,
-              lastPromotion: conversationContext.promotionMentioned,
-              lastMetric: conversationContext.metricMentioned,
-            }
+            moduleId: moduleId
+            // NOTE: Removed conversationHistory and conversationContext to match handleAsk
           }),
         }
       );
@@ -287,7 +272,10 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
       // Add both messages to history
       setConversationHistory(prev => [
         ...prev.slice(-8), // Keep last 8 messages
-        userHistoryEntry,
+        {
+          role: 'user' as const,
+          content: questionText,
+        },
         {
           role: 'assistant',
           content: analyticsResult.whatHappened?.join(' ') || '',
