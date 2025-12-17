@@ -146,6 +146,86 @@ function isSimulationQuestion(question: string): boolean {
   return simulationTriggers.some(trigger => question.toLowerCase().includes(trigger));
 }
 
+// Detect ambiguous terms that need clarification
+interface ClarificationOption {
+  label: string;
+  description: string;
+  refinedQuestion: string;
+}
+
+interface AmbiguityCheck {
+  needsClarification: boolean;
+  ambiguousTerm?: string;
+  clarificationPrompt?: string;
+  options?: ClarificationOption[];
+}
+
+function detectAmbiguousTerms(question: string, moduleId: string): AmbiguityCheck {
+  const q = question.toLowerCase();
+  
+  // Ambiguous term mappings with clarification options
+  const ambiguousTerms: Record<string, { prompt: string; options: ClarificationOption[] }> = {
+    'seller': {
+      prompt: 'When you say "seller", do you mean:',
+      options: [
+        { label: 'Products/SKUs', description: 'Top performing products by sales', refinedQuestion: question.replace(/seller/gi, 'product') },
+        { label: 'Vendors/Suppliers', description: 'Suppliers by sales volume', refinedQuestion: question.replace(/seller/gi, 'supplier') },
+        { label: 'Stores', description: 'Store locations by revenue', refinedQuestion: question.replace(/seller/gi, 'store') }
+      ]
+    },
+    'performer': {
+      prompt: 'When you say "performer", what do you want to measure by:',
+      options: [
+        { label: 'Revenue', description: 'Total sales revenue generated', refinedQuestion: question + ' by revenue' },
+        { label: 'Margin', description: 'Profit margin contribution', refinedQuestion: question + ' by margin' },
+        { label: 'Units Sold', description: 'Volume of units sold', refinedQuestion: question + ' by units sold' },
+        { label: 'ROI', description: 'Return on investment', refinedQuestion: question + ' by ROI' }
+      ]
+    },
+    'best': {
+      prompt: 'What metric should I use to determine "best":',
+      options: [
+        { label: 'Revenue', description: 'Highest sales revenue', refinedQuestion: question + ' by revenue' },
+        { label: 'Margin', description: 'Highest profit margin', refinedQuestion: question + ' by margin' },
+        { label: 'Growth', description: 'Fastest growth rate', refinedQuestion: question + ' by growth' }
+      ]
+    },
+    'worst': {
+      prompt: 'What metric should I use to determine "worst":',
+      options: [
+        { label: 'Revenue', description: 'Lowest sales revenue', refinedQuestion: question + ' by revenue' },
+        { label: 'Margin', description: 'Lowest or negative margin', refinedQuestion: question + ' by margin' },
+        { label: 'Decline', description: 'Biggest decline in performance', refinedQuestion: question + ' by decline' }
+      ]
+    },
+    'performance': {
+      prompt: 'What aspect of performance are you interested in:',
+      options: [
+        { label: 'Sales Performance', description: 'Revenue and units sold', refinedQuestion: question.replace(/performance/gi, 'sales performance by revenue') },
+        { label: 'Margin Performance', description: 'Profitability metrics', refinedQuestion: question.replace(/performance/gi, 'margin performance') },
+        { label: 'Promotion Performance', description: 'ROI and lift from promotions', refinedQuestion: question.replace(/performance/gi, 'promotion performance by ROI') }
+      ]
+    }
+  };
+  
+  // Check for ambiguous terms only if question lacks specific metric context
+  const hasMetricContext = /\b(revenue|margin|roi|sales|units|lift|spend|profit|growth)\b/i.test(q);
+  
+  for (const [term, config] of Object.entries(ambiguousTerms)) {
+    // Only flag as ambiguous if the term exists AND there's no metric context
+    if (q.includes(term) && !hasMetricContext) {
+      return {
+        needsClarification: true,
+        ambiguousTerm: term,
+        clarificationPrompt: config.prompt,
+        options: config.options
+      };
+    }
+  }
+  
+  return { needsClarification: false };
+}
+
 // Detect if question spans multiple modules
 function detectCrossModuleQuestion(question: string): string[] {
   const moduleKeywords: Record<string, string[]> = {
@@ -274,6 +354,20 @@ serve(async (req) => {
 
   try {
     const { question, moduleId, selectedKPIs, timePeriod, crossModules, conversationHistory, conversationContext } = await req.json();
+    
+    // Check for ambiguous terms that need clarification FIRST
+    const ambiguityCheck = detectAmbiguousTerms(question, moduleId);
+    if (ambiguityCheck.needsClarification) {
+      console.log(`[${moduleId}] Ambiguous term detected: "${ambiguityCheck.ambiguousTerm}"`);
+      return new Response(JSON.stringify({
+        needsClarification: true,
+        clarificationPrompt: ambiguityCheck.clarificationPrompt,
+        options: ambiguityCheck.options,
+        originalQuestion: question
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
     // Detect time period from question text - override UI selection if question explicitly mentions time
     const detectedTimePeriod = detectTimePeriodFromQuestion(question);
