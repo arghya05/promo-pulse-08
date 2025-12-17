@@ -418,23 +418,13 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
     setIsLoading(true);
 
     try {
-      const conversationHistory = buildConversationHistory();
-      
+      // Use EXACT same parameters as Classic View to ensure consistent responses
       const { data, error } = await supabase.functions.invoke('analyze-module-question', {
         body: { 
           question: resolvedText,
           moduleId: module.id,
-          selectedKPIs: selectedKPIs,
-          timePeriod: selectedTimePeriod,
-          conversationHistory,
-          conversationContext: {
-            lastCategory: conversationContext.lastCategory,
-            lastProduct: conversationContext.lastProduct,
-            lastMetric: conversationContext.lastMetric,
-            lastTimePeriod: conversationContext.lastTimePeriod,
-            drillPath: conversationContext.drillPath,
-            drillLevel: drillContext?.level || conversationContext.currentDrillLevel
-          }
+          selectedKPIs: selectedKPIs.length > 0 ? selectedKPIs : undefined,
+          timePeriod: selectedTimePeriod
         }
       });
 
@@ -506,10 +496,19 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       // Generate drill-down questions
       const drillDownQuestions = generateDrillDownQuestions(data, module.id);
       
+      // Format content with bullet points to match Classic View display
+      const formatContent = () => {
+        if (data?.whatHappened?.length > 0) {
+          // Format as bullet points for clear display like Classic View
+          return data.whatHappened.map((item: string) => `• ${item}`).join('\n\n');
+        }
+        return data?.answer || 'I analyzed your question. Here are the insights based on the available data.';
+      };
+      
       const responseMessage: Message = {
         id: `response-${Date.now()}`,
         role: 'assistant',
-        content: data?.whatHappened?.join(' ') || data?.answer || 'I analyzed your question. Here are the insights based on the available data.',
+        content: formatContent(),
         timestamp: new Date(),
         data: {
           ...data,
