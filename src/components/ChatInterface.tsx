@@ -707,15 +707,28 @@ export default function ChatInterface({
     ];
     
     const hasExplicitKPI = explicitKPIs.some(kpi => questionLower.includes(kpi));
+    
+    // Entity-ambiguous terms should ALWAYS get clarification from the server, regardless of KPI
+    const entityAmbiguousTerms = ['seller', 'selling', 'moving', 'mover'];
+    const hasEntityAmbiguity = entityAmbiguousTerms.some(term => questionLower.includes(term));
+    const hasEntityContext = /\b(product|sku|vendor|supplier|store|brand|category)\b/i.test(questionLower);
+    
+    // If the question has entity ambiguity without explicit entity context, let server handle clarification
+    if (hasEntityAmbiguity && !hasEntityContext) {
+      console.log(`[Clarification] Allowing server to handle entity clarification for: "${question}"`);
+      return { needs: false }; // Let server handle this
+    }
+    
     if (hasExplicitKPI) {
       console.log(`[Clarification] Skipped - explicit KPI found in: "${question}"`);
       return { needs: false };
     }
     
     // Domain-specific implied KPIs - question structure implies the metric
+    // NOTE: "seller" patterns removed - entity clarification handled by server
     const impliedKPIPatterns = [
-      // Sales/Revenue implied
-      { pattern: /seller|selling|sold/, metric: 'revenue' },
+      // Sales/Revenue implied - seller removed to allow entity clarification
+      { pattern: /sold\b/, metric: 'revenue' },
       { pattern: /moving\s*(item|product|sku)?/, metric: 'velocity' },
       { pattern: /fast(est)?.*mov/, metric: 'velocity' },
       { pattern: /slow(est)?.*mov/, metric: 'velocity' },
