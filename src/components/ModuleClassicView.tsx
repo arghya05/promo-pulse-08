@@ -38,6 +38,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
   LineChart,
   Line,
@@ -240,18 +241,33 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
             </PieChart>
           </ResponsiveContainer>
         );
-      default:
+      default: {
+        // Dynamically detect data keys for bars - support multi-bar charts
+        const sampleItem = data[0] || {};
+        const barKeys = Object.keys(sampleItem).filter(k => 
+          k !== 'name' && 
+          typeof sampleItem[k] === 'number' && 
+          !['id', 'index'].includes(k)
+        );
+        
+        // If no valid numeric keys found, or only 'value' exists, use single bar
+        const primaryKey = barKeys.includes('value') ? 'value' : 
+                          barKeys.includes('revenue') ? 'revenue' : 
+                          barKeys[0] || 'value';
+        
         return (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data} onClick={(e) => e?.activePayload?.[0] && handleChartClick(e.activePayload[0].payload)}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis dataKey="name" className="text-xs" />
-              <YAxis className="text-xs" />
-              <Tooltip />
-              <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} className="cursor-pointer" />
+              <YAxis className="text-xs" tickFormatter={(v) => v >= 1000 ? `$${(v/1000).toFixed(1)}K` : `$${v}`} />
+              <Tooltip formatter={(value: number) => value >= 1000 ? `$${(value/1000).toFixed(1)}K` : `$${value.toFixed(2)}`} />
+              <Legend />
+              <Bar dataKey={primaryKey} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} className="cursor-pointer" name={primaryKey.charAt(0).toUpperCase() + primaryKey.slice(1)} />
             </BarChart>
           </ResponsiveContainer>
         );
+      }
     }
   };
 
