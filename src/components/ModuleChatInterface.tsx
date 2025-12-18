@@ -763,10 +763,10 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                     </div>
                   )}
                   <div
-                    className={`rounded-lg p-3 text-left break-words ${
+                    className={`rounded-lg p-3 text-left ${
                       message.role === 'user'
                         ? 'bg-primary text-primary-foreground max-w-[85%]'
-                        : 'bg-muted'
+                        : 'bg-muted flex-1 min-w-0'
                     }`}
                   >
                       {message.isLoading ? (
