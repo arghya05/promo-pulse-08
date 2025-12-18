@@ -2695,6 +2695,146 @@ ${Object.entries(categoryMetrics).map(([cat, data]) => {
       }
     }
 
+    // ============ SHARED ENRICHMENT: Blend new data tables into ALL module contexts ============
+    // This ensures existing questions can leverage new KPIs and data across all modules
+    
+    // KPI Measures enrichment (YOY metrics, margin analysis, turnover)
+    const kpiEnrichment = kpiMeasures.length > 0 ? (() => {
+      const recentKpis = kpiMeasures.slice(0, 50);
+      const avgNetSales = recentKpis.reduce((s, k: any) => s + Number(k.net_sales || 0), 0) / (recentKpis.length || 1);
+      const avgGrossMargin = recentKpis.reduce((s, k: any) => s + Number(k.gross_margin_pct || 0), 0) / (recentKpis.length || 1);
+      const avgYoyGrowth = recentKpis.filter((k: any) => k.yoy_net_sales_growth_pct).reduce((s, k: any) => s + Number(k.yoy_net_sales_growth_pct || 0), 0) / (recentKpis.filter((k: any) => k.yoy_net_sales_growth_pct).length || 1);
+      const avgInventoryTurn = recentKpis.filter((k: any) => k.inventory_turn).reduce((s, k: any) => s + Number(k.inventory_turn || 0), 0) / (recentKpis.filter((k: any) => k.inventory_turn).length || 1);
+      const avgReturnRate = recentKpis.filter((k: any) => k.return_rate_pct).reduce((s, k: any) => s + Number(k.return_rate_pct || 0), 0) / (recentKpis.filter((k: any) => k.return_rate_pct).length || 1);
+      
+      return `
+ENTERPRISE KPI MEASURES (FROM kpi_measures TABLE):
+- Avg Net Sales: $${avgNetSales.toFixed(0)}
+- Avg Gross Margin %: ${avgGrossMargin.toFixed(1)}%
+- YOY Net Sales Growth: ${avgYoyGrowth.toFixed(1)}%
+- Avg Inventory Turnover: ${avgInventoryTurn.toFixed(2)}x
+- Avg Return Rate: ${avgReturnRate.toFixed(1)}%
+- Avg Basket Size: $${(recentKpis.reduce((s, k: any) => s + Number(k.avg_basket_size || 0), 0) / (recentKpis.length || 1)).toFixed(2)}
+- Avg Transaction Value: $${(recentKpis.reduce((s, k: any) => s + Number(k.avg_transaction_value || 0), 0) / (recentKpis.length || 1)).toFixed(2)}`;
+    })() : '';
+    
+    // Returns analysis enrichment
+    const returnsEnrichment = returns.length > 0 ? (() => {
+      const returnReasons: Record<string, number> = {};
+      const returnTypes: Record<string, number> = {};
+      let totalRefunds = 0;
+      returns.forEach((r: any) => {
+        returnReasons[r.return_reason] = (returnReasons[r.return_reason] || 0) + 1;
+        returnTypes[r.return_type] = (returnTypes[r.return_type] || 0) + 1;
+        totalRefunds += Number(r.refund_amount || 0);
+      });
+      const topReasons = Object.entries(returnReasons).sort((a, b) => b[1] - a[1]).slice(0, 5);
+      
+      return `
+RETURNS ANALYSIS (FROM returns TABLE):
+- Total Returns: ${returns.length}
+- Total Refund Amount: $${totalRefunds.toFixed(0)}
+- Avg Refund: $${(totalRefunds / returns.length).toFixed(2)}
+- Top Return Reasons: ${topReasons.map(([r, c]) => `${r} (${c})`).join(', ')}
+- Return Types: ${Object.entries(returnTypes).map(([t, c]) => `${t}: ${c}`).join(', ')}`;
+    })() : '';
+    
+    // Markdowns enrichment
+    const markdownsEnrichment = markdowns.length > 0 ? (() => {
+      const activeMarkdowns = markdowns.filter((m: any) => m.status === 'Active');
+      const avgMarkdownPct = markdowns.reduce((s, m: any) => s + Number(m.markdown_percent || 0), 0) / (markdowns.length || 1);
+      const totalMarkdownValue = markdowns.reduce((s, m: any) => s + (Number(m.original_price || 0) - Number(m.markdown_price || 0)), 0);
+      const reasonBreakdown: Record<string, number> = {};
+      markdowns.forEach((m: any) => {
+        reasonBreakdown[m.markdown_reason] = (reasonBreakdown[m.markdown_reason] || 0) + 1;
+      });
+      
+      return `
+MARKDOWN ANALYSIS (FROM markdowns TABLE):
+- Total Markdowns: ${markdowns.length} (${activeMarkdowns.length} active)
+- Avg Markdown %: ${avgMarkdownPct.toFixed(1)}%
+- Total Markdown Value: $${totalMarkdownValue.toFixed(0)}
+- Reasons: ${Object.entries(reasonBreakdown).map(([r, c]) => `${r} (${c})`).join(', ')}`;
+    })() : '';
+    
+    // Discounts enrichment
+    const discountsEnrichment = discounts.length > 0 ? (() => {
+      const activeDiscounts = discounts.filter((d: any) => d.status === 'Active');
+      const totalUsage = discounts.reduce((s, d: any) => s + Number(d.usage_count || 0), 0);
+      
+      return `
+DISCOUNT CODES (FROM discounts TABLE):
+- Total Discount Codes: ${discounts.length} (${activeDiscounts.length} active)
+- Total Usage Count: ${totalUsage}
+- Discount Types: ${[...new Set(discounts.map((d: any) => d.discount_type))].join(', ')}
+- Top Discounts: ${discounts.slice(0, 3).map((d: any) => `${d.discount_name} (${d.discount_percent || d.discount_value}${d.discount_percent ? '%' : '$'} off, used ${d.usage_count}x)`).join('; ')}`;
+    })() : '';
+    
+    // Stock Age enrichment
+    const stockAgeEnrichment = stockAge.length > 0 ? (() => {
+      const ageBands: Record<string, { count: number; value: number }> = {};
+      stockAge.forEach((s: any) => {
+        if (!ageBands[s.stock_age_band]) ageBands[s.stock_age_band] = { count: 0, value: 0 };
+        ageBands[s.stock_age_band].count += Number(s.quantity || 0);
+        ageBands[s.stock_age_band].value += Number(s.value_at_cost || 0);
+      });
+      
+      return `
+STOCK AGE ANALYSIS (FROM stock_age_tracking TABLE):
+${Object.entries(ageBands).map(([band, data]) => `- ${band}: ${data.count} units, $${data.value.toFixed(0)} at cost`).join('\n')}`;
+    })() : '';
+    
+    // Vendors & Purchase Orders enrichment
+    const vendorsEnrichment = vendors.length > 0 || purchaseOrders.length > 0 ? (() => {
+      const pendingPOs = purchaseOrders.filter((po: any) => po.status === 'Pending');
+      const totalPOValue = purchaseOrders.reduce((s, po: any) => s + Number(po.total_amount || 0), 0);
+      
+      return `
+VENDOR & PURCHASE ORDER DATA:
+- Vendors: ${vendors.length}
+- Purchase Orders: ${purchaseOrders.length} (${pendingPOs.length} pending)
+- Total PO Value: $${totalPOValue.toFixed(0)}
+- Top Vendors: ${vendors.slice(0, 3).map((v: any) => `${v.vendor_name} (${v.rating || 'N/A'} rating)`).join(', ')}`;
+    })() : '';
+    
+    // Holidays enrichment
+    const holidaysEnrichment = holidays.length > 0 ? `
+HOLIDAY CALENDAR:
+- Upcoming/Recent Holidays: ${holidays.slice(0, 5).map((h: any) => `${h.holiday_name} (${h.holiday_date})`).join(', ')}` : '';
+    
+    // Employees enrichment
+    const employeesEnrichment = employees.length > 0 ? (() => {
+      const deptBreakdown: Record<string, number> = {};
+      employees.forEach((e: any) => {
+        deptBreakdown[e.department || 'Other'] = (deptBreakdown[e.department || 'Other'] || 0) + 1;
+      });
+      
+      return `
+EMPLOYEE DATA:
+- Total Employees: ${employees.length}
+- By Department: ${Object.entries(deptBreakdown).map(([d, c]) => `${d}: ${c}`).join(', ')}`;
+    })() : '';
+    
+    // Price Bands enrichment
+    const priceBandsEnrichment = priceBands.length > 0 ? `
+PRICE BANDS:
+${priceBands.slice(0, 5).map((pb: any) => `- ${pb.price_band} (${pb.price_department}): $${pb.price_point_low}-$${pb.price_point_high}`).join('\n')}` : '';
+    
+    // Append all enrichments to dataContext
+    dataContext += `
+
+=== ADDITIONAL ENTERPRISE DATA (FOR ENRICHED ANALYSIS) ===
+${kpiEnrichment}
+${returnsEnrichment}
+${markdownsEnrichment}
+${discountsEnrichment}
+${stockAgeEnrichment}
+${vendorsEnrichment}
+${holidaysEnrichment}
+${employeesEnrichment}
+${priceBandsEnrichment}
+`;
+
     // Select appropriate system prompt
     let systemPrompt = moduleContexts[moduleId] || moduleContexts.pricing;
     if (isCrossModule) {
