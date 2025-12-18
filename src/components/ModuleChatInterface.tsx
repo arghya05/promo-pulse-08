@@ -750,12 +750,13 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
             </div>
           )}
           
-          <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3">
-            <div className="space-y-4">
+          <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto p-3" style={{ overflowX: 'hidden' }}>
+            <div className="space-y-4 w-full">
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex gap-2 w-full ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  style={{ minWidth: 0 }}
                 >
                   {message.role === 'assistant' && (
                     <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit flex-shrink-0`}>
@@ -763,16 +764,17 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                     </div>
                   )}
                   <div
-                    className={`rounded-lg p-3 text-left ${
+                    className={`rounded-lg p-3 text-left min-w-0 ${
                       message.role === 'user'
-                        ? 'bg-primary text-primary-foreground max-w-[75%] flex-shrink-0'
-                        : 'bg-muted'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted flex-1'
                     }`}
                     style={{ 
                       wordWrap: 'break-word', 
-                      overflowWrap: 'break-word', 
+                      overflowWrap: 'anywhere', 
                       wordBreak: 'break-word',
-                      maxWidth: message.role === 'assistant' ? 'calc(100% - 48px)' : '75%'
+                      whiteSpace: 'pre-wrap',
+                      maxWidth: message.role === 'user' ? '75%' : '100%'
                     }}
                   >
                       {message.isLoading ? (
