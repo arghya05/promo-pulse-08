@@ -113,7 +113,7 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
             )}
           >
             <InsightIcon type={type} />
-            <p className="text-sm leading-relaxed break-words">
+            <p className="text-sm leading-relaxed flex-1 min-w-0 break-words">
               {highlightMetrics(insight)}
             </p>
           </div>
