@@ -1453,18 +1453,22 @@ export default function ChatInterface({
               </div>
 
               {/* Message Content */}
-              <div className={`flex flex-col gap-2 flex-1 min-w-0 ${message.type === 'user' ? 'items-end max-w-[85%]' : 'items-start'}`}>
+              <div 
+                className={`flex flex-col gap-2 ${message.type === 'user' ? 'items-end max-w-[85%]' : 'items-start flex-1'}`}
+                style={{ minWidth: 0 }}
+              >
                 <div 
-                  className={`rounded-2xl px-4 py-3 w-full ${
+                  className={`rounded-2xl px-4 py-3 ${
                     message.type === 'user'
                       ? 'bg-primary text-primary-foreground rounded-br-md'
                       : message.isError
-                      ? 'bg-destructive/10 text-foreground border border-destructive/30 rounded-bl-md'
-                      : 'bg-secondary/50 text-foreground rounded-bl-md'
+                      ? 'bg-destructive/10 text-foreground border border-destructive/30 rounded-bl-md w-full'
+                      : 'bg-secondary/50 text-foreground rounded-bl-md w-full'
                   }`}
+                  style={{ maxWidth: '100%' }}
                 >
                   {message.type === 'user' || message.isError ? (
-                    <p className="text-sm leading-relaxed break-words">{message.content}</p>
+                    <p className="text-sm leading-relaxed" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', wordBreak: 'break-word' }}>{message.content}</p>
                   ) : (
                     <FormattedInsight content={message.content} />
                   )}
