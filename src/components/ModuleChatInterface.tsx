@@ -750,32 +750,31 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
             </div>
           )}
           
-          <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-auto">
-            <ScrollArea className="h-full" style={{ height: 'calc(100vh - 280px)' }}>
-              <div className="space-y-4 p-3">
-                {messages.map((message) => (
+          <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3">
+            <div className="space-y-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  {message.role === 'assistant' && (
+                    <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit flex-shrink-0`}>
+                      <Icon className={`h-4 w-4 ${module.color}`} />
+                    </div>
+                  )}
                   <div
-                    key={message.id}
-                    className={`flex gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`rounded-lg p-3 text-left ${
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground max-w-[75%] flex-shrink-0'
+                        : 'bg-muted'
+                    }`}
+                    style={{ 
+                      wordWrap: 'break-word', 
+                      overflowWrap: 'break-word', 
+                      wordBreak: 'break-word',
+                      maxWidth: message.role === 'assistant' ? 'calc(100% - 48px)' : '75%'
+                    }}
                   >
-                    {message.role === 'assistant' && (
-                      <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit flex-shrink-0`}>
-                        <Icon className={`h-4 w-4 ${module.color}`} />
-                      </div>
-                    )}
-                    <div
-                      className={`rounded-lg p-3 text-left ${
-                        message.role === 'user'
-                          ? 'bg-primary text-primary-foreground max-w-[75%] flex-shrink-0'
-                          : 'bg-muted flex-1'
-                      }`}
-                      style={{ 
-                        wordWrap: 'break-word', 
-                        overflowWrap: 'break-word', 
-                        wordBreak: 'break-word',
-                        maxWidth: message.role === 'assistant' ? '100%' : undefined
-                      }}
-                    >
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -921,7 +920,6 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                 ))}
                 <div ref={messagesEndRef} />
               </div>
-            </ScrollArea>
           </div>
 
           {/* Input Area */}
