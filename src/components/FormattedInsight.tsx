@@ -80,7 +80,7 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
   if (!hasBullets) {
     // Single paragraph - format as insight card
     return (
-      <div className={cn("text-sm leading-relaxed", className)}>
+      <div className={cn("text-sm leading-relaxed break-words", className)}>
         {highlightMetrics(content)}
       </div>
     );
@@ -110,7 +110,7 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
             )}
           >
             <InsightIcon type={type} />
-            <p className="text-sm leading-relaxed flex-1">
+            <p className="text-sm leading-relaxed flex-1 break-words">
               {highlightMetrics(insight)}
             </p>
           </div>
