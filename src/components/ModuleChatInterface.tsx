@@ -750,13 +750,12 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
             </div>
           )}
           
-          <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto p-3" style={{ overflowX: 'hidden' }}>
-            <div className="space-y-4 w-full">
+          <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto p-3">
+            <div className="space-y-4">
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-2 w-full ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  style={{ minWidth: 0 }}
+                  className={`flex gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {message.role === 'assistant' && (
                     <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit flex-shrink-0`}>
@@ -764,17 +763,16 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                     </div>
                   )}
                   <div
-                    className={`rounded-lg p-3 text-left min-w-0 ${
+                    className={`rounded-lg p-3 text-left ${
                       message.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted flex-1'
+                        ? 'bg-primary text-primary-foreground max-w-[85%]'
+                        : 'bg-muted'
                     }`}
                     style={{ 
                       wordWrap: 'break-word', 
-                      overflowWrap: 'anywhere', 
+                      overflowWrap: 'break-word', 
                       wordBreak: 'break-word',
-                      whiteSpace: 'pre-wrap',
-                      maxWidth: message.role === 'user' ? '75%' : '100%'
+                      whiteSpace: 'normal'
                     }}
                   >
                       {message.isLoading ? (
