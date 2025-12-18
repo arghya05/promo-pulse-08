@@ -766,8 +766,9 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                     className={`rounded-lg p-3 text-left ${
                       message.role === 'user'
                         ? 'bg-primary text-primary-foreground max-w-[85%]'
-                        : 'bg-muted flex-1 min-w-0'
+                        : 'bg-muted flex-1'
                     }`}
+                    style={{ minWidth: 0, maxWidth: '100%' }}
                   >
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
