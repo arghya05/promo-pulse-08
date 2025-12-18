@@ -177,7 +177,9 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
             categories: personaConfig[persona].categories,
             selectedKPIs: selectedKPIs.length > 0 ? selectedKPIs : null,
             timePeriod: timePeriod !== 'custom' ? timePeriod : null,
-            moduleId: moduleId
+            moduleId: moduleId,
+            // Pass conversation history for contextual follow-ups (e.g., "why did it work?")
+            conversationHistory: conversationHistory.slice(-6),
           }),
         }
       );
@@ -243,7 +245,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
       // Log what we're sending for debugging
       console.log('Chat sending question with KPIs:', { question: questionText, kpis });
       
-      // Use EXACT same parameters as handleAsk to ensure identical cache keys and responses
+      // Pass SAME parameters as handleAsk with conversation history for contextual follow-ups
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${edgeFunctionName}`,
         {
@@ -257,8 +259,9 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
             categories: personaConfig[persona].categories,
             selectedKPIs: kpis.length > 0 ? kpis : null,
             timePeriod: timePeriod !== 'custom' ? timePeriod : null,
-            moduleId: moduleId
-            // NOTE: Removed conversationHistory and conversationContext to match handleAsk
+            moduleId: moduleId,
+            // Pass conversation history for contextual follow-ups (e.g., "why did that campaign work?")
+            conversationHistory: conversationHistory.slice(-6),
           }),
         }
       );
