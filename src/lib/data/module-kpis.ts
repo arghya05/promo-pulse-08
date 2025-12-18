@@ -13,6 +13,10 @@ export const sharedKPIs: ModuleKPI[] = [
   { id: 'margin_percent', name: 'Margin %', category: 'financial', dataSource: 'transactions', format: 'percent' },
   { id: 'units_sold', name: 'Units Sold', category: 'sales', dataSource: 'transactions', format: 'number' },
   { id: 'avg_transaction_value', name: 'Avg Transaction Value', category: 'sales', dataSource: 'transactions', format: 'currency' },
+  // Critical Merchandising KPIs - added to all modules
+  { id: 'sell_through_rate', name: 'Sell-Through Rate', category: 'inventory', dataSource: 'supplier_orders', format: 'percent' },
+  { id: 'units_per_transaction', name: 'Units per Transaction', category: 'sales', dataSource: 'transactions', format: 'ratio' },
+  { id: 'basket_penetration', name: 'Basket Penetration', category: 'customer', dataSource: 'transactions', format: 'percent' },
 ];
 
 // Pricing-specific KPIs
@@ -25,6 +29,14 @@ export const pricingKPIs: ModuleKPI[] = [
   { id: 'price_variance', name: 'Price Variance', category: 'pricing', dataSource: 'price_change_history', format: 'percent' },
   { id: 'markdown_rate', name: 'Markdown Rate', category: 'pricing', dataSource: 'price_change_history', format: 'percent' },
   { id: 'price_change_frequency', name: 'Price Change Frequency', category: 'pricing', dataSource: 'price_change_history', format: 'number' },
+  // Additional critical pricing KPIs
+  { id: 'net_price_realization', name: 'Net Price Realization', category: 'pricing', dataSource: 'transactions', format: 'percent' },
+  { id: 'cross_elasticity', name: 'Cross-Price Elasticity', category: 'pricing', dataSource: 'products', format: 'ratio' },
+  { id: 'average_discount_percent', name: 'Avg Discount %', category: 'pricing', dataSource: 'transactions', format: 'percent' },
+  { id: 'price_per_unit', name: 'Price per Unit', category: 'pricing', dataSource: 'transactions', format: 'currency' },
+  { id: 'price_index_vs_market', name: 'Price Index vs Market', category: 'pricing', dataSource: 'competitor_prices', format: 'ratio' },
+  { id: 'promoted_price_index', name: 'Promoted vs Regular Price Index', category: 'pricing', dataSource: 'promotions', format: 'ratio' },
+  { id: 'margin_erosion', name: 'Margin Erosion', category: 'pricing', dataSource: 'price_change_history', format: 'percent' },
 ];
 
 // Assortment-specific KPIs
@@ -38,6 +50,15 @@ export const assortmentKPIs: ModuleKPI[] = [
   { id: 'assortment_efficiency', name: 'Assortment Efficiency', category: 'assortment', dataSource: 'products', format: 'percent' },
   { id: 'category_growth', name: 'Category Growth', category: 'assortment', dataSource: 'transactions', format: 'percent' },
   { id: 'private_label_share', name: 'Private Label Share', category: 'assortment', dataSource: 'transactions', format: 'percent' },
+  // Additional critical assortment KPIs
+  { id: 'sku_productivity', name: 'SKU Productivity', category: 'assortment', dataSource: 'transactions', format: 'currency' },
+  { id: 'dead_stock_percent', name: 'Dead Stock %', category: 'assortment', dataSource: 'inventory_levels', format: 'percent' },
+  { id: 'sku_rationalization_score', name: 'SKU Rationalization Score', category: 'assortment', dataSource: 'products', format: 'ratio' },
+  { id: 'category_role_index', name: 'Category Role Index', category: 'assortment', dataSource: 'transactions', format: 'ratio' },
+  { id: 'variety_index', name: 'Variety Index', category: 'assortment', dataSource: 'products', format: 'ratio' },
+  { id: 'attribute_performance', name: 'Attribute Performance', category: 'assortment', dataSource: 'products', format: 'ratio' },
+  { id: 'new_item_success_rate', name: 'New Item Success Rate', category: 'assortment', dataSource: 'products', format: 'percent' },
+  { id: 'delisting_rate', name: 'Delisting Rate', category: 'assortment', dataSource: 'products', format: 'percent' },
 ];
 
 // Demand Forecasting-specific KPIs
@@ -52,6 +73,17 @@ export const demandKPIs: ModuleKPI[] = [
   { id: 'inventory_turnover', name: 'Inventory Turnover', category: 'inventory', dataSource: 'inventory_levels', format: 'ratio' },
   { id: 'fill_rate', name: 'Fill Rate', category: 'inventory', dataSource: 'inventory_levels', format: 'percent' },
   { id: 'demand_variability', name: 'Demand Variability', category: 'forecasting', dataSource: 'transactions', format: 'percent' },
+  // Additional critical demand/replenishment KPIs
+  { id: 'weeks_of_supply', name: 'Weeks of Supply', category: 'inventory', dataSource: 'inventory_levels', format: 'number' },
+  { id: 'safety_stock_level', name: 'Safety Stock Level', category: 'inventory', dataSource: 'inventory_levels', format: 'number' },
+  { id: 'reorder_point', name: 'Reorder Point', category: 'inventory', dataSource: 'inventory_levels', format: 'number' },
+  { id: 'service_level', name: 'Service Level', category: 'inventory', dataSource: 'inventory_levels', format: 'percent' },
+  { id: 'lost_sales', name: 'Lost Sales', category: 'inventory', dataSource: 'inventory_levels', format: 'currency' },
+  { id: 'inventory_accuracy', name: 'Inventory Accuracy', category: 'inventory', dataSource: 'inventory_levels', format: 'percent' },
+  { id: 'demand_sensing_accuracy', name: 'Demand Sensing Accuracy', category: 'forecasting', dataSource: 'demand_forecasts', format: 'percent' },
+  { id: 'forecast_value_add', name: 'Forecast Value Add (FVA)', category: 'forecasting', dataSource: 'demand_forecasts', format: 'percent' },
+  { id: 'weighted_mape', name: 'Weighted MAPE', category: 'forecasting', dataSource: 'forecast_accuracy_tracking', format: 'percent' },
+  { id: 'rmse', name: 'RMSE', category: 'forecasting', dataSource: 'forecast_accuracy_tracking', format: 'number' },
 ];
 
 // Supply Chain-specific KPIs
@@ -66,6 +98,17 @@ export const supplyChainKPIs: ModuleKPI[] = [
   { id: 'transport_cost_per_unit', name: 'Transport Cost/Unit', category: 'cost', dataSource: 'shipping_routes', format: 'currency' },
   { id: 'order_cycle_time', name: 'Order Cycle Time', category: 'logistics', dataSource: 'supplier_orders', format: 'number' },
   { id: 'perfect_order_rate', name: 'Perfect Order Rate', category: 'logistics', dataSource: 'supplier_orders', format: 'percent' },
+  // Additional critical supply chain KPIs
+  { id: 'inbound_fill_rate', name: 'Inbound Fill Rate', category: 'supplier', dataSource: 'supplier_orders', format: 'percent' },
+  { id: 'receiving_accuracy', name: 'Receiving Accuracy', category: 'logistics', dataSource: 'supplier_orders', format: 'percent' },
+  { id: 'vendor_scorecard', name: 'Vendor Scorecard', category: 'supplier', dataSource: 'suppliers', format: 'ratio' },
+  { id: 'cost_per_case', name: 'Cost per Case', category: 'cost', dataSource: 'supplier_orders', format: 'currency' },
+  { id: 'carbon_footprint', name: 'Carbon Footprint (kg CO2)', category: 'sustainability', dataSource: 'shipping_routes', format: 'number' },
+  { id: 'order_accuracy', name: 'Order Accuracy', category: 'logistics', dataSource: 'supplier_orders', format: 'percent' },
+  { id: 'backorder_rate', name: 'Backorder Rate', category: 'logistics', dataSource: 'supplier_orders', format: 'percent' },
+  { id: 'supplier_defect_rate', name: 'Supplier Defect Rate', category: 'supplier', dataSource: 'supplier_orders', format: 'percent' },
+  { id: 'days_payable_outstanding', name: 'Days Payable Outstanding', category: 'financial', dataSource: 'suppliers', format: 'number' },
+  { id: 'total_cost_of_ownership', name: 'Total Cost of Ownership', category: 'cost', dataSource: 'supplier_orders', format: 'currency' },
 ];
 
 // Space Planning-specific KPIs
@@ -88,6 +131,13 @@ export const spaceKPIs: ModuleKPI[] = [
   { id: 'shelf_replenishment_frequency', name: 'Replenishment Frequency', category: 'space', dataSource: 'inventory_levels', format: 'number' },
   { id: 'space_to_sales_index', name: 'Space-to-Sales Index', category: 'space', dataSource: 'shelf_allocations', format: 'ratio' },
   { id: 'vertical_blocking_score', name: 'Blocking Score', category: 'space', dataSource: 'planograms', format: 'ratio' },
+  // Additional critical space planning KPIs
+  { id: 'gmrof', name: 'GMROF (Gross Margin Return on Footage)', category: 'space', dataSource: 'shelf_allocations', format: 'ratio' },
+  { id: 'share_of_shelf', name: 'Share of Shelf', category: 'space', dataSource: 'shelf_allocations', format: 'percent' },
+  { id: 'adjacency_compliance', name: 'Adjacency Compliance', category: 'space', dataSource: 'planograms', format: 'percent' },
+  { id: 'hot_spot_conversion', name: 'Hot Spot Conversion', category: 'space', dataSource: 'store_performance', format: 'percent' },
+  { id: 'cold_zone_performance', name: 'Cold Zone Performance', category: 'space', dataSource: 'store_performance', format: 'percent' },
+  { id: 'promo_display_roi', name: 'Promo Display ROI', category: 'space', dataSource: 'promotions', format: 'ratio' },
 ];
 
 // Promotion-specific KPIs (existing module)
@@ -100,6 +150,16 @@ export const promotionKPIs: ModuleKPI[] = [
   { id: 'redemption_rate', name: 'Redemption Rate', category: 'promotion', dataSource: 'customer_journey', format: 'percent' },
   { id: 'cannibalization', name: 'Cannibalization %', category: 'promotion', dataSource: 'transactions', format: 'percent' },
   { id: 'halo_effect', name: 'Halo Effect', category: 'promotion', dataSource: 'transactions', format: 'percent' },
+  // Additional critical promotion KPIs
+  { id: 'promo_intensity', name: 'Promo Intensity Index', category: 'promotion', dataSource: 'promotions', format: 'ratio' },
+  { id: 'trade_spend_percent', name: 'Trade Spend % of Sales', category: 'promotion', dataSource: 'promotions', format: 'percent' },
+  { id: 'incremental_units', name: 'Incremental Units', category: 'promotion', dataSource: 'transactions', format: 'number' },
+  { id: 'base_vs_incremental', name: 'Base vs Incremental Sales', category: 'promotion', dataSource: 'transactions', format: 'ratio' },
+  { id: 'promo_frequency', name: 'Promo Frequency', category: 'promotion', dataSource: 'promotions', format: 'number' },
+  { id: 'depth_of_discount', name: 'Depth of Discount', category: 'promotion', dataSource: 'promotions', format: 'percent' },
+  { id: 'forward_buying_index', name: 'Forward Buying Index', category: 'promotion', dataSource: 'transactions', format: 'ratio' },
+  { id: 'markdown_efficiency', name: 'Markdown Efficiency', category: 'promotion', dataSource: 'promotions', format: 'percent' },
+  { id: 'promo_attach_rate', name: 'Promo Attach Rate', category: 'promotion', dataSource: 'transactions', format: 'percent' },
 ];
 
 // Executive Strategic KPIs - cross-functional
@@ -171,6 +231,13 @@ export const executiveKPIs: ModuleKPI[] = [
   { id: 'customer_retention_rate', name: 'Customer Retention Rate', category: 'customer', dataSource: 'customers', format: 'percent' },
   { id: 'market_share', name: 'Market Share %', category: 'competitive', dataSource: 'competitor_data', format: 'percent' },
   { id: 'share_of_wallet', name: 'Share of Wallet', category: 'customer', dataSource: 'customers', format: 'percent' },
+  
+  // Additional Executive KPIs for merchandising
+  { id: 'fresh_waste_percent', name: 'Fresh Waste %', category: 'operations', dataSource: 'inventory_levels', format: 'percent' },
+  { id: 'open_to_buy', name: 'Open-to-Buy', category: 'financial', dataSource: 'supplier_orders', format: 'currency' },
+  { id: 'total_inventory_value', name: 'Total Inventory Value', category: 'inventory', dataSource: 'inventory_levels', format: 'currency' },
+  { id: 'category_contribution', name: 'Category Contribution', category: 'financial', dataSource: 'transactions', format: 'percent' },
+  { id: 'vendor_fill_rate', name: 'Vendor Fill Rate', category: 'supplier', dataSource: 'supplier_orders', format: 'percent' },
 ];
 
 export const getKPIsByModule = (moduleId: string): ModuleKPI[] => {
