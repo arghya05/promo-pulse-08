@@ -3082,7 +3082,9 @@ When the user asks follow-up questions like "why did it work", "give me recommen
     };
 
     // Calculate actual KPI values from database for verification
-    const calculatedKPIs = calculateActualKPIs(moduleId, transactions, products, stores, selectedKPIs || []);
+    // Pass category filter when analyzing a specific category
+    const categoryFilter = (hierarchyAnalysis.level === 'category' && hierarchyAnalysis.entityName) ? hierarchyAnalysis.entityName : undefined;
+    const calculatedKPIs = calculateActualKPIs(moduleId, transactions, products, stores, selectedKPIs || [], categoryFilter);
     console.log(`[${moduleId}] Calculated KPIs:`, JSON.stringify(calculatedKPIs));
 
     // Verify and clean response to prevent hallucination, injecting calculated KPIs
@@ -3179,21 +3181,41 @@ function generateModuleFallback(moduleId: string): any {
 }
 
 // Calculate actual KPI values from database data
-function calculateActualKPIs(moduleId: string, transactions: any[], products: any[], stores: any[], selectedKPIs: string[]): Record<string, any> {
+// categoryFilter: if set, filter data to only this category (e.g., "Beverages")
+function calculateActualKPIs(moduleId: string, transactions: any[], products: any[], stores: any[], selectedKPIs: string[], categoryFilter?: string): Record<string, any> {
   const calculated: Record<string, any> = {};
   
-  const totalRevenue = transactions.reduce((sum, t) => sum + Number(t.total_amount || 0), 0);
-  const totalUnits = transactions.reduce((sum, t) => sum + Number(t.quantity || 0), 0);
-  const totalTransactions = transactions.length;
-  const totalDiscount = transactions.reduce((sum, t) => sum + Number(t.discount_amount || 0), 0);
-  
-  // Create product lookup for margin calculation
+  // Create product lookup for filtering
   const productLookup: Record<string, any> = {};
   products.forEach(p => { productLookup[p.product_sku] = p; });
   
+  // Get products and transactions filtered by category if specified
+  let filteredProducts = products;
+  let filteredTransactions = transactions;
+  
+  if (categoryFilter) {
+    const categoryLower = categoryFilter.toLowerCase();
+    filteredProducts = products.filter(p => 
+      p.category?.toLowerCase() === categoryLower
+    );
+    
+    const filteredSKUs = new Set(filteredProducts.map(p => p.product_sku));
+    filteredTransactions = transactions.filter(t => 
+      filteredSKUs.has(t.product_sku) || 
+      productLookup[t.product_sku]?.category?.toLowerCase() === categoryLower
+    );
+    
+    console.log(`[ChartData] Filtering by category "${categoryFilter}": ${filteredProducts.length} products, ${filteredTransactions.length} transactions`);
+  }
+  
+  const totalRevenue = filteredTransactions.reduce((sum, t) => sum + Number(t.total_amount || 0), 0);
+  const totalUnits = filteredTransactions.reduce((sum, t) => sum + Number(t.quantity || 0), 0);
+  const totalTransactions = filteredTransactions.length;
+  const totalDiscount = filteredTransactions.reduce((sum, t) => sum + Number(t.discount_amount || 0), 0);
+  
   // Calculate total cost and margin
   let totalCost = 0;
-  transactions.forEach(t => {
+  filteredTransactions.forEach(t => {
     const product = productLookup[t.product_sku];
     if (product?.cost) {
       totalCost += Number(product.cost) * Number(t.quantity || 0);
@@ -3217,14 +3239,14 @@ function calculateActualKPIs(moduleId: string, transactions: any[], products: an
   
   // Module-specific KPIs
   if (moduleId === 'pricing' || moduleId === 'executive') {
-    const avgMarginPct = products.reduce((sum, p) => sum + Number(p.margin_percent || 0), 0) / (products.length || 1);
-    const avgElasticity = products.filter(p => p.price_elasticity).reduce((sum, p) => sum + Number(p.price_elasticity || 0), 0) / (products.filter(p => p.price_elasticity).length || 1);
+    const avgMarginPct = filteredProducts.reduce((sum, p) => sum + Number(p.margin_percent || 0), 0) / (filteredProducts.length || 1);
+    const avgElasticity = filteredProducts.filter(p => p.price_elasticity).reduce((sum, p) => sum + Number(p.price_elasticity || 0), 0) / (filteredProducts.filter(p => p.price_elasticity).length || 1);
     calculated.avg_margin_pct = `${avgMarginPct.toFixed(1)}%`;
     calculated.avg_elasticity = avgElasticity.toFixed(2);
   }
   
   // Calculate ROI if promotional data available
-  const promoTransactions = transactions.filter(t => t.promotion_id);
+  const promoTransactions = filteredTransactions.filter(t => t.promotion_id);
   if (promoTransactions.length > 0) {
     const promoRevenue = promoTransactions.reduce((sum, t) => sum + Number(t.total_amount || 0), 0);
     const promoSpend = promoTransactions.reduce((sum, t) => sum + Number(t.discount_amount || 0), 0);
@@ -3233,9 +3255,9 @@ function calculateActualKPIs(moduleId: string, transactions: any[], products: an
     calculated.lift_pct = `${((promoTransactions.length / (totalTransactions || 1)) * 100).toFixed(1)}%`;
   }
   
-  // Calculate top products by revenue for chart data generation
+  // Calculate top products by revenue for chart data generation - FILTERED BY CATEGORY
   const productRevenue: Record<string, number> = {};
-  transactions.forEach(t => {
+  filteredTransactions.forEach(t => {
     const productName = t.product_name || productLookup[t.product_sku]?.product_name || t.product_sku;
     productRevenue[productName] = (productRevenue[productName] || 0) + Number(t.total_amount || 0);
   });
@@ -3245,7 +3267,7 @@ function calculateActualKPIs(moduleId: string, transactions: any[], products: an
     .slice(0, 10)
     .map(([name, revenue]) => ({ name, revenue, value: revenue }));
   
-  // Calculate category breakdown
+  // Calculate category breakdown (unfiltered - for all categories)
   const categoryRevenue: Record<string, number> = {};
   transactions.forEach(t => {
     const product = productLookup[t.product_sku];
