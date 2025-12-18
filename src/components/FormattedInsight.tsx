@@ -80,7 +80,7 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
   if (!hasBullets) {
     // Single paragraph - format as insight card
     return (
-      <div className={cn("text-sm leading-relaxed w-full min-w-0", className)} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+      <div className={cn("text-sm leading-relaxed w-full overflow-hidden", className)} style={{ wordWrap: 'break-word', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
         {highlightMetrics(content)}
       </div>
     );
@@ -94,7 +94,7 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
   }).filter(Boolean);
   
   return (
-    <div className={cn("space-y-3 w-full", className)}>
+    <div className={cn("space-y-3 w-full overflow-hidden", className)}>
       {insights.map((insight, idx) => {
         const type = getInsightType(insight);
         
@@ -102,7 +102,7 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
           <div
             key={idx}
             className={cn(
-              "flex gap-3 p-3 rounded-lg border transition-colors min-w-0",
+              "flex gap-3 p-3 rounded-lg border transition-colors overflow-hidden",
               type === 'positive' && "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-800/30",
               type === 'negative' && "bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-800/30",
               type === 'comparison' && "bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/50 dark:border-blue-800/30",
@@ -110,7 +110,7 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
             )}
           >
             <InsightIcon type={type} />
-            <p className="text-sm leading-relaxed flex-1 min-w-0" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+            <p className="text-sm leading-relaxed flex-1" style={{ wordWrap: 'break-word', overflowWrap: 'anywhere', wordBreak: 'break-word', minWidth: 0 }}>
               {highlightMetrics(insight)}
             </p>
           </div>
