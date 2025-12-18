@@ -349,19 +349,48 @@ ${isUnderperforming ? `
   }
 
   if (analysisType === 'recommendation' || analysisType === 'general') {
+    const priceIncreaseOpportunity = isTopPerformer && Number(product.margin_percent || 0) > 50;
+    const bundleOpportunity = isTopPerformer;
+    const distributionOpportunity = units > 100;
+    
     context += `
-RECOMMENDATIONS FOR "${product.product_name}":
+═══════════════════════════════════════════════════════════════════
+ACTIONABLE RECOMMENDATIONS FOR "${product.product_name}":
+═══════════════════════════════════════════════════════════════════
 ${isUnderperforming ? `
-1. PRICING: ${avgPrice > Number(product.base_price) ? 'Consider price reduction' : 'Review pricing strategy'} - current avg price $${avgPrice.toFixed(2)} vs base $${Number(product.base_price || 0).toFixed(2)}
-2. PROMOTION: ${productPromos.length === 0 ? 'Create dedicated promotion with 15-20% discount' : 'Increase promotional visibility'}
-3. PLACEMENT: ${productInventory?.stockout_risk === 'high' ? 'Address stockout risk first' : 'Improve shelf positioning to eye-level'}
-4. BUNDLING: Consider bundling with top-performing products in ${product.category}
-5. MARKETING: Increase marketing spend if price elasticity supports volume response
+⚠️ UNDERPERFORMING PRODUCT - IMMEDIATE ACTIONS REQUIRED:
+
+1. 💰 PRICING ACTION: ${avgPrice > Number(product.base_price) ? `REDUCE price by 10-15% (current $${avgPrice.toFixed(2)} vs base $${Number(product.base_price || 0).toFixed(2)})` : `Review pricing - test 5-10% markdown to drive volume`}
+   → Expected Impact: +15-25% unit lift
+
+2. 📣 PROMOTION ACTION: ${productPromos.length === 0 ? 'CREATE dedicated promotion with 15-20% discount + end-cap display' : 'INCREASE promotional frequency and visibility'}
+   → Expected Impact: +20-30% revenue lift during promo period
+
+3. 📍 PLACEMENT ACTION: ${productInventory?.stockout_risk === 'high' ? 'PRIORITY: Address stockout risk immediately' : 'MOVE to eye-level shelf position in high-traffic aisle'}
+   → Expected Impact: +10-15% visibility lift
+
+4. 🎁 BUNDLING ACTION: Create bundle with top sellers in ${product.category} at 10% bundle discount
+   → Expected Impact: +8-12% basket size
+
+5. 📊 REVIEW ACTION: Analyze if SKU should be discontinued or replaced
+   → Timeline: 30-day performance review
 ` : `
-1. MAINTAIN: Keep current pricing strategy at $${avgPrice.toFixed(2)}
-2. EXPAND: Increase distribution to more stores
-3. LEVERAGE: Use as anchor for promotional bundles
-4. INVENTORY: Ensure adequate stock levels to meet demand
+✅ TOP PERFORMER - GROWTH & OPTIMIZATION ACTIONS:
+
+1. 💰 PRICING ACTION: ${priceIncreaseOpportunity ? `TEST 3-5% price increase (current $${avgPrice.toFixed(2)}, margin ${Number(product.margin_percent || 0).toFixed(1)}% supports increase)` : `MAINTAIN current pricing at $${avgPrice.toFixed(2)} - it's working`}
+   → Expected Impact: ${priceIncreaseOpportunity ? '+$500-800 additional margin per quarter' : 'Maintain current revenue stream'}
+
+2. 🏪 DISTRIBUTION ACTION: ${distributionOpportunity ? 'EXPAND to all stores - currently strong velocity supports wider distribution' : 'MAINTAIN current distribution footprint'}
+   → Expected Impact: +15-25% revenue from new locations
+
+3. 🎯 ANCHOR ACTION: USE as anchor product for ${product.category} promotional bundles
+   → Expected Impact: Drive 20-30% traffic to category
+
+4. 📦 INVENTORY ACTION: INCREASE safety stock by 20% to prevent stockouts during peak demand
+   → Expected Impact: Prevent $200-500 lost sales from stockouts
+
+5. 📍 PLACEMENT ACTION: SECURE premium shelf placement (eye-level, end-cap rotation)
+   → Expected Impact: Maintain visibility advantage
 `}
 `;
   }
