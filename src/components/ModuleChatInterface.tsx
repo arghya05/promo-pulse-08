@@ -756,7 +756,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                 {messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex gap-3 min-w-0 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     {message.role === 'assistant' && (
                       <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit`}>
@@ -764,11 +764,12 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                       </div>
                     )}
                     <div
-                      className={`rounded-lg p-4 ${
+                      className={`rounded-lg p-4 break-words ${
                         message.role === 'user'
-                          ? 'bg-primary text-primary-foreground max-w-[85%]'
-                          : 'bg-muted max-w-[95%] w-full'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted flex-1'
                       }`}
+                      style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
                     >
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
@@ -808,7 +809,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           
                           {/* Why section */}
                           {message.data?.why && message.data.why.length > 0 && (
-                            <div className="mt-3 p-2 bg-background/50 rounded text-xs">
+                            <div className="mt-3 p-2 bg-background/50 rounded text-xs" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                               <span className="font-medium">Why: </span>
                               {message.data.why.slice(0, 2).join(' ')}
                             </div>
