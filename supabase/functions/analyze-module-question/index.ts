@@ -1182,8 +1182,9 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Common data queries - OPTIMIZED for speed
-    const [productsRes, storesRes, transactionsRes, competitorPricesRes, suppliersRes, planogramsRes, promotionsRes, inventoryRes, forecastsRes] = await Promise.all([
+    // Common data queries - OPTIMIZED for speed (including new tables)
+    const [productsRes, storesRes, transactionsRes, competitorPricesRes, suppliersRes, planogramsRes, promotionsRes, inventoryRes, forecastsRes, 
+           kpiMeasuresRes, returnsRes, markdownsRes, discountsRes, vendorsRes, purchaseOrdersRes, stockAgeRes, holidaysRes, employeesRes, priceBandsRes] = await Promise.all([
       supabase.from('products').select('*').limit(50),
       supabase.from('stores').select('*').limit(20),
       supabase.from('transactions').select('*').limit(200),
@@ -1193,6 +1194,17 @@ serve(async (req) => {
       supabase.from('promotions').select('*').limit(55),
       supabase.from('inventory_levels').select('*').limit(100),
       supabase.from('demand_forecasts').select('*').limit(100),
+      // NEW TABLES
+      supabase.from('kpi_measures').select('*').limit(100),
+      supabase.from('returns').select('*').limit(100),
+      supabase.from('markdowns').select('*').limit(50),
+      supabase.from('discounts').select('*').limit(20),
+      supabase.from('vendors').select('*').limit(20),
+      supabase.from('purchase_orders').select('*').limit(100),
+      supabase.from('stock_age_tracking').select('*').limit(100),
+      supabase.from('holidays').select('*').limit(30),
+      supabase.from('employees').select('*').limit(50),
+      supabase.from('price_bands').select('*').limit(20),
     ]);
     
     const products = productsRes.data || [];
@@ -1204,6 +1216,17 @@ serve(async (req) => {
     const promotions = promotionsRes.data || [];
     const inventoryLevels = inventoryRes.data || [];
     const forecasts = forecastsRes.data || [];
+    // NEW DATA
+    const kpiMeasures = kpiMeasuresRes.data || [];
+    const returns = returnsRes.data || [];
+    const markdowns = markdownsRes.data || [];
+    const discounts = discountsRes.data || [];
+    const vendors = vendorsRes.data || [];
+    const purchaseOrders = purchaseOrdersRes.data || [];
+    const stockAge = stockAgeRes.data || [];
+    const holidays = holidaysRes.data || [];
+    const employees = employeesRes.data || [];
+    const priceBands = priceBandsRes.data || [];
 
     // Detect hierarchy level (category, brand, or product)
     const hierarchyAnalysis = detectHierarchyAnalysisType(question, products);
