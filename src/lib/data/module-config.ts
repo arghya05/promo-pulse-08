@@ -427,10 +427,8 @@ export const getModulePopularIds = (moduleId: string): number[] => {
   return modulePopularIds[moduleId] || [];
 };
 
-// Get edge function name for a module
+// Get edge function name for a module - all modules now use analyze-module-question for consistent behavior
 export const getModuleEdgeFunction = (moduleId: string): string => {
-  if (moduleId === 'promotion') {
-    return 'analyze-question';
-  }
+  // All modules use the same edge function for consistent conversation history, follow-up support, and caching
   return 'analyze-module-question';
 };

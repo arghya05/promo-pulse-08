@@ -1864,7 +1864,20 @@ Respond with a JSON object:
         'break that down', 'break this down', 'show me more about',
         'tell me more about', 'expand on', 'elaborate on',
         'we discussed', 'you mentioned', 'you said', 'as you said',
-        'earlier you', 'before you', 'go back to', 'return to'
+        'earlier you', 'before you', 'go back to', 'return to',
+        // New contextual follow-up patterns for recommendations, forecasts, etc.
+        'why did it work', 'why did that work', 'why did this work',
+        'why does it work', 'why does that work', 'why is it working',
+        'what made it work', 'what makes it work', 'reason for success',
+        'give me recommendations', 'what do you recommend', 'your recommendations',
+        'recommend for this', 'recommendations for that', 'what should i do',
+        'what should we do', 'how can we improve', 'how do we improve',
+        'forecast for this', 'forecast that', 'predict for this',
+        'how can we replicate', 'scale this', 'scale that success',
+        'why is that', 'why is this', 'explain why', 'reason for this',
+        'what caused', 'what drove', 'what drives', 'what\'s driving',
+        'next steps', 'action items', 'to do about', 'do about this',
+        'similar to', 'like that one', 'like this one'
       ];
       
       // Check for explicit patterns
@@ -1877,10 +1890,18 @@ Respond with a JSON object:
       const pronounStartPatterns = [
         /^(why is|why are|why does|what about|how about) (it|that|this|those|they|them)\b/,
         /^(tell me|show me|explain) (more|that|this)\b/,
-        /^(and|also|now) (what|why|how|show|tell)/
+        /^(and|also|now) (what|why|how|show|tell)/,
+        /^(so|then) (what|why|how|should)/,
+        /^(ok|okay|great|good|alright),? (what|why|how|now|so)/
       ];
       
       if (pronounStartPatterns.some(p => p.test(lowerQ))) {
+        return true;
+      }
+      
+      // Short follow-up questions (< 5 words) that likely reference context
+      const words = lowerQ.split(/\s+/).length;
+      if (words < 5 && /^(why|how|what).*(this|that|it|them)/.test(lowerQ)) {
         return true;
       }
       
@@ -1919,18 +1940,46 @@ Respond with a JSON object:
     let conversationContextPrompt = '';
     
     if (needsConversationContext && (conversationContext || (conversationHistory && conversationHistory.length > 0))) {
+      // Extract key entities from previous conversation for follow-up reference
+      const previousEntities: string[] = [];
+      if (conversationHistory && conversationHistory.length > 0) {
+        const lastAssistantMsg = conversationHistory.filter((m: any) => m.role === 'assistant').pop();
+        if (lastAssistantMsg?.content) {
+          // Extract product/category names from previous response
+          const entityPatterns = [
+            /['"]([^'"]{3,50})['"]/, // Quoted names
+            /(?:top|best|leading|performing)\s+(?:is\s+)?['"]?([A-Z][a-zA-Z\s]+)['"]?/gi,
+          ];
+          entityPatterns.forEach(p => {
+            const matches = lastAssistantMsg.content.match(p);
+            if (matches) previousEntities.push(...matches.slice(0, 3));
+          });
+        }
+      }
+      
       conversationContextPrompt = `
-CONVERSATION CONTEXT (use for continuity):
+CONVERSATION CONTEXT (use for continuity - IMPORTANT for follow-up questions):
 - Previous category: ${conversationContext?.lastCategory || 'none'}
 - Previous product/promotion: ${conversationContext?.lastPromotion || 'none'}
 - Previous metric: ${conversationContext?.lastMetric || 'none'}
 - Drill level: ${conversationContext?.drillLevel || 0}
+${previousEntities.length > 0 ? `- Key entities from last answer: ${previousEntities.join(', ')}` : ''}
 
 ${contextReference ? `Start your first bullet with: "${contextReference}"` : ''}
 
 ${isDrillDown ? `DRILL-DOWN: Provide more granular detail than before. Start with "Drilling into ${drillPath[drillPath.length - 1] || 'the data'}..."` : ''}
 
-${conversationHistory && conversationHistory.length > 0 ? `Recent context:\n${conversationHistory.slice(-2).map((m: any) => `${m.role}: ${m.content.substring(0, 100)}...`).join('\n')}` : ''}
+PREVIOUS CONVERSATION (use this to answer follow-up questions like "why did it work", "recommendations", etc.):
+${conversationHistory && conversationHistory.length > 0 ? conversationHistory.slice(-4).map((m: any) => {
+  const preview = m.content?.substring(0, 200) || '';
+  const context = m.context ? ` [Context: ${JSON.stringify(m.context)}]` : '';
+  return `${m.role.toUpperCase()}: ${preview}...${context}`;
+}).join('\n\n') : 'No previous context'}
+
+When the user asks follow-up questions like "why did it work", "give me recommendations", or "forecast this":
+- Reference the SPECIFIC campaigns, products, or categories from the previous answer
+- Provide actionable recommendations based on the previous data
+- For "why" questions, explain the causal drivers specific to the mentioned entity
 `;
     }
     

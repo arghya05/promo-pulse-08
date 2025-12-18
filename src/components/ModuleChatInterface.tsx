@@ -422,13 +422,35 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
     setIsLoading(true);
 
     try {
+      // Build conversation history for context continuity (same as classic view)
+      const conversationHistoryForAI = messages
+        .filter(m => !m.isLoading && m.id !== 'greeting')
+        .slice(-6) // Last 6 messages for context
+        .map(m => ({
+          role: m.role,
+          content: m.role === 'user' ? m.content : 
+            m.data?.whatHappened?.join(' ') || m.content,
+          kpis: m.data?.kpis,
+          chartSummary: m.data?.chartData?.slice(0, 3).map((c: any) => c.name).join(', ')
+        }));
+
       // Use EXACT same parameters as Classic View to ensure consistent responses
       const { data, error } = await supabase.functions.invoke('analyze-module-question', {
         body: { 
           question: resolvedText,
           moduleId: module.id,
           selectedKPIs: selectedKPIs.length > 0 ? selectedKPIs : undefined,
-          timePeriod: selectedTimePeriod
+          timePeriod: selectedTimePeriod,
+          conversationHistory: conversationHistoryForAI,
+          conversationContext: {
+            lastCategory: conversationContext.lastCategory,
+            lastProduct: conversationContext.lastProduct,
+            lastMetric: conversationContext.lastMetric,
+            lastTimePeriod: conversationContext.lastTimePeriod,
+            recentTopics: conversationContext.recentTopics,
+            drillPath: conversationContext.drillPath,
+            drillLevel: conversationContext.currentDrillLevel
+          }
         }
       });
 
