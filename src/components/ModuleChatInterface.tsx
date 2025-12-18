@@ -725,8 +725,8 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       </div>
 
       {/* Chat Area */}
-      <div className="lg:col-span-4 flex flex-col min-w-0 overflow-hidden">
-        <Card className="flex-1 flex flex-col overflow-hidden">
+      <div className="lg:col-span-4 flex flex-col min-w-0">
+        <Card className="flex-1 flex flex-col">
           {/* Cross-Module Navigation */}
           {crossModuleLink && (
             <div className="px-4 pt-3">
@@ -750,14 +750,13 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
             </div>
           )}
           
-          <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-hidden">
+          <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-auto">
             <ScrollArea className="h-full" style={{ height: 'calc(100vh - 280px)' }}>
-              <div className="space-y-4 p-2 pr-3">
+              <div className="space-y-4 p-3">
                 {messages.map((message) => (
                   <div
                     key={message.id}
                     className={`flex gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    style={{ width: '100%' }}
                   >
                     {message.role === 'assistant' && (
                       <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit flex-shrink-0`}>
@@ -765,12 +764,17 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                       </div>
                     )}
                     <div
-                      className={`rounded-lg p-3 text-left overflow-hidden ${
+                      className={`rounded-lg p-3 text-left ${
                         message.role === 'user'
-                          ? 'bg-primary text-primary-foreground max-w-[70%] ml-auto flex-shrink-0'
-                          : 'bg-muted flex-1 min-w-0'
+                          ? 'bg-primary text-primary-foreground max-w-[75%] flex-shrink-0'
+                          : 'bg-muted flex-1'
                       }`}
-                      style={{ wordWrap: 'break-word', overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+                      style={{ 
+                        wordWrap: 'break-word', 
+                        overflowWrap: 'break-word', 
+                        wordBreak: 'break-word',
+                        maxWidth: message.role === 'assistant' ? '100%' : undefined
+                      }}
                     >
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
