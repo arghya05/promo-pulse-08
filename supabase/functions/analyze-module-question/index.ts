@@ -146,6 +146,247 @@ function isSimulationQuestion(question: string): boolean {
   return simulationTriggers.some(trigger => question.toLowerCase().includes(trigger));
 }
 
+// Detect product-specific analysis type needed
+interface ProductAnalysisType {
+  isProductSpecific: boolean;
+  analysisType: 'why' | 'recommendation' | 'forecast' | 'drivers' | 'general' | null;
+  productName: string | null;
+}
+
+function detectProductAnalysisType(question: string, products: any[]): ProductAnalysisType {
+  const q = question.toLowerCase();
+  
+  // Find mentioned product
+  const mentionedProduct = products.find((p: any) => 
+    q.includes(p.product_name?.toLowerCase()) ||
+    q.includes(p.product_sku?.toLowerCase())
+  );
+  
+  if (!mentionedProduct) {
+    return { isProductSpecific: false, analysisType: null, productName: null };
+  }
+  
+  const productName = mentionedProduct.product_name;
+  
+  // Detect analysis type
+  const whyPatterns = ['why', 'reason', 'cause', 'explain', 'what happened', 'how come', 'underperform', 'not working', 'performing'];
+  const recommendPatterns = ['recommend', 'suggestion', 'what should', 'what do you recommend', 'advice', 'how to improve', 'how can we', 'optimize', 'what to do'];
+  const forecastPatterns = ['forecast', 'predict', 'projection', 'next month', 'next quarter', 'next year', 'next 3 months', 'future', 'expected', 'anticipate'];
+  const driverPatterns = ['driver', 'what drives', 'factor', 'influence', 'affect', 'impact on sales', 'sales driver', 'demand driver'];
+  
+  let analysisType: 'why' | 'recommendation' | 'forecast' | 'drivers' | 'general' = 'general';
+  
+  if (whyPatterns.some(p => q.includes(p))) {
+    analysisType = 'why';
+  } else if (recommendPatterns.some(p => q.includes(p))) {
+    analysisType = 'recommendation';
+  } else if (forecastPatterns.some(p => q.includes(p))) {
+    analysisType = 'forecast';
+  } else if (driverPatterns.some(p => q.includes(p))) {
+    analysisType = 'drivers';
+  }
+  
+  return { isProductSpecific: true, analysisType, productName };
+}
+
+// Build comprehensive product-specific data context for any module
+function buildProductSpecificContext(
+  product: any,
+  analysisType: string,
+  transactions: any[],
+  products: any[],
+  promotions: any[],
+  forecasts: any[],
+  inventory: any[],
+  competitorPrices: any[],
+  suppliers: any[],
+  moduleId: string
+): string {
+  // Calculate product performance
+  const productTransactions = transactions.filter((t: any) => t.product_sku === product.product_sku);
+  const revenue = productTransactions.reduce((sum, t: any) => sum + Number(t.total_amount || 0), 0);
+  const units = productTransactions.reduce((sum, t: any) => sum + Number(t.quantity || 0), 0);
+  const avgPrice = units > 0 ? revenue / units : Number(product.base_price || 0);
+  const discounts = productTransactions.reduce((sum, t: any) => sum + Number(t.discount_amount || 0), 0);
+  
+  // Category comparison
+  const categoryProducts = products.filter((p: any) => p.category === product.category);
+  const categoryTransactions = transactions.filter((t: any) => 
+    categoryProducts.some((p: any) => p.product_sku === t.product_sku)
+  );
+  const avgCategoryRevenue = categoryTransactions.length > 0 
+    ? categoryTransactions.reduce((sum, t: any) => sum + Number(t.total_amount || 0), 0) / categoryProducts.length 
+    : revenue;
+  
+  // Find product promotions
+  const productPromos = promotions.filter((p: any) => 
+    p.product_sku === product.product_sku || p.product_category === product.category
+  );
+  
+  // Get inventory info
+  const productInventory = inventory.find((i: any) => i.product_sku === product.product_sku);
+  
+  // Get forecast data
+  const productForecasts = forecasts.filter((f: any) => f.product_sku === product.product_sku);
+  
+  // Get competitor pricing
+  const productCompetitorPrices = competitorPrices.filter((cp: any) => cp.product_sku === product.product_sku);
+  
+  // Performance assessment
+  const performanceRatio = avgCategoryRevenue > 0 ? revenue / avgCategoryRevenue : 1;
+  const isUnderperforming = performanceRatio < 0.7;
+  const isTopPerformer = performanceRatio > 1.3;
+  const performanceStatus = isUnderperforming ? 'UNDERPERFORMING' : isTopPerformer ? 'TOP PERFORMER' : 'AVERAGE';
+  
+  let context = `
+═══════════════════════════════════════════════════════════════════
+SPECIFIC PRODUCT ANALYSIS: "${product.product_name}"
+═══════════════════════════════════════════════════════════════════
+
+PRODUCT PROFILE:
+- SKU: ${product.product_sku}
+- Category: ${product.category}
+- Subcategory: ${product.subcategory || 'N/A'}
+- Brand: ${product.brand || 'Unknown'}
+- Base Price: $${Number(product.base_price || 0).toFixed(2)}
+- Cost: $${Number(product.cost || 0).toFixed(2)}
+- Margin: ${Number(product.margin_percent || 0).toFixed(1)}%
+- Price Elasticity: ${product.price_elasticity || 'Not measured'}
+- Seasonality: ${product.seasonality_factor || 'None'}
+
+PERFORMANCE METRICS:
+- Total Revenue: $${revenue.toFixed(2)}
+- Units Sold: ${units}
+- Transactions: ${productTransactions.length}
+- Average Selling Price: $${avgPrice.toFixed(2)}
+- Total Discounts: $${discounts.toFixed(2)}
+- Category Average Revenue: $${avgCategoryRevenue.toFixed(2)}
+- Performance vs Category: ${(performanceRatio * 100).toFixed(0)}% of avg
+- Status: ${performanceStatus}
+`;
+
+  // Add analysis-type specific context
+  if (analysisType === 'why' || analysisType === 'general') {
+    context += `
+WHY ANALYSIS - PERFORMANCE DRIVERS FOR "${product.product_name}":
+${isUnderperforming ? `
+1. Revenue is ${((1 - performanceRatio) * 100).toFixed(0)}% below category average ($${revenue.toFixed(2)} vs $${avgCategoryRevenue.toFixed(2)})
+2. ${Number(product.margin_percent || 0) < 25 ? `Low margin (${Number(product.margin_percent || 0).toFixed(1)}%) limits profitability` : `Margin of ${Number(product.margin_percent || 0).toFixed(1)}% is acceptable`}
+3. ${units < 20 ? `Very low unit velocity (${units} units) indicates weak demand` : `Unit velocity of ${units} units is ${units < 50 ? 'moderate' : 'healthy'}`}
+4. ${product.price_elasticity ? `Price elasticity of ${product.price_elasticity} - ${Math.abs(Number(product.price_elasticity)) > 1.5 ? 'highly price sensitive' : 'moderate sensitivity'}` : 'Price elasticity not measured'}
+5. ${discounts > 0 ? `$${discounts.toFixed(2)} in discounts applied - ${discounts / revenue > 0.1 ? 'may be eroding margins' : 'reasonable promotional investment'}` : 'No promotional discounts - consider promotion'}
+6. ${productPromos.length > 0 ? `${productPromos.length} promotions ran for this product` : 'No dedicated promotions for this product'}
+` : `
+1. Revenue of $${revenue.toFixed(2)} is ${((performanceRatio - 1) * 100).toFixed(0)}% above category average
+2. Strong margin of ${Number(product.margin_percent || 0).toFixed(1)}% 
+3. Solid unit velocity with ${units} units sold
+4. ${productPromos.length > 0 ? `Supported by ${productPromos.length} promotions` : 'Performing well without dedicated promotions'}
+`}
+`;
+  }
+
+  if (analysisType === 'recommendation' || analysisType === 'general') {
+    context += `
+RECOMMENDATIONS FOR "${product.product_name}":
+${isUnderperforming ? `
+1. PRICING: ${avgPrice > Number(product.base_price) ? 'Consider price reduction' : 'Review pricing strategy'} - current avg price $${avgPrice.toFixed(2)} vs base $${Number(product.base_price || 0).toFixed(2)}
+2. PROMOTION: ${productPromos.length === 0 ? 'Create dedicated promotion with 15-20% discount' : 'Increase promotional visibility'}
+3. PLACEMENT: ${productInventory?.stockout_risk === 'high' ? 'Address stockout risk first' : 'Improve shelf positioning to eye-level'}
+4. BUNDLING: Consider bundling with top-performing products in ${product.category}
+5. MARKETING: Increase marketing spend if price elasticity supports volume response
+` : `
+1. MAINTAIN: Keep current pricing strategy at $${avgPrice.toFixed(2)}
+2. EXPAND: Increase distribution to more stores
+3. LEVERAGE: Use as anchor for promotional bundles
+4. INVENTORY: Ensure adequate stock levels to meet demand
+`}
+`;
+  }
+
+  if (analysisType === 'forecast' || analysisType === 'general') {
+    const avgWeeklyUnits = units / 4; // Approximate weekly run rate
+    const forecastedUnits3Mo = Math.round(avgWeeklyUnits * 12 * (product.seasonality_factor === 'high' ? 1.3 : 1.1));
+    const forecastedRevenue3Mo = forecastedUnits3Mo * avgPrice;
+    
+    context += `
+FORECAST FOR "${product.product_name}" (NEXT 3 MONTHS):
+- Current Weekly Run Rate: ${avgWeeklyUnits.toFixed(0)} units/week
+- Forecasted Units (3 months): ${forecastedUnits3Mo} units
+- Forecasted Revenue (3 months): $${forecastedRevenue3Mo.toFixed(2)}
+- Trend: ${performanceRatio > 1 ? 'Upward' : performanceRatio < 0.8 ? 'Downward' : 'Stable'}
+- Seasonality Impact: ${product.seasonality_factor || 'None'} - ${product.seasonality_factor === 'high' ? '+30% expected boost' : 'minimal impact'}
+- Confidence: ${productForecasts.length > 0 ? '85%' : '70%'} (based on ${productTransactions.length} historical transactions)
+
+${productForecasts.length > 0 ? `
+EXISTING FORECASTS:
+${productForecasts.slice(0, 5).map((f: any) => `- ${f.forecast_period_start} to ${f.forecast_period_end}: ${f.forecasted_units} units forecasted, ${f.actual_units || 'TBD'} actual`).join('\n')}
+` : ''}
+`;
+  }
+
+  if (analysisType === 'drivers' || analysisType === 'general') {
+    context += `
+SALES DRIVERS FOR "${product.product_name}":
+1. PRICE SENSITIVITY: ${product.price_elasticity ? `Elasticity of ${product.price_elasticity} - ${Math.abs(Number(product.price_elasticity)) > 1.5 ? 'highly responsive to price changes, discounts drive volume' : 'moderate response to pricing'}` : 'Not measured - recommend A/B testing'}
+2. PROMOTIONAL LIFT: ${productPromos.length > 0 ? `${productPromos.length} promotions generated $${discounts.toFixed(2)} in discounts` : 'No promotional data - opportunity to test'}
+3. COMPETITIVE POSITION: ${productCompetitorPrices.length > 0 ? `${productCompetitorPrices.map((cp: any) => `vs ${cp.competitor_name}: ${Number(cp.price_gap_percent || 0).toFixed(1)}% gap`).join(', ')}` : 'No competitive data available'}
+4. BRAND LOYALTY: ${product.brand || 'Unknown'} brand - ${categoryProducts.filter((p: any) => p.brand === product.brand).length} SKUs in category
+5. INVENTORY AVAILABILITY: ${productInventory ? `${productInventory.stock_level} units in stock, ${productInventory.stockout_risk || 'low'} stockout risk` : 'No inventory data'}
+6. SEASONALITY: ${product.seasonality_factor || 'No seasonal pattern'} - ${product.seasonality_factor === 'high' ? 'expect significant seasonal variation' : 'consistent demand expected'}
+`;
+  }
+
+  // Add module-specific context
+  context += `
+MODULE-SPECIFIC CONTEXT (${moduleId.toUpperCase()}):
+`;
+  
+  switch (moduleId) {
+    case 'pricing':
+      context += `
+- Current margin: ${Number(product.margin_percent || 0).toFixed(1)}%
+- Price vs competitors: ${productCompetitorPrices.length > 0 ? productCompetitorPrices.map((cp: any) => `${cp.competitor_name}: $${Number(cp.competitor_price).toFixed(2)} (${Number(cp.price_gap_percent || 0).toFixed(1)}% gap)`).join(', ') : 'No data'}
+- Price optimization opportunity: ${Number(product.margin_percent || 0) < 25 ? 'High - margin below threshold' : 'Moderate'}
+`;
+      break;
+    case 'demand':
+      context += `
+- Current demand: ${units} units over analysis period
+- Forecast accuracy: ${productForecasts.length > 0 ? `${productForecasts[0]?.forecast_accuracy || 'N/A'}%` : 'No forecasts'}
+- Stockout risk: ${productInventory?.stockout_risk || 'Unknown'}
+- Reorder point: ${productInventory?.reorder_point || 'Not set'}
+`;
+      break;
+    case 'supply-chain':
+      context += `
+- Current stock: ${productInventory?.stock_level || 'Unknown'} units
+- Stockout risk: ${productInventory?.stockout_risk || 'Unknown'}
+- Last restocked: ${productInventory?.last_restocked || 'Unknown'}
+`;
+      break;
+    case 'assortment':
+      context += `
+- SKU productivity: $${revenue.toFixed(2)} revenue
+- Velocity: ${(units / 4).toFixed(1)} units/week
+- Brand portfolio: ${categoryProducts.filter((p: any) => p.brand === product.brand).length} ${product.brand} SKUs in ${product.category}
+`;
+      break;
+    case 'space':
+      context += `
+- Sales productivity: $${(revenue / 10).toFixed(2)}/sqft estimated
+- Promotion potential: ${productPromos.length === 0 ? 'High - no current promotions' : 'Moderate'}
+`;
+      break;
+    default:
+      context += `
+- Active promotions: ${productPromos.length}
+- Total promotional spend: $${productPromos.reduce((sum, p: any) => sum + Number(p.total_spend || 0), 0).toFixed(2)}
+`;
+  }
+
+  return context;
+}
+
 // Detect ambiguous terms that need clarification
 interface ClarificationOption {
   label: string;
@@ -472,7 +713,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Common data queries - OPTIMIZED for speed
-    const [productsRes, storesRes, transactionsRes, competitorPricesRes, suppliersRes, planogramsRes, promotionsRes] = await Promise.all([
+    const [productsRes, storesRes, transactionsRes, competitorPricesRes, suppliersRes, planogramsRes, promotionsRes, inventoryRes, forecastsRes] = await Promise.all([
       supabase.from('products').select('*').limit(50),
       supabase.from('stores').select('*').limit(20),
       supabase.from('transactions').select('*').limit(200),
@@ -480,6 +721,8 @@ serve(async (req) => {
       supabase.from('suppliers').select('*').limit(25),
       supabase.from('planograms').select('*').limit(25),
       supabase.from('promotions').select('*').limit(55),
+      supabase.from('inventory_levels').select('*').limit(100),
+      supabase.from('demand_forecasts').select('*').limit(100),
     ]);
     
     const products = productsRes.data || [];
@@ -489,6 +732,37 @@ serve(async (req) => {
     const suppliers = suppliersRes.data || [];
     const planograms = planogramsRes.data || [];
     const promotions = promotionsRes.data || [];
+    const inventoryLevels = inventoryRes.data || [];
+    const forecasts = forecastsRes.data || [];
+
+    // Detect if this is a product-specific question
+    const productAnalysis = detectProductAnalysisType(question, products);
+    console.log(`[${moduleId}] Product analysis:`, JSON.stringify(productAnalysis));
+
+    // Build product-specific context if a product is mentioned
+    let productSpecificContext = '';
+    if (productAnalysis.isProductSpecific) {
+      const mentionedProduct = products.find((p: any) => 
+        p.product_name?.toLowerCase() === productAnalysis.productName?.toLowerCase() ||
+        question.toLowerCase().includes(p.product_name?.toLowerCase())
+      );
+      
+      if (mentionedProduct) {
+        productSpecificContext = buildProductSpecificContext(
+          mentionedProduct,
+          productAnalysis.analysisType || 'general',
+          transactions,
+          products,
+          promotions,
+          forecasts,
+          inventoryLevels,
+          competitorPrices,
+          suppliers,
+          moduleId
+        );
+        console.log(`[${moduleId}] Built product-specific context for: ${mentionedProduct.product_name}`);
+      }
+    }
 
     // Build comprehensive data context based on module
     let dataContext = '';
@@ -1919,6 +2193,49 @@ CROSS-MODULE ANALYSIS INSTRUCTIONS:
 - Provide integrated recommendations that consider all affected areas.
 - Highlight trade-offs between different modules.
 ` : '';
+
+    // Build product-specific analysis instructions
+    const productAnalysisInstructions = productAnalysis.isProductSpecific ? `
+PRODUCT-SPECIFIC ANALYSIS INSTRUCTIONS:
+This question is about a SPECIFIC PRODUCT: "${productAnalysis.productName}"
+Analysis Type: ${productAnalysis.analysisType?.toUpperCase() || 'GENERAL'}
+
+${productAnalysis.analysisType === 'why' ? `
+FOR "WHY" ANALYSIS:
+- Explain WHY this product is performing the way it is
+- Reference specific metrics: revenue, margin, unit velocity, price elasticity
+- Compare to category average and identify gaps
+- List 3-5 specific causal factors with quantified impacts
+- Include competitive positioning if data available
+` : ''}
+${productAnalysis.analysisType === 'recommendation' ? `
+FOR "RECOMMENDATION" ANALYSIS:
+- Provide 3-5 SPECIFIC, ACTIONABLE recommendations for this product
+- Each recommendation should include: what to do, expected impact, timeline
+- Prioritize by impact (high/medium/low)
+- Include pricing, promotion, placement, and inventory recommendations
+- Reference specific numbers from the data
+` : ''}
+${productAnalysis.analysisType === 'forecast' ? `
+FOR "FORECAST" ANALYSIS:
+- Provide demand/sales forecast for this specific product
+- Include forecasts for: next month, next quarter, next 3 months
+- Show confidence levels (%) for each forecast
+- Explain drivers affecting the forecast (seasonality, trends, promotions)
+- Include scenario analysis: conservative, expected, optimistic
+` : ''}
+${productAnalysis.analysisType === 'drivers' ? `
+FOR "DRIVERS" ANALYSIS:
+- Identify TOP 5 drivers that influence sales for this product
+- Quantify each driver's impact (correlation %, contribution %)
+- Include: price sensitivity, promotional lift, seasonality, competitive factors, brand loyalty
+- Rank drivers by importance
+- Suggest how to leverage each driver
+` : ''}
+
+CRITICAL: Your ENTIRE response must focus on "${productAnalysis.productName}". Do NOT provide generic category-level answers.
+Use ALL the specific data provided in the PRODUCT ANALYSIS section above.
+` : '';
     
     const userPrompt = `
 Question: ${question}
@@ -1935,14 +2252,17 @@ Include these KPI values in:
 2. The kpis object with calculated values
 3. The chartData showing these metrics where applicable` : ''}
 
+${productSpecificContext}
+
 ${dataContext}
 
 ${simulationInstructions}
 ${crossModuleInstructions}
+${productAnalysisInstructions}
 
 CRITICAL ANTI-HALLUCINATION RULES - FOLLOW EXACTLY:
-1. Your response must be 100% relevant to ${isCrossModule ? 'CROSS-MODULE analysis' : moduleId.toUpperCase() + ' module ONLY'}.
-2. NEVER mention promotions, promotional ROI, or promotional lift unless directly asked.
+1. Your response must be 100% relevant to ${productAnalysis.isProductSpecific ? `the product "${productAnalysis.productName}"` : (isCrossModule ? 'CROSS-MODULE analysis' : moduleId.toUpperCase() + ' module ONLY')}.
+2. ${productAnalysis.isProductSpecific ? `Focus ONLY on "${productAnalysis.productName}" - do NOT give generic answers` : 'NEVER mention promotions, promotional ROI, or promotional lift unless directly asked'}.
 3. USE ONLY EXACT PRODUCT NAMES, SKUs, and specific numbers FROM THE DATA PROVIDED ABOVE - DO NOT INVENT DATA.
 4. DO NOT say "no products identified" if products are listed in the data - USE THE SPECIFIC PRODUCTS LISTED.
 5. If the question asks about stockout risk, LIST THE ACTUAL PRODUCTS with their stock levels from the data.
@@ -1954,9 +2274,16 @@ CRITICAL ANTI-HALLUCINATION RULES - FOLLOW EXACTLY:
 ${selectedKPIs?.length > 0 ? `11. MANDATORY: Include calculated values for ALL selected KPIs: ${selectedKPIs.join(', ')}` : ''}
 ${isSimulation ? '12. Include SIMULATION RESULTS with baseline vs. projected values and confidence levels.' : ''}
 ${isCrossModule ? '13. Show CROSS-MODULE IMPACTS connecting effects across ' + detectedModules.join(', ') + '.' : ''}
+${productAnalysis.isProductSpecific ? `14. PRODUCT-SPECIFIC: Every bullet point must mention "${productAnalysis.productName}" with specific metrics.` : ''}
 
 Focus areas for ${moduleId}:
-${moduleId === 'pricing' ? 'pricing, margins, elasticity, competitor pricing, price changes' : 
+${productAnalysis.isProductSpecific ? 
+  `SPECIFIC PRODUCT "${productAnalysis.productName}": ${productAnalysis.analysisType === 'why' ? 'performance drivers, causal factors, comparison to category' :
+   productAnalysis.analysisType === 'recommendation' ? 'actionable recommendations with expected impacts' :
+   productAnalysis.analysisType === 'forecast' ? 'demand forecasts with confidence levels and scenarios' :
+   productAnalysis.analysisType === 'drivers' ? 'sales drivers ranked by impact with quantified effects' :
+   'comprehensive product analysis including performance, recommendations, and forecasts'}` :
+  (moduleId === 'pricing' ? 'pricing, margins, elasticity, competitor pricing, price changes' : 
   moduleId === 'assortment' ? 'SKU performance, category gaps, brand mix, product rationalization' :
   moduleId === 'demand' ? `HIERARCHICAL FORECASTING: Provide forecasts at Category → SKU → Store → Time Period levels. 
     - If asked "forecast by category by month" show forecasted units BY CATEGORY broken down BY MONTH
@@ -1966,7 +2293,7 @@ ${moduleId === 'pricing' ? 'pricing, margins, elasticity, competitor pricing, pr
     - Include stockout risk products BY NAME, inventory levels, reorder points` :
   moduleId === 'supply-chain' ? 'supplier performance, lead times, logistics, delivery rates' :
   moduleId === 'space' ? 'shelf space, planograms, sales per sqft, fixture utilization' : 
-  isCrossModule ? 'relationships between modules, integrated impacts, trade-offs' : 'relevant metrics'}
+  isCrossModule ? 'relationships between modules, integrated impacts, trade-offs' : 'relevant metrics')}
 
 Respond with a JSON object:
 {
