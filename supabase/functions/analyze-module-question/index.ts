@@ -240,8 +240,10 @@ function detectAmbiguousTerms(question: string, moduleId: string): AmbiguityChec
   };
   
   // Check for entity ambiguity FIRST - these always need clarification
-  const hasEntityContext = /\b(product|sku|vendor|supplier|store|brand|category)\b/i.test(q);
-  console.log(`Entity context check: hasEntityContext=${hasEntityContext}, question="${q}"`);
+  // Also check if question contains a likely product name (contains oz, ct, pack, gallon, lb, rolls, etc.)
+  const hasProductNamePattern = /\d+\s*(oz|ct|pack|gallon|lb|lbs|rolls|can|cans|bags?|box|bottles?)\b/i.test(q);
+  const hasEntityContext = /\b(product|sku|vendor|supplier|store|brand|category)\b/i.test(q) || hasProductNamePattern;
+  console.log(`Entity context check: hasEntityContext=${hasEntityContext}, hasProductNamePattern=${hasProductNamePattern}, question="${q}"`);
   
   for (const config of entityAmbiguousTerms) {
     const patternMatches = config.pattern.test(q);
@@ -1731,6 +1733,162 @@ STORE PERFORMANCE:
 - Average conversion rate: ${(avgConversion * 100).toFixed(1)}%
 - Average daily foot traffic: ${avgFootTraffic.toFixed(0)}
 ${storePerformanceDetails.slice(0, 8).map(s => `- ${s.store} (${s.region}): ${s.footTraffic} visitors, ${(Number(s.conversion) * 100).toFixed(1)}% conversion, $${Number(s.basketSize).toFixed(0)} avg basket`).join('\n')}`;
+        break;
+      }
+      
+      case 'promotion':
+      default: {
+        // Promotion module - analyze promotional performance
+        const productLookup: Record<string, any> = {};
+        products.forEach((p: any) => { productLookup[p.product_sku] = p; });
+        
+        const storeLookup: Record<string, any> = {};
+        stores.forEach((s: any) => { storeLookup[s.id] = s; });
+        
+        // Check if question mentions specific product
+        const questionLower = question.toLowerCase();
+        const mentionedProduct = products.find((p: any) => 
+          questionLower.includes(p.product_name?.toLowerCase()) ||
+          questionLower.includes(p.product_sku?.toLowerCase())
+        );
+        
+        // Calculate promotion performance
+        const promoLookup: Record<string, any> = {};
+        promotions.forEach((p: any) => { promoLookup[p.id] = p; });
+        
+        // Product performance from transactions
+        const productPerformance: Record<string, { 
+          name: string; sku: string; category: string; brand: string;
+          revenue: number; units: number; margin: number; transactions: number;
+          avgPrice: number; basePrice: number; discount: number;
+        }> = {};
+        
+        transactions.forEach((t: any) => {
+          const sku = t.product_sku;
+          const product = productLookup[sku] || {};
+          if (!productPerformance[sku]) {
+            productPerformance[sku] = {
+              name: t.product_name || product.product_name || sku,
+              sku,
+              category: product.category || 'Unknown',
+              brand: product.brand || 'Unknown',
+              revenue: 0,
+              units: 0,
+              margin: Number(product.margin_percent || 0),
+              transactions: 0,
+              avgPrice: 0,
+              basePrice: Number(product.base_price || 0),
+              discount: 0
+            };
+          }
+          productPerformance[sku].revenue += Number(t.total_amount || 0);
+          productPerformance[sku].units += Number(t.quantity || 0);
+          productPerformance[sku].transactions++;
+          productPerformance[sku].discount += Number(t.discount_amount || 0);
+        });
+        
+        // Calculate avg price per product
+        Object.values(productPerformance).forEach(p => {
+          p.avgPrice = p.units > 0 ? p.revenue / p.units : 0;
+        });
+        
+        // Sort by revenue
+        const productsByRevenue = Object.values(productPerformance).sort((a, b) => b.revenue - a.revenue);
+        const topProducts = productsByRevenue.slice(0, 15);
+        const bottomProducts = productsByRevenue.slice(-10).reverse();
+        
+        // Promotion effectiveness by category
+        const categoryMetrics: Record<string, { revenue: number; units: number; promos: Set<string>; products: Set<string> }> = {};
+        transactions.forEach((t: any) => {
+          const product = productLookup[t.product_sku] || {};
+          const cat = product.category || 'Other';
+          if (!categoryMetrics[cat]) categoryMetrics[cat] = { revenue: 0, units: 0, promos: new Set(), products: new Set() };
+          categoryMetrics[cat].revenue += Number(t.total_amount || 0);
+          categoryMetrics[cat].units += Number(t.quantity || 0);
+          if (t.promotion_id) categoryMetrics[cat].promos.add(t.promotion_id);
+          categoryMetrics[cat].products.add(t.product_sku);
+        });
+        
+        const totalRevenue = Object.values(categoryMetrics).reduce((sum, c) => sum + c.revenue, 0);
+        
+        // Build specific product analysis if mentioned
+        let specificProductAnalysis = '';
+        if (mentionedProduct) {
+          const perf = productPerformance[mentionedProduct.product_sku];
+          if (perf) {
+            const avgCategoryRevenue = Object.values(productPerformance)
+              .filter(p => p.category === perf.category)
+              .reduce((sum, p) => sum + p.revenue, 0) / 
+              Object.values(productPerformance).filter(p => p.category === perf.category).length;
+            
+            const isUnderperforming = perf.revenue < avgCategoryRevenue * 0.7;
+            const priceVsBase = perf.avgPrice > 0 && perf.basePrice > 0 ? 
+              ((perf.avgPrice - perf.basePrice) / perf.basePrice * 100).toFixed(1) : '0';
+            
+            specificProductAnalysis = `
+SPECIFIC PRODUCT ANALYSIS FOR "${mentionedProduct.product_name}":
+- SKU: ${mentionedProduct.product_sku}
+- Category: ${mentionedProduct.category}
+- Brand: ${mentionedProduct.brand || 'Unknown'}
+- Revenue: $${perf.revenue.toFixed(2)}
+- Units Sold: ${perf.units}
+- Transactions: ${perf.transactions}
+- Average Price: $${perf.avgPrice.toFixed(2)}
+- Base Price: $${perf.basePrice.toFixed(2)}
+- Price vs Base: ${priceVsBase}%
+- Margin: ${perf.margin.toFixed(1)}%
+- Total Discounts Given: $${perf.discount.toFixed(2)}
+- Category Average Revenue: $${avgCategoryRevenue.toFixed(2)}
+- Performance vs Category: ${isUnderperforming ? 'UNDERPERFORMING' : 'PERFORMING'} (${((perf.revenue / avgCategoryRevenue) * 100).toFixed(0)}% of category avg)
+- Price Elasticity: ${mentionedProduct.price_elasticity || 'Not measured'}
+- Seasonality: ${mentionedProduct.seasonality_factor || 'Not defined'}
+
+WHY "${mentionedProduct.product_name}" MAY BE UNDERPERFORMING:
+${isUnderperforming ? `
+1. Revenue is ${((1 - perf.revenue / avgCategoryRevenue) * 100).toFixed(0)}% below category average
+2. ${perf.margin < 30 ? 'Low margin product (' + perf.margin.toFixed(1) + '%) limits profitability' : 'Margin is acceptable at ' + perf.margin.toFixed(1) + '%'}
+3. ${perf.units < 10 ? 'Very low unit velocity (' + perf.units + ' units)' : 'Unit velocity: ' + perf.units + ' units'}
+4. ${mentionedProduct.price_elasticity && Math.abs(Number(mentionedProduct.price_elasticity)) > 2 ? 'High price elasticity (' + mentionedProduct.price_elasticity + ') - very sensitive to price changes' : 'Price elasticity is moderate'}
+5. ${perf.discount > 0 ? 'Discounts of $' + perf.discount.toFixed(2) + ' applied but may not be driving volume' : 'No promotional discounts applied - consider promotion'}
+` : `This product is performing at or above category average.`}
+`;
+          }
+        }
+        
+        dataContext = `
+PROMOTION INTELLIGENCE DATA SUMMARY:
+- Products: ${products.length}
+- Active Promotions: ${promotions.filter((p: any) => p.status === 'active').length}
+- Total Promotions: ${promotions.length}
+- Stores: ${stores.length}
+- Total Revenue: $${totalRevenue.toFixed(2)}
+- Transactions Analyzed: ${transactions.length}
+
+${specificProductAnalysis}
+
+TOP PERFORMING PRODUCTS BY REVENUE:
+${topProducts.map(p => `- ${p.name} (${p.category}, ${p.brand}): $${p.revenue.toFixed(2)} revenue, ${p.units} units, ${p.margin.toFixed(1)}% margin, $${p.avgPrice.toFixed(2)} avg price`).join('\n')}
+
+BOTTOM PERFORMING PRODUCTS (NEED ATTENTION):
+${bottomProducts.map(p => `- ${p.name} (${p.category}, ${p.brand}): $${p.revenue.toFixed(2)} revenue, ${p.units} units, ${p.margin.toFixed(1)}% margin`).join('\n')}
+
+CATEGORY PERFORMANCE:
+${Object.entries(categoryMetrics)
+  .sort((a, b) => b[1].revenue - a[1].revenue)
+  .map(([cat, data]) => `- ${cat}: $${data.revenue.toFixed(2)} revenue (${((data.revenue / totalRevenue) * 100).toFixed(1)}% share), ${data.units} units, ${data.products.size} products, ${data.promos.size} promotions`)
+  .join('\n')}
+
+ACTIVE PROMOTIONS:
+${promotions.filter((p: any) => p.status === 'active').slice(0, 10).map((p: any) => 
+  `- ${p.promotion_name} (${p.promotion_type}): ${p.discount_percent ? p.discount_percent + '% off' : '$' + (p.discount_amount || 0) + ' off'}, Category: ${p.product_category || 'All'}, Spend: $${Number(p.total_spend || 0).toFixed(0)}`
+).join('\n')}
+
+PRODUCTS BY CATEGORY (USE THESE EXACT NAMES):
+${Object.entries(categoryMetrics).map(([cat, data]) => {
+  const catProducts = Object.values(productPerformance).filter(p => p.category === cat).slice(0, 5);
+  return `${cat}: ${catProducts.map(p => p.name).join(', ')}`;
+}).join('\n')}
+`;
         break;
       }
     }
