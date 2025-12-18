@@ -832,7 +832,33 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                               <div className="flex flex-wrap gap-2">
                                 {message.data.chartData.slice(0, 6).map((item: any, idx: number) => {
                                   const name = item.name || item.label || item.category || `Item ${idx + 1}`;
-                                  const value = item.value || item.revenue || item.roi || item.margin;
+                                  // Determine the primary metric and its label
+                                  let metricLabel = '';
+                                  let metricValue: number | undefined;
+                                  let formattedValue = '';
+                                  
+                                  if (item.incrementalMargin !== undefined && item.incrementalMargin !== 0) {
+                                    metricLabel = 'Margin';
+                                    metricValue = item.incrementalMargin;
+                                    formattedValue = metricValue >= 1000000 ? `$${(metricValue/1000000).toFixed(1)}M` : metricValue >= 1000 ? `$${(metricValue/1000).toFixed(0)}K` : `$${metricValue.toFixed(0)}`;
+                                  } else if (item.margin !== undefined && item.margin !== 0) {
+                                    metricLabel = 'Margin';
+                                    metricValue = item.margin;
+                                    formattedValue = metricValue >= 1000000 ? `$${(metricValue/1000000).toFixed(1)}M` : metricValue >= 1000 ? `$${(metricValue/1000).toFixed(0)}K` : `$${metricValue.toFixed(0)}`;
+                                  } else if (item.revenue !== undefined && item.revenue !== 0) {
+                                    metricLabel = 'Revenue';
+                                    metricValue = item.revenue;
+                                    formattedValue = metricValue >= 1000000 ? `$${(metricValue/1000000).toFixed(1)}M` : metricValue >= 1000 ? `$${(metricValue/1000).toFixed(0)}K` : `$${metricValue.toFixed(0)}`;
+                                  } else if (item.roi !== undefined) {
+                                    metricLabel = 'ROI';
+                                    metricValue = item.roi;
+                                    formattedValue = `${metricValue.toFixed(1)}x`;
+                                  } else if (item.value !== undefined) {
+                                    metricLabel = 'Value';
+                                    metricValue = item.value;
+                                    formattedValue = typeof metricValue === 'number' ? (metricValue >= 1000000 ? `$${(metricValue/1000000).toFixed(1)}M` : metricValue >= 1000 ? `$${(metricValue/1000).toFixed(0)}K` : metricValue.toFixed(1)) : String(metricValue);
+                                  }
+                                  
                                   return (
                                     <Button
                                       key={idx}
@@ -842,10 +868,11 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                       onClick={() => handleDrillInto('item', name, 1)}
                                     >
                                       <TrendingUp className="h-3 w-3 mr-1.5 text-primary" />
-                                      <span className="font-medium">{name}</span>
-                                      {value !== undefined && (
-                                        <Badge variant="secondary" className="ml-2 text-[10px] h-4">
-                                          {typeof value === 'number' ? (value > 1000 ? `$${(value/1000).toFixed(1)}K` : value.toFixed(1)) : value}
+                                      <span className="font-medium truncate max-w-[120px]" title={name}>{name}</span>
+                                      {metricValue !== undefined && (
+                                        <Badge variant="secondary" className="ml-2 text-[10px] h-5 px-1.5">
+                                          <span className="text-muted-foreground mr-1">{metricLabel}:</span>
+                                          <span className="font-semibold">{formattedValue}</span>
                                         </Badge>
                                       )}
                                     </Button>
