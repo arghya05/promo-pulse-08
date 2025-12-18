@@ -752,11 +752,11 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
           
           <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-hidden">
             <ScrollArea className="h-full" style={{ height: 'calc(100vh - 280px)' }}>
-              <div className="space-y-4 p-4 pr-6">
+              <div className="space-y-4 p-2 pr-3">
                 {messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex gap-3 w-full ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex gap-2 w-full ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     {message.role === 'assistant' && (
                       <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit flex-shrink-0`}>
@@ -764,10 +764,10 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                       </div>
                     )}
                     <div
-                      className={`rounded-lg p-4 min-w-0 ${
+                      className={`rounded-lg p-3 min-w-0 ${
                         message.role === 'user'
-                          ? 'bg-primary text-primary-foreground max-w-[90%]'
-                          : 'bg-muted flex-1 max-w-full'
+                          ? 'bg-primary text-primary-foreground max-w-[85%]'
+                          : 'bg-muted flex-1'
                       }`}
                       style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                     >
