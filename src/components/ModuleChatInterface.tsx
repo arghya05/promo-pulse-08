@@ -764,10 +764,10 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                       </div>
                     )}
                     <div
-                      className={`rounded-lg p-3 min-w-0 ${
+                      className={`rounded-lg p-3 min-w-0 text-left ${
                         message.role === 'user'
-                          ? 'bg-primary text-primary-foreground max-w-[85%]'
-                          : 'bg-muted flex-1'
+                          ? 'bg-primary text-primary-foreground max-w-[70%] ml-auto'
+                          : 'bg-muted w-full max-w-full'
                       }`}
                       style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                     >
