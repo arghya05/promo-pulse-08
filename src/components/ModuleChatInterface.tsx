@@ -756,7 +756,8 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                 {messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex gap-2 w-full ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    style={{ width: '100%' }}
                   >
                     {message.role === 'assistant' && (
                       <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit flex-shrink-0`}>
@@ -764,12 +765,12 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                       </div>
                     )}
                     <div
-                      className={`rounded-lg p-3 min-w-0 text-left ${
+                      className={`rounded-lg p-3 text-left overflow-hidden ${
                         message.role === 'user'
-                          ? 'bg-primary text-primary-foreground max-w-[70%] ml-auto'
-                          : 'bg-muted w-full max-w-full'
+                          ? 'bg-primary text-primary-foreground max-w-[70%] ml-auto flex-shrink-0'
+                          : 'bg-muted flex-1 min-w-0'
                       }`}
-                      style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                      style={{ wordWrap: 'break-word', overflowWrap: 'anywhere', wordBreak: 'break-word' }}
                     >
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
