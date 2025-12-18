@@ -97,7 +97,7 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
   }).filter(Boolean);
   
   return (
-    <div className={cn("space-y-3 w-full max-w-full", className)}>
+    <div className={cn("space-y-3 w-full", className)}>
       {insights.map((insight, idx) => {
         const type = getInsightType(insight);
         
@@ -105,20 +105,19 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
           <div
             key={idx}
             className={cn(
-              "flex gap-3 p-3 rounded-lg border transition-colors w-full max-w-full",
+              "p-3 rounded-lg border transition-colors overflow-x-auto",
               type === 'positive' && "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-800/30",
               type === 'negative' && "bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-800/30",
               type === 'comparison' && "bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/50 dark:border-blue-800/30",
               type === 'neutral' && "bg-muted/30 border-border/50"
             )}
           >
-            <InsightIcon type={type} />
-            <p 
-              className="text-sm leading-relaxed flex-1 min-w-0"
-              style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}
-            >
-              {highlightMetrics(insight)}
-            </p>
+            <div className="flex gap-3 min-w-max">
+              <InsightIcon type={type} />
+              <p className="text-sm leading-relaxed whitespace-nowrap">
+                {highlightMetrics(insight)}
+              </p>
+            </div>
           </div>
         );
       })}
