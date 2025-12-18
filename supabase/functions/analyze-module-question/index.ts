@@ -2805,27 +2805,53 @@ ${hierarchyAnalysis.level !== 'none' ?
   moduleId === 'space' ? 'shelf space, planograms, sales per sqft, fixture utilization' : 
   isCrossModule ? 'relationships between modules, integrated impacts, trade-offs' : 'relevant metrics')}
 
+MANDATORY QUALITY REQUIREMENTS FOR ALL RESPONSES (INCLUDING DRILL-DOWN):
+1. CAUSAL DRIVERS ARE ALWAYS REQUIRED - Every response MUST include meaningful causalDrivers with:
+   - 3-5 specific causal drivers ranked by impact (e.g., "High margin at 35% drives profitability", "Strong brand loyalty - Chobani leads category")
+   - Each driver must have: correlation (0-1), impact (%), direction (positive/negative)
+   - Reference SPECIFIC product names, categories, suppliers from the data - NEVER generic statements
+
+2. WHY ANALYSIS IS ALWAYS REQUIRED - The "why" array must explain:
+   - Root causes with specific data (e.g., "Sharp Cheddar drives 23% of Dairy revenue due to $14.99 price point and 35% margin")
+   - Compare to benchmarks (e.g., "performs 183% above category average of $49.22")
+   - Identify patterns (e.g., "premium price + no discounts = high margin retention")
+
+3. RECOMMENDATIONS ARE ALWAYS REQUIRED - The "whatToDo" array must be:
+   - ACTIONABLE with specific products/categories (e.g., "Increase Sharp Cheddar Cheese distribution to all 5 stores")
+   - Include EXPECTED IMPACT (e.g., "→ +15-20% revenue lift expected")
+   - Prioritized by impact (highest impact first)
+   - Reference specific entities from data (not "underperformers" but "Trail Mix 26oz and Chicken Nuggets 32oz")
+
 ${hierarchyAnalysis.analysisType === 'why' || question.toLowerCase().includes('why') ? `
-MANDATORY CAUSAL DRIVER REQUIREMENTS:
-Since this is a "WHY" analysis question, you MUST provide detailed causalDrivers with:
-- At least 3-5 specific causal drivers ranked by impact
-- Each driver must include: correlation score (0-1), impact value (percentage or absolute), and direction (positive/negative)
-- Reference specific product names, suppliers, or entities from the data
-- Explain the business significance of each driver
+ENHANCED WHY ANALYSIS REQUIRED:
+Since this is explicitly a "WHY" question, provide DEEP causal analysis:
+- Primary driver with quantified impact and business explanation
+- Secondary drivers with correlation scores
+- Comparison to peers/benchmarks to explain relative performance
+- Historical trend explanation if available
+` : ''}
+
+${isDrillDown || hierarchyAnalysis.level !== 'none' ? `
+DRILL-DOWN ANALYSIS QUALITY REQUIREMENTS:
+You are analyzing "${hierarchyAnalysis.entityName}" at the ${hierarchyAnalysis.level} level.
+- DO NOT just show numbers - EXPLAIN what they mean
+- WHY is this ${hierarchyAnalysis.level} performing this way? (margin structure, price point, brand strength, promotional support, seasonality, competition)
+- WHAT should be done about it? Give 3 specific, actionable recommendations with expected impacts
+- Each recommendation must reference THIS specific ${hierarchyAnalysis.level} ("${hierarchyAnalysis.entityName}")
 ` : ''}
 
 Respond with a JSON object:
 {
   "whatHappened": ["3-4 bullet points with SPECIFIC product names and metrics from data above - NO vague statements"],
-  "why": ["2-3 causal explanations with specific data references"],
-  "whatToDo": ["2-3 actionable recommendations with SPECIFIC product names and expected impact percentages"],
+  "why": ["2-3 CAUSAL EXPLANATIONS - not just numbers. Example: 'Sharp Cheddar drives Dairy because premium $14.99 price point captures 35% margin while maintaining strong volume - 537 units shows price inelastic demand'"],
+  "whatToDo": ["2-3 ACTIONABLE RECOMMENDATIONS with SPECIFIC product names AND expected impact percentages. Example: 'Test 5% price increase on Sharp Cheddar (current margin 35% supports it) → Expected +$150-200 additional quarterly margin'"],
   "kpis": {"metric_name": "value with units", ...},
   "chartData": [{"name": "Specific Product/Category Name", "value": number}, ...],
   "nextQuestions": ["${moduleId}-specific follow-up 1", "${moduleId}-specific follow-up 2"],
   "causalDrivers": [
-    {"driver": "Specific driver with product/category name", "impact": "percentage or dollar value", "correlation": 0.85, "direction": "positive"},
-    {"driver": "Second driver with specific entity", "impact": "percentage or value", "correlation": 0.72, "direction": "negative"},
-    {"driver": "Third driver", "impact": "value", "correlation": 0.65, "direction": "positive"}
+    {"driver": "Primary driver: [specific product/category name] with quantified reason", "impact": "percentage or dollar value", "correlation": 0.85, "direction": "positive"},
+    {"driver": "Secondary driver: [specific entity] - business explanation", "impact": "percentage or value", "correlation": 0.72, "direction": "positive/negative"},
+    {"driver": "Third driver: [specific factor]", "impact": "value", "correlation": 0.65, "direction": "positive/negative"}
   ],
   "mlInsights": {
     "patternDetected": "Specific pattern with product names",
