@@ -146,33 +146,22 @@ function isSimulationQuestion(question: string): boolean {
   return simulationTriggers.some(trigger => question.toLowerCase().includes(trigger));
 }
 
-// Detect product-specific analysis type needed
-interface ProductAnalysisType {
-  isProductSpecific: boolean;
+// Detect hierarchy-level analysis type (Category → Brand → SKU)
+interface HierarchyAnalysisType {
+  level: 'category' | 'brand' | 'product' | 'none';
   analysisType: 'why' | 'recommendation' | 'forecast' | 'drivers' | 'general' | null;
-  productName: string | null;
+  entityName: string | null;
+  entityData: any | null;
 }
 
-function detectProductAnalysisType(question: string, products: any[]): ProductAnalysisType {
+function detectHierarchyAnalysisType(question: string, products: any[]): HierarchyAnalysisType {
   const q = question.toLowerCase();
   
-  // Find mentioned product
-  const mentionedProduct = products.find((p: any) => 
-    q.includes(p.product_name?.toLowerCase()) ||
-    q.includes(p.product_sku?.toLowerCase())
-  );
-  
-  if (!mentionedProduct) {
-    return { isProductSpecific: false, analysisType: null, productName: null };
-  }
-  
-  const productName = mentionedProduct.product_name;
-  
-  // Detect analysis type
-  const whyPatterns = ['why', 'reason', 'cause', 'explain', 'what happened', 'how come', 'underperform', 'not working', 'performing'];
-  const recommendPatterns = ['recommend', 'suggestion', 'what should', 'what do you recommend', 'advice', 'how to improve', 'how can we', 'optimize', 'what to do'];
-  const forecastPatterns = ['forecast', 'predict', 'projection', 'next month', 'next quarter', 'next year', 'next 3 months', 'future', 'expected', 'anticipate'];
-  const driverPatterns = ['driver', 'what drives', 'factor', 'influence', 'affect', 'impact on sales', 'sales driver', 'demand driver'];
+  // Detect analysis type first
+  const whyPatterns = ['why', 'reason', 'cause', 'explain', 'what happened', 'how come', 'underperform', 'not working', 'performing', 'struggling'];
+  const recommendPatterns = ['recommend', 'suggestion', 'what should', 'what do you recommend', 'advice', 'how to improve', 'how can we', 'optimize', 'what to do', 'strategy'];
+  const forecastPatterns = ['forecast', 'predict', 'projection', 'next month', 'next quarter', 'next year', 'next 3 months', 'future', 'expected', 'anticipate', 'outlook'];
+  const driverPatterns = ['driver', 'what drives', 'factor', 'influence', 'affect', 'impact on sales', 'sales driver', 'demand driver', 'what influences'];
   
   let analysisType: 'why' | 'recommendation' | 'forecast' | 'drivers' | 'general' = 'general';
   
@@ -186,7 +175,81 @@ function detectProductAnalysisType(question: string, products: any[]): ProductAn
     analysisType = 'drivers';
   }
   
-  return { isProductSpecific: true, analysisType, productName };
+  // 1. Check for product/SKU match (most specific)
+  const mentionedProduct = products.find((p: any) => 
+    q.includes(p.product_name?.toLowerCase()) ||
+    q.includes(p.product_sku?.toLowerCase())
+  );
+  
+  if (mentionedProduct) {
+    return { 
+      level: 'product', 
+      analysisType, 
+      entityName: mentionedProduct.product_name,
+      entityData: mentionedProduct
+    };
+  }
+  
+  // 2. Check for brand match
+  const brands = [...new Set(products.map((p: any) => p.brand).filter(Boolean))];
+  const mentionedBrand = brands.find((brand: string) => 
+    q.includes(brand.toLowerCase())
+  );
+  
+  if (mentionedBrand) {
+    const brandProducts = products.filter((p: any) => p.brand === mentionedBrand);
+    return { 
+      level: 'brand', 
+      analysisType, 
+      entityName: mentionedBrand,
+      entityData: { brand: mentionedBrand, products: brandProducts }
+    };
+  }
+  
+  // 3. Check for category match
+  const categories = [...new Set(products.map((p: any) => p.category).filter(Boolean))];
+  const mentionedCategory = categories.find((cat: string) => 
+    q.includes(cat.toLowerCase())
+  );
+  
+  if (mentionedCategory) {
+    const categoryProducts = products.filter((p: any) => p.category === mentionedCategory);
+    const categoryBrands = [...new Set(categoryProducts.map((p: any) => p.brand).filter(Boolean))];
+    return { 
+      level: 'category', 
+      analysisType, 
+      entityName: mentionedCategory,
+      entityData: { category: mentionedCategory, products: categoryProducts, brands: categoryBrands }
+    };
+  }
+  
+  // 4. Check for subcategory match
+  const subcategories = [...new Set(products.map((p: any) => p.subcategory).filter(Boolean))];
+  const mentionedSubcategory = subcategories.find((sub: string) => 
+    q.includes(sub.toLowerCase())
+  );
+  
+  if (mentionedSubcategory) {
+    const subcatProducts = products.filter((p: any) => p.subcategory === mentionedSubcategory);
+    return { 
+      level: 'category', 
+      analysisType, 
+      entityName: mentionedSubcategory,
+      entityData: { subcategory: mentionedSubcategory, products: subcatProducts }
+    };
+  }
+  
+  return { level: 'none', analysisType, entityName: null, entityData: null };
+}
+
+// Legacy function for backward compatibility
+function detectProductAnalysisType(question: string, products: any[]): { isProductSpecific: boolean; analysisType: string | null; productName: string | null } {
+  const result = detectHierarchyAnalysisType(question, products);
+  return {
+    isProductSpecific: result.level === 'product',
+    analysisType: result.analysisType,
+    productName: result.level === 'product' ? result.entityName : null
+  };
 }
 
 // Build comprehensive product-specific data context for any module
@@ -387,7 +450,265 @@ MODULE-SPECIFIC CONTEXT (${moduleId.toUpperCase()}):
   return context;
 }
 
-// Detect ambiguous terms that need clarification
+// Build category-level analysis context
+function buildCategoryContext(
+  categoryData: { category?: string; subcategory?: string; products: any[]; brands?: string[] },
+  analysisType: string,
+  transactions: any[],
+  promotions: any[],
+  forecasts: any[],
+  inventory: any[],
+  competitorPrices: any[],
+  moduleId: string
+): string {
+  const entityName = categoryData.category || categoryData.subcategory || 'Unknown';
+  const categoryProducts = categoryData.products || [];
+  const brands = categoryData.brands || [...new Set(categoryProducts.map((p: any) => p.brand).filter(Boolean))];
+  
+  // Calculate category metrics
+  const categorySKUs = categoryProducts.map((p: any) => p.product_sku);
+  const categoryTransactions = transactions.filter((t: any) => categorySKUs.includes(t.product_sku));
+  const totalRevenue = categoryTransactions.reduce((sum, t: any) => sum + Number(t.total_amount || 0), 0);
+  const totalUnits = categoryTransactions.reduce((sum, t: any) => sum + Number(t.quantity || 0), 0);
+  const totalDiscounts = categoryTransactions.reduce((sum, t: any) => sum + Number(t.discount_amount || 0), 0);
+  const avgMargin = categoryProducts.reduce((sum, p: any) => sum + Number(p.margin_percent || 0), 0) / (categoryProducts.length || 1);
+  
+  // Top and bottom products in category
+  const productPerformance = categoryProducts.map((p: any) => {
+    const prodTxns = categoryTransactions.filter((t: any) => t.product_sku === p.product_sku);
+    const prodRevenue = prodTxns.reduce((sum, t: any) => sum + Number(t.total_amount || 0), 0);
+    const prodUnits = prodTxns.reduce((sum, t: any) => sum + Number(t.quantity || 0), 0);
+    return { ...p, revenue: prodRevenue, units: prodUnits };
+  }).sort((a, b) => b.revenue - a.revenue);
+  
+  const topProducts = productPerformance.slice(0, 5);
+  const bottomProducts = productPerformance.slice(-5).reverse();
+  
+  // Category promotions
+  const categoryPromos = promotions.filter((p: any) => 
+    p.product_category === entityName || categorySKUs.includes(p.product_sku)
+  );
+  
+  // Category inventory
+  const categoryInventory = inventory.filter((i: any) => categorySKUs.includes(i.product_sku));
+  const stockoutRiskItems = categoryInventory.filter((i: any) => i.stockout_risk === 'high' || i.stockout_risk === 'critical');
+  
+  // Category forecasts
+  const categoryForecasts = forecasts.filter((f: any) => categorySKUs.includes(f.product_sku));
+  const forecastedUnits = categoryForecasts.reduce((sum, f: any) => sum + Number(f.forecasted_units || 0), 0);
+  
+  let context = `
+═══════════════════════════════════════════════════════════════════
+CATEGORY-LEVEL ANALYSIS: "${entityName}"
+═══════════════════════════════════════════════════════════════════
+
+CATEGORY PROFILE:
+- Category: ${entityName}
+- Total SKUs: ${categoryProducts.length}
+- Brands: ${brands.join(', ') || 'Various'}
+- Average Margin: ${avgMargin.toFixed(1)}%
+
+CATEGORY PERFORMANCE:
+- Total Revenue: $${totalRevenue.toFixed(2)}
+- Total Units Sold: ${totalUnits}
+- Transactions: ${categoryTransactions.length}
+- Total Discounts: $${totalDiscounts.toFixed(2)}
+- Revenue per SKU: $${(totalRevenue / (categoryProducts.length || 1)).toFixed(2)}
+
+TOP 5 PRODUCTS IN ${entityName.toUpperCase()}:
+${topProducts.map((p, i) => `${i + 1}. ${p.product_name} - $${p.revenue.toFixed(2)} revenue, ${p.units} units`).join('\n')}
+
+BOTTOM 5 PRODUCTS IN ${entityName.toUpperCase()}:
+${bottomProducts.map((p, i) => `${i + 1}. ${p.product_name} - $${p.revenue.toFixed(2)} revenue, ${p.units} units`).join('\n')}
+
+BRANDS IN CATEGORY:
+${brands.map((brand: string) => {
+    const brandProds = categoryProducts.filter((p: any) => p.brand === brand);
+    const brandRevenue = productPerformance.filter((p: any) => p.brand === brand).reduce((sum, p: any) => sum + p.revenue, 0);
+    return `- ${brand}: ${brandProds.length} SKUs, $${brandRevenue.toFixed(2)} revenue`;
+  }).join('\n')}
+`;
+
+  if (analysisType === 'why' || analysisType === 'general') {
+    const avgRevPerProduct = totalRevenue / (categoryProducts.length || 1);
+    context += `
+WHY ANALYSIS FOR ${entityName.toUpperCase()}:
+1. Category generates $${totalRevenue.toFixed(2)} with ${categoryProducts.length} SKUs (avg $${avgRevPerProduct.toFixed(2)}/SKU)
+2. ${topProducts[0]?.product_name || 'Top product'} leads with $${topProducts[0]?.revenue.toFixed(2) || 0} (${((topProducts[0]?.revenue || 0) / totalRevenue * 100).toFixed(1)}% of category)
+3. ${bottomProducts[0]?.product_name || 'Bottom product'} underperforms at $${bottomProducts[0]?.revenue.toFixed(2) || 0}
+4. Average category margin is ${avgMargin.toFixed(1)}% ${avgMargin > 30 ? '(healthy)' : avgMargin > 20 ? '(moderate)' : '(below target)'}
+5. ${categoryPromos.length} promotions driving $${totalDiscounts.toFixed(2)} in promotional activity
+6. ${stockoutRiskItems.length} products at risk of stockout
+`;
+  }
+
+  if (analysisType === 'recommendation' || analysisType === 'general') {
+    context += `
+RECOMMENDATIONS FOR ${entityName.toUpperCase()}:
+1. FOCUS ON TOP PERFORMERS: ${topProducts.slice(0, 3).map(p => p.product_name).join(', ')} - maximize visibility
+2. ADDRESS UNDERPERFORMERS: ${bottomProducts.slice(0, 3).map(p => p.product_name).join(', ')} - consider delisting or repricing
+3. BRAND STRATEGY: ${brands[0] || 'Primary brand'} dominates - ${brands.length > 3 ? 'consider SKU rationalization' : 'expand selection'}
+4. PROMOTIONAL FOCUS: ${categoryPromos.length === 0 ? 'Create category promotion' : `Optimize ${categoryPromos.length} existing promotions`}
+5. INVENTORY: ${stockoutRiskItems.length > 0 ? `Address ${stockoutRiskItems.length} stockout risks: ${stockoutRiskItems.slice(0, 3).map((i: any) => i.product_sku).join(', ')}` : 'Inventory healthy'}
+`;
+  }
+
+  if (analysisType === 'forecast' || analysisType === 'general') {
+    const weeklyUnits = totalUnits / 4;
+    const forecast3Mo = Math.round(weeklyUnits * 12 * 1.1);
+    context += `
+FORECAST FOR ${entityName.toUpperCase()} (NEXT 3 MONTHS):
+- Current Weekly Run Rate: ${weeklyUnits.toFixed(0)} units/week
+- Forecasted Units (3 months): ${forecast3Mo} units
+- Forecasted Revenue: $${(forecast3Mo * (totalRevenue / totalUnits || 0)).toFixed(2)}
+- Existing Forecasts: ${categoryForecasts.length > 0 ? `${forecastedUnits} units forecasted across ${categoryForecasts.length} SKUs` : 'No forecasts available'}
+- Growth Trend: ${totalRevenue > avgMargin * 1000 ? 'Upward' : 'Stable'}
+`;
+  }
+
+  if (analysisType === 'drivers' || analysisType === 'general') {
+    context += `
+CATEGORY DRIVERS FOR ${entityName.toUpperCase()}:
+1. TOP SKU CONTRIBUTION: ${topProducts[0]?.product_name || 'N/A'} drives ${((topProducts[0]?.revenue || 0) / totalRevenue * 100).toFixed(1)}% of revenue
+2. BRAND MIX: ${brands.length} brands compete - ${brands[0] || 'Leader'} leads
+3. PRICE POINT: Average price $${(totalRevenue / totalUnits || 0).toFixed(2)}/unit
+4. PROMOTION INTENSITY: ${categoryPromos.length} promotions, $${totalDiscounts.toFixed(2)} total discounts
+5. INVENTORY POSITION: ${stockoutRiskItems.length} at-risk items out of ${categoryInventory.length}
+`;
+  }
+
+  return context;
+}
+
+// Build brand-level analysis context
+function buildBrandContext(
+  brandData: { brand: string; products: any[] },
+  analysisType: string,
+  transactions: any[],
+  promotions: any[],
+  forecasts: any[],
+  inventory: any[],
+  competitorPrices: any[],
+  moduleId: string
+): string {
+  const brandName = brandData.brand;
+  const brandProducts = brandData.products || [];
+  const categories = [...new Set(brandProducts.map((p: any) => p.category).filter(Boolean))];
+  
+  // Calculate brand metrics
+  const brandSKUs = brandProducts.map((p: any) => p.product_sku);
+  const brandTransactions = transactions.filter((t: any) => brandSKUs.includes(t.product_sku));
+  const totalRevenue = brandTransactions.reduce((sum, t: any) => sum + Number(t.total_amount || 0), 0);
+  const totalUnits = brandTransactions.reduce((sum, t: any) => sum + Number(t.quantity || 0), 0);
+  const totalDiscounts = brandTransactions.reduce((sum, t: any) => sum + Number(t.discount_amount || 0), 0);
+  const avgMargin = brandProducts.reduce((sum, p: any) => sum + Number(p.margin_percent || 0), 0) / (brandProducts.length || 1);
+  
+  // Product performance within brand
+  const productPerformance = brandProducts.map((p: any) => {
+    const prodTxns = brandTransactions.filter((t: any) => t.product_sku === p.product_sku);
+    const prodRevenue = prodTxns.reduce((sum, t: any) => sum + Number(t.total_amount || 0), 0);
+    const prodUnits = prodTxns.reduce((sum, t: any) => sum + Number(t.quantity || 0), 0);
+    return { ...p, revenue: prodRevenue, units: prodUnits };
+  }).sort((a, b) => b.revenue - a.revenue);
+  
+  const topProducts = productPerformance.slice(0, 5);
+  const bottomProducts = productPerformance.slice(-5).reverse();
+  
+  // Brand promotions
+  const brandPromos = promotions.filter((p: any) => brandSKUs.includes(p.product_sku));
+  
+  // Brand inventory
+  const brandInventory = inventory.filter((i: any) => brandSKUs.includes(i.product_sku));
+  const stockoutRiskItems = brandInventory.filter((i: any) => i.stockout_risk === 'high' || i.stockout_risk === 'critical');
+  
+  // Competitor pricing for brand
+  const brandCompetitorPrices = competitorPrices.filter((cp: any) => brandSKUs.includes(cp.product_sku));
+  
+  let context = `
+═══════════════════════════════════════════════════════════════════
+BRAND-LEVEL ANALYSIS: "${brandName}"
+═══════════════════════════════════════════════════════════════════
+
+BRAND PROFILE:
+- Brand: ${brandName}
+- Total SKUs: ${brandProducts.length}
+- Categories: ${categories.join(', ') || 'Various'}
+- Average Margin: ${avgMargin.toFixed(1)}%
+
+BRAND PERFORMANCE:
+- Total Revenue: $${totalRevenue.toFixed(2)}
+- Total Units Sold: ${totalUnits}
+- Transactions: ${brandTransactions.length}
+- Total Discounts: $${totalDiscounts.toFixed(2)}
+- Revenue per SKU: $${(totalRevenue / (brandProducts.length || 1)).toFixed(2)}
+
+TOP 5 ${brandName.toUpperCase()} PRODUCTS:
+${topProducts.map((p, i) => `${i + 1}. ${p.product_name} (${p.category}) - $${p.revenue.toFixed(2)} revenue, ${p.units} units`).join('\n')}
+
+BOTTOM 5 ${brandName.toUpperCase()} PRODUCTS:
+${bottomProducts.map((p, i) => `${i + 1}. ${p.product_name} (${p.category}) - $${p.revenue.toFixed(2)} revenue, ${p.units} units`).join('\n')}
+
+CATEGORY BREAKDOWN:
+${categories.map((cat: string) => {
+    const catProds = brandProducts.filter((p: any) => p.category === cat);
+    const catRevenue = productPerformance.filter((p: any) => p.category === cat).reduce((sum, p: any) => sum + p.revenue, 0);
+    return `- ${cat}: ${catProds.length} SKUs, $${catRevenue.toFixed(2)} revenue`;
+  }).join('\n')}
+
+COMPETITIVE POSITION:
+${brandCompetitorPrices.length > 0 ? brandCompetitorPrices.slice(0, 5).map((cp: any) => `- vs ${cp.competitor_name}: ${Number(cp.price_gap_percent || 0).toFixed(1)}% price gap`).join('\n') : 'No competitor data available'}
+`;
+
+  if (analysisType === 'why' || analysisType === 'general') {
+    context += `
+WHY ANALYSIS FOR ${brandName.toUpperCase()}:
+1. Brand generates $${totalRevenue.toFixed(2)} across ${brandProducts.length} SKUs
+2. ${topProducts[0]?.product_name || 'Top product'} leads with ${((topProducts[0]?.revenue || 0) / totalRevenue * 100).toFixed(1)}% of brand revenue
+3. Present in ${categories.length} categories: ${categories.join(', ')}
+4. Average margin of ${avgMargin.toFixed(1)}% ${avgMargin > 30 ? 'exceeds target' : 'needs improvement'}
+5. ${brandPromos.length} promotions supporting the brand
+6. ${stockoutRiskItems.length > 0 ? `${stockoutRiskItems.length} products at stockout risk` : 'Inventory stable'}
+`;
+  }
+
+  if (analysisType === 'recommendation' || analysisType === 'general') {
+    context += `
+RECOMMENDATIONS FOR ${brandName.toUpperCase()}:
+1. HERO SKU FOCUS: Maximize ${topProducts[0]?.product_name || 'top performer'} visibility and distribution
+2. PORTFOLIO CLEANUP: Review ${bottomProducts.slice(0, 3).map(p => p.product_name).join(', ')} for discontinuation
+3. CATEGORY EXPANSION: ${categories.length < 3 ? 'Expand into adjacent categories' : 'Optimize existing category presence'}
+4. PROMOTIONAL STRATEGY: ${brandPromos.length === 0 ? 'Create brand-level promotion' : `Consolidate ${brandPromos.length} promotions`}
+5. COMPETITIVE RESPONSE: ${brandCompetitorPrices.some((cp: any) => Number(cp.price_gap_percent) > 10) ? 'Address significant price gaps' : 'Maintain competitive position'}
+`;
+  }
+
+  if (analysisType === 'forecast' || analysisType === 'general') {
+    const weeklyUnits = totalUnits / 4;
+    const forecast3Mo = Math.round(weeklyUnits * 12 * 1.1);
+    context += `
+FORECAST FOR ${brandName.toUpperCase()} (NEXT 3 MONTHS):
+- Current Weekly Run Rate: ${weeklyUnits.toFixed(0)} units/week
+- Forecasted Units (3 months): ${forecast3Mo} units
+- Forecasted Revenue: $${(forecast3Mo * (totalRevenue / totalUnits || 0)).toFixed(2)}
+- Growth Drivers: ${topProducts.slice(0, 2).map(p => p.product_name).join(', ')}
+- Risk Factors: ${bottomProducts.slice(0, 2).map(p => p.product_name).join(', ')} may decline
+`;
+  }
+
+  if (analysisType === 'drivers' || analysisType === 'general') {
+    context += `
+BRAND DRIVERS FOR ${brandName.toUpperCase()}:
+1. PORTFOLIO DEPTH: ${brandProducts.length} SKUs across ${categories.length} categories
+2. HERO PRODUCTS: ${topProducts.slice(0, 2).map(p => p.product_name).join(', ')} drive ${((topProducts[0]?.revenue || 0) + (topProducts[1]?.revenue || 0)) / totalRevenue * 100 || 0}% of revenue
+3. PRICE POSITIONING: ${brandCompetitorPrices.length > 0 ? `Avg gap ${(brandCompetitorPrices.reduce((sum, cp: any) => sum + Number(cp.price_gap_percent || 0), 0) / brandCompetitorPrices.length).toFixed(1)}% vs competitors` : 'No competitive data'}
+4. PROMOTIONAL INTENSITY: ${brandPromos.length} promotions, $${totalDiscounts.toFixed(2)} invested
+5. INVENTORY HEALTH: ${stockoutRiskItems.length} at-risk items
+`;
+  }
+
+  return context;
+}
+
 interface ClarificationOption {
   label: string;
   description: string;
@@ -735,34 +1056,69 @@ serve(async (req) => {
     const inventoryLevels = inventoryRes.data || [];
     const forecasts = forecastsRes.data || [];
 
-    // Detect if this is a product-specific question
-    const productAnalysis = detectProductAnalysisType(question, products);
-    console.log(`[${moduleId}] Product analysis:`, JSON.stringify(productAnalysis));
+    // Detect hierarchy level (category, brand, or product)
+    const hierarchyAnalysis = detectHierarchyAnalysisType(question, products);
+    console.log(`[${moduleId}] Hierarchy analysis:`, JSON.stringify({ level: hierarchyAnalysis.level, analysisType: hierarchyAnalysis.analysisType, entityName: hierarchyAnalysis.entityName }));
 
-    // Build product-specific context if a product is mentioned
-    let productSpecificContext = '';
-    if (productAnalysis.isProductSpecific) {
-      const mentionedProduct = products.find((p: any) => 
-        p.product_name?.toLowerCase() === productAnalysis.productName?.toLowerCase() ||
-        question.toLowerCase().includes(p.product_name?.toLowerCase())
-      );
-      
-      if (mentionedProduct) {
-        productSpecificContext = buildProductSpecificContext(
-          mentionedProduct,
-          productAnalysis.analysisType || 'general',
-          transactions,
-          products,
-          promotions,
-          forecasts,
-          inventoryLevels,
-          competitorPrices,
-          suppliers,
-          moduleId
-        );
-        console.log(`[${moduleId}] Built product-specific context for: ${mentionedProduct.product_name}`);
+    // Build context based on detected hierarchy level
+    let hierarchyContext = '';
+    if (hierarchyAnalysis.level !== 'none') {
+      switch (hierarchyAnalysis.level) {
+        case 'product':
+          // Find the product and build product-specific context
+          const mentionedProduct = products.find((p: any) => 
+            p.product_name?.toLowerCase() === hierarchyAnalysis.entityName?.toLowerCase() ||
+            question.toLowerCase().includes(p.product_name?.toLowerCase())
+          );
+          if (mentionedProduct) {
+            hierarchyContext = buildProductSpecificContext(
+              mentionedProduct,
+              hierarchyAnalysis.analysisType || 'general',
+              transactions,
+              products,
+              promotions,
+              forecasts,
+              inventoryLevels,
+              competitorPrices,
+              suppliers,
+              moduleId
+            );
+            console.log(`[${moduleId}] Built PRODUCT context for: ${mentionedProduct.product_name}`);
+          }
+          break;
+        
+        case 'brand':
+          hierarchyContext = buildBrandContext(
+            hierarchyAnalysis.entityData,
+            hierarchyAnalysis.analysisType || 'general',
+            transactions,
+            promotions,
+            forecasts,
+            inventoryLevels,
+            competitorPrices,
+            moduleId
+          );
+          console.log(`[${moduleId}] Built BRAND context for: ${hierarchyAnalysis.entityName}`);
+          break;
+        
+        case 'category':
+          hierarchyContext = buildCategoryContext(
+            hierarchyAnalysis.entityData,
+            hierarchyAnalysis.analysisType || 'general',
+            transactions,
+            promotions,
+            forecasts,
+            inventoryLevels,
+            competitorPrices,
+            moduleId
+          );
+          console.log(`[${moduleId}] Built CATEGORY context for: ${hierarchyAnalysis.entityName}`);
+          break;
       }
     }
+    
+    // Legacy variable for backward compatibility
+    const productSpecificContext = hierarchyContext;
 
     // Build comprehensive data context based on module
     let dataContext = '';
@@ -2194,47 +2550,52 @@ CROSS-MODULE ANALYSIS INSTRUCTIONS:
 - Highlight trade-offs between different modules.
 ` : '';
 
-    // Build product-specific analysis instructions
-    const productAnalysisInstructions = productAnalysis.isProductSpecific ? `
-PRODUCT-SPECIFIC ANALYSIS INSTRUCTIONS:
-This question is about a SPECIFIC PRODUCT: "${productAnalysis.productName}"
-Analysis Type: ${productAnalysis.analysisType?.toUpperCase() || 'GENERAL'}
+    // Build hierarchy-specific analysis instructions (category, brand, or product level)
+    const hierarchyInstructions = hierarchyAnalysis.level !== 'none' ? `
+HIERARCHY-LEVEL ANALYSIS INSTRUCTIONS:
+This question is about a SPECIFIC ${hierarchyAnalysis.level.toUpperCase()}: "${hierarchyAnalysis.entityName}"
+Analysis Type: ${hierarchyAnalysis.analysisType?.toUpperCase() || 'GENERAL'}
+Hierarchy Level: ${hierarchyAnalysis.level.toUpperCase()}
 
-${productAnalysis.analysisType === 'why' ? `
+${hierarchyAnalysis.analysisType === 'why' ? `
 FOR "WHY" ANALYSIS:
-- Explain WHY this product is performing the way it is
+- Explain WHY this ${hierarchyAnalysis.level} is performing the way it is
 - Reference specific metrics: revenue, margin, unit velocity, price elasticity
-- Compare to category average and identify gaps
+- Compare to ${hierarchyAnalysis.level === 'product' ? 'category average' : hierarchyAnalysis.level === 'brand' ? 'other brands' : 'other categories'} and identify gaps
 - List 3-5 specific causal factors with quantified impacts
-- Include competitive positioning if data available
+- ${hierarchyAnalysis.level !== 'product' ? `Include TOP and BOTTOM performers within this ${hierarchyAnalysis.level}` : 'Include competitive positioning if data available'}
 ` : ''}
-${productAnalysis.analysisType === 'recommendation' ? `
+${hierarchyAnalysis.analysisType === 'recommendation' ? `
 FOR "RECOMMENDATION" ANALYSIS:
-- Provide 3-5 SPECIFIC, ACTIONABLE recommendations for this product
+- Provide 3-5 SPECIFIC, ACTIONABLE recommendations for this ${hierarchyAnalysis.level}
 - Each recommendation should include: what to do, expected impact, timeline
 - Prioritize by impact (high/medium/low)
-- Include pricing, promotion, placement, and inventory recommendations
+- ${hierarchyAnalysis.level === 'product' ? 'Include pricing, promotion, placement, and inventory recommendations' : `Include recommendations for top/bottom products within this ${hierarchyAnalysis.level}`}
 - Reference specific numbers from the data
 ` : ''}
-${productAnalysis.analysisType === 'forecast' ? `
+${hierarchyAnalysis.analysisType === 'forecast' ? `
 FOR "FORECAST" ANALYSIS:
-- Provide demand/sales forecast for this specific product
+- Provide demand/sales forecast for this ${hierarchyAnalysis.level}
 - Include forecasts for: next month, next quarter, next 3 months
 - Show confidence levels (%) for each forecast
 - Explain drivers affecting the forecast (seasonality, trends, promotions)
 - Include scenario analysis: conservative, expected, optimistic
+- ${hierarchyAnalysis.level !== 'product' ? `Break down forecast by top products within this ${hierarchyAnalysis.level}` : ''}
 ` : ''}
-${productAnalysis.analysisType === 'drivers' ? `
+${hierarchyAnalysis.analysisType === 'drivers' ? `
 FOR "DRIVERS" ANALYSIS:
-- Identify TOP 5 drivers that influence sales for this product
+- Identify TOP 5 drivers that influence sales for this ${hierarchyAnalysis.level}
 - Quantify each driver's impact (correlation %, contribution %)
 - Include: price sensitivity, promotional lift, seasonality, competitive factors, brand loyalty
 - Rank drivers by importance
-- Suggest how to leverage each driver
+- ${hierarchyAnalysis.level !== 'product' ? `Show which products within this ${hierarchyAnalysis.level} are most affected by each driver` : 'Suggest how to leverage each driver'}
 ` : ''}
 
-CRITICAL: Your ENTIRE response must focus on "${productAnalysis.productName}". Do NOT provide generic category-level answers.
-Use ALL the specific data provided in the PRODUCT ANALYSIS section above.
+CRITICAL: Your ENTIRE response must focus on "${hierarchyAnalysis.entityName}" at the ${hierarchyAnalysis.level.toUpperCase()} level.
+${hierarchyAnalysis.level === 'category' ? 'Include analysis of TOP and BOTTOM products/brands within this category.' : ''}
+${hierarchyAnalysis.level === 'brand' ? 'Include analysis of TOP and BOTTOM products within this brand.' : ''}
+${hierarchyAnalysis.level === 'product' ? 'Do NOT provide generic category-level answers.' : ''}
+Use ALL the specific data provided in the ${hierarchyAnalysis.level.toUpperCase()} ANALYSIS section above.
 ` : '';
     
     const userPrompt = `
@@ -2258,11 +2619,11 @@ ${dataContext}
 
 ${simulationInstructions}
 ${crossModuleInstructions}
-${productAnalysisInstructions}
+${hierarchyInstructions}
 
 CRITICAL ANTI-HALLUCINATION RULES - FOLLOW EXACTLY:
-1. Your response must be 100% relevant to ${productAnalysis.isProductSpecific ? `the product "${productAnalysis.productName}"` : (isCrossModule ? 'CROSS-MODULE analysis' : moduleId.toUpperCase() + ' module ONLY')}.
-2. ${productAnalysis.isProductSpecific ? `Focus ONLY on "${productAnalysis.productName}" - do NOT give generic answers` : 'NEVER mention promotions, promotional ROI, or promotional lift unless directly asked'}.
+1. Your response must be 100% relevant to ${hierarchyAnalysis.level !== 'none' ? `the ${hierarchyAnalysis.level} "${hierarchyAnalysis.entityName}"` : (isCrossModule ? 'CROSS-MODULE analysis' : moduleId.toUpperCase() + ' module ONLY')}.
+2. ${hierarchyAnalysis.level !== 'none' ? `Focus ONLY on "${hierarchyAnalysis.entityName}" at the ${hierarchyAnalysis.level} level - do NOT give generic answers` : 'NEVER mention promotions, promotional ROI, or promotional lift unless directly asked'}.
 3. USE ONLY EXACT PRODUCT NAMES, SKUs, and specific numbers FROM THE DATA PROVIDED ABOVE - DO NOT INVENT DATA.
 4. DO NOT say "no products identified" if products are listed in the data - USE THE SPECIFIC PRODUCTS LISTED.
 5. If the question asks about stockout risk, LIST THE ACTUAL PRODUCTS with their stock levels from the data.
@@ -2274,15 +2635,15 @@ CRITICAL ANTI-HALLUCINATION RULES - FOLLOW EXACTLY:
 ${selectedKPIs?.length > 0 ? `11. MANDATORY: Include calculated values for ALL selected KPIs: ${selectedKPIs.join(', ')}` : ''}
 ${isSimulation ? '12. Include SIMULATION RESULTS with baseline vs. projected values and confidence levels.' : ''}
 ${isCrossModule ? '13. Show CROSS-MODULE IMPACTS connecting effects across ' + detectedModules.join(', ') + '.' : ''}
-${productAnalysis.isProductSpecific ? `14. PRODUCT-SPECIFIC: Every bullet point must mention "${productAnalysis.productName}" with specific metrics.` : ''}
+${hierarchyAnalysis.level !== 'none' ? `14. HIERARCHY-SPECIFIC: Every bullet point must mention "${hierarchyAnalysis.entityName}" with specific metrics at the ${hierarchyAnalysis.level} level.` : ''}
 
 Focus areas for ${moduleId}:
-${productAnalysis.isProductSpecific ? 
-  `SPECIFIC PRODUCT "${productAnalysis.productName}": ${productAnalysis.analysisType === 'why' ? 'performance drivers, causal factors, comparison to category' :
-   productAnalysis.analysisType === 'recommendation' ? 'actionable recommendations with expected impacts' :
-   productAnalysis.analysisType === 'forecast' ? 'demand forecasts with confidence levels and scenarios' :
-   productAnalysis.analysisType === 'drivers' ? 'sales drivers ranked by impact with quantified effects' :
-   'comprehensive product analysis including performance, recommendations, and forecasts'}` :
+${hierarchyAnalysis.level !== 'none' ? 
+  `SPECIFIC ${hierarchyAnalysis.level.toUpperCase()} "${hierarchyAnalysis.entityName}": ${hierarchyAnalysis.analysisType === 'why' ? 'performance drivers, causal factors, comparison to peers' :
+   hierarchyAnalysis.analysisType === 'recommendation' ? 'actionable recommendations with expected impacts' :
+   hierarchyAnalysis.analysisType === 'forecast' ? 'demand forecasts with confidence levels and scenarios' :
+   hierarchyAnalysis.analysisType === 'drivers' ? 'sales drivers ranked by impact with quantified effects' :
+   `comprehensive ${hierarchyAnalysis.level} analysis including performance, recommendations, and forecasts`}` :
   (moduleId === 'pricing' ? 'pricing, margins, elasticity, competitor pricing, price changes' : 
   moduleId === 'assortment' ? 'SKU performance, category gaps, brand mix, product rationalization' :
   moduleId === 'demand' ? `HIERARCHICAL FORECASTING: Provide forecasts at Category → SKU → Store → Time Period levels. 
