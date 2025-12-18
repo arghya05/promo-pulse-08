@@ -642,7 +642,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
   }, [module.name]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 h-[calc(100vh-200px)] w-full overflow-hidden">
+    <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 h-[calc(100vh-200px)]">
       {/* Sidebar - Quick Actions */}
       <div className="lg:col-span-1 space-y-4 overflow-auto hidden lg:block">
         <Card>
@@ -725,8 +725,8 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       </div>
 
       {/* Chat Area */}
-      <div className="lg:col-span-5 flex flex-col min-w-0 w-full overflow-hidden">
-        <Card className="flex-1 flex flex-col min-w-0 w-full overflow-hidden">
+      <div className="lg:col-span-5 flex flex-col">
+        <Card className="flex-1 flex flex-col">
           {/* Cross-Module Navigation */}
           {crossModuleLink && (
             <div className="px-4 pt-3">
