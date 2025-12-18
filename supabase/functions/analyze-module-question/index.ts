@@ -2805,17 +2805,27 @@ ${hierarchyAnalysis.level !== 'none' ?
   moduleId === 'space' ? 'shelf space, planograms, sales per sqft, fixture utilization' : 
   isCrossModule ? 'relationships between modules, integrated impacts, trade-offs' : 'relevant metrics')}
 
+${hierarchyAnalysis.analysisType === 'why' || question.toLowerCase().includes('why') ? `
+MANDATORY CAUSAL DRIVER REQUIREMENTS:
+Since this is a "WHY" analysis question, you MUST provide detailed causalDrivers with:
+- At least 3-5 specific causal drivers ranked by impact
+- Each driver must include: correlation score (0-1), impact value (percentage or absolute), and direction (positive/negative)
+- Reference specific product names, suppliers, or entities from the data
+- Explain the business significance of each driver
+` : ''}
+
 Respond with a JSON object:
 {
   "whatHappened": ["3-4 bullet points with SPECIFIC product names and metrics from data above - NO vague statements"],
   "why": ["2-3 causal explanations with specific data references"],
-  "whatToDo": ["2-3 actionable recommendations with SPECIFIC product names"],
+  "whatToDo": ["2-3 actionable recommendations with SPECIFIC product names and expected impact percentages"],
   "kpis": {"metric_name": "value with units", ...},
   "chartData": [{"name": "Specific Product/Category Name", "value": number}, ...],
   "nextQuestions": ["${moduleId}-specific follow-up 1", "${moduleId}-specific follow-up 2"],
   "causalDrivers": [
-    {"driver": "Specific driver with product/category", "impact": "percentage or value", "correlation": 0.85, "direction": "positive"},
-    {"driver": "Second driver", "impact": "percentage or value", "correlation": 0.72, "direction": "negative"}
+    {"driver": "Specific driver with product/category name", "impact": "percentage or dollar value", "correlation": 0.85, "direction": "positive"},
+    {"driver": "Second driver with specific entity", "impact": "percentage or value", "correlation": 0.72, "direction": "negative"},
+    {"driver": "Third driver", "impact": "value", "correlation": 0.65, "direction": "positive"}
   ],
   "mlInsights": {
     "patternDetected": "Specific pattern with product names",
