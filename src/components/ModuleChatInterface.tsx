@@ -725,8 +725,8 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       </div>
 
       {/* Chat Area */}
-      <div className="lg:col-span-4 flex flex-col min-w-0">
-        <Card className="flex-1 flex flex-col">
+      <div className="lg:col-span-4 flex flex-col min-w-0 overflow-hidden">
+        <Card className="flex-1 flex flex-col overflow-hidden">
           {/* Cross-Module Navigation */}
           {crossModuleLink && (
             <div className="px-4 pt-3">
@@ -750,7 +750,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
             </div>
           )}
           
-          <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto p-3">
+          <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-auto p-3">
             <div className="space-y-4">
               {messages.map((message) => (
                 <div
