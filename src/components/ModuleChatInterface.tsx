@@ -764,7 +764,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                       </div>
                     )}
                     <div
-                      className={`max-w-[80%] rounded-lg p-4 ${
+                      className={`max-w-[85%] rounded-lg p-4 overflow-hidden ${
                         message.role === 'user'
                           ? 'bg-primary text-primary-foreground'
                           : 'bg-muted'
@@ -829,7 +829,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           {message.data?.chartData && message.data.chartData.length > 0 && (
                             <div className="mt-3 space-y-2">
                               <span className="text-xs text-muted-foreground font-medium">Drill into data:</span>
-                              <div className="flex flex-wrap gap-2">
+                              <div className="flex flex-wrap gap-2 overflow-visible">
                                 {message.data.chartData.slice(0, 6).map((item: any, idx: number) => {
                                   const name = item.name || item.label || item.category || `Item ${idx + 1}`;
                                   // Determine the primary metric and its label
@@ -884,21 +884,23 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           
                           {/* Follow-up Questions - More prominent */}
                           {(message.data?.drillDownQuestions || message.data?.nextQuestions) && (
-                            <div className="mt-3 space-y-1.5 border-t pt-3">
+                            <div className="mt-3 space-y-2 border-t pt-3">
                               <span className="text-xs text-muted-foreground font-medium">Continue exploring:</span>
-                              {(message.data.drillDownQuestions || message.data.nextQuestions).slice(0, 3).map((q: string, i: number) => (
-                                <Button
-                                  key={i}
-                                  variant="secondary"
-                                  size="sm"
-                                  className="w-full justify-start text-left h-auto py-2 px-3 text-xs hover:bg-primary/10"
-                                  onClick={() => handleSend(q)}
-                                  disabled={isLoading}
-                                >
-                                  <ChevronRight className="h-3 w-3 mr-2 text-primary flex-shrink-0" />
-                                  <span className="line-clamp-2">{q}</span>
-                                </Button>
-                              ))}
+                              <div className="flex flex-col gap-2">
+                                {(message.data.drillDownQuestions || message.data.nextQuestions).slice(0, 3).map((q: string, i: number) => (
+                                  <Button
+                                    key={i}
+                                    variant="secondary"
+                                    size="sm"
+                                    className="w-full justify-start text-left h-auto py-2.5 px-3 text-xs hover:bg-primary/10 whitespace-normal break-words"
+                                    onClick={() => handleSend(q)}
+                                    disabled={isLoading}
+                                  >
+                                    <ChevronRight className="h-3 w-3 mr-2 text-primary flex-shrink-0 mt-0.5" />
+                                    <span className="text-left leading-relaxed">{q}</span>
+                                  </Button>
+                                ))}
+                              </div>
                             </div>
                           )}
                         </>
