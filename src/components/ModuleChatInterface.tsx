@@ -725,8 +725,8 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       </div>
 
       {/* Chat Area */}
-      <div className="lg:col-span-4 flex flex-col min-w-0">
-        <Card className="flex-1 flex flex-col">
+      <div className="lg:col-span-4 flex flex-col min-w-0 overflow-hidden">
+        <Card className="flex-1 flex flex-col overflow-hidden">
           {/* Cross-Module Navigation */}
           {crossModuleLink && (
             <div className="px-4 pt-3">
@@ -750,26 +750,26 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
             </div>
           )}
           
-          <div ref={scrollAreaRef} className="flex-1 min-h-0">
-            <ScrollArea className="h-full p-4" style={{ height: 'calc(100vh - 280px)' }}>
-              <div className="space-y-4">
+          <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-hidden">
+            <ScrollArea className="h-full" style={{ height: 'calc(100vh - 280px)' }}>
+              <div className="space-y-4 p-4 pr-6">
                 {messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex gap-3 min-w-0 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex gap-3 w-full ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     {message.role === 'assistant' && (
-                      <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit`}>
+                      <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit flex-shrink-0`}>
                         <Icon className={`h-4 w-4 ${module.color}`} />
                       </div>
                     )}
                     <div
-                      className={`rounded-lg p-4 break-words ${
+                      className={`rounded-lg p-4 min-w-0 ${
                         message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted flex-1'
+                          ? 'bg-primary text-primary-foreground max-w-[90%]'
+                          : 'bg-muted flex-1 max-w-full'
                       }`}
-                      style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                      style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                     >
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
