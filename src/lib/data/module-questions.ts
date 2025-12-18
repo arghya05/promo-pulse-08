@@ -65,6 +65,16 @@ export const pricingQuestions: ModuleQuestion[] = [
   { id: 38, text: "How does pricing impact demand forecasting accuracy?", tags: ['cross-module', 'demand'], metricKey: 'demand_price_correlation', chartType: 'line', crossModule: ['demand'] },
   { id: 39, text: "What's the relationship between price changes and inventory levels?", tags: ['cross-module', 'inventory'], metricKey: 'price_inventory_impact', chartType: 'line', crossModule: ['demand', 'supply-chain'] },
   { id: 40, text: "How do price changes affect shelf space productivity?", tags: ['cross-module', 'space'], metricKey: 'price_space_impact', chartType: 'bar', crossModule: ['space'] },
+  
+  // NEW: Price Band & Markdown Analysis (using new tables)
+  { id: 41, text: "What's the performance by price band in each category?", tags: ['price-band', 'category', 'tier'], metricKey: 'price_band_performance', chartType: 'bar' },
+  { id: 42, text: "Which price bands are most profitable?", tags: ['price-band', 'profitability'], metricKey: 'price_band_margin', chartType: 'bar' },
+  { id: 43, text: "What's the optimal price band distribution?", tags: ['price-band', 'optimization'], metricKey: 'price_band_distribution', chartType: 'pie' },
+  { id: 44, text: "What's the markdown effectiveness by category?", tags: ['markdown', 'effectiveness'], metricKey: 'markdown_effectiveness', chartType: 'bar' },
+  { id: 45, text: "Which products need markdown to clear inventory?", tags: ['markdown', 'clearance'], metricKey: 'markdown_candidates', chartType: 'bar' },
+  { id: 46, text: "What's the YOY price change trend?", tags: ['yoy', 'trend', 'price-change'], metricKey: 'yoy_price_trend', chartType: 'line' },
+  { id: 47, text: "How do price changes correlate with return rates?", tags: ['price', 'returns', 'correlation'], metricKey: 'price_return_correlation', chartType: 'line' },
+  { id: 48, text: "What's the discount utilization rate by discount type?", tags: ['discount', 'utilization'], metricKey: 'discount_usage', chartType: 'bar' },
 ];
 
 export const pricingPopularIds = [1, 2, 3, 10, 17, 33, 38];
@@ -128,6 +138,16 @@ export const assortmentQuestions: ModuleQuestion[] = [
   { id: 40, text: "How does assortment depth impact space productivity?", tags: ['cross-module', 'space'], metricKey: 'assortment_space_efficiency', chartType: 'bar', crossModule: ['space'] },
   { id: 41, text: "What's the supply chain complexity impact of current assortment?", tags: ['cross-module', 'supply-chain'], metricKey: 'assortment_complexity', chartType: 'bar', crossModule: ['supply-chain'] },
   { id: 42, text: "How does assortment strategy affect demand forecasting?", tags: ['cross-module', 'demand'], metricKey: 'assortment_demand_impact', chartType: 'line', crossModule: ['demand'] },
+  
+  // NEW: Stock Age & Return Analysis (using new tables)
+  { id: 43, text: "What's the stock age distribution by category?", tags: ['stock-age', 'category', 'inventory'], metricKey: 'stock_age_distribution', chartType: 'bar' },
+  { id: 44, text: "Which products have aging inventory needing action?", tags: ['stock-age', 'aging', 'action'], metricKey: 'aging_inventory', chartType: 'bar' },
+  { id: 45, text: "What's the return rate by product category?", tags: ['returns', 'category'], metricKey: 'return_rate', chartType: 'bar' },
+  { id: 46, text: "What are the top reasons for product returns?", tags: ['returns', 'reasons'], metricKey: 'return_reasons', chartType: 'pie' },
+  { id: 47, text: "Which SKUs have the highest return rates?", tags: ['returns', 'sku', 'problem'], metricKey: 'high_return_skus', chartType: 'bar' },
+  { id: 48, text: "What's the YOY category performance comparison?", tags: ['yoy', 'category', 'performance'], metricKey: 'yoy_category_performance', chartType: 'bar' },
+  { id: 49, text: "What's the new product introduction success rate?", tags: ['new-product', 'success', 'introduction'], metricKey: 'new_product_success', chartType: 'bar' },
+  { id: 50, text: "Which products are at risk of obsolescence?", tags: ['obsolescence', 'risk', 'stock-age'], metricKey: 'obsolescence_risk', chartType: 'bar' },
 ];
 
 export const assortmentPopularIds = [1, 2, 4, 10, 20, 25, 35];
@@ -183,6 +203,16 @@ export const demandQuestions: ModuleQuestion[] = [
   { id: 36, text: "How does demand volatility impact supply chain costs?", tags: ['cross-module', 'supply-chain'], metricKey: 'demand_supply_cost', chartType: 'bar', crossModule: ['supply-chain'] },
   { id: 37, text: "What's the relationship between demand forecast and space allocation?", tags: ['cross-module', 'space'], metricKey: 'demand_space_alignment', chartType: 'bar', crossModule: ['space'] },
   { id: 38, text: "How do pricing changes impact replenishment requirements?", tags: ['cross-module', 'pricing'], metricKey: 'pricing_replenishment_impact', chartType: 'line', crossModule: ['pricing'] },
+  
+  // NEW: Holiday, YOY & Time-Based Analysis (using new tables)
+  { id: 39, text: "How do holidays impact demand by category?", tags: ['holiday', 'demand', 'category'], metricKey: 'holiday_demand_impact', chartType: 'bar' },
+  { id: 40, text: "What's the YOY forecast accuracy comparison?", tags: ['yoy', 'forecast', 'accuracy'], metricKey: 'yoy_forecast_accuracy', chartType: 'line' },
+  { id: 41, text: "Which holidays drive the highest demand uplift?", tags: ['holiday', 'uplift', 'ranking'], metricKey: 'holiday_ranking', chartType: 'bar' },
+  { id: 42, text: "What's the weekly demand pattern by day type?", tags: ['day-type', 'pattern', 'weekly'], metricKey: 'day_type_pattern', chartType: 'bar' },
+  { id: 43, text: "How does fiscal quarter affect demand trends?", tags: ['fiscal', 'quarter', 'trend'], metricKey: 'fiscal_quarter_trend', chartType: 'line' },
+  { id: 44, text: "What's the YOY units sold comparison by category?", tags: ['yoy', 'units', 'category'], metricKey: 'yoy_units_comparison', chartType: 'bar' },
+  { id: 45, text: "What's the forecast accuracy by time period (week/month)?", tags: ['forecast', 'accuracy', 'period'], metricKey: 'period_forecast_accuracy', chartType: 'bar' },
+  { id: 46, text: "How does stock age impact stockout risk?", tags: ['stock-age', 'stockout', 'risk'], metricKey: 'age_stockout_correlation', chartType: 'line' },
 ];
 
 export const demandPopularIds = [1, 2, 3, 5, 19, 20, 23, 32];
@@ -246,6 +276,16 @@ export const supplyChainQuestions: ModuleQuestion[] = [
   { id: 40, text: "How does supplier lead time impact pricing flexibility?", tags: ['cross-module', 'pricing'], metricKey: 'leadtime_pricing_impact', chartType: 'bar', crossModule: ['pricing'] },
   { id: 41, text: "What's the supply chain constraint on assortment expansion?", tags: ['cross-module', 'assortment'], metricKey: 'supply_assortment_constraint', chartType: 'bar', crossModule: ['assortment'] },
   { id: 42, text: "How does supply variability affect demand forecasting?", tags: ['cross-module', 'demand'], metricKey: 'supply_demand_impact', chartType: 'line', crossModule: ['demand'] },
+  
+  // NEW: Vendor, Purchase Order & Invoice Analysis (using new tables)
+  { id: 43, text: "What's the vendor performance scorecard?", tags: ['vendor', 'scorecard', 'performance'], metricKey: 'vendor_scorecard', chartType: 'bar' },
+  { id: 44, text: "What's the purchase order status by vendor?", tags: ['po', 'status', 'vendor'], metricKey: 'po_status', chartType: 'pie' },
+  { id: 45, text: "Which vendors have the best payment terms?", tags: ['vendor', 'payment', 'terms'], metricKey: 'payment_terms_analysis', chartType: 'bar' },
+  { id: 46, text: "What's the PO delivery accuracy by vendor?", tags: ['po', 'delivery', 'accuracy'], metricKey: 'po_delivery_accuracy', chartType: 'bar' },
+  { id: 47, text: "What's the vendor credit utilization?", tags: ['vendor', 'credit', 'utilization'], metricKey: 'credit_utilization', chartType: 'bar' },
+  { id: 48, text: "Which purchase orders are overdue?", tags: ['po', 'overdue', 'risk'], metricKey: 'overdue_pos', chartType: 'bar' },
+  { id: 49, text: "What's the vendor defect rate trend?", tags: ['vendor', 'defect', 'quality'], metricKey: 'defect_rate_trend', chartType: 'line' },
+  { id: 50, text: "What's the invoice payment status by vendor?", tags: ['invoice', 'payment', 'vendor'], metricKey: 'invoice_payment_status', chartType: 'pie' },
 ];
 
 export const supplyChainPopularIds = [1, 3, 10, 16, 22, 35, 40];
@@ -276,6 +316,16 @@ export const spaceQuestions: ModuleQuestion[] = [
   // Cross-module
   { id: 19, text: "How does shelf space allocation impact inventory turnover?", tags: ['cross-module', 'demand'], metricKey: 'space_turnover_impact', chartType: 'bar', crossModule: ['demand'] },
   { id: 20, text: "What's the relationship between space productivity and pricing?", tags: ['cross-module', 'pricing'], metricKey: 'space_pricing_correlation', chartType: 'line', crossModule: ['pricing'] },
+  
+  // NEW: Fixture, Stock Age & Markdown Display Analysis (using new tables)
+  { id: 21, text: "What's the fixture utilization by store?", tags: ['fixture', 'utilization', 'store'], metricKey: 'fixture_utilization', chartType: 'bar' },
+  { id: 22, text: "Which fixtures need replacement or maintenance?", tags: ['fixture', 'maintenance', 'status'], metricKey: 'fixture_status', chartType: 'bar' },
+  { id: 23, text: "What's the markdown display effectiveness?", tags: ['markdown', 'display', 'effectiveness'], metricKey: 'markdown_display_performance', chartType: 'bar' },
+  { id: 24, text: "How does stock age affect shelf productivity?", tags: ['stock-age', 'shelf', 'productivity'], metricKey: 'age_shelf_productivity', chartType: 'line' },
+  { id: 25, text: "What's the aisle-level performance by category?", tags: ['aisle', 'performance', 'category'], metricKey: 'aisle_performance', chartType: 'bar' },
+  { id: 26, text: "Which planograms need seasonal updates?", tags: ['planogram', 'seasonal', 'update'], metricKey: 'planogram_seasonal_needs', chartType: 'bar' },
+  { id: 27, text: "What's the employee productivity by store section?", tags: ['employee', 'productivity', 'section'], metricKey: 'employee_section_productivity', chartType: 'bar' },
+  { id: 28, text: "What's the optimal fixture allocation for markdown items?", tags: ['fixture', 'markdown', 'allocation'], metricKey: 'markdown_fixture_allocation', chartType: 'bar' },
 ];
 
 export const spacePopularIds = [1, 2, 3, 4, 6, 17, 19];
