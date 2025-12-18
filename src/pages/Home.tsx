@@ -3,7 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { modules } from '@/lib/data/modules';
-import { ArrowRight, Brain, Sparkles } from 'lucide-react';
+import { downloadModuleQuestions } from '@/lib/data/module-questions-export';
+import { ArrowRight, Brain, Sparkles, Download } from 'lucide-react';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -74,6 +75,22 @@ const Home = () => {
             );
           })}
         </div>
+      </section>
+
+      {/* Download Section */}
+      <section className="container mx-auto px-6 py-8">
+        <Card className="p-6 bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <h3 className="font-semibold text-lg">Download Question Library</h3>
+              <p className="text-sm text-muted-foreground">Get the top 5 questions for each module as a CSV file</p>
+            </div>
+            <Button onClick={downloadModuleQuestions} className="gap-2">
+              <Download className="h-4 w-4" />
+              Download Excel/CSV
+            </Button>
+          </div>
+        </Card>
       </section>
 
       {/* Stats Section */}
