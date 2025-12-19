@@ -56,7 +56,7 @@ const getInsightType = (text: string): 'positive' | 'negative' | 'neutral' | 'co
 };
 
 const InsightIcon: React.FC<{ type: 'positive' | 'negative' | 'neutral' | 'comparison' }> = ({ type }) => {
-  const iconClass = "h-4 w-4 flex-shrink-0 mt-0.5";
+  const iconClass = "h-4 w-4 flex-shrink-0";
   
   switch (type) {
     case 'positive':
@@ -70,6 +70,44 @@ const InsightIcon: React.FC<{ type: 'positive' | 'negative' | 'neutral' | 'compa
   }
 };
 
+// Scrollable insight row component
+const ScrollableInsightRow: React.FC<{ 
+  insight: string; 
+  type: 'positive' | 'negative' | 'neutral' | 'comparison' 
+}> = ({ insight, type }) => {
+  return (
+    <div
+      className={cn(
+        "rounded-lg border transition-colors",
+        type === 'positive' && "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-800/30",
+        type === 'negative' && "bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-800/30",
+        type === 'comparison' && "bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/50 dark:border-blue-800/30",
+        type === 'neutral' && "bg-muted/30 border-border/50"
+      )}
+    >
+      {/* Scrollable container */}
+      <div 
+        className="overflow-x-auto p-3"
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'hsl(217, 91%, 60%) hsl(210, 17%, 95%)'
+        }}
+      >
+        <div className="flex gap-3 items-start min-w-max">
+          <InsightIcon type={type} />
+          <p className="text-sm leading-relaxed whitespace-nowrap pr-4">
+            {highlightMetrics(insight)}
+          </p>
+        </div>
+      </div>
+      {/* Scrollbar track - always visible */}
+      <div className="h-3 bg-muted/50 rounded-b-lg border-t border-border/30 relative overflow-hidden">
+        <div className="absolute inset-x-2 top-1 h-1.5 bg-muted rounded-full" />
+      </div>
+    </div>
+  );
+};
+
 export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, className }) => {
   // Parse bullet points
   const lines = content.split('\n').filter(line => line.trim());
@@ -78,15 +116,28 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
   const hasBullets = lines.some(line => line.trim().startsWith('•') || line.trim().startsWith('-'));
   
   if (!hasBullets) {
-    // Single paragraph - format as insight card
+    // Single paragraph - format with scrollbar
     return (
-      <div className={cn("text-sm leading-relaxed whitespace-nowrap", className)}>
-        {highlightMetrics(content)}
+      <div className={cn("rounded-lg border bg-muted/30 border-border/50", className)}>
+        <div 
+          className="overflow-x-auto p-3"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'hsl(217, 91%, 60%) hsl(210, 17%, 95%)'
+          }}
+        >
+          <p className="text-sm leading-relaxed whitespace-nowrap min-w-max pr-4">
+            {highlightMetrics(content)}
+          </p>
+        </div>
+        <div className="h-3 bg-muted/50 rounded-b-lg border-t border-border/30 relative overflow-hidden">
+          <div className="absolute inset-x-2 top-1 h-1.5 bg-muted rounded-full" />
+        </div>
       </div>
     );
   }
   
-  // Format as professional insight list
+  // Format as professional insight list with individual scrollbars
   const insights = lines.map(line => {
     // Remove bullet markers
     const cleanLine = line.trim().replace(/^[•\-]\s*/, '');
@@ -97,24 +148,7 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
     <div className={cn("space-y-3 w-full", className)}>
       {insights.map((insight, idx) => {
         const type = getInsightType(insight);
-        
-        return (
-          <div
-            key={idx}
-            className={cn(
-              "flex gap-3 p-3 rounded-lg border transition-colors whitespace-nowrap",
-              type === 'positive' && "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-800/30",
-              type === 'negative' && "bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-800/30",
-              type === 'comparison' && "bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/50 dark:border-blue-800/30",
-              type === 'neutral' && "bg-muted/30 border-border/50"
-            )}
-          >
-            <InsightIcon type={type} />
-            <p className="text-sm leading-relaxed">
-              {highlightMetrics(insight)}
-            </p>
-          </div>
-        );
+        return <ScrollableInsightRow key={idx} insight={insight} type={type} />;
       })}
     </div>
   );
