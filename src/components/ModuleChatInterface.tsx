@@ -646,7 +646,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
   }, [module.name]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 h-[calc(100vh-200px)]">
+    <div className="grid grid-cols-1 lg:grid-cols-8 gap-4 h-[calc(100vh-200px)]">
       {/* Sidebar - Quick Actions */}
       <div className="lg:col-span-1 space-y-4 overflow-auto hidden lg:block">
         <Card>
@@ -729,7 +729,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       </div>
 
       {/* Chat Area */}
-      <div className="lg:col-span-5 flex flex-col">
+      <div className="lg:col-span-7 flex flex-col">
         <Card className="flex-1 flex flex-col">
           {/* Cross-Module Navigation */}
           {crossModuleLink && (
@@ -766,14 +766,14 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                       <Icon className={`h-4 w-4 ${module.color}`} />
                     </div>
                   )}
-                  <div
-                    className={`rounded-lg p-3 text-left ${
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground max-w-[85%]'
-                        : 'bg-muted flex-1'
-                    }`}
-                    style={{ minWidth: 0, maxWidth: '100%' }}
-                  >
+                    <div
+                      className={`rounded-lg p-3 text-left ${
+                        message.role === 'user'
+                          ? 'bg-primary text-primary-foreground max-w-[85%]'
+                          : 'bg-muted flex-1 min-w-0'
+                      }`}
+                      style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                    >
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
