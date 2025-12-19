@@ -97,7 +97,7 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
   }).filter(Boolean);
   
   return (
-    <div className={cn("space-y-3 w-full", className)} style={{ maxWidth: '100%' }}>
+    <div className={cn("space-y-3 w-full", className)}>
       {insights.map((insight, idx) => {
         const type = getInsightType(insight);
         
@@ -105,13 +105,12 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
           <div
             key={idx}
             className={cn(
-              "flex gap-3 p-3 rounded-lg border transition-colors w-full",
+              "flex gap-3 p-3 rounded-lg border transition-colors",
               type === 'positive' && "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-800/30",
               type === 'negative' && "bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-800/30",
               type === 'comparison' && "bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/50 dark:border-blue-800/30",
               type === 'neutral' && "bg-muted/30 border-border/50"
             )}
-            style={{ maxWidth: '100%' }}
           >
             <InsightIcon type={type} />
             <p 
