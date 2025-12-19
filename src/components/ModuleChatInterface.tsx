@@ -23,8 +23,11 @@ import {
   BarChart3,
   Target,
   Zap,
-  Brain
+  Brain,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
+import HorizontalScrollContainer from './HorizontalScrollContainer';
 import FormattedInsight from './FormattedInsight';
 import {
   BarChart,
@@ -111,6 +114,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
   const [crossModuleLink, setCrossModuleLink] = useState<ReturnType<typeof detectTargetModule>>(null);
   const [selectedKPIs, setSelectedKPIs] = useState<string[]>(kpis.slice(0, 4).map(k => k.id));
   const [selectedTimePeriod, setSelectedTimePeriod] = useState<string>('last_quarter');
+  const [isExpanded, setIsExpanded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -647,90 +651,118 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-200px)]">
-      {/* Sidebar - Quick Actions */}
-      <div className="lg:col-span-2 space-y-4 overflow-auto hidden lg:block">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Lightbulb className="h-4 w-4 text-yellow-500" />
-                <span className="font-medium text-sm">Quick Start</span>
+      {/* Sidebar - Quick Actions (hidden when expanded) */}
+      {!isExpanded && (
+        <div className="lg:col-span-2 space-y-4 overflow-auto hidden lg:block">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="h-4 w-4 text-yellow-500" />
+                  <span className="font-medium text-sm">Quick Start</span>
+                </div>
+                {messages.length > 1 && (
+                  <Button variant="ghost" size="sm" onClick={resetConversation} className="h-6 px-2">
+                    <RefreshCw className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
-              {messages.length > 1 && (
-                <Button variant="ghost" size="sm" onClick={resetConversation} className="h-6 px-2">
-                  <RefreshCw className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
-            <div className="space-y-2">
-              {chatContent.quickStarts.map((qs, idx) => (
-                <Button
-                  key={idx}
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start text-left h-auto py-2 px-3 gap-2"
-                  onClick={() => handleSend(qs.text)}
-                  disabled={isLoading}
-                >
-                  <qs.icon className="h-3 w-3 flex-shrink-0 text-primary" />
-                  <span className="line-clamp-2 text-xs flex-1">{qs.text}</span>
-                  <Badge variant="secondary" className="text-[10px] px-1">{qs.tag}</Badge>
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              <div className="space-y-2">
+                {chatContent.quickStarts.map((qs, idx) => (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-left h-auto py-2 px-3 gap-2"
+                    onClick={() => handleSend(qs.text)}
+                    disabled={isLoading}
+                  >
+                    <qs.icon className="h-3 w-3 flex-shrink-0 text-primary" />
+                    <span className="line-clamp-2 text-xs flex-1">{qs.text}</span>
+                    <Badge variant="secondary" className="text-[10px] px-1">{qs.tag}</Badge>
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Time Period Filter */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Calendar className="h-4 w-4 text-primary" />
-              <span className="font-medium text-sm">Time Period</span>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {[
-                { value: 'last_week', label: 'Week' },
-                { value: 'last_month', label: 'Month' },
-                { value: 'last_quarter', label: 'Quarter' },
-                { value: 'ytd', label: 'YTD' },
-                { value: 'last_year', label: 'Year' }
-              ].map((period) => (
-                <Button
-                  key={period.value}
-                  variant={selectedTimePeriod === period.value ? 'default' : 'outline'}
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => setSelectedTimePeriod(period.value)}
-                >
-                  {period.label}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+          {/* Time Period Filter */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Calendar className="h-4 w-4 text-primary" />
+                <span className="font-medium text-sm">Time Period</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  { value: 'last_week', label: 'Week' },
+                  { value: 'last_month', label: 'Month' },
+                  { value: 'last_quarter', label: 'Quarter' },
+                  { value: 'ytd', label: 'YTD' },
+                  { value: 'last_year', label: 'Year' }
+                ].map((period) => (
+                  <Button
+                    key={period.value}
+                    variant={selectedTimePeriod === period.value ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setSelectedTimePeriod(period.value)}
+                  >
+                    {period.label}
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* KPI Selector */}
-        <KPISelector
-          question=""
-          selectedKPIs={selectedKPIs}
-          onKPIsChange={setSelectedKPIs}
-          isLoading={isLoading}
-          moduleId={module.id}
-        />
+          {/* KPI Selector */}
+          <KPISelector
+            question=""
+            selectedKPIs={selectedKPIs}
+            onKPIsChange={setSelectedKPIs}
+            isLoading={isLoading}
+            moduleId={module.id}
+          />
 
-        {/* Enhanced Conversation Context Panel */}
-        <ConversationContextPanel
-          context={conversationContext}
-          sessionInsights={sessionInsights}
-          onTopicClick={handleTopicClick}
-          onInsightClick={handleInsightClick}
-        />
-      </div>
+          {/* Enhanced Conversation Context Panel */}
+          <ConversationContextPanel
+            context={conversationContext}
+            sessionInsights={sessionInsights}
+            onTopicClick={handleTopicClick}
+            onInsightClick={handleInsightClick}
+          />
+        </div>
+      )}
 
       {/* Chat Area */}
-      <div className="lg:col-span-10 flex flex-col min-w-0">
+      <div className={`flex flex-col min-w-0 ${isExpanded ? 'lg:col-span-12' : 'lg:col-span-10'}`}>
         <Card className="flex-1 flex flex-col">
+          {/* Header with Expand Button */}
+          <div className="flex items-center justify-between px-4 pt-3 border-b pb-2">
+            <div className="flex items-center gap-2">
+              <Icon className={`h-4 w-4 ${module.color}`} />
+              <span className="font-medium text-sm">{module.name} Assistant</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="h-8 px-2 gap-1"
+            >
+              {isExpanded ? (
+                <>
+                  <Minimize2 className="h-4 w-4" />
+                  <span className="text-xs hidden sm:inline">Minimize</span>
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="h-4 w-4" />
+                  <span className="text-xs hidden sm:inline">Expand</span>
+                </>
+              )}
+            </Button>
+          </div>
+          
           {/* Cross-Module Navigation */}
           {crossModuleLink && (
             <div className="px-4 pt-3">
@@ -808,43 +840,47 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                             </Badge>
                           )}
                           
-                          <div className="overflow-x-scroll scrollbar-thin pb-2">
+                          <HorizontalScrollContainer>
                             <FormattedInsight content={message.content} />
-                          </div>
+                          </HorizontalScrollContainer>
                           
                           {/* Why section - Full */}
                           {message.data?.why && message.data.why.length > 0 && (
-                            <div className="mt-3 p-2 bg-amber-500/10 rounded border border-amber-500/20 overflow-x-scroll scrollbar-thin">
+                            <div className="mt-3 p-2 bg-amber-500/10 rounded border border-amber-500/20">
                               <div className="flex items-center gap-2 mb-2">
                                 <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
                                 <span className="font-medium text-xs">Why It Happened</span>
                               </div>
-                              <ul className="space-y-1">
-                                {message.data.why.map((reason: string, i: number) => (
-                                  <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap">
-                                    <span className="text-amber-500 mt-0.5">•</span>
-                                    <span>{reason}</span>
-                                  </li>
-                                ))}
-                              </ul>
+                              <HorizontalScrollContainer>
+                                <ul className="space-y-1">
+                                  {message.data.why.map((reason: string, i: number) => (
+                                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap">
+                                      <span className="text-amber-500 mt-0.5">•</span>
+                                      <span>{reason}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </HorizontalScrollContainer>
                             </div>
                           )}
                           
                           {/* What To Do (Recommendations) - Full */}
                           {message.data?.whatToDo && message.data.whatToDo.length > 0 && (
-                            <div className="mt-3 p-2 bg-emerald-500/10 rounded border border-emerald-500/20 overflow-x-scroll scrollbar-thin">
+                            <div className="mt-3 p-2 bg-emerald-500/10 rounded border border-emerald-500/20">
                               <div className="flex items-center gap-2 mb-2">
                                 <Target className="h-3.5 w-3.5 text-emerald-500" />
                                 <span className="font-medium text-xs">Recommendations</span>
                               </div>
-                              <ul className="space-y-1">
-                                {message.data.whatToDo.map((action: string, i: number) => (
-                                  <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap">
-                                    <span className="text-emerald-500 mt-0.5">✓</span>
-                                    <span>{action}</span>
-                                  </li>
-                                ))}
-                              </ul>
+                              <HorizontalScrollContainer>
+                                <ul className="space-y-1">
+                                  {message.data.whatToDo.map((action: string, i: number) => (
+                                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap">
+                                      <span className="text-emerald-500 mt-0.5">✓</span>
+                                      <span>{action}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </HorizontalScrollContainer>
                             </div>
                           )}
                           
