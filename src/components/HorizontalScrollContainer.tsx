@@ -68,19 +68,40 @@ const HorizontalScrollContainer: React.FC<HorizontalScrollContainerProps> = ({
         </button>
       )}
       
-      {/* Scrollable Content */}
+      {/* Scrollable Content with always-visible thick scrollbar */}
       <div
         ref={scrollRef}
-        className="overflow-x-auto pb-2"
-        style={{
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'hsl(var(--muted-foreground)) hsl(var(--muted))'
-        }}
+        className="overflow-x-scroll pb-3 horizontal-scroll-visible"
       >
         <div className="min-w-max">
           {children}
         </div>
       </div>
+      
+      {/* Custom scrollbar styles */}
+      <style>{`
+        .horizontal-scroll-visible {
+          scrollbar-width: auto;
+          scrollbar-color: hsl(var(--primary)) hsl(var(--muted));
+        }
+        .horizontal-scroll-visible::-webkit-scrollbar {
+          height: 12px;
+          display: block;
+        }
+        .horizontal-scroll-visible::-webkit-scrollbar-track {
+          background: hsl(var(--muted));
+          border-radius: 6px;
+          margin: 0 4px;
+        }
+        .horizontal-scroll-visible::-webkit-scrollbar-thumb {
+          background: hsl(var(--primary));
+          border-radius: 6px;
+          border: 2px solid hsl(var(--muted));
+        }
+        .horizontal-scroll-visible::-webkit-scrollbar-thumb:hover {
+          background: hsl(var(--primary) / 0.8);
+        }
+      `}</style>
     </div>
   );
 };
