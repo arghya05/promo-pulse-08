@@ -646,9 +646,9 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
   }, [module.name]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-8 gap-4 h-[calc(100vh-200px)]">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-200px)]">
       {/* Sidebar - Quick Actions */}
-      <div className="lg:col-span-1 space-y-4 overflow-auto hidden lg:block">
+      <div className="lg:col-span-2 space-y-4 overflow-auto hidden lg:block">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
@@ -729,7 +729,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       </div>
 
       {/* Chat Area */}
-      <div className="lg:col-span-7 flex flex-col">
+      <div className="lg:col-span-10 flex flex-col min-w-0">
         <Card className="flex-1 flex flex-col">
           {/* Cross-Module Navigation */}
           {crossModuleLink && (
@@ -755,11 +755,11 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
           )}
           
           <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3">
-            <div className="space-y-4 w-full">
+            <div className="space-y-4 w-full min-w-0">
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-2 w-full ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex gap-2 min-w-0 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {message.role === 'assistant' && (
                     <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit flex-shrink-0`}>
@@ -767,12 +767,12 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                     </div>
                   )}
                   <div
-                    className={`rounded-lg p-3 text-left break-words ${
+                    className={`rounded-lg p-3 text-left min-w-0 flex-1 ${
                       message.role === 'user'
-                        ? 'bg-primary text-primary-foreground max-w-[85%]'
-                        : 'bg-muted max-w-full overflow-hidden'
+                        ? 'bg-primary text-primary-foreground max-w-[85%] flex-initial'
+                        : 'bg-muted'
                     }`}
-                    style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0 }}
+                    style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                   >
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
