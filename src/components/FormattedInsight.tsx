@@ -1,5 +1,5 @@
-import React from 'react';
-import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, ArrowRight } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import { TrendingUp, TrendingDown, CheckCircle2, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FormattedInsightProps {
@@ -9,16 +9,12 @@ interface FormattedInsightProps {
 
 // Highlight numbers, percentages, and currency values
 const highlightMetrics = (text: string): React.ReactNode[] => {
-  // Pattern to match: $1.15M, 1.48x, 15%, $720K, etc.
   const metricPattern = /(\$[\d,.]+[KMB]?|\d+\.?\d*[xX%]|\d+\.?\d*%|\$[\d,.]+)/g;
   const parts = text.split(metricPattern);
   
   return parts.map((part, idx) => {
     if (metricPattern.test(part)) {
-      // Reset the regex lastIndex
       metricPattern.lastIndex = 0;
-      
-      // Determine if positive or negative context
       const isPositive = part.includes('x') && parseFloat(part) >= 1;
       const isNegative = part.includes('x') && parseFloat(part) < 1;
       
@@ -40,13 +36,12 @@ const highlightMetrics = (text: string): React.ReactNode[] => {
   });
 };
 
-// Determine insight type based on content
 const getInsightType = (text: string): 'positive' | 'negative' | 'neutral' | 'comparison' => {
   const lowerText = text.toLowerCase();
-  if (lowerText.includes('higher') || lowerText.includes('strong') || lowerText.includes('increase') || lowerText.includes('growth')) {
+  if (lowerText.includes('higher') || lowerText.includes('strong') || lowerText.includes('increase') || lowerText.includes('growth') || lowerText.includes('top performer')) {
     return 'positive';
   }
-  if (lowerText.includes('lower') || lowerText.includes('decline') || lowerText.includes('decrease') || lowerText.includes('underperform')) {
+  if (lowerText.includes('lower') || lowerText.includes('decline') || lowerText.includes('decrease') || lowerText.includes('underperform') || lowerText.includes('lowest')) {
     return 'negative';
   }
   if (lowerText.includes('contrast') || lowerText.includes('compared') || lowerText.includes('versus') || lowerText.includes('while')) {
@@ -70,85 +65,127 @@ const InsightIcon: React.FC<{ type: 'positive' | 'negative' | 'neutral' | 'compa
   }
 };
 
-// Scrollable insight row component
-const ScrollableInsightRow: React.FC<{ 
-  insight: string; 
-  type: 'positive' | 'negative' | 'neutral' | 'comparison' 
-}> = ({ insight, type }) => {
+// Individual scrollable row with real scrollbar
+const ScrollableRow: React.FC<{ 
+  children: React.ReactNode;
+  bgColor?: string;
+  borderColor?: string;
+}> = ({ children, bgColor = "bg-muted/30", borderColor = "border-border/50" }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [hasOverflow, setHasOverflow] = useState(false);
+  
+  useEffect(() => {
+    const checkOverflow = () => {
+      if (scrollRef.current) {
+        setHasOverflow(scrollRef.current.scrollWidth > scrollRef.current.clientWidth);
+      }
+    };
+    checkOverflow();
+    window.addEventListener('resize', checkOverflow);
+    return () => window.removeEventListener('resize', checkOverflow);
+  }, [children]);
+
+  const scroll = (dir: 'left' | 'right') => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: dir === 'left' ? -150 : 150, behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div
-      className={cn(
-        "rounded-lg border transition-colors",
-        type === 'positive' && "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-800/30",
-        type === 'negative' && "bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-800/30",
-        type === 'comparison' && "bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/50 dark:border-blue-800/30",
-        type === 'neutral' && "bg-muted/30 border-border/50"
+    <div className={cn("rounded-lg border relative", bgColor, borderColor)}>
+      {/* Left scroll button */}
+      {hasOverflow && (
+        <button
+          onClick={() => scroll('left')}
+          className="absolute left-1 top-1/2 -translate-y-1/2 z-10 bg-background/90 border rounded-full p-1 shadow-sm hover:bg-background"
+        >
+          <ChevronLeft className="h-3 w-3" />
+        </button>
       )}
-    >
-      {/* Scrollable container */}
+      
+      {/* Right scroll button */}
+      {hasOverflow && (
+        <button
+          onClick={() => scroll('right')}
+          className="absolute right-1 top-1/2 -translate-y-1/2 z-10 bg-background/90 border rounded-full p-1 shadow-sm hover:bg-background"
+        >
+          <ChevronRight className="h-3 w-3" />
+        </button>
+      )}
+      
+      {/* Scrollable content */}
       <div 
-        className="overflow-x-auto p-3"
-        style={{
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'hsl(217, 91%, 60%) hsl(210, 17%, 95%)'
-        }}
+        ref={scrollRef}
+        className="overflow-x-auto p-3 insight-scrollbar"
       >
-        <div className="flex gap-3 items-start min-w-max">
-          <InsightIcon type={type} />
-          <p className="text-sm leading-relaxed whitespace-nowrap pr-4">
-            {highlightMetrics(insight)}
-          </p>
+        <div className="whitespace-nowrap pr-8">
+          {children}
         </div>
       </div>
-      {/* Scrollbar track - always visible */}
-      <div className="h-3 bg-muted/50 rounded-b-lg border-t border-border/30 relative overflow-hidden">
-        <div className="absolute inset-x-2 top-1 h-1.5 bg-muted rounded-full" />
-      </div>
+      
+      {/* CSS for visible scrollbar */}
+      <style>{`
+        .insight-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: hsl(217, 91%, 60%) hsl(var(--muted));
+        }
+        .insight-scrollbar::-webkit-scrollbar {
+          height: 10px;
+        }
+        .insight-scrollbar::-webkit-scrollbar-track {
+          background: hsl(var(--muted));
+          border-radius: 5px;
+        }
+        .insight-scrollbar::-webkit-scrollbar-thumb {
+          background: hsl(217, 91%, 60%);
+          border-radius: 5px;
+          border: 2px solid hsl(var(--muted));
+        }
+        .insight-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: hsl(217, 91%, 50%);
+        }
+      `}</style>
     </div>
   );
 };
 
 export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, className }) => {
-  // Parse bullet points
   const lines = content.split('\n').filter(line => line.trim());
-  
-  // Check if content has bullet points
   const hasBullets = lines.some(line => line.trim().startsWith('•') || line.trim().startsWith('-'));
   
   if (!hasBullets) {
-    // Single paragraph - format with scrollbar
     return (
-      <div className={cn("rounded-lg border bg-muted/30 border-border/50", className)}>
-        <div 
-          className="overflow-x-auto p-3"
-          style={{
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'hsl(217, 91%, 60%) hsl(210, 17%, 95%)'
-          }}
-        >
-          <p className="text-sm leading-relaxed whitespace-nowrap min-w-max pr-4">
-            {highlightMetrics(content)}
-          </p>
-        </div>
-        <div className="h-3 bg-muted/50 rounded-b-lg border-t border-border/30 relative overflow-hidden">
-          <div className="absolute inset-x-2 top-1 h-1.5 bg-muted rounded-full" />
-        </div>
-      </div>
+      <ScrollableRow>
+        <p className="text-sm leading-relaxed inline">
+          {highlightMetrics(content)}
+        </p>
+      </ScrollableRow>
     );
   }
   
-  // Format as professional insight list with individual scrollbars
-  const insights = lines.map(line => {
-    // Remove bullet markers
-    const cleanLine = line.trim().replace(/^[•\-]\s*/, '');
-    return cleanLine;
-  }).filter(Boolean);
+  const insights = lines.map(line => line.trim().replace(/^[•\-]\s*/, '')).filter(Boolean);
   
   return (
     <div className={cn("space-y-3 w-full", className)}>
       {insights.map((insight, idx) => {
         const type = getInsightType(insight);
-        return <ScrollableInsightRow key={idx} insight={insight} type={type} />;
+        const bgColor = type === 'positive' ? "bg-emerald-50/50 dark:bg-emerald-950/20" :
+                        type === 'negative' ? "bg-amber-50/50 dark:bg-amber-950/20" :
+                        type === 'comparison' ? "bg-blue-50/50 dark:bg-blue-950/20" : "bg-muted/30";
+        const borderColor = type === 'positive' ? "border-emerald-200/50 dark:border-emerald-800/30" :
+                           type === 'negative' ? "border-amber-200/50 dark:border-amber-800/30" :
+                           type === 'comparison' ? "border-blue-200/50 dark:border-blue-800/30" : "border-border/50";
+        
+        return (
+          <ScrollableRow key={idx} bgColor={bgColor} borderColor={borderColor}>
+            <span className="inline-flex gap-3 items-center">
+              <InsightIcon type={type} />
+              <span className="text-sm leading-relaxed">
+                {highlightMetrics(insight)}
+              </span>
+            </span>
+          </ScrollableRow>
+        );
       })}
     </div>
   );
