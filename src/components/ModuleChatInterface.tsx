@@ -770,9 +770,8 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                     className={`rounded-lg p-3 text-left min-w-0 flex-1 ${
                       message.role === 'user'
                         ? 'bg-primary text-primary-foreground max-w-[85%] flex-initial'
-                        : 'bg-muted'
+                        : 'bg-muted overflow-x-auto'
                     }`}
-                    style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                   >
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
