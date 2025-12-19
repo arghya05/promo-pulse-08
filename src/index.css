@@ -139,4 +139,33 @@ All colors MUST be HSL.
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.5);
   }
+
+  /* Always visible thick horizontal scrollbar */
+  .scrollbar-visible {
+    overflow-x: scroll !important;
+    scrollbar-width: auto;
+    scrollbar-color: hsl(var(--primary)) hsl(var(--muted));
+  }
+  
+  .scrollbar-visible::-webkit-scrollbar {
+    height: 14px;
+    display: block !important;
+  }
+  
+  .scrollbar-visible::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 7px;
+    border: 2px solid hsl(var(--background));
+  }
+  
+  .scrollbar-visible::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, hsl(var(--primary)), hsl(var(--primary) / 0.7));
+    border-radius: 7px;
+    border: 2px solid hsl(var(--muted));
+    min-width: 40px;
+  }
+  
+  .scrollbar-visible::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.9);
+  }
 }

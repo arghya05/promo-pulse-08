@@ -744,20 +744,20 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
               <span className="font-medium text-sm">{module.name} Assistant</span>
             </div>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="h-8 px-2 gap-1"
+              className="h-8 px-3 gap-2 bg-primary/10 hover:bg-primary/20 border-primary/30"
             >
               {isExpanded ? (
                 <>
-                  <Minimize2 className="h-4 w-4" />
-                  <span className="text-xs hidden sm:inline">Minimize</span>
+                  <Minimize2 className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-medium">Minimize</span>
                 </>
               ) : (
                 <>
-                  <Maximize2 className="h-4 w-4" />
-                  <span className="text-xs hidden sm:inline">Expand</span>
+                  <Maximize2 className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-medium">Expand</span>
                 </>
               )}
             </Button>
