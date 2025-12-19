@@ -754,26 +754,26 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
             </div>
           )}
           
-          <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto p-3">
-            <div className="space-y-4">
+          <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3">
+            <div className="space-y-4 w-full">
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex gap-2 w-full ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {message.role === 'assistant' && (
                     <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit flex-shrink-0`}>
                       <Icon className={`h-4 w-4 ${module.color}`} />
                     </div>
                   )}
-                    <div
-                      className={`rounded-lg p-3 text-left ${
-                        message.role === 'user'
-                          ? 'bg-primary text-primary-foreground max-w-[85%]'
-                          : 'bg-muted flex-1 min-w-0'
-                      }`}
-                      style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
-                    >
+                  <div
+                    className={`rounded-lg p-3 text-left break-words ${
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground max-w-[85%]'
+                        : 'bg-muted max-w-full overflow-hidden'
+                    }`}
+                    style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0 }}
+                  >
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
