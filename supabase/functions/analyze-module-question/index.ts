@@ -3218,8 +3218,33 @@ When the user asks follow-up questions like "why did it work", "give me recommen
       throw new Error(`AI API error: ${response.status}`);
     }
 
-    const aiResponse = await response.json();
+    // Parse AI response with proper error handling for empty/incomplete responses
+    let aiResponse;
+    try {
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        console.error('AI API returned empty response');
+        throw new Error('Empty response from AI API');
+      }
+      aiResponse = JSON.parse(responseText);
+    } catch (jsonError) {
+      console.error('Failed to parse AI API response:', jsonError);
+      // Return fallback response instead of throwing
+      const fallback = generateModuleFallback(moduleId);
+      return new Response(JSON.stringify(fallback), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
     const content = aiResponse.choices?.[0]?.message?.content || '';
+    
+    if (!content) {
+      console.error('AI API returned no content in choices');
+      const fallback = generateModuleFallback(moduleId);
+      return new Response(JSON.stringify(fallback), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
     let parsedResponse;
     try {
