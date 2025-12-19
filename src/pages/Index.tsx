@@ -668,8 +668,8 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
             </div>
 
             {/* Chat Interface */}
-            <div className="grid grid-cols-12 gap-6">
-              <div className="col-span-8">
+            <div className="grid grid-cols-12 gap-4">
+              <div className="col-span-9">
                 <ChatInterface
                   persona={persona}
                   personaConfig={personaConfig[persona]}
@@ -682,7 +682,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
               </div>
               
               {/* Results Panel */}
-              <div className="col-span-4 space-y-4">
+              <div className="col-span-3 space-y-4">
                 {result ? (
                   <>
                     {/* Quick KPIs */}
