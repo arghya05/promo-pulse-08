@@ -767,11 +767,12 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                     </div>
                   )}
                   <div
-                    className={`rounded-lg p-3 text-left min-w-0 flex-1 ${
+                    className={`rounded-lg p-3 text-left min-w-0 ${
                       message.role === 'user'
-                        ? 'bg-primary text-primary-foreground max-w-[85%] flex-initial'
-                        : 'bg-muted overflow-x-auto'
+                        ? 'bg-primary text-primary-foreground max-w-[85%]'
+                        : 'bg-muted w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100'
                     }`}
+                    style={{ maxWidth: message.role === 'assistant' ? 'calc(100% - 48px)' : undefined }}
                   >
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
