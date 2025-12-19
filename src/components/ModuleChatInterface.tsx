@@ -770,7 +770,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                     className={`rounded-lg p-3 text-left min-w-0 ${
                       message.role === 'user'
                         ? 'bg-primary text-primary-foreground max-w-[85%]'
-                        : 'bg-muted w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100'
+                        : 'bg-muted w-full overflow-x-scroll scrollbar-thin'
                     }`}
                     style={{ maxWidth: message.role === 'assistant' ? 'calc(100% - 48px)' : undefined }}
                   >
