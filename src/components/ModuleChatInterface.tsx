@@ -821,7 +821,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                               </div>
                               <ul className="space-y-1">
                                 {message.data.why.map((reason: string, i: number) => (
-                                  <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                                  <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap">
                                     <span className="text-amber-500 mt-0.5">•</span>
                                     <span>{reason}</span>
                                   </li>
@@ -839,7 +839,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                               </div>
                               <ul className="space-y-1">
                                 {message.data.whatToDo.map((action: string, i: number) => (
-                                  <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                                  <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap">
                                     <span className="text-emerald-500 mt-0.5">✓</span>
                                     <span>{action}</span>
                                   </li>
