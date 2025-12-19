@@ -808,11 +808,13 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                             </Badge>
                           )}
                           
-                          <FormattedInsight content={message.content} />
+                          <div className="overflow-x-scroll scrollbar-thin pb-2">
+                            <FormattedInsight content={message.content} />
+                          </div>
                           
                           {/* Why section - Full */}
                           {message.data?.why && message.data.why.length > 0 && (
-                            <div className="mt-3 p-2 bg-amber-500/10 rounded border border-amber-500/20" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                            <div className="mt-3 p-2 bg-amber-500/10 rounded border border-amber-500/20 overflow-x-scroll scrollbar-thin">
                               <div className="flex items-center gap-2 mb-2">
                                 <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
                                 <span className="font-medium text-xs">Why It Happened</span>
@@ -830,7 +832,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           
                           {/* What To Do (Recommendations) - Full */}
                           {message.data?.whatToDo && message.data.whatToDo.length > 0 && (
-                            <div className="mt-3 p-2 bg-emerald-500/10 rounded border border-emerald-500/20" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                            <div className="mt-3 p-2 bg-emerald-500/10 rounded border border-emerald-500/20 overflow-x-scroll scrollbar-thin">
                               <div className="flex items-center gap-2 mb-2">
                                 <Target className="h-3.5 w-3.5 text-emerald-500" />
                                 <span className="font-medium text-xs">Recommendations</span>
@@ -848,7 +850,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           
                           {/* Causal Drivers - Full */}
                           {message.data?.causalDrivers && message.data.causalDrivers.length > 0 && (
-                            <div className="mt-3 p-2 bg-orange-500/10 rounded border border-orange-500/20" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                            <div className="mt-3 p-2 bg-orange-500/10 rounded border border-orange-500/20 overflow-x-scroll scrollbar-thin">
                               <div className="flex items-center gap-2 mb-2">
                                 <Zap className="h-3.5 w-3.5 text-orange-500" />
                                 <span className="font-medium text-xs">Causal Drivers</span>
@@ -879,7 +881,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           
                           {/* ML Insights - Full */}
                           {message.data?.mlInsights && (
-                            <div className="mt-3 p-2 bg-purple-500/10 rounded border border-purple-500/20" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                            <div className="mt-3 p-2 bg-purple-500/10 rounded border border-purple-500/20 overflow-x-scroll scrollbar-thin">
                               <div className="flex items-center gap-2 mb-2">
                                 <Brain className="h-3.5 w-3.5 text-purple-500" />
                                 <span className="font-medium text-xs">ML Insights</span>
@@ -900,7 +902,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           
                           {/* Predictions - Full */}
                           {message.data?.predictions && (
-                            <div className="mt-3 p-2 bg-blue-500/10 rounded border border-blue-500/20" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                            <div className="mt-3 p-2 bg-blue-500/10 rounded border border-blue-500/20 overflow-x-scroll scrollbar-thin">
                               <div className="flex items-center gap-2 mb-2">
                                 <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
                                 <span className="font-medium text-xs">Predictions</span>
