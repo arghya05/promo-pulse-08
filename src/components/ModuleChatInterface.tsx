@@ -27,7 +27,6 @@ import {
   Maximize2,
   Minimize2
 } from 'lucide-react';
-import HorizontalScrollContainer from './HorizontalScrollContainer';
 import FormattedInsight from './FormattedInsight';
 import {
   BarChart,
@@ -840,134 +839,162 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                             </Badge>
                           )}
                           
-                          <HorizontalScrollContainer>
-                            <FormattedInsight content={message.content} />
-                          </HorizontalScrollContainer>
+                          <FormattedInsight content={message.content} />
                           
                           {/* Why section - Full */}
                           {message.data?.why && message.data.why.length > 0 && (
-                            <div className="mt-3 p-2 bg-amber-500/10 rounded border border-amber-500/20">
-                              <div className="flex items-center gap-2 mb-2">
+                            <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 overflow-hidden">
+                              <div className="flex items-center gap-2 px-3 pt-2 pb-1">
                                 <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
                                 <span className="font-medium text-xs">Why It Happened</span>
                               </div>
-                              <HorizontalScrollContainer>
-                                <ul className="space-y-1">
+                              <div 
+                                className="overflow-x-auto px-3 pb-2"
+                                style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(38, 92%, 50%) hsl(210, 17%, 95%)' }}
+                              >
+                                <ul className="space-y-1 min-w-max">
                                   {message.data.why.map((reason: string, i: number) => (
-                                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap">
+                                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap pr-4">
                                       <span className="text-amber-500 mt-0.5">•</span>
                                       <span>{reason}</span>
                                     </li>
                                   ))}
                                 </ul>
-                              </HorizontalScrollContainer>
+                              </div>
+                              <div className="h-2.5 bg-amber-500/5 border-t border-amber-500/10" />
                             </div>
                           )}
                           
                           {/* What To Do (Recommendations) - Full */}
                           {message.data?.whatToDo && message.data.whatToDo.length > 0 && (
-                            <div className="mt-3 p-2 bg-emerald-500/10 rounded border border-emerald-500/20">
-                              <div className="flex items-center gap-2 mb-2">
+                            <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 overflow-hidden">
+                              <div className="flex items-center gap-2 px-3 pt-2 pb-1">
                                 <Target className="h-3.5 w-3.5 text-emerald-500" />
                                 <span className="font-medium text-xs">Recommendations</span>
                               </div>
-                              <HorizontalScrollContainer>
-                                <ul className="space-y-1">
+                              <div 
+                                className="overflow-x-auto px-3 pb-2"
+                                style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(142, 71%, 45%) hsl(210, 17%, 95%)' }}
+                              >
+                                <ul className="space-y-1 min-w-max">
                                   {message.data.whatToDo.map((action: string, i: number) => (
-                                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap">
+                                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap pr-4">
                                       <span className="text-emerald-500 mt-0.5">✓</span>
                                       <span>{action}</span>
                                     </li>
                                   ))}
                                 </ul>
-                              </HorizontalScrollContainer>
+                              </div>
+                              <div className="h-2.5 bg-emerald-500/5 border-t border-emerald-500/10" />
                             </div>
                           )}
                           
                           {/* Causal Drivers - Full */}
                           {message.data?.causalDrivers && message.data.causalDrivers.length > 0 && (
-                            <div className="mt-3 p-2 bg-orange-500/10 rounded border border-orange-500/20 overflow-x-scroll scrollbar-thin">
-                              <div className="flex items-center gap-2 mb-2">
+                            <div className="mt-3 rounded-lg border border-orange-500/20 bg-orange-500/10 overflow-hidden">
+                              <div className="flex items-center gap-2 px-3 pt-2 pb-1">
                                 <Zap className="h-3.5 w-3.5 text-orange-500" />
                                 <span className="font-medium text-xs">Causal Drivers</span>
                               </div>
-                              <div className="grid grid-cols-1 gap-2">
-                                {message.data.causalDrivers.map((driver: any, i: number) => (
-                                  <div key={i} className="bg-background/50 rounded p-2 border border-border/50">
-                                    <div className="flex items-center justify-between mb-1">
-                                      <span className="font-medium text-xs">{driver.driver}</span>
-                                      {driver.direction === 'positive' ? (
-                                        <TrendingUp className="h-3 w-3 text-emerald-500" />
-                                      ) : (
-                                        <TrendingDown className="h-3 w-3 text-red-500" />
-                                      )}
+                              <div 
+                                className="overflow-x-auto px-3 pb-2"
+                                style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(25, 95%, 53%) hsl(210, 17%, 95%)' }}
+                              >
+                                <div className="grid grid-cols-1 gap-2 min-w-max">
+                                  {message.data.causalDrivers.map((driver: any, i: number) => (
+                                    <div key={i} className="bg-background/50 rounded p-2 border border-border/50 whitespace-nowrap">
+                                      <div className="flex items-center justify-between mb-1 gap-4">
+                                        <span className="font-medium text-xs">{driver.driver}</span>
+                                        {driver.direction === 'positive' ? (
+                                          <TrendingUp className="h-3 w-3 text-emerald-500" />
+                                        ) : (
+                                          <TrendingDown className="h-3 w-3 text-red-500" />
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                        <span className={driver.direction === 'positive' ? 'text-emerald-500' : 'text-red-500'}>
+                                          {driver.impact}
+                                        </span>
+                                        <span>•</span>
+                                        <span>Correlation: {((driver.correlation || 0) * 100).toFixed(0)}%</span>
+                                      </div>
                                     </div>
-                                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                                      <span className={driver.direction === 'positive' ? 'text-emerald-500' : 'text-red-500'}>
-                                        {driver.impact}
-                                      </span>
-                                      <span>•</span>
-                                      <span>Correlation: {((driver.correlation || 0) * 100).toFixed(0)}%</span>
-                                    </div>
-                                  </div>
-                                ))}
+                                  ))}
+                                </div>
                               </div>
+                              <div className="h-2.5 bg-orange-500/5 border-t border-orange-500/10" />
                             </div>
                           )}
                           
                           {/* ML Insights - Full */}
                           {message.data?.mlInsights && (
-                            <div className="mt-3 p-2 bg-purple-500/10 rounded border border-purple-500/20 overflow-x-scroll scrollbar-thin">
-                              <div className="flex items-center gap-2 mb-2">
+                            <div className="mt-3 rounded-lg border border-purple-500/20 bg-purple-500/10 overflow-hidden">
+                              <div className="flex items-center gap-2 px-3 pt-2 pb-1">
                                 <Brain className="h-3.5 w-3.5 text-purple-500" />
                                 <span className="font-medium text-xs">ML Insights</span>
                                 <Badge variant="secondary" className="text-[10px] h-4">
                                   {((message.data.mlInsights.confidence || 0) * 100).toFixed(0)}% confidence
                                 </Badge>
                               </div>
-                              <p className="text-xs text-muted-foreground mb-1">
-                                {message.data.mlInsights.patternDetected}
-                              </p>
-                              {message.data.mlInsights.businessSignificance && (
-                                <p className="text-[10px] text-purple-600 dark:text-purple-400">
-                                  <strong>Significance:</strong> {message.data.mlInsights.businessSignificance}
-                                </p>
-                              )}
+                              <div 
+                                className="overflow-x-auto px-3 pb-2"
+                                style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(280, 70%, 60%) hsl(210, 17%, 95%)' }}
+                              >
+                                <div className="min-w-max whitespace-nowrap pr-4">
+                                  <p className="text-xs text-muted-foreground mb-1">
+                                    {message.data.mlInsights.patternDetected}
+                                  </p>
+                                  {message.data.mlInsights.businessSignificance && (
+                                    <p className="text-[10px] text-purple-600 dark:text-purple-400">
+                                      <strong>Significance:</strong> {message.data.mlInsights.businessSignificance}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="h-2.5 bg-purple-500/5 border-t border-purple-500/10" />
                             </div>
                           )}
                           
                           {/* Predictions - Full */}
                           {message.data?.predictions && (
-                            <div className="mt-3 p-2 bg-blue-500/10 rounded border border-blue-500/20 overflow-x-scroll scrollbar-thin">
-                              <div className="flex items-center gap-2 mb-2">
+                            <div className="mt-3 rounded-lg border border-blue-500/20 bg-blue-500/10 overflow-hidden">
+                              <div className="flex items-center gap-2 px-3 pt-2 pb-1">
                                 <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
                                 <span className="font-medium text-xs">Predictions</span>
                               </div>
-                              <div className="flex items-center gap-4 text-xs">
-                                <div>
-                                  <span className="text-[10px] text-muted-foreground">Trend: </span>
-                                  <span className={`font-medium capitalize ${
-                                    message.data.predictions.trend === 'increasing' ? 'text-emerald-500' :
-                                    message.data.predictions.trend === 'decreasing' ? 'text-red-500' : 'text-amber-500'
-                                  }`}>
-                                    {message.data.predictions.trend}
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-[10px] text-muted-foreground">Risk: </span>
-                                  <span className={`font-medium capitalize ${
-                                    message.data.predictions.riskLevel === 'low' ? 'text-emerald-500' :
-                                    message.data.predictions.riskLevel === 'high' ? 'text-red-500' : 'text-amber-500'
-                                  }`}>
-                                    {message.data.predictions.riskLevel}
-                                  </span>
+                              <div 
+                                className="overflow-x-auto px-3 pb-2"
+                                style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(217, 91%, 60%) hsl(210, 17%, 95%)' }}
+                              >
+                                <div className="min-w-max whitespace-nowrap pr-4">
+                                  <div className="flex items-center gap-4 text-xs">
+                                    <div>
+                                      <span className="text-[10px] text-muted-foreground">Trend: </span>
+                                      <span className={`font-medium capitalize ${
+                                        message.data.predictions.trend === 'increasing' ? 'text-emerald-500' :
+                                        message.data.predictions.trend === 'decreasing' ? 'text-red-500' : 'text-amber-500'
+                                      }`}>
+                                        {message.data.predictions.trend}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[10px] text-muted-foreground">Risk: </span>
+                                      <span className={`font-medium capitalize ${
+                                        message.data.predictions.riskLevel === 'low' ? 'text-emerald-500' :
+                                        message.data.predictions.riskLevel === 'high' ? 'text-red-500' : 'text-amber-500'
+                                      }`}>
+                                        {message.data.predictions.riskLevel}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {message.data.predictions.forecast && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {message.data.predictions.forecast}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
-                              {message.data.predictions.forecast && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {message.data.predictions.forecast}
-                                </p>
-                              )}
+                              <div className="h-2.5 bg-blue-500/5 border-t border-blue-500/10" />
                             </div>
                           )}
                           
