@@ -80,10 +80,7 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
   if (!hasBullets) {
     // Single paragraph - format as insight card
     return (
-      <div 
-        className={cn("text-sm leading-relaxed", className)} 
-        style={{ wordWrap: 'break-word', overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
-      >
+      <div className={cn("text-sm leading-relaxed whitespace-nowrap", className)}>
         {highlightMetrics(content)}
       </div>
     );
@@ -105,7 +102,7 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
           <div
             key={idx}
             className={cn(
-              "flex gap-3 p-3 rounded-lg border transition-colors",
+              "flex gap-3 p-3 rounded-lg border transition-colors whitespace-nowrap",
               type === 'positive' && "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-800/30",
               type === 'negative' && "bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-800/30",
               type === 'comparison' && "bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/50 dark:border-blue-800/30",
@@ -113,16 +110,7 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
             )}
           >
             <InsightIcon type={type} />
-            <p 
-              className="text-sm leading-relaxed flex-1"
-              style={{ 
-                minWidth: 0,
-                wordWrap: 'break-word',
-                overflowWrap: 'break-word',
-                wordBreak: 'break-word',
-                hyphens: 'auto'
-              }}
-            >
+            <p className="text-sm leading-relaxed">
               {highlightMetrics(insight)}
             </p>
           </div>
