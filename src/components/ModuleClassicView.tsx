@@ -415,35 +415,37 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
       </div>
 
       {/* Right Panel - Results */}
-      <div className="lg:col-span-2">
+      <div className="lg:col-span-2 w-full max-w-full min-w-0 overflow-x-hidden">
         <Card className="h-full">
-          <CardContent className="p-6">
+          <CardContent className="p-6 w-full max-w-full min-w-0 overflow-x-hidden">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center h-64 gap-4">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-muted-foreground">Analyzing your question...</p>
               </div>
             ) : result ? (
-              <div className="space-y-6">
+              <div className="space-y-6 w-full max-w-full min-w-0 overflow-x-hidden">
                 {/* WHAT HAPPENED Section */}
                 {result.whatHappened && (
                   <Collapsible open={expandedSections.whatHappened} onOpenChange={() => toggleSection('whatHappened')}>
                     <CollapsibleTrigger className="flex items-center justify-between w-full">
                       <h3 className="font-semibold flex items-center gap-2">
-                        <BarChart3 className="h-4 w-4 text-primary" />
+                        <BarChart3 className="h-4 w-4 text-primary flex-shrink-0" />
                         WHAT HAPPENED
                       </h3>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.whatHappened ? '' : '-rotate-90'}`} />
+                      <ChevronDown className={`h-4 w-4 transition-transform flex-shrink-0 ${expandedSections.whatHappened ? '' : '-rotate-90'}`} />
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <ul className="space-y-2 mt-3">
-                        {result.whatHappened.map((point: string, i: number) => (
-                          <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                            <span className="text-primary mt-1">•</span>
-                            {point}
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="max-h-80 overflow-y-auto overflow-x-hidden pr-2 mt-3">
+                        <ul className="space-y-2">
+                          {result.whatHappened.map((point: string, i: number) => (
+                            <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                              <span className="text-primary mt-1 flex-shrink-0">•</span>
+                              <span className="whitespace-normal break-words">{point}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     </CollapsibleContent>
                   </Collapsible>
                 )}
@@ -453,20 +455,22 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                   <Collapsible open={expandedSections.why} onOpenChange={() => toggleSection('why')}>
                     <CollapsibleTrigger className="flex items-center justify-between w-full">
                       <h3 className="font-semibold flex items-center gap-2">
-                        <Lightbulb className="h-4 w-4 text-yellow-500" />
+                        <Lightbulb className="h-4 w-4 text-yellow-500 flex-shrink-0" />
                         WHY IT HAPPENED
                       </h3>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.why ? '' : '-rotate-90'}`} />
+                      <ChevronDown className={`h-4 w-4 transition-transform flex-shrink-0 ${expandedSections.why ? '' : '-rotate-90'}`} />
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <ul className="space-y-2 mt-3">
-                        {result.why.map((reason: string, i: number) => (
-                          <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                            <span className="text-yellow-500 mt-1">•</span>
-                            {reason}
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="max-h-80 overflow-y-auto overflow-x-hidden pr-2 mt-3">
+                        <ul className="space-y-2">
+                          {result.why.map((reason: string, i: number) => (
+                            <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                              <span className="text-yellow-500 mt-1 flex-shrink-0">•</span>
+                              <span className="whitespace-normal break-words">{reason}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     </CollapsibleContent>
                   </Collapsible>
                 )}
@@ -476,20 +480,22 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                   <Collapsible open={expandedSections.whatToDo} onOpenChange={() => toggleSection('whatToDo')}>
                     <CollapsibleTrigger className="flex items-center justify-between w-full">
                       <h3 className="font-semibold flex items-center gap-2">
-                        <Target className="h-4 w-4 text-status-good" />
+                        <Target className="h-4 w-4 text-status-good flex-shrink-0" />
                         WHAT TO DO
                       </h3>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.whatToDo ? '' : '-rotate-90'}`} />
+                      <ChevronDown className={`h-4 w-4 transition-transform flex-shrink-0 ${expandedSections.whatToDo ? '' : '-rotate-90'}`} />
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <ul className="space-y-2 mt-3">
-                        {result.whatToDo.map((action: string, i: number) => (
-                          <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                            <span className="text-status-good mt-1">✓</span>
-                            {action}
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="max-h-80 overflow-y-auto overflow-x-hidden pr-2 mt-3">
+                        <ul className="space-y-2">
+                          {result.whatToDo.map((action: string, i: number) => (
+                            <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                              <span className="text-status-good mt-1 flex-shrink-0">✓</span>
+                              <span className="whitespace-normal break-words">{action}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     </CollapsibleContent>
                   </Collapsible>
                 )}
@@ -499,32 +505,34 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                   <Collapsible open={expandedSections.causalDrivers} onOpenChange={() => toggleSection('causalDrivers')}>
                     <CollapsibleTrigger className="flex items-center justify-between w-full">
                       <h3 className="font-semibold flex items-center gap-2">
-                        <Zap className="h-4 w-4 text-orange-500" />
+                        <Zap className="h-4 w-4 text-orange-500 flex-shrink-0" />
                         CAUSAL DRIVERS
                       </h3>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.causalDrivers ? '' : '-rotate-90'}`} />
+                      <ChevronDown className={`h-4 w-4 transition-transform flex-shrink-0 ${expandedSections.causalDrivers ? '' : '-rotate-90'}`} />
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                        {result.causalDrivers.map((driver: any, i: number) => (
-                          <div key={i} className="bg-muted/30 rounded-lg p-3 border border-border">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="font-medium text-sm">{driver.driver}</span>
-                              {driver.direction === 'positive' ? (
-                                <TrendingUp className="h-4 w-4 text-status-good" />
-                              ) : (
-                                <TrendingDown className="h-4 w-4 text-status-bad" />
-                              )}
+                      <div className="max-h-80 overflow-y-auto overflow-x-hidden pr-2 mt-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {result.causalDrivers.map((driver: any, i: number) => (
+                            <div key={i} className="bg-muted/30 rounded-lg p-3 border border-border">
+                              <div className="flex items-center justify-between mb-1 gap-2">
+                                <span className="font-medium text-sm whitespace-normal break-words">{driver.driver}</span>
+                                {driver.direction === 'positive' ? (
+                                  <TrendingUp className="h-4 w-4 text-status-good flex-shrink-0" />
+                                ) : (
+                                  <TrendingDown className="h-4 w-4 text-status-bad flex-shrink-0" />
+                                )}
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                <span className={driver.direction === 'positive' ? 'text-status-good' : 'text-status-bad'}>
+                                  {driver.impact}
+                                </span>
+                                <span>•</span>
+                                <span>Correlation: {(driver.correlation * 100).toFixed(0)}%</span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span className={driver.direction === 'positive' ? 'text-status-good' : 'text-status-bad'}>
-                                {driver.impact}
-                              </span>
-                              <span>•</span>
-                              <span>Correlation: {(driver.correlation * 100).toFixed(0)}%</span>
-                            </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     </CollapsibleContent>
                   </Collapsible>
@@ -535,26 +543,26 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                   <Collapsible open={expandedSections.mlInsights} onOpenChange={() => toggleSection('mlInsights')}>
                     <CollapsibleTrigger className="flex items-center justify-between w-full">
                       <h3 className="font-semibold flex items-center gap-2">
-                        <Brain className="h-4 w-4 text-purple-500" />
+                        <Brain className="h-4 w-4 text-purple-500 flex-shrink-0" />
                         MACHINE LEARNING INSIGHTS
                       </h3>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.mlInsights ? '' : '-rotate-90'}`} />
+                      <ChevronDown className={`h-4 w-4 transition-transform flex-shrink-0 ${expandedSections.mlInsights ? '' : '-rotate-90'}`} />
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <div className="bg-purple-500/10 rounded-lg p-4 mt-3 border border-purple-500/20">
                         <div className="flex items-start gap-3">
-                          <Brain className="h-5 w-5 text-purple-500 mt-0.5" />
-                          <div className="flex-1">
+                          <Brain className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1 min-w-0 max-h-80 overflow-y-auto overflow-x-hidden">
                             <div className="flex items-center gap-2 mb-2">
                               <span className="font-medium text-sm">Pattern Detected</span>
                               <Badge variant="secondary" className="text-xs">
                                 {(result.mlInsights.confidence * 100).toFixed(0)}% confidence
                               </Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground mb-2">
+                            <p className="text-sm text-muted-foreground mb-2 whitespace-normal break-words">
                               {result.mlInsights.patternDetected}
                             </p>
-                            <p className="text-xs text-purple-600 dark:text-purple-400">
+                            <p className="text-xs text-purple-600 dark:text-purple-400 whitespace-normal break-words">
                               <strong>Business Significance:</strong> {result.mlInsights.businessSignificance}
                             </p>
                           </div>
@@ -569,14 +577,14 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                   <Collapsible open={expandedSections.predictions} onOpenChange={() => toggleSection('predictions')}>
                     <CollapsibleTrigger className="flex items-center justify-between w-full">
                       <h3 className="font-semibold flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-blue-500" />
+                        <TrendingUp className="h-4 w-4 text-blue-500 flex-shrink-0" />
                         FORECASTING & PREDICTIONS
                       </h3>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.predictions ? '' : '-rotate-90'}`} />
+                      <ChevronDown className={`h-4 w-4 transition-transform flex-shrink-0 ${expandedSections.predictions ? '' : '-rotate-90'}`} />
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="bg-blue-500/10 rounded-lg p-4 mt-3 border border-blue-500/20">
-                        <div className="flex items-center gap-4 mb-3">
+                      <div className="bg-blue-500/10 rounded-lg p-4 mt-3 border border-blue-500/20 max-h-80 overflow-y-auto overflow-x-hidden">
+                        <div className="flex flex-wrap items-center gap-4 mb-3">
                           <div>
                             <span className="text-xs text-muted-foreground">Trend</span>
                             <div className={`font-semibold capitalize ${
@@ -604,7 +612,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                                 ? result.predictions.forecast 
                                 : [result.predictions.forecast]
                               ).map((f: any, i: number) => (
-                                <Badge key={i} variant="outline" className="text-xs">
+                                <Badge key={i} variant="outline" className="text-xs whitespace-normal break-words">
                                   {f.period}: {typeof f.value === 'number' ? f.value.toFixed(1) : String(f.value || '')}
                                   {f.confidence !== undefined && (
                                     <span className="ml-1 text-muted-foreground">
