@@ -13,8 +13,21 @@ interface AiScrollableAnswerProps {
  */
 export function AiScrollableAnswer({ children, className }: AiScrollableAnswerProps) {
   return (
-    <div className={cn("overflow-x-auto scrollbar-visible", className)}>
-      <div className="inline-block min-w-max whitespace-nowrap">
+    <div 
+      className={cn("ai-answer-scroll", className)}
+      style={{ 
+        overflowX: 'auto', 
+        overflowY: 'visible',
+        maxWidth: '100%'
+      }}
+    >
+      <div 
+        style={{ 
+          display: 'inline-block', 
+          minWidth: 'max-content',
+          whiteSpace: 'nowrap'
+        }}
+      >
         {children}
       </div>
     </div>

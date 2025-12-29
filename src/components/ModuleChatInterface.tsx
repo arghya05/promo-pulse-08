@@ -845,7 +845,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           
                           {/* Why section - Horizontal scroll */}
                           {message.data?.why && message.data.why.length > 0 && (
-                            <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 overflow-hidden">
+                            <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10">
                               <div className="flex items-center gap-2 px-3 pt-2 pb-1">
                                 <Lightbulb className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
                                 <span className="font-medium text-xs">Why It Happened</span>
@@ -868,7 +868,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           
                           {/* What To Do (Recommendations) - Horizontal scroll */}
                           {message.data?.whatToDo && message.data.whatToDo.length > 0 && (
-                            <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 overflow-hidden">
+                            <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10">
                               <div className="flex items-center gap-2 px-3 pt-2 pb-1">
                                 <Target className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
                                 <span className="font-medium text-xs">Recommendations</span>
@@ -891,7 +891,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           
                           {/* Causal Drivers - Horizontal scroll */}
                           {message.data?.causalDrivers && message.data.causalDrivers.length > 0 && (
-                            <div className="mt-3 rounded-lg border border-orange-500/20 bg-orange-500/10 overflow-hidden">
+                            <div className="mt-3 rounded-lg border border-orange-500/20 bg-orange-500/10">
                               <div className="flex items-center gap-2 px-3 pt-2 pb-1">
                                 <Zap className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
                                 <span className="font-medium text-xs">Causal Drivers</span>
@@ -927,7 +927,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           
                           {/* ML Insights - Horizontal scroll */}
                           {message.data?.mlInsights && (
-                            <div className="mt-3 rounded-lg border border-purple-500/20 bg-purple-500/10 overflow-hidden">
+                            <div className="mt-3 rounded-lg border border-purple-500/20 bg-purple-500/10">
                               <div className="flex items-center gap-2 px-3 pt-2 pb-1">
                                 <Brain className="h-3.5 w-3.5 text-purple-500 flex-shrink-0" />
                                 <span className="font-medium text-xs">ML Insights</span>
@@ -953,7 +953,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           
                           {/* Predictions - Horizontal scroll */}
                           {message.data?.predictions && (
-                            <div className="mt-3 rounded-lg border border-blue-500/20 bg-blue-500/10 overflow-hidden">
+                            <div className="mt-3 rounded-lg border border-blue-500/20 bg-blue-500/10">
                               <div className="flex items-center gap-2 px-3 pt-2 pb-1">
                                 <TrendingUp className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
                                 <span className="font-medium text-xs">Predictions</span>

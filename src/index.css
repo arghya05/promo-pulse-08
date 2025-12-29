@@ -172,4 +172,32 @@ All colors MUST be HSL.
   .scrollbar-visible::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--primary) / 0.8);
   }
+  
+  /* AI Answer horizontal scroll - ensures scrollbar always visible */
+  .ai-answer-scroll {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    scrollbar-width: auto;
+    scrollbar-color: hsl(var(--primary)) hsl(var(--muted) / 0.5);
+  }
+  
+  .ai-answer-scroll::-webkit-scrollbar {
+    height: 10px;
+    display: block !important;
+  }
+  
+  .ai-answer-scroll::-webkit-scrollbar-track {
+    background: hsl(var(--muted) / 0.5);
+    border-radius: 5px;
+  }
+  
+  .ai-answer-scroll::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary));
+    border-radius: 5px;
+    min-width: 30px;
+  }
+  
+  .ai-answer-scroll::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.8);
+  }
 }
