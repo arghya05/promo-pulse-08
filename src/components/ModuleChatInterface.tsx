@@ -806,15 +806,17 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           : 'bg-slate-100 dark:bg-slate-800'
                       }`}
                     >
-                      <UniversalScrollableText>
-                      {message.isLoading ? (
+                      {/* User messages: wrap text, no scrollbar */}
+                      {message.role === 'user' ? (
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+                      ) : message.isLoading ? (
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           <span className="text-sm">Analyzing {module.name}...</span>
                         </div>
                       ) : message.clarificationOptions ? (
                         <div className="space-y-3">
-                          <p className="text-sm font-medium">{message.content}</p>
+                          <p className="text-sm font-medium whitespace-pre-wrap break-words">{message.content}</p>
                           <div className="flex flex-wrap gap-2">
                             {message.clarificationOptions.map((option, idx) => (
                               <Button
@@ -841,7 +843,9 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                             </Badge>
                           )}
                           
-                          <FormattedInsight content={message.content} />
+                          <UniversalScrollableText>
+                            <FormattedInsight content={message.content} />
+                          </UniversalScrollableText>
                           
                           {/* Why section - Horizontal scroll */}
                           {message.data?.why && message.data.why.length > 0 && (
@@ -1081,7 +1085,6 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           )}
                         </>
                       )}
-                      </UniversalScrollableText>
                     </div>
                     {message.role === 'user' && (
                       <div className="p-2 rounded-lg bg-primary/10 h-fit">
