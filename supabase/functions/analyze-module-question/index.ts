@@ -974,8 +974,13 @@ function detectAmbiguousTerms(question: string, moduleId: string): AmbiguityChec
   // Check for metric ambiguity only if no metric context
   const hasMetricContext = /\b(revenue|margin|roi|sales|units|lift|spend|profit|growth)\b/i.test(q);
   
+  // Executive-level questions that should NOT trigger clarification
+  // These are high-level overview questions that expect comprehensive answers
+  const isExecutiveOverviewQuestion = /\b(overall|executive|summary|health|dashboard|overview|quarterly|annual|ytd|yoy|year.over.year|this.quarter|this.year|merchandising.performance|business.performance)\b/i.test(q);
+  
   for (const [term, config] of Object.entries(metricAmbiguousTerms)) {
-    if (q.includes(term) && !hasMetricContext) {
+    // Skip clarification for executive overview questions - they expect comprehensive answers
+    if (q.includes(term) && !hasMetricContext && !isExecutiveOverviewQuestion) {
       return {
         needsClarification: true,
         ambiguousTerm: term,
