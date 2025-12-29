@@ -1100,21 +1100,23 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                   
                   {/* What Happened Section - Collapsible */}
                   <Collapsible defaultOpen>
-                    <Card className="p-6">
+                    <Card className="p-6 w-full max-w-full min-w-0 overflow-x-hidden">
                       <CollapsibleTrigger className="w-full flex items-center justify-between group">
                         <h2 className="text-lg font-bold flex items-center gap-2">
                           WHAT HAPPENED
                         </h2>
-                        <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                        <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform flex-shrink-0 group-data-[state=open]:rotate-180" />
                       </CollapsibleTrigger>
                       <CollapsibleContent className="mt-4">
-                        <div className="space-y-4">
-                          {(result.whatHappened || []).map((point, idx) => (
-                            <div key={idx} className="flex gap-3">
-                              <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
-                              <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
-                            </div>
-                          ))}
+                        <div className="max-h-80 overflow-y-auto overflow-x-hidden pr-2">
+                          <div className="space-y-4">
+                            {(result.whatHappened || []).map((point, idx) => (
+                              <div key={idx} className="flex gap-3">
+                                <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
+                                <p className="text-base leading-relaxed text-foreground whitespace-normal break-words" dangerouslySetInnerHTML={{ __html: point }} />
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </CollapsibleContent>
                     </Card>
@@ -1122,19 +1124,21 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
 
                   {/* Why It Happened Section - Collapsible */}
                   <Collapsible defaultOpen>
-                    <Card className="p-6">
+                    <Card className="p-6 w-full max-w-full min-w-0 overflow-x-hidden">
                       <CollapsibleTrigger className="w-full flex items-center justify-between group">
                         <h2 className="text-lg font-bold">WHY IT HAPPENED</h2>
-                        <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                        <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform flex-shrink-0 group-data-[state=open]:rotate-180" />
                       </CollapsibleTrigger>
                       <CollapsibleContent className="mt-4">
-                        <div className="space-y-4">
-                          {(result.why || []).map((point, idx) => (
-                            <div key={idx} className="flex gap-3">
-                              <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-chart-3 flex-shrink-0" />
-                              <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
-                            </div>
-                          ))}
+                        <div className="max-h-80 overflow-y-auto overflow-x-hidden pr-2">
+                          <div className="space-y-4">
+                            {(result.why || []).map((point, idx) => (
+                              <div key={idx} className="flex gap-3">
+                                <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-chart-3 flex-shrink-0" />
+                                <p className="text-base leading-relaxed text-foreground whitespace-normal break-words" dangerouslySetInnerHTML={{ __html: point }} />
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </CollapsibleContent>
                     </Card>
@@ -1142,19 +1146,21 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
 
                   {/* Recommendation Section - Collapsible */}
                   <Collapsible defaultOpen>
-                    <Card className="p-6">
+                    <Card className="p-6 w-full max-w-full min-w-0 overflow-x-hidden">
                       <CollapsibleTrigger className="w-full flex items-center justify-between group">
                         <h2 className="text-lg font-bold">RECOMMENDATION</h2>
-                        <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                        <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform flex-shrink-0 group-data-[state=open]:rotate-180" />
                       </CollapsibleTrigger>
                       <CollapsibleContent className="mt-4">
-                        <div className="space-y-4">
-                          {(result.whatToDo || []).map((point, idx) => (
-                            <div key={idx} className="flex gap-3">
-                              <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-status-good flex-shrink-0" />
-                              <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
-                            </div>
-                          ))}
+                        <div className="max-h-80 overflow-y-auto overflow-x-hidden pr-2">
+                          <div className="space-y-4">
+                            {(result.whatToDo || []).map((point, idx) => (
+                              <div key={idx} className="flex gap-3">
+                                <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-status-good flex-shrink-0" />
+                                <p className="text-base leading-relaxed text-foreground whitespace-normal break-words" dangerouslySetInnerHTML={{ __html: point }} />
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </CollapsibleContent>
                     </Card>

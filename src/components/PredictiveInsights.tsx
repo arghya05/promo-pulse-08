@@ -50,12 +50,12 @@ export default function PredictiveInsights({ predictions, causalDrivers, mlInsig
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full min-w-0 overflow-x-hidden">
       {/* Predictive Forecasts */}
       {predictions && (
-        <Card className="p-6">
+        <Card className="p-6 w-full max-w-full min-w-0 overflow-x-hidden">
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="h-5 w-5 text-primary" />
+            <TrendingUp className="h-5 w-5 text-primary flex-shrink-0" />
             <h2 className="text-lg font-bold">PREDICTIVE FORECAST</h2>
             <Badge variant="secondary" className="ml-auto">
               {(predictions.confidence * 100).toFixed(0)}% Confidence
@@ -70,22 +70,24 @@ export default function PredictiveInsights({ predictions, causalDrivers, mlInsig
             <Progress value={predictions.confidence * 100} className="h-2" />
           </div>
 
-          <div className="space-y-4">
-            {predictions.forecast.map((forecast, idx) => {
-              // Handle both string format and object format {period, value, confidence}
-              const forecastText = typeof forecast === 'string' 
-                ? forecast 
-                : typeof forecast === 'object' && forecast !== null
-                  ? `${(forecast as any).period || ''}: ${(forecast as any).value || ''} (${((forecast as any).confidence || 0) * 100}% confidence)`
-                  : String(forecast);
-              
-              return (
-                <div key={idx} className="flex gap-3">
-                  <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
-                  <p className="text-base leading-relaxed text-foreground">{forecastText}</p>
-                </div>
-              );
-            })}
+          <div className="max-h-80 overflow-y-auto overflow-x-hidden pr-2">
+            <div className="space-y-4">
+              {predictions.forecast.map((forecast, idx) => {
+                // Handle both string format and object format {period, value, confidence}
+                const forecastText = typeof forecast === 'string' 
+                  ? forecast 
+                  : typeof forecast === 'object' && forecast !== null
+                    ? `${(forecast as any).period || ''}: ${(forecast as any).value || ''} (${((forecast as any).confidence || 0) * 100}% confidence)`
+                    : String(forecast);
+                
+                return (
+                  <div key={idx} className="flex gap-3">
+                    <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
+                    <p className="text-base leading-relaxed text-foreground whitespace-normal break-words">{forecastText}</p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Projected Impact */}
@@ -188,72 +190,76 @@ export default function PredictiveInsights({ predictions, causalDrivers, mlInsig
 
       {/* Causal Drivers */}
       {causalDrivers && causalDrivers.length > 0 && (
-        <Card className="p-6">
+        <Card className="p-6 w-full max-w-full min-w-0 overflow-x-hidden">
           <div className="flex items-center gap-2 mb-4">
-            <Target className="h-5 w-5 text-chart-3" />
+            <Target className="h-5 w-5 text-chart-3 flex-shrink-0" />
             <h2 className="text-lg font-bold">CAUSAL DRIVERS</h2>
           </div>
           
-          <div className="space-y-4">
-            {causalDrivers.map((driver, idx) => (
-              <div key={idx} className="bg-secondary/30 rounded-lg p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-semibold text-foreground">{driver.driver}</h3>
-                  <div className="flex items-center gap-2">
-                    <Badge 
-                      variant={Math.abs(driver.correlation) >= 0.7 ? "default" : "secondary"}
-                      className="text-xs"
-                    >
-                      {getCorrelationStrength(driver.correlation)}
-                    </Badge>
-                    <span className={`text-sm font-bold ${getCorrelationColor(driver.correlation)}`}>
-                      {driver.correlation > 0 ? '+' : ''}{(driver.correlation * 100).toFixed(0)}%
-                    </span>
+          <div className="max-h-80 overflow-y-auto overflow-x-hidden pr-2">
+            <div className="space-y-4">
+              {causalDrivers.map((driver, idx) => (
+                <div key={idx} className="bg-secondary/30 rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-2 gap-2">
+                    <h3 className="font-semibold text-foreground whitespace-normal break-words">{driver.driver}</h3>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Badge 
+                        variant={Math.abs(driver.correlation) >= 0.7 ? "default" : "secondary"}
+                        className="text-xs"
+                      >
+                        {getCorrelationStrength(driver.correlation)}
+                      </Badge>
+                      <span className={`text-sm font-bold ${getCorrelationColor(driver.correlation)}`}>
+                        {driver.correlation > 0 ? '+' : ''}{(driver.correlation * 100).toFixed(0)}%
+                      </span>
+                    </div>
                   </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-normal break-words">{driver.impact}</p>
+                  {driver.actionable && (
+                    <div className="mt-2 pt-2 border-t border-border/50">
+                      <p className="text-sm text-primary font-medium flex items-start gap-2">
+                        <span className="text-xs flex-shrink-0">💡</span>
+                        <span className="whitespace-normal break-words">{driver.actionable}</span>
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">{driver.impact}</p>
-                {driver.actionable && (
-                  <div className="mt-2 pt-2 border-t border-border/50">
-                    <p className="text-sm text-primary font-medium flex items-center gap-2">
-                      <span className="text-xs">💡</span>
-                      {driver.actionable}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </Card>
       )}
 
       {/* ML Insights */}
       {mlInsights && mlInsights.length > 0 && (
-        <Card className="p-6">
+        <Card className="p-6 w-full max-w-full min-w-0 overflow-x-hidden">
           <div className="flex items-center gap-2 mb-4">
-            <Brain className="h-5 w-5 text-chart-4" />
+            <Brain className="h-5 w-5 text-chart-4 flex-shrink-0" />
             <h2 className="text-lg font-bold">ML-DETECTED PATTERNS</h2>
           </div>
           
-          <div className="space-y-4">
-            {mlInsights.map((insight, idx) => (
-              <div key={idx} className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-                <div className="flex items-start gap-3 mb-2">
-                  <AlertCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                  <h3 className="font-semibold text-foreground">{insight.pattern}</h3>
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed pl-7">
-                  {insight.significance}
-                </p>
-                {insight.recommendation && (
-                  <div className="mt-2 pl-7">
-                    <p className="text-sm text-status-good font-medium flex items-center gap-2">
-                      <span className="text-xs">✓</span>
-                      {insight.recommendation}
-                    </p>
+          <div className="max-h-80 overflow-y-auto overflow-x-hidden pr-2">
+            <div className="space-y-4">
+              {mlInsights.map((insight, idx) => (
+                <div key={idx} className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                  <div className="flex items-start gap-3 mb-2">
+                    <AlertCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                    <h3 className="font-semibold text-foreground whitespace-normal break-words">{insight.pattern}</h3>
                   </div>
-                )}
-              </div>
-            ))}
+                  <p className="text-sm text-muted-foreground leading-relaxed pl-7 whitespace-normal break-words">
+                    {insight.significance}
+                  </p>
+                  {insight.recommendation && (
+                    <div className="mt-2 pl-7">
+                      <p className="text-sm text-status-good font-medium flex items-start gap-2">
+                        <span className="text-xs flex-shrink-0">✓</span>
+                        <span className="whitespace-normal break-words">{insight.recommendation}</span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </Card>
       )}
