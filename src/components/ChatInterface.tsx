@@ -1438,9 +1438,9 @@ export default function ChatInterface({
       )}
 
       {/* Messages Area - Clean Chat Shell */}
-      <div className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-hidden">
+      <div className="flex flex-col flex-1 min-h-0 w-full max-w-full">
         <ScrollArea className="flex-1 min-h-0 w-full max-w-full" ref={scrollRef}>
-          <div className="space-y-4 px-6 py-4 w-full">
+          <div className="space-y-4 px-6 py-4 w-full overflow-visible">
             {messages.map((message) => (
               <div 
                 key={message.id} 
@@ -1459,7 +1459,7 @@ export default function ChatInterface({
 
                 {/* Message Content */}
                 <div 
-                  className={`max-w-[70%] rounded-2xl px-3 py-2 min-w-0 ${
+                  className={`max-w-[70%] rounded-2xl px-3 py-2 min-w-0 overflow-visible ${
                     message.type === 'user'
                       ? 'bg-blue-500 text-white'
                       : message.isError
@@ -1469,9 +1469,9 @@ export default function ChatInterface({
                 >
                   {/* User messages: wrap text, no scrollbar */}
                   {message.type === 'user' ? (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words overflow-visible w-full">{message.content}</p>
                   ) : message.isError ? (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words overflow-visible w-full">{message.content}</p>
                   ) : (
                     <UniversalScrollableText>
                       <FormattedInsight content={message.content} />

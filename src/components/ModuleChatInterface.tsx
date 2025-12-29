@@ -787,8 +787,8 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
           
           {/* Chat Messages Shell */}
           <div ref={scrollAreaRef} className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-hidden">
-            <div className="flex-1 min-h-0 w-full max-w-full overflow-y-auto overflow-x-hidden p-3">
-              <div className="space-y-4 w-full">
+            <div className="flex-1 min-h-0 w-full max-w-full overflow-y-auto p-3">
+              <div className="space-y-4 w-full overflow-visible">
                 {messages.map((message) => (
                   <div
                     key={message.id}
@@ -800,7 +800,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                       </div>
                     )}
                     <div
-                      className={`max-w-[70%] rounded-2xl px-3 py-2 min-w-0 ${
+                      className={`max-w-[70%] rounded-2xl px-3 py-2 min-w-0 overflow-visible ${
                         message.role === 'user'
                           ? 'bg-blue-500 text-white'
                           : 'bg-slate-100 dark:bg-slate-800'
@@ -808,7 +808,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                     >
                       {/* User messages: wrap text, no scrollbar */}
                       {message.role === 'user' ? (
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words overflow-visible w-full">{message.content}</p>
                       ) : message.isLoading ? (
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
