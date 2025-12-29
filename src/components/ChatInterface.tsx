@@ -1436,43 +1436,43 @@ export default function ChatInterface({
         </div>
       )}
 
-      {/* Messages Area */}
-      <ScrollArea className="flex-1 px-6 py-4" ref={scrollRef}>
-        <div className="space-y-6">
-          {messages.map((message) => (
-            <div key={message.id} className={`flex gap-3 ${message.type === 'user' ? 'flex-row-reverse' : ''}`}>
-              {/* Avatar */}
-              <div className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                message.type === 'user' 
-                  ? 'bg-primary text-primary-foreground' 
-                  : message.isError 
-                  ? 'bg-destructive/20 text-destructive'
-                  : 'bg-secondary text-secondary-foreground'
-              }`}>
-                {message.type === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-              </div>
-
-              {/* Message Content */}
+      {/* Messages Area - Clean Chat Shell */}
+      <div className="flex flex-col flex-1 h-full w-full max-w-full min-w-0 overflow-x-hidden">
+        <ScrollArea className="flex-1 w-full max-w-full min-w-0 overflow-y-auto overflow-x-hidden" ref={scrollRef}>
+          <div className="space-y-6 px-6 py-4">
+            {messages.map((message) => (
               <div 
-                className={`flex flex-col gap-2 ${message.type === 'user' ? 'items-end max-w-[85%]' : 'items-start flex-1'}`}
-                style={{ minWidth: 0 }}
+                key={message.id} 
+                className={`flex w-full ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
+                {/* Avatar for assistant */}
+                {message.type !== 'user' && (
+                  <div className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 mr-3 ${
+                    message.isError 
+                      ? 'bg-destructive/20 text-destructive'
+                      : 'bg-secondary text-secondary-foreground'
+                  }`}>
+                    <Bot className="h-4 w-4" />
+                  </div>
+                )}
+
+                {/* Message Content */}
                 <div 
-                  className={`rounded-2xl px-4 py-3 ${
+                  className={`rounded-2xl px-4 py-3 min-w-0 ${
                     message.type === 'user'
-                      ? 'bg-primary text-primary-foreground rounded-br-md'
+                      ? 'bg-primary text-primary-foreground max-w-[70%]'
                       : message.isError
-                      ? 'bg-destructive/10 text-foreground border border-destructive/30 rounded-bl-md w-full'
-                      : 'bg-secondary/50 text-foreground rounded-bl-md w-full'
+                      ? 'bg-destructive/10 text-foreground border border-destructive/30 max-w-[70%]'
+                      : 'bg-secondary/50 text-foreground max-w-[70%]'
                   }`}
-                  style={{ maxWidth: '100%' }}
                 >
-                  {message.type === 'user' || message.isError ? (
-                    <p className="text-sm leading-relaxed" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', wordBreak: 'break-word' }}>{message.content}</p>
-                  ) : (
-                    <FormattedInsight content={message.content} />
-                  )}
-                </div>
+                  <div className="whitespace-pre-wrap break-words max-w-full overflow-x-hidden">
+                    {message.type === 'user' || message.isError ? (
+                      <p className="text-sm leading-relaxed">{message.content}</p>
+                    ) : (
+                      <FormattedInsight content={message.content} />
+                    )}
+                  </div>
 
                 {/* Why section */}
                 {message.analyticsResult?.why && message.analyticsResult.why.length > 0 && (
@@ -1899,8 +1899,9 @@ export default function ChatInterface({
               </div>
             </div>
           )}
-        </div>
-      </ScrollArea>
+          </div>
+        </ScrollArea>
+      </div>
 
       {/* Quick Actions Bar */}
       {(messages.length === 1 || (messages.length > 0 && messages.length % 5 === 0)) && !isLoading && (
