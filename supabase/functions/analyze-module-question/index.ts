@@ -874,6 +874,13 @@ interface AmbiguityCheck {
 function detectAmbiguousTerms(question: string, moduleId: string): AmbiguityCheck {
   const q = question.toLowerCase();
   
+  // EXECUTIVE MODULE OVERRIDE: Skip clarification for executive module
+  // Executive questions are strategic and should receive comprehensive answers without clarification
+  if (moduleId === 'executive') {
+    console.log('[executive] Skipping ambiguity detection for executive module - strategic questions get comprehensive answers');
+    return { needsClarification: false };
+  }
+  
   // Entity-ambiguous terms: ALWAYS ask what type of entity regardless of metric
   // (e.g., "top seller by revenue" still needs clarification: product, vendor, or store?)
   // Using regex patterns to handle common typos
