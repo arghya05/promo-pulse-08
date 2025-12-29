@@ -22,10 +22,10 @@ const Home = () => {
   const kpisByCategory = getKPIsByCategory();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background w-full max-w-full overflow-x-hidden">
       {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4">
+      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50 w-full max-w-full overflow-x-hidden">
+        <div className="w-full max-w-screen-2xl mx-auto px-4 md:px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary/10">
               <Brain className="h-6 w-6 text-primary" />
@@ -39,7 +39,7 @@ const Home = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-6 py-12">
+      <section className="w-full max-w-screen-2xl mx-auto px-4 md:px-6 py-12">
         <div className="text-center mb-12">
           <Badge variant="outline" className="mb-4 gap-1">
             <Sparkles className="h-3 w-3" />

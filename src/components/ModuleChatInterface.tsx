@@ -649,10 +649,10 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
   }, [module.name]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-200px)]">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-200px)] w-full max-w-full min-w-0 overflow-x-hidden">
       {/* Sidebar - Quick Actions (hidden when expanded) */}
       {!isExpanded && (
-        <div className="lg:col-span-2 space-y-4 overflow-auto hidden lg:block">
+        <div className="lg:col-span-2 space-y-4 overflow-y-auto overflow-x-hidden hidden lg:block min-w-0">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
@@ -734,8 +734,8 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
       )}
 
       {/* Chat Area */}
-      <div className={`flex flex-col min-w-0 ${isExpanded ? 'lg:col-span-12' : 'lg:col-span-10'}`}>
-        <Card className="flex-1 flex flex-col">
+      <div className={`flex flex-col min-w-0 max-w-full overflow-x-hidden ${isExpanded ? 'lg:col-span-12' : 'lg:col-span-10'}`}>
+        <Card className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden">
           {/* Header with Expand Button */}
           <div className="flex items-center justify-between px-4 pt-3 border-b pb-2">
             <div className="flex items-center gap-2">

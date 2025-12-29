@@ -559,27 +559,27 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
   const currentQuestions = getModulePersonaQuestions[persona] || [];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background w-full max-w-full overflow-x-hidden">
       {/* Header */}
-      <header className="border-b border-border bg-card sticky top-0 z-10">
-        <div className="max-w-[1600px] mx-auto px-8 py-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm" onClick={() => navigate('/home')} className="gap-2">
+      <header className="border-b border-border bg-card sticky top-0 z-10 w-full max-w-full overflow-x-hidden">
+        <div className="w-full max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between mb-6 gap-4">
+            <div className="flex items-center gap-4 min-w-0">
+              <Button variant="outline" size="sm" onClick={() => navigate('/home')} className="gap-2 flex-shrink-0">
                 <ArrowLeft className="h-4 w-4" />
                 <Home className="h-4 w-4" />
                 <span className="hidden sm:inline">Home</span>
               </Button>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground mb-1">
+              <div className="min-w-0">
+                <h1 className="text-xl md:text-2xl font-bold text-foreground mb-1 truncate">
                   {module?.name || 'Promotion Intelligence'}
                 </h1>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground truncate">
                   {module?.description || 'AI-powered promotion analysis and ROI intelligence'}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-shrink-0">
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -587,14 +587,14 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                 className="gap-2"
               >
                 <AlertTriangle className="h-4 w-4" />
-                {showRisksOnly ? "Show all" : "Show anomalies only"}
+                <span className="hidden md:inline">{showRisksOnly ? "Show all" : "Show anomalies only"}</span>
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-[1600px] mx-auto px-8 py-8">
+      <div className="w-full max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 py-8 min-w-0 overflow-x-hidden">
         <Tabs defaultValue="chat" className="w-full">
           <TabsList className="grid w-full grid-cols-5 mb-8">
             <TabsTrigger value="chat" className="gap-2">
