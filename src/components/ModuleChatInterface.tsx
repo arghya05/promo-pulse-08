@@ -785,26 +785,27 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
             </div>
           )}
           
-          <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3">
-            <div className="space-y-4 w-full min-w-0">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-2 min-w-0 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  {message.role === 'assistant' && (
-                    <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit flex-shrink-0`}>
-                      <Icon className={`h-4 w-4 ${module.color}`} />
-                    </div>
-                  )}
+          {/* Chat Messages Shell */}
+          <div ref={scrollAreaRef} className="flex flex-col h-full w-full max-w-full min-w-0 overflow-x-hidden">
+            <div className="flex-1 w-full max-w-full min-w-0 overflow-y-auto overflow-x-hidden p-3">
+              <div className="space-y-4 w-full min-w-0">
+                {messages.map((message) => (
                   <div
-                    className={`rounded-lg p-3 text-left min-w-0 ${
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground max-w-[85%]'
-                        : 'bg-muted w-full overflow-x-scroll scrollbar-thin'
-                    }`}
-                    style={{ maxWidth: message.role === 'assistant' ? 'calc(100% - 48px)' : undefined }}
+                    key={message.id}
+                    className={`flex w-full ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
+                    {message.role === 'assistant' && (
+                      <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit flex-shrink-0 mr-2`}>
+                        <Icon className={`h-4 w-4 ${module.color}`} />
+                      </div>
+                    )}
+                    <div
+                      className={`rounded-2xl px-3 py-2 min-w-0 ${
+                        message.role === 'user'
+                          ? 'bg-primary text-primary-foreground max-w-[70%]'
+                          : 'bg-muted max-w-[70%]'
+                      }`}
+                    >
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -1079,6 +1080,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                 ))}
                 <div ref={messagesEndRef} />
               </div>
+            </div>
           </div>
 
           {/* Input Area */}
