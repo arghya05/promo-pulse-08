@@ -735,7 +735,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
 
       {/* Chat Area */}
       <div className={`flex flex-col min-w-0 max-w-full overflow-x-hidden ${isExpanded ? 'lg:col-span-12' : 'lg:col-span-10'}`}>
-        <Card className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden">
+        <Card className="flex-1 flex flex-col min-h-0 min-w-0 max-w-full">
           {/* Header with Expand Button */}
           <div className="flex items-center justify-between px-4 pt-3 border-b pb-2">
             <div className="flex items-center gap-2">
@@ -786,9 +786,9 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
           )}
           
           {/* Chat Messages Shell */}
-          <div ref={scrollAreaRef} className="flex flex-col h-full w-full max-w-full min-w-0 overflow-x-hidden">
-            <div className="flex-1 w-full max-w-full min-w-0 overflow-y-auto overflow-x-hidden p-3">
-              <div className="space-y-4 w-full min-w-0">
+          <div ref={scrollAreaRef} className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-hidden">
+            <div className="flex-1 min-h-0 w-full max-w-full overflow-y-auto overflow-x-hidden p-3">
+              <div className="space-y-4 w-full">
                 {messages.map((message) => (
                   <div
                     key={message.id}

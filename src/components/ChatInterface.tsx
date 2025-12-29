@@ -1352,7 +1352,7 @@ export default function ChatInterface({
   };
 
   return (
-    <div className="flex flex-col h-[650px] bg-card rounded-xl border border-border overflow-hidden shadow-lg">
+    <div className="flex flex-col h-[650px] bg-card rounded-xl border border-border shadow-lg">
       {/* Chat Header */}
       <div className="px-6 py-4 border-b border-border bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
         <div className="flex items-center justify-between">
@@ -1437,9 +1437,9 @@ export default function ChatInterface({
       )}
 
       {/* Messages Area - Clean Chat Shell */}
-      <div className="flex flex-col flex-1 h-full w-full max-w-full min-w-0 overflow-x-hidden">
-        <ScrollArea className="flex-1 w-full max-w-full min-w-0 overflow-y-auto overflow-x-hidden" ref={scrollRef}>
-          <div className="space-y-6 px-6 py-4">
+      <div className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-hidden">
+        <ScrollArea className="flex-1 min-h-0 w-full max-w-full" ref={scrollRef}>
+          <div className="space-y-4 px-6 py-4 w-full">
             {messages.map((message) => (
               <div 
                 key={message.id} 
