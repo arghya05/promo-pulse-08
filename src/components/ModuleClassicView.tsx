@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import UniversalScrollableText from '@/components/UniversalScrollableText';
 import { 
   Search, 
   Loader2, 
@@ -442,9 +441,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                           {result.whatHappened.map((point: string, i: number) => (
                             <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
                               <span className="text-primary mt-1 flex-shrink-0">•</span>
-                              <UniversalScrollableText>
-                                <span>{point}</span>
-                              </UniversalScrollableText>
+                              <span>{point}</span>
                             </li>
                           ))}
                         </ul>
@@ -469,9 +466,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                           {result.why.map((reason: string, i: number) => (
                             <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
                               <span className="text-yellow-500 mt-1 flex-shrink-0">•</span>
-                              <UniversalScrollableText>
-                                <span>{reason}</span>
-                              </UniversalScrollableText>
+                              <span>{reason}</span>
                             </li>
                           ))}
                         </ul>
@@ -496,9 +491,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                           {result.whatToDo.map((action: string, i: number) => (
                             <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
                               <span className="text-status-good mt-1 flex-shrink-0">✓</span>
-                              <UniversalScrollableText>
-                                <span>{action}</span>
-                              </UniversalScrollableText>
+                              <span>{action}</span>
                             </li>
                           ))}
                         </ul>
@@ -523,24 +516,20 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                           {result.causalDrivers.map((driver: any, i: number) => (
                             <div key={i} className="bg-muted/30 rounded-lg p-3 border border-border">
                               <div className="flex items-center justify-between mb-1 gap-2">
-                                <UniversalScrollableText>
-                                  <span className="font-medium text-sm">{driver.driver}</span>
-                                </UniversalScrollableText>
+                                <span className="font-medium text-sm">{driver.driver}</span>
                                 {driver.direction === 'positive' ? (
                                   <TrendingUp className="h-4 w-4 text-status-good flex-shrink-0" />
                                 ) : (
                                   <TrendingDown className="h-4 w-4 text-status-bad flex-shrink-0" />
                                 )}
                               </div>
-                              <UniversalScrollableText>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                  <span className={driver.direction === 'positive' ? 'text-status-good' : 'text-status-bad'}>
-                                    {driver.impact}
-                                  </span>
-                                  <span>•</span>
-                                  <span>Correlation: {(driver.correlation * 100).toFixed(0)}%</span>
-                                </div>
-                              </UniversalScrollableText>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span className={driver.direction === 'positive' ? 'text-status-good' : 'text-status-bad'}>
+                                  {driver.impact}
+                                </span>
+                                <span>•</span>
+                                <span>Correlation: {(driver.correlation * 100).toFixed(0)}%</span>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -570,16 +559,12 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                                 {(result.mlInsights.confidence * 100).toFixed(0)}% confidence
                               </Badge>
                             </div>
-                            <UniversalScrollableText>
-                              <p className="text-sm text-muted-foreground mb-2">
-                                {result.mlInsights.patternDetected}
-                              </p>
-                            </UniversalScrollableText>
-                            <UniversalScrollableText>
-                              <p className="text-xs text-purple-600 dark:text-purple-400">
-                                <strong>Business Significance:</strong> {result.mlInsights.businessSignificance}
-                              </p>
-                            </UniversalScrollableText>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              {result.mlInsights.patternDetected}
+                            </p>
+                            <p className="text-xs text-purple-600 dark:text-purple-400">
+                              <strong>Business Significance:</strong> {result.mlInsights.businessSignificance}
+                            </p>
                           </div>
                         </div>
                       </div>
