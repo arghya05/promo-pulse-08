@@ -1475,76 +1475,82 @@ export default function ChatInterface({
                     )}
                   </LongText>
 
-                {/* Why section */}
+                {/* Why section - Horizontal scroll */}
                 {message.analyticsResult?.why && message.analyticsResult.why.length > 0 && (
-                  <div className="mt-3 p-2 bg-amber-500/10 rounded border border-amber-500/20 w-full" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                  <div className="mt-3 p-2 bg-amber-500/10 rounded border border-amber-500/20 w-full">
                     <div className="flex items-center gap-2 mb-2">
                       <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
                       <span className="font-medium text-xs">Why It Happened</span>
                     </div>
-                    <ul className="space-y-1">
-                      {message.analyticsResult.why.map((reason: string, i: number) => (
-                        <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
-                          <span className="text-amber-500 mt-0.5">•</span>
-                          <span>{reason}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="overflow-x-auto scrollbar-visible">
+                      <ul className="space-y-1 min-w-max">
+                        {message.analyticsResult.why.map((reason: string, i: number) => (
+                          <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap">
+                            <span className="text-amber-500 mt-0.5">•</span>
+                            <span>{reason}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
                 )}
                 
-                {/* What To Do (Recommendations) */}
+                {/* What To Do (Recommendations) - Horizontal scroll */}
                 {message.analyticsResult?.whatToDo && message.analyticsResult.whatToDo.length > 0 && (
-                  <div className="mt-3 p-2 bg-emerald-500/10 rounded border border-emerald-500/20 w-full" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                  <div className="mt-3 p-2 bg-emerald-500/10 rounded border border-emerald-500/20 w-full">
                     <div className="flex items-center gap-2 mb-2">
                       <Target className="h-3.5 w-3.5 text-emerald-500" />
                       <span className="font-medium text-xs">Recommendations</span>
                     </div>
-                    <ul className="space-y-1">
-                      {message.analyticsResult.whatToDo.map((action: string, i: number) => (
-                        <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
-                          <span className="text-emerald-500 mt-0.5">✓</span>
-                          <span>{action}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="overflow-x-auto scrollbar-visible">
+                      <ul className="space-y-1 min-w-max">
+                        {message.analyticsResult.whatToDo.map((action: string, i: number) => (
+                          <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap">
+                            <span className="text-emerald-500 mt-0.5">✓</span>
+                            <span>{action}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
                 )}
                 
-                {/* Causal Drivers */}
+                {/* Causal Drivers - Horizontal scroll */}
                 {message.analyticsResult?.causalDrivers && message.analyticsResult.causalDrivers.length > 0 && (
-                  <div className="mt-3 p-2 bg-orange-500/10 rounded border border-orange-500/20 w-full" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                  <div className="mt-3 p-2 bg-orange-500/10 rounded border border-orange-500/20 w-full">
                     <div className="flex items-center gap-2 mb-2">
                       <Zap className="h-3.5 w-3.5 text-orange-500" />
                       <span className="font-medium text-xs">Causal Drivers</span>
                     </div>
-                    <div className="grid grid-cols-1 gap-2">
-                      {message.analyticsResult.causalDrivers.map((driver: any, i: number) => (
-                        <div key={i} className="bg-background/50 rounded p-2 border border-border/50">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-medium text-xs">{driver.driver}</span>
-                            {driver.direction === 'positive' ? (
-                              <TrendingUp className="h-3 w-3 text-emerald-500" />
-                            ) : (
-                              <TrendingDown className="h-3 w-3 text-red-500" />
-                            )}
+                    <div className="overflow-x-auto scrollbar-visible">
+                      <div className="flex gap-2 min-w-max">
+                        {message.analyticsResult.causalDrivers.map((driver: any, i: number) => (
+                          <div key={i} className="bg-background/50 rounded p-2 border border-border/50 whitespace-nowrap flex-shrink-0">
+                            <div className="flex items-center justify-between mb-1 gap-2">
+                              <span className="font-medium text-xs">{driver.driver}</span>
+                              {driver.direction === 'positive' ? (
+                                <TrendingUp className="h-3 w-3 text-emerald-500" />
+                              ) : (
+                                <TrendingDown className="h-3 w-3 text-red-500" />
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                              <span className={driver.direction === 'positive' ? 'text-emerald-500' : 'text-red-500'}>
+                                {driver.impact}
+                              </span>
+                              <span>•</span>
+                              <span>Correlation: {((driver.correlation || 0) * 100).toFixed(0)}%</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                            <span className={driver.direction === 'positive' ? 'text-emerald-500' : 'text-red-500'}>
-                              {driver.impact}
-                            </span>
-                            <span>•</span>
-                            <span>Correlation: {((driver.correlation || 0) * 100).toFixed(0)}%</span>
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
                 
-                {/* ML Insights */}
+                {/* ML Insights - Horizontal scroll */}
                 {message.analyticsResult?.mlInsights && (
-                  <div className="mt-3 p-2 bg-purple-500/10 rounded border border-purple-500/20 w-full" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                  <div className="mt-3 p-2 bg-purple-500/10 rounded border border-purple-500/20 w-full">
                     <div className="flex items-center gap-2 mb-2">
                       <Brain className="h-3.5 w-3.5 text-purple-500" />
                       <span className="font-medium text-xs">ML Insights</span>
@@ -1552,57 +1558,65 @@ export default function ChatInterface({
                         {(((message.analyticsResult.mlInsights as any).confidence || 0) * 100).toFixed(0)}% confidence
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground mb-1">
-                      {(message.analyticsResult.mlInsights as any).patternDetected || (message.analyticsResult.mlInsights as any).pattern}
-                    </p>
-                    {((message.analyticsResult.mlInsights as any).businessSignificance || (message.analyticsResult.mlInsights as any).significance) && (
-                      <p className="text-[10px] text-purple-600 dark:text-purple-400">
-                        <strong>Significance:</strong> {(message.analyticsResult.mlInsights as any).businessSignificance || (message.analyticsResult.mlInsights as any).significance}
-                      </p>
-                    )}
+                    <div className="overflow-x-auto scrollbar-visible">
+                      <div className="min-w-max whitespace-nowrap">
+                        <p className="text-xs text-muted-foreground mb-1">
+                          {(message.analyticsResult.mlInsights as any).patternDetected || (message.analyticsResult.mlInsights as any).pattern}
+                        </p>
+                        {((message.analyticsResult.mlInsights as any).businessSignificance || (message.analyticsResult.mlInsights as any).significance) && (
+                          <p className="text-[10px] text-purple-600 dark:text-purple-400">
+                            <strong>Significance:</strong> {(message.analyticsResult.mlInsights as any).businessSignificance || (message.analyticsResult.mlInsights as any).significance}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
                 
-                {/* Predictions */}
+                {/* Predictions - Horizontal scroll */}
                 {message.analyticsResult?.predictions && (
-                  <div className="mt-3 p-2 bg-blue-500/10 rounded border border-blue-500/20 w-full" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                  <div className="mt-3 p-2 bg-blue-500/10 rounded border border-blue-500/20 w-full">
                     <div className="flex items-center gap-2 mb-2">
                       <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
                       <span className="font-medium text-xs">Predictions</span>
                     </div>
-                    <div className="flex items-center gap-4 text-xs">
-                      {(message.analyticsResult.predictions as any).trend && (
-                        <div>
-                          <span className="text-[10px] text-muted-foreground">Trend: </span>
-                          <span className={`font-medium capitalize ${
-                            (message.analyticsResult.predictions as any).trend === 'increasing' ? 'text-emerald-500' :
-                            (message.analyticsResult.predictions as any).trend === 'decreasing' ? 'text-red-500' : 'text-amber-500'
-                          }`}>
-                            {(message.analyticsResult.predictions as any).trend}
-                          </span>
+                    <div className="overflow-x-auto scrollbar-visible">
+                      <div className="min-w-max whitespace-nowrap">
+                        <div className="flex items-center gap-4 text-xs">
+                          {(message.analyticsResult.predictions as any).trend && (
+                            <div>
+                              <span className="text-[10px] text-muted-foreground">Trend: </span>
+                              <span className={`font-medium capitalize ${
+                                (message.analyticsResult.predictions as any).trend === 'increasing' ? 'text-emerald-500' :
+                                (message.analyticsResult.predictions as any).trend === 'decreasing' ? 'text-red-500' : 'text-amber-500'
+                              }`}>
+                                {(message.analyticsResult.predictions as any).trend}
+                              </span>
+                            </div>
+                          )}
+                          {(message.analyticsResult.predictions as any).riskLevel && (
+                            <div>
+                              <span className="text-[10px] text-muted-foreground">Risk: </span>
+                              <span className={`font-medium capitalize ${
+                                (message.analyticsResult.predictions as any).riskLevel === 'low' ? 'text-emerald-500' :
+                                (message.analyticsResult.predictions as any).riskLevel === 'high' ? 'text-red-500' : 'text-amber-500'
+                              }`}>
+                                {(message.analyticsResult.predictions as any).riskLevel}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      {(message.analyticsResult.predictions as any).riskLevel && (
-                        <div>
-                          <span className="text-[10px] text-muted-foreground">Risk: </span>
-                          <span className={`font-medium capitalize ${
-                            (message.analyticsResult.predictions as any).riskLevel === 'low' ? 'text-emerald-500' :
-                            (message.analyticsResult.predictions as any).riskLevel === 'high' ? 'text-red-500' : 'text-amber-500'
-                          }`}>
-                            {(message.analyticsResult.predictions as any).riskLevel}
-                          </span>
-                        </div>
-                      )}
+                        {(message.analyticsResult.predictions as any).forecast && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {typeof (message.analyticsResult.predictions as any).forecast === 'string' 
+                              ? (message.analyticsResult.predictions as any).forecast 
+                              : Array.isArray((message.analyticsResult.predictions as any).forecast) 
+                                ? (message.analyticsResult.predictions as any).forecast.map((f: any) => `${f.period}: ${typeof f.value === 'number' ? f.value.toFixed(0) : f.value}`).join(', ')
+                                : ''}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    {(message.analyticsResult.predictions as any).forecast && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {typeof (message.analyticsResult.predictions as any).forecast === 'string' 
-                          ? (message.analyticsResult.predictions as any).forecast 
-                          : Array.isArray((message.analyticsResult.predictions as any).forecast) 
-                            ? (message.analyticsResult.predictions as any).forecast.map((f: any) => `${f.period}: ${typeof f.value === 'number' ? f.value.toFixed(0) : f.value}`).join(', ')
-                            : ''}
-                      </p>
-                    )}
                   </div>
                 )}
 
