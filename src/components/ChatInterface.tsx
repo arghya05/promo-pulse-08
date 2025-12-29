@@ -1518,36 +1518,34 @@ export default function ChatInterface({
                   </div>
                 )}
                 
-                {/* Causal Drivers - Horizontal scroll */}
+                {/* Causal Drivers - Text wrap */}
                 {message.analyticsResult?.causalDrivers && message.analyticsResult.causalDrivers.length > 0 && (
                   <div className="mt-3 p-2 bg-orange-500/10 rounded border border-orange-500/20 w-full">
                     <div className="flex items-center gap-2 mb-2">
                       <Zap className="h-3.5 w-3.5 text-orange-500" />
                       <span className="font-medium text-xs">Causal Drivers</span>
                     </div>
-                    <UniversalScrollableText>
-                      <div className="flex gap-2">
-                        {message.analyticsResult.causalDrivers.map((driver: any, i: number) => (
-                          <div key={i} className="bg-background/50 rounded p-2 border border-border/50 flex-shrink-0">
-                            <div className="flex items-center justify-between mb-1 gap-2">
-                              <span className="font-medium text-xs">{driver.driver}</span>
-                              {driver.direction === 'positive' ? (
-                                <TrendingUp className="h-3 w-3 text-emerald-500" />
-                              ) : (
-                                <TrendingDown className="h-3 w-3 text-red-500" />
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                              <span className={driver.direction === 'positive' ? 'text-emerald-500' : 'text-red-500'}>
-                                {driver.impact}
-                              </span>
-                              <span>•</span>
-                              <span>Correlation: {((driver.correlation || 0) * 100).toFixed(0)}%</span>
-                            </div>
+                    <div className="flex flex-wrap gap-2">
+                      {message.analyticsResult.causalDrivers.map((driver: any, i: number) => (
+                        <div key={i} className="bg-background/50 rounded p-2 border border-border/50">
+                          <div className="flex items-center justify-between mb-1 gap-2">
+                            <span className="font-medium text-xs whitespace-pre-wrap break-words">{driver.driver}</span>
+                            {driver.direction === 'positive' ? (
+                              <TrendingUp className="h-3 w-3 text-emerald-500 flex-shrink-0" />
+                            ) : (
+                              <TrendingDown className="h-3 w-3 text-red-500 flex-shrink-0" />
+                            )}
                           </div>
-                        ))}
-                      </div>
-                    </UniversalScrollableText>
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                            <span className={driver.direction === 'positive' ? 'text-emerald-500' : 'text-red-500'}>
+                              {driver.impact}
+                            </span>
+                            <span>•</span>
+                            <span>Correlation: {((driver.correlation || 0) * 100).toFixed(0)}%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
                 
