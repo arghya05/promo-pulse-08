@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { AiScrollableAnswer } from '@/components/ui/AiScrollableAnswer';
+import UniversalScrollableText from '@/components/UniversalScrollableText';
 import { 
   Send, 
   User, 
@@ -806,7 +806,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           : 'bg-slate-100 dark:bg-slate-800'
                       }`}
                     >
-                      <AiScrollableAnswer>
+                      <UniversalScrollableText>
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -851,7 +851,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                 <span className="font-medium text-xs">Why It Happened</span>
                               </div>
                               <div className="px-3 pb-2">
-                                <AiScrollableAnswer>
+                                <UniversalScrollableText>
                                   <ul className="space-y-1">
                                     {message.data.why.map((reason: string, i: number) => (
                                       <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
@@ -860,7 +860,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                       </li>
                                     ))}
                                   </ul>
-                                </AiScrollableAnswer>
+                                </UniversalScrollableText>
                               </div>
                               <div className="h-2.5 bg-amber-500/5 border-t border-amber-500/10" />
                             </div>
@@ -874,7 +874,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                 <span className="font-medium text-xs">Recommendations</span>
                               </div>
                               <div className="px-3 pb-2">
-                                <AiScrollableAnswer>
+                                <UniversalScrollableText>
                                   <ul className="space-y-1">
                                     {message.data.whatToDo.map((action: string, i: number) => (
                                       <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
@@ -883,7 +883,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                       </li>
                                     ))}
                                   </ul>
-                                </AiScrollableAnswer>
+                                </UniversalScrollableText>
                               </div>
                               <div className="h-2.5 bg-emerald-500/5 border-t border-emerald-500/10" />
                             </div>
@@ -897,7 +897,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                 <span className="font-medium text-xs">Causal Drivers</span>
                               </div>
                               <div className="px-3 pb-2">
-                                <AiScrollableAnswer>
+                                <UniversalScrollableText>
                                   <div className="flex gap-2">
                                     {message.data.causalDrivers.map((driver: any, i: number) => (
                                       <div key={i} className="bg-background/50 rounded p-2 border border-border/50 flex-shrink-0">
@@ -919,7 +919,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                       </div>
                                     ))}
                                   </div>
-                                </AiScrollableAnswer>
+                                </UniversalScrollableText>
                               </div>
                               <div className="h-2.5 bg-orange-500/5 border-t border-orange-500/10" />
                             </div>
@@ -936,7 +936,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                 </Badge>
                               </div>
                               <div className="px-3 pb-2">
-                                <AiScrollableAnswer>
+                                <UniversalScrollableText>
                                   <p className="text-xs text-muted-foreground mb-1">
                                     {message.data.mlInsights.patternDetected}
                                   </p>
@@ -945,7 +945,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                       <strong>Significance:</strong> {message.data.mlInsights.businessSignificance}
                                     </p>
                                   )}
-                                </AiScrollableAnswer>
+                                </UniversalScrollableText>
                               </div>
                               <div className="h-2.5 bg-purple-500/5 border-t border-purple-500/10" />
                             </div>
@@ -959,7 +959,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                 <span className="font-medium text-xs">Predictions</span>
                               </div>
                               <div className="px-3 pb-2">
-                                <AiScrollableAnswer>
+                                <UniversalScrollableText>
                                   <div className="flex items-center gap-4 text-xs">
                                     <div>
                                       <span className="text-[10px] text-muted-foreground">Trend: </span>
@@ -985,7 +985,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                       {message.data.predictions.forecast}
                                     </p>
                                   )}
-                                </AiScrollableAnswer>
+                                </UniversalScrollableText>
                               </div>
                               <div className="h-2.5 bg-blue-500/5 border-t border-blue-500/10" />
                             </div>
@@ -1081,7 +1081,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           )}
                         </>
                       )}
-                      </AiScrollableAnswer>
+                      </UniversalScrollableText>
                     </div>
                     {message.role === 'user' && (
                       <div className="p-2 rounded-lg bg-primary/10 h-fit">

@@ -1,7 +1,7 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, CheckCircle2, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AiScrollableAnswer } from './ui/AiScrollableAnswer';
+import UniversalScrollableText from './UniversalScrollableText';
 
 interface FormattedInsightProps {
   content: string;
@@ -75,9 +75,9 @@ const ScrollableRow: React.FC<{
   return (
     <div className={cn("rounded-lg border", bgColor, borderColor)}>
       <div className="p-3">
-        <AiScrollableAnswer>
+        <UniversalScrollableText>
           {children}
-        </AiScrollableAnswer>
+        </UniversalScrollableText>
       </div>
     </div>
   );

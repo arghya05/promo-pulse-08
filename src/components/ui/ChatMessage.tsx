@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Bot, User } from "lucide-react";
-import { AiScrollableAnswer } from "./AiScrollableAnswer";
+import UniversalScrollableText from "@/components/UniversalScrollableText";
 import { ReactNode } from "react";
 
 export interface ChatMessageProps {
@@ -36,9 +36,9 @@ export function ChatMessage({
 
     // All messages use horizontal scroll to prevent clipping
     return (
-      <AiScrollableAnswer>
+      <UniversalScrollableText>
         {textContent}
-      </AiScrollableAnswer>
+      </UniversalScrollableText>
     );
   };
 
