@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LongText } from "@/components/ui/LongText";
+import { AiScrollableAnswer } from "@/components/ui/AiScrollableAnswer";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   BarChart,
@@ -1467,13 +1467,13 @@ export default function ChatInterface({
                       : 'bg-slate-100 dark:bg-slate-800 text-foreground'
                   }`}
                 >
-                  <LongText>
+                  <AiScrollableAnswer>
                     {message.type === 'user' || message.isError ? (
                       <p className="text-sm leading-relaxed">{message.content}</p>
                     ) : (
                       <FormattedInsight content={message.content} />
                     )}
-                  </LongText>
+                  </AiScrollableAnswer>
 
                 {/* Why section - Horizontal scroll */}
                 {message.analyticsResult?.why && message.analyticsResult.why.length > 0 && (
@@ -1482,16 +1482,16 @@ export default function ChatInterface({
                       <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
                       <span className="font-medium text-xs">Why It Happened</span>
                     </div>
-                    <div className="overflow-x-auto scrollbar-visible">
-                      <ul className="space-y-1 min-w-max">
+                    <AiScrollableAnswer>
+                      <ul className="space-y-1">
                         {message.analyticsResult.why.map((reason: string, i: number) => (
-                          <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap">
+                          <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
                             <span className="text-amber-500 mt-0.5">•</span>
                             <span>{reason}</span>
                           </li>
                         ))}
                       </ul>
-                    </div>
+                    </AiScrollableAnswer>
                   </div>
                 )}
                 
@@ -1502,16 +1502,16 @@ export default function ChatInterface({
                       <Target className="h-3.5 w-3.5 text-emerald-500" />
                       <span className="font-medium text-xs">Recommendations</span>
                     </div>
-                    <div className="overflow-x-auto scrollbar-visible">
-                      <ul className="space-y-1 min-w-max">
+                    <AiScrollableAnswer>
+                      <ul className="space-y-1">
                         {message.analyticsResult.whatToDo.map((action: string, i: number) => (
-                          <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap">
+                          <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
                             <span className="text-emerald-500 mt-0.5">✓</span>
                             <span>{action}</span>
                           </li>
                         ))}
                       </ul>
-                    </div>
+                    </AiScrollableAnswer>
                   </div>
                 )}
                 
@@ -1522,10 +1522,10 @@ export default function ChatInterface({
                       <Zap className="h-3.5 w-3.5 text-orange-500" />
                       <span className="font-medium text-xs">Causal Drivers</span>
                     </div>
-                    <div className="overflow-x-auto scrollbar-visible">
-                      <div className="flex gap-2 min-w-max">
+                    <AiScrollableAnswer>
+                      <div className="flex gap-2">
                         {message.analyticsResult.causalDrivers.map((driver: any, i: number) => (
-                          <div key={i} className="bg-background/50 rounded p-2 border border-border/50 whitespace-nowrap flex-shrink-0">
+                          <div key={i} className="bg-background/50 rounded p-2 border border-border/50 flex-shrink-0">
                             <div className="flex items-center justify-between mb-1 gap-2">
                               <span className="font-medium text-xs">{driver.driver}</span>
                               {driver.direction === 'positive' ? (
@@ -1544,7 +1544,7 @@ export default function ChatInterface({
                           </div>
                         ))}
                       </div>
-                    </div>
+                    </AiScrollableAnswer>
                   </div>
                 )}
                 
@@ -1558,18 +1558,16 @@ export default function ChatInterface({
                         {(((message.analyticsResult.mlInsights as any).confidence || 0) * 100).toFixed(0)}% confidence
                       </Badge>
                     </div>
-                    <div className="overflow-x-auto scrollbar-visible">
-                      <div className="min-w-max whitespace-nowrap">
-                        <p className="text-xs text-muted-foreground mb-1">
-                          {(message.analyticsResult.mlInsights as any).patternDetected || (message.analyticsResult.mlInsights as any).pattern}
+                    <AiScrollableAnswer>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        {(message.analyticsResult.mlInsights as any).patternDetected || (message.analyticsResult.mlInsights as any).pattern}
+                      </p>
+                      {((message.analyticsResult.mlInsights as any).businessSignificance || (message.analyticsResult.mlInsights as any).significance) && (
+                        <p className="text-[10px] text-purple-600 dark:text-purple-400">
+                          <strong>Significance:</strong> {(message.analyticsResult.mlInsights as any).businessSignificance || (message.analyticsResult.mlInsights as any).significance}
                         </p>
-                        {((message.analyticsResult.mlInsights as any).businessSignificance || (message.analyticsResult.mlInsights as any).significance) && (
-                          <p className="text-[10px] text-purple-600 dark:text-purple-400">
-                            <strong>Significance:</strong> {(message.analyticsResult.mlInsights as any).businessSignificance || (message.analyticsResult.mlInsights as any).significance}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                      )}
+                    </AiScrollableAnswer>
                   </div>
                 )}
                 
@@ -1580,43 +1578,41 @@ export default function ChatInterface({
                       <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
                       <span className="font-medium text-xs">Predictions</span>
                     </div>
-                    <div className="overflow-x-auto scrollbar-visible">
-                      <div className="min-w-max whitespace-nowrap">
-                        <div className="flex items-center gap-4 text-xs">
-                          {(message.analyticsResult.predictions as any).trend && (
-                            <div>
-                              <span className="text-[10px] text-muted-foreground">Trend: </span>
-                              <span className={`font-medium capitalize ${
-                                (message.analyticsResult.predictions as any).trend === 'increasing' ? 'text-emerald-500' :
-                                (message.analyticsResult.predictions as any).trend === 'decreasing' ? 'text-red-500' : 'text-amber-500'
-                              }`}>
-                                {(message.analyticsResult.predictions as any).trend}
-                              </span>
-                            </div>
-                          )}
-                          {(message.analyticsResult.predictions as any).riskLevel && (
-                            <div>
-                              <span className="text-[10px] text-muted-foreground">Risk: </span>
-                              <span className={`font-medium capitalize ${
-                                (message.analyticsResult.predictions as any).riskLevel === 'low' ? 'text-emerald-500' :
-                                (message.analyticsResult.predictions as any).riskLevel === 'high' ? 'text-red-500' : 'text-amber-500'
-                              }`}>
-                                {(message.analyticsResult.predictions as any).riskLevel}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        {(message.analyticsResult.predictions as any).forecast && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {typeof (message.analyticsResult.predictions as any).forecast === 'string' 
-                              ? (message.analyticsResult.predictions as any).forecast 
-                              : Array.isArray((message.analyticsResult.predictions as any).forecast) 
-                                ? (message.analyticsResult.predictions as any).forecast.map((f: any) => `${f.period}: ${typeof f.value === 'number' ? f.value.toFixed(0) : f.value}`).join(', ')
-                                : ''}
-                          </p>
+                    <AiScrollableAnswer>
+                      <div className="flex items-center gap-4 text-xs">
+                        {(message.analyticsResult.predictions as any).trend && (
+                          <div>
+                            <span className="text-[10px] text-muted-foreground">Trend: </span>
+                            <span className={`font-medium capitalize ${
+                              (message.analyticsResult.predictions as any).trend === 'increasing' ? 'text-emerald-500' :
+                              (message.analyticsResult.predictions as any).trend === 'decreasing' ? 'text-red-500' : 'text-amber-500'
+                            }`}>
+                              {(message.analyticsResult.predictions as any).trend}
+                            </span>
+                          </div>
+                        )}
+                        {(message.analyticsResult.predictions as any).riskLevel && (
+                          <div>
+                            <span className="text-[10px] text-muted-foreground">Risk: </span>
+                            <span className={`font-medium capitalize ${
+                              (message.analyticsResult.predictions as any).riskLevel === 'low' ? 'text-emerald-500' :
+                              (message.analyticsResult.predictions as any).riskLevel === 'high' ? 'text-red-500' : 'text-amber-500'
+                            }`}>
+                              {(message.analyticsResult.predictions as any).riskLevel}
+                            </span>
+                          </div>
                         )}
                       </div>
-                    </div>
+                      {(message.analyticsResult.predictions as any).forecast && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {typeof (message.analyticsResult.predictions as any).forecast === 'string' 
+                            ? (message.analyticsResult.predictions as any).forecast 
+                            : Array.isArray((message.analyticsResult.predictions as any).forecast) 
+                              ? (message.analyticsResult.predictions as any).forecast.map((f: any) => `${f.period}: ${typeof f.value === 'number' ? f.value.toFixed(0) : f.value}`).join(', ')
+                              : ''}
+                        </p>
+                      )}
+                    </AiScrollableAnswer>
                   </div>
                 )}
 
