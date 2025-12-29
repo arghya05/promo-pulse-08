@@ -1458,12 +1458,12 @@ export default function ChatInterface({
 
                 {/* Message Content */}
                 <div 
-                  className={`rounded-2xl px-4 py-3 min-w-0 ${
+                  className={`max-w-[70%] rounded-2xl px-3 py-2 min-w-0 ${
                     message.type === 'user'
-                      ? 'bg-primary text-primary-foreground max-w-[70%]'
+                      ? 'bg-blue-500 text-white'
                       : message.isError
-                      ? 'bg-destructive/10 text-foreground border border-destructive/30 max-w-[70%]'
-                      : 'bg-secondary/50 text-foreground max-w-[70%]'
+                      ? 'bg-destructive/10 text-foreground border border-destructive/30'
+                      : 'bg-slate-100 dark:bg-slate-800 text-foreground'
                   }`}
                 >
                   <div className="whitespace-pre-wrap break-words max-w-full overflow-x-hidden">

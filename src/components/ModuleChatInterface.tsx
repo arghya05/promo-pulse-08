@@ -800,12 +800,13 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                       </div>
                     )}
                     <div
-                      className={`rounded-2xl px-3 py-2 min-w-0 ${
+                      className={`max-w-[70%] rounded-2xl px-3 py-2 min-w-0 ${
                         message.role === 'user'
-                          ? 'bg-primary text-primary-foreground max-w-[70%]'
-                          : 'bg-muted max-w-[70%]'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-slate-100 dark:bg-slate-800'
                       }`}
                     >
+                      <div className="whitespace-pre-wrap break-words max-w-full overflow-x-hidden">
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -1070,6 +1071,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           )}
                         </>
                       )}
+                      </div>
                     </div>
                     {message.role === 'user' && (
                       <div className="p-2 rounded-lg bg-primary/10 h-fit">
