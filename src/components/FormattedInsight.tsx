@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { TrendingUp, TrendingDown, CheckCircle2, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import React from 'react';
+import { TrendingUp, TrendingDown, CheckCircle2, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FormattedInsightProps {
@@ -65,86 +65,17 @@ const InsightIcon: React.FC<{ type: 'positive' | 'negative' | 'neutral' | 'compa
   }
 };
 
-// Individual scrollable row with real scrollbar
-const ScrollableRow: React.FC<{ 
+// Wrapping row with proper text handling and vertical scroll for long content
+const WrappingRow: React.FC<{ 
   children: React.ReactNode;
   bgColor?: string;
   borderColor?: string;
 }> = ({ children, bgColor = "bg-muted/30", borderColor = "border-border/50" }) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [hasOverflow, setHasOverflow] = useState(false);
-  
-  useEffect(() => {
-    const checkOverflow = () => {
-      if (scrollRef.current) {
-        setHasOverflow(scrollRef.current.scrollWidth > scrollRef.current.clientWidth);
-      }
-    };
-    checkOverflow();
-    window.addEventListener('resize', checkOverflow);
-    return () => window.removeEventListener('resize', checkOverflow);
-  }, [children]);
-
-  const scroll = (dir: 'left' | 'right') => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: dir === 'left' ? -150 : 150, behavior: 'smooth' });
-    }
-  };
-
   return (
-    <div className={cn("rounded-lg border relative", bgColor, borderColor)}>
-      {/* Left scroll button */}
-      {hasOverflow && (
-        <button
-          onClick={() => scroll('left')}
-          className="absolute left-1 top-1/2 -translate-y-1/2 z-10 bg-background/90 border rounded-full p-1 shadow-sm hover:bg-background"
-        >
-          <ChevronLeft className="h-3 w-3" />
-        </button>
-      )}
-      
-      {/* Right scroll button */}
-      {hasOverflow && (
-        <button
-          onClick={() => scroll('right')}
-          className="absolute right-1 top-1/2 -translate-y-1/2 z-10 bg-background/90 border rounded-full p-1 shadow-sm hover:bg-background"
-        >
-          <ChevronRight className="h-3 w-3" />
-        </button>
-      )}
-      
-      {/* Scrollable content */}
-      <div 
-        ref={scrollRef}
-        className="overflow-x-auto p-3 insight-scrollbar"
-      >
-        <div className="whitespace-nowrap pr-8">
-          {children}
-        </div>
+    <div className={cn("rounded-lg border", bgColor, borderColor)}>
+      <div className="p-3 max-h-[400px] overflow-y-auto whitespace-normal break-words">
+        {children}
       </div>
-      
-      {/* CSS for visible scrollbar */}
-      <style>{`
-        .insight-scrollbar {
-          scrollbar-width: thin;
-          scrollbar-color: hsl(217, 91%, 60%) hsl(var(--muted));
-        }
-        .insight-scrollbar::-webkit-scrollbar {
-          height: 10px;
-        }
-        .insight-scrollbar::-webkit-scrollbar-track {
-          background: hsl(var(--muted));
-          border-radius: 5px;
-        }
-        .insight-scrollbar::-webkit-scrollbar-thumb {
-          background: hsl(217, 91%, 60%);
-          border-radius: 5px;
-          border: 2px solid hsl(var(--muted));
-        }
-        .insight-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: hsl(217, 91%, 50%);
-        }
-      `}</style>
     </div>
   );
 };
@@ -155,11 +86,11 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
   
   if (!hasBullets) {
     return (
-      <ScrollableRow>
-        <p className="text-sm leading-relaxed inline">
+      <WrappingRow>
+        <p className="text-sm leading-relaxed">
           {highlightMetrics(content)}
         </p>
-      </ScrollableRow>
+      </WrappingRow>
     );
   }
   
@@ -177,14 +108,14 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
                            type === 'comparison' ? "border-blue-200/50 dark:border-blue-800/30" : "border-border/50";
         
         return (
-          <ScrollableRow key={idx} bgColor={bgColor} borderColor={borderColor}>
-            <span className="inline-flex gap-3 items-center">
+          <WrappingRow key={idx} bgColor={bgColor} borderColor={borderColor}>
+            <div className="flex gap-3 items-start">
               <InsightIcon type={type} />
-              <span className="text-sm leading-relaxed">
+              <span className="text-sm leading-relaxed flex-1">
                 {highlightMetrics(insight)}
               </span>
-            </span>
-          </ScrollableRow>
+            </div>
+          </WrappingRow>
         );
       })}
     </div>
