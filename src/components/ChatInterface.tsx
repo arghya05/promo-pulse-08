@@ -1467,13 +1467,16 @@ export default function ChatInterface({
                       : 'bg-slate-100 dark:bg-slate-800 text-foreground'
                   }`}
                 >
-                  <UniversalScrollableText>
-                    {message.type === 'user' || message.isError ? (
-                      <p className="text-sm leading-relaxed">{message.content}</p>
-                    ) : (
+                  {/* User messages: wrap text, no scrollbar */}
+                  {message.type === 'user' ? (
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+                  ) : message.isError ? (
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+                  ) : (
+                    <UniversalScrollableText>
                       <FormattedInsight content={message.content} />
-                    )}
-                  </UniversalScrollableText>
+                    </UniversalScrollableText>
+                  )}
 
                 {/* Why section - Horizontal scroll */}
                 {message.analyticsResult?.why && message.analyticsResult.why.length > 0 && (
