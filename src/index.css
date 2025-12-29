@@ -146,32 +146,30 @@ All colors MUST be HSL.
     background: hsl(var(--muted-foreground) / 0.5);
   }
 
-  /* Always visible thick horizontal scrollbar */
+  /* Visible horizontal scrollbar - shows when content overflows */
   .scrollbar-visible {
-    overflow-x: scroll !important;
+    overflow-x: auto;
     scrollbar-width: auto;
     scrollbar-color: hsl(var(--primary)) hsl(var(--muted));
   }
   
   .scrollbar-visible::-webkit-scrollbar {
-    height: 14px;
-    display: block !important;
+    height: 10px;
+    display: block;
   }
   
   .scrollbar-visible::-webkit-scrollbar-track {
     background: hsl(var(--muted));
-    border-radius: 7px;
-    border: 2px solid hsl(var(--background));
+    border-radius: 5px;
   }
   
   .scrollbar-visible::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, hsl(var(--primary)), hsl(var(--primary) / 0.7));
-    border-radius: 7px;
-    border: 2px solid hsl(var(--muted));
-    min-width: 40px;
+    background: hsl(var(--primary));
+    border-radius: 5px;
+    min-width: 30px;
   }
   
   .scrollbar-visible::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary) / 0.9);
+    background: hsl(var(--primary) / 0.8);
   }
 }

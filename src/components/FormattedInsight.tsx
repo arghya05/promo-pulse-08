@@ -65,16 +65,18 @@ const InsightIcon: React.FC<{ type: 'positive' | 'negative' | 'neutral' | 'compa
   }
 };
 
-// Wrapping row with proper text handling and vertical scroll for long content
-const WrappingRow: React.FC<{ 
+// Scrollable row with horizontal scroll for long content
+const ScrollableRow: React.FC<{ 
   children: React.ReactNode;
   bgColor?: string;
   borderColor?: string;
 }> = ({ children, bgColor = "bg-muted/30", borderColor = "border-border/50" }) => {
   return (
     <div className={cn("rounded-lg border", bgColor, borderColor)}>
-      <div className="p-3 max-h-[400px] overflow-y-auto whitespace-normal break-words">
-        {children}
+      <div className="p-3 max-h-[400px] overflow-y-auto overflow-x-auto scrollbar-visible">
+        <div className="min-w-max whitespace-nowrap">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -86,11 +88,11 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
   
   if (!hasBullets) {
     return (
-      <WrappingRow>
+      <ScrollableRow>
         <p className="text-sm leading-relaxed">
           {highlightMetrics(content)}
         </p>
-      </WrappingRow>
+      </ScrollableRow>
     );
   }
   
@@ -108,14 +110,14 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
                            type === 'comparison' ? "border-blue-200/50 dark:border-blue-800/30" : "border-border/50";
         
         return (
-          <WrappingRow key={idx} bgColor={bgColor} borderColor={borderColor}>
-            <div className="flex gap-3 items-start">
+          <ScrollableRow key={idx} bgColor={bgColor} borderColor={borderColor}>
+            <div className="flex gap-3 items-center">
               <InsightIcon type={type} />
-              <span className="text-sm leading-relaxed flex-1">
+              <span className="text-sm leading-relaxed">
                 {highlightMetrics(insight)}
               </span>
             </div>
-          </WrappingRow>
+          </ScrollableRow>
         );
       })}
     </div>
