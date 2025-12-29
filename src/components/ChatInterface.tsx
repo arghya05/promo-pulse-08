@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { LongText } from "@/components/ui/LongText";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   BarChart,
@@ -1466,13 +1467,13 @@ export default function ChatInterface({
                       : 'bg-slate-100 dark:bg-slate-800 text-foreground'
                   }`}
                 >
-                  <div className="whitespace-pre-wrap break-words max-w-full overflow-x-hidden">
+                  <LongText>
                     {message.type === 'user' || message.isError ? (
                       <p className="text-sm leading-relaxed">{message.content}</p>
                     ) : (
                       <FormattedInsight content={message.content} />
                     )}
-                  </div>
+                  </LongText>
 
                 {/* Why section */}
                 {message.analyticsResult?.why && message.analyticsResult.why.length > 0 && (

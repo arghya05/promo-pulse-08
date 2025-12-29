@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { LongText } from '@/components/ui/LongText';
 import { 
   Send, 
   User, 
@@ -806,7 +806,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           : 'bg-slate-100 dark:bg-slate-800'
                       }`}
                     >
-                      <div className="whitespace-pre-wrap break-words max-w-full overflow-x-hidden">
+                      <LongText>
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -1071,7 +1071,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           )}
                         </>
                       )}
-                      </div>
+                      </LongText>
                     </div>
                     {message.role === 'user' && (
                       <div className="p-2 rounded-lg bg-primary/10 h-fit">
