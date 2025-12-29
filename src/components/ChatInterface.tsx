@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AiScrollableAnswer } from "@/components/ui/AiScrollableAnswer";
+import UniversalScrollableText from "@/components/UniversalScrollableText";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   BarChart,
@@ -1467,13 +1467,13 @@ export default function ChatInterface({
                       : 'bg-slate-100 dark:bg-slate-800 text-foreground'
                   }`}
                 >
-                  <AiScrollableAnswer>
+                  <UniversalScrollableText>
                     {message.type === 'user' || message.isError ? (
                       <p className="text-sm leading-relaxed">{message.content}</p>
                     ) : (
                       <FormattedInsight content={message.content} />
                     )}
-                  </AiScrollableAnswer>
+                  </UniversalScrollableText>
 
                 {/* Why section - Horizontal scroll */}
                 {message.analyticsResult?.why && message.analyticsResult.why.length > 0 && (
@@ -1482,7 +1482,7 @@ export default function ChatInterface({
                       <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
                       <span className="font-medium text-xs">Why It Happened</span>
                     </div>
-                    <AiScrollableAnswer>
+                    <UniversalScrollableText>
                       <ul className="space-y-1">
                         {message.analyticsResult.why.map((reason: string, i: number) => (
                           <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
@@ -1491,7 +1491,7 @@ export default function ChatInterface({
                           </li>
                         ))}
                       </ul>
-                    </AiScrollableAnswer>
+                    </UniversalScrollableText>
                   </div>
                 )}
                 
@@ -1502,7 +1502,7 @@ export default function ChatInterface({
                       <Target className="h-3.5 w-3.5 text-emerald-500" />
                       <span className="font-medium text-xs">Recommendations</span>
                     </div>
-                    <AiScrollableAnswer>
+                    <UniversalScrollableText>
                       <ul className="space-y-1">
                         {message.analyticsResult.whatToDo.map((action: string, i: number) => (
                           <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
@@ -1511,7 +1511,7 @@ export default function ChatInterface({
                           </li>
                         ))}
                       </ul>
-                    </AiScrollableAnswer>
+                    </UniversalScrollableText>
                   </div>
                 )}
                 
@@ -1522,7 +1522,7 @@ export default function ChatInterface({
                       <Zap className="h-3.5 w-3.5 text-orange-500" />
                       <span className="font-medium text-xs">Causal Drivers</span>
                     </div>
-                    <AiScrollableAnswer>
+                    <UniversalScrollableText>
                       <div className="flex gap-2">
                         {message.analyticsResult.causalDrivers.map((driver: any, i: number) => (
                           <div key={i} className="bg-background/50 rounded p-2 border border-border/50 flex-shrink-0">
@@ -1544,7 +1544,7 @@ export default function ChatInterface({
                           </div>
                         ))}
                       </div>
-                    </AiScrollableAnswer>
+                    </UniversalScrollableText>
                   </div>
                 )}
                 
@@ -1558,7 +1558,7 @@ export default function ChatInterface({
                         {(((message.analyticsResult.mlInsights as any).confidence || 0) * 100).toFixed(0)}% confidence
                       </Badge>
                     </div>
-                    <AiScrollableAnswer>
+                    <UniversalScrollableText>
                       <p className="text-xs text-muted-foreground mb-1">
                         {(message.analyticsResult.mlInsights as any).patternDetected || (message.analyticsResult.mlInsights as any).pattern}
                       </p>
@@ -1567,7 +1567,7 @@ export default function ChatInterface({
                           <strong>Significance:</strong> {(message.analyticsResult.mlInsights as any).businessSignificance || (message.analyticsResult.mlInsights as any).significance}
                         </p>
                       )}
-                    </AiScrollableAnswer>
+                    </UniversalScrollableText>
                   </div>
                 )}
                 
@@ -1578,7 +1578,7 @@ export default function ChatInterface({
                       <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
                       <span className="font-medium text-xs">Predictions</span>
                     </div>
-                    <AiScrollableAnswer>
+                    <UniversalScrollableText>
                       <div className="flex items-center gap-4 text-xs">
                         {(message.analyticsResult.predictions as any).trend && (
                           <div>
@@ -1612,7 +1612,7 @@ export default function ChatInterface({
                               : ''}
                         </p>
                       )}
-                    </AiScrollableAnswer>
+                    </UniversalScrollableText>
                   </div>
                 )}
 
