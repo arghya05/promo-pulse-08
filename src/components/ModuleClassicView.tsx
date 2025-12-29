@@ -274,9 +274,9 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
   const drillPath = MODULE_DRILL_PATHS[module.id] || MODULE_DRILL_PATHS.promotion;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full max-w-full min-w-0 overflow-x-hidden">
       {/* Left Panel - Questions */}
-      <div className="space-y-4">
+      <div className="space-y-4 min-w-0 overflow-x-hidden">
         {/* Search */}
         <Card>
           <CardContent className="p-4">
