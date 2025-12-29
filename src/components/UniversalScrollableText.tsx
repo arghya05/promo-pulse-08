@@ -1,18 +1,14 @@
-// UNIVERSAL FIX FOR ALL CHAT + INSIGHTS
-// This prevents cutting text & adds horizontal + vertical scrollbars
-
 import React from "react";
 
 export default function UniversalScrollableText({
-  children
+  children,
 }: {
   children: React.ReactNode;
 }) {
   return (
     <div
       style={{
-        width: "100%",
-        maxWidth: "100%",
+        maxHeight: "260px",
         overflowX: "auto",
         overflowY: "auto",
       }}
@@ -20,8 +16,9 @@ export default function UniversalScrollableText({
       <div
         style={{
           display: "inline-block",
-          minWidth: "max-content",
-          whiteSpace: "nowrap",
+          minWidth: "100%",
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
         }}
       >
         {children}
