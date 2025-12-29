@@ -18,7 +18,6 @@ import DrillDownPanel from "@/components/DrillDownPanel";
 import PredictiveInsights from "@/components/PredictiveInsights";
 import VoiceRecorder from "@/components/VoiceRecorder";
 import DataManagement from "@/components/DataManagement";
-import UniversalScrollableText from "@/components/UniversalScrollableText";
 import { RecommendationsEngine } from "@/components/RecommendationsEngine";
 import IntelligentDrillDown from "@/components/IntelligentDrillDown";
 import KPISelector from "@/components/KPISelector";
@@ -1114,9 +1113,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                             {(result.whatHappened || []).map((point, idx) => (
                               <div key={idx} className="flex gap-3">
                                 <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
-                                <UniversalScrollableText>
-                                  <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
-                                </UniversalScrollableText>
+                                <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
                               </div>
                             ))}
                           </div>
@@ -1138,9 +1135,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                             {(result.why || []).map((point, idx) => (
                               <div key={idx} className="flex gap-3">
                                 <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-chart-3 flex-shrink-0" />
-                                <UniversalScrollableText>
-                                  <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
-                                </UniversalScrollableText>
+                                <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
                               </div>
                             ))}
                           </div>
@@ -1162,9 +1157,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                             {(result.whatToDo || []).map((point, idx) => (
                               <div key={idx} className="flex gap-3">
                                 <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-status-good flex-shrink-0" />
-                                <UniversalScrollableText>
-                                  <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
-                                </UniversalScrollableText>
+                                <p className="text-base leading-relaxed text-foreground" dangerouslySetInnerHTML={{ __html: point }} />
                               </div>
                             ))}
                           </div>
