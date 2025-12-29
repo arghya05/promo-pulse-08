@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { LongText } from '@/components/ui/LongText';
+import { AiScrollableAnswer } from '@/components/ui/AiScrollableAnswer';
 import { 
   Send, 
   User, 
@@ -806,7 +806,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           : 'bg-slate-100 dark:bg-slate-800'
                       }`}
                     >
-                      <LongText>
+                      <AiScrollableAnswer>
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -850,15 +850,17 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                 <Lightbulb className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
                                 <span className="font-medium text-xs">Why It Happened</span>
                               </div>
-                              <div className="px-3 pb-2 overflow-x-auto scrollbar-visible">
-                                <ul className="space-y-1 min-w-max">
-                                  {message.data.why.map((reason: string, i: number) => (
-                                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap">
-                                      <span className="text-amber-500 mt-0.5 flex-shrink-0">•</span>
-                                      <span>{reason}</span>
-                                    </li>
-                                  ))}
-                                </ul>
+                              <div className="px-3 pb-2">
+                                <AiScrollableAnswer>
+                                  <ul className="space-y-1">
+                                    {message.data.why.map((reason: string, i: number) => (
+                                      <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                                        <span className="text-amber-500 mt-0.5 flex-shrink-0">•</span>
+                                        <span>{reason}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </AiScrollableAnswer>
                               </div>
                               <div className="h-2.5 bg-amber-500/5 border-t border-amber-500/10" />
                             </div>
@@ -871,15 +873,17 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                 <Target className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
                                 <span className="font-medium text-xs">Recommendations</span>
                               </div>
-                              <div className="px-3 pb-2 overflow-x-auto scrollbar-visible">
-                                <ul className="space-y-1 min-w-max">
-                                  {message.data.whatToDo.map((action: string, i: number) => (
-                                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap">
-                                      <span className="text-emerald-500 mt-0.5 flex-shrink-0">✓</span>
-                                      <span>{action}</span>
-                                    </li>
-                                  ))}
-                                </ul>
+                              <div className="px-3 pb-2">
+                                <AiScrollableAnswer>
+                                  <ul className="space-y-1">
+                                    {message.data.whatToDo.map((action: string, i: number) => (
+                                      <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                                        <span className="text-emerald-500 mt-0.5 flex-shrink-0">✓</span>
+                                        <span>{action}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </AiScrollableAnswer>
                               </div>
                               <div className="h-2.5 bg-emerald-500/5 border-t border-emerald-500/10" />
                             </div>
@@ -892,28 +896,30 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                 <Zap className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
                                 <span className="font-medium text-xs">Causal Drivers</span>
                               </div>
-                              <div className="px-3 pb-2 overflow-x-auto scrollbar-visible">
-                                <div className="flex gap-2 min-w-max">
-                                  {message.data.causalDrivers.map((driver: any, i: number) => (
-                                    <div key={i} className="bg-background/50 rounded p-2 border border-border/50 whitespace-nowrap flex-shrink-0">
-                                      <div className="flex items-center justify-between mb-1 gap-2">
-                                        <span className="font-medium text-xs">{driver.driver}</span>
-                                        {driver.direction === 'positive' ? (
-                                          <TrendingUp className="h-3 w-3 text-emerald-500 flex-shrink-0" />
-                                        ) : (
-                                          <TrendingDown className="h-3 w-3 text-red-500 flex-shrink-0" />
-                                        )}
+                              <div className="px-3 pb-2">
+                                <AiScrollableAnswer>
+                                  <div className="flex gap-2">
+                                    {message.data.causalDrivers.map((driver: any, i: number) => (
+                                      <div key={i} className="bg-background/50 rounded p-2 border border-border/50 flex-shrink-0">
+                                        <div className="flex items-center justify-between mb-1 gap-2">
+                                          <span className="font-medium text-xs">{driver.driver}</span>
+                                          {driver.direction === 'positive' ? (
+                                            <TrendingUp className="h-3 w-3 text-emerald-500 flex-shrink-0" />
+                                          ) : (
+                                            <TrendingDown className="h-3 w-3 text-red-500 flex-shrink-0" />
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                          <span className={driver.direction === 'positive' ? 'text-emerald-500' : 'text-red-500'}>
+                                            {driver.impact}
+                                          </span>
+                                          <span>•</span>
+                                          <span>Correlation: {((driver.correlation || 0) * 100).toFixed(0)}%</span>
+                                        </div>
                                       </div>
-                                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                                        <span className={driver.direction === 'positive' ? 'text-emerald-500' : 'text-red-500'}>
-                                          {driver.impact}
-                                        </span>
-                                        <span>•</span>
-                                        <span>Correlation: {((driver.correlation || 0) * 100).toFixed(0)}%</span>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
+                                    ))}
+                                  </div>
+                                </AiScrollableAnswer>
                               </div>
                               <div className="h-2.5 bg-orange-500/5 border-t border-orange-500/10" />
                             </div>
@@ -929,8 +935,8 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                   {((message.data.mlInsights.confidence || 0) * 100).toFixed(0)}% confidence
                                 </Badge>
                               </div>
-                              <div className="px-3 pb-2 overflow-x-auto scrollbar-visible">
-                                <div className="min-w-max whitespace-nowrap">
+                              <div className="px-3 pb-2">
+                                <AiScrollableAnswer>
                                   <p className="text-xs text-muted-foreground mb-1">
                                     {message.data.mlInsights.patternDetected}
                                   </p>
@@ -939,7 +945,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                       <strong>Significance:</strong> {message.data.mlInsights.businessSignificance}
                                     </p>
                                   )}
-                                </div>
+                                </AiScrollableAnswer>
                               </div>
                               <div className="h-2.5 bg-purple-500/5 border-t border-purple-500/10" />
                             </div>
@@ -952,8 +958,8 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                 <TrendingUp className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
                                 <span className="font-medium text-xs">Predictions</span>
                               </div>
-                              <div className="px-3 pb-2 overflow-x-auto scrollbar-visible">
-                                <div className="min-w-max whitespace-nowrap">
+                              <div className="px-3 pb-2">
+                                <AiScrollableAnswer>
                                   <div className="flex items-center gap-4 text-xs">
                                     <div>
                                       <span className="text-[10px] text-muted-foreground">Trend: </span>
@@ -979,7 +985,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                       {message.data.predictions.forecast}
                                     </p>
                                   )}
-                                </div>
+                                </AiScrollableAnswer>
                               </div>
                               <div className="h-2.5 bg-blue-500/5 border-t border-blue-500/10" />
                             </div>
@@ -1075,7 +1081,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           )}
                         </>
                       )}
-                      </LongText>
+                      </AiScrollableAnswer>
                     </div>
                     {message.role === 'user' && (
                       <div className="p-2 rounded-lg bg-primary/10 h-fit">

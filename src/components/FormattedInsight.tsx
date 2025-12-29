@@ -1,6 +1,7 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, CheckCircle2, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AiScrollableAnswer } from './ui/AiScrollableAnswer';
 
 interface FormattedInsightProps {
   content: string;
@@ -73,10 +74,10 @@ const ScrollableRow: React.FC<{
 }> = ({ children, bgColor = "bg-muted/30", borderColor = "border-border/50" }) => {
   return (
     <div className={cn("rounded-lg border", bgColor, borderColor)}>
-      <div className="p-3 max-h-[400px] overflow-y-auto overflow-x-auto scrollbar-visible">
-        <div className="min-w-max whitespace-nowrap">
+      <div className="p-3">
+        <AiScrollableAnswer>
           {children}
-        </div>
+        </AiScrollableAnswer>
       </div>
     </div>
   );

@@ -1,7 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Bot, User } from "lucide-react";
-import { LongText } from "./LongText";
-import { ScrollX } from "./ScrollX";
+import { AiScrollableAnswer } from "./AiScrollableAnswer";
 import { ReactNode } from "react";
 
 export interface ChatMessageProps {
@@ -14,8 +13,6 @@ export interface ChatMessageProps {
   avatarIcon?: ReactNode;
   avatarClassName?: string;
   className?: string;
-  /** Use horizontal scroll for user messages instead of wrapping */
-  scrollUserMessages?: boolean;
 }
 
 export function ChatMessage({
@@ -27,28 +24,22 @@ export function ChatMessage({
   avatarIcon,
   avatarClassName,
   className,
-  scrollUserMessages = false,
 }: ChatMessageProps) {
   const isUser = role === "user";
 
   const renderContent = () => {
     const textContent = typeof content === "string" ? (
-      <p className="text-sm leading-relaxed">{content}</p>
+      <span className="text-sm leading-relaxed">{content}</span>
     ) : (
       content
     );
 
-    // User messages can optionally use horizontal scroll
-    if (isUser && scrollUserMessages) {
-      return (
-        <ScrollX>
-          <span className="whitespace-nowrap text-sm">{content}</span>
-        </ScrollX>
-      );
-    }
-
-    // Default: wrap text
-    return <LongText>{textContent}</LongText>;
+    // All messages use horizontal scroll to prevent clipping
+    return (
+      <AiScrollableAnswer>
+        {textContent}
+      </AiScrollableAnswer>
+    );
   };
 
   return (
