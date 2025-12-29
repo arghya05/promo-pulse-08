@@ -843,19 +843,19 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           
                           <FormattedInsight content={message.content} />
                           
-                          {/* Why section - Full with wrapping */}
+                          {/* Why section - Horizontal scroll */}
                           {message.data?.why && message.data.why.length > 0 && (
                             <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 overflow-hidden">
                               <div className="flex items-center gap-2 px-3 pt-2 pb-1">
                                 <Lightbulb className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
                                 <span className="font-medium text-xs">Why It Happened</span>
                               </div>
-                              <div className="px-3 pb-2 max-h-[300px] overflow-y-auto">
-                                <ul className="space-y-1">
+                              <div className="px-3 pb-2 overflow-x-auto scrollbar-visible">
+                                <ul className="space-y-1 min-w-max">
                                   {message.data.why.map((reason: string, i: number) => (
-                                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap">
                                       <span className="text-amber-500 mt-0.5 flex-shrink-0">•</span>
-                                      <span className="break-words whitespace-normal">{reason}</span>
+                                      <span>{reason}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -864,19 +864,19 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                             </div>
                           )}
                           
-                          {/* What To Do (Recommendations) - Full with wrapping */}
+                          {/* What To Do (Recommendations) - Horizontal scroll */}
                           {message.data?.whatToDo && message.data.whatToDo.length > 0 && (
                             <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 overflow-hidden">
                               <div className="flex items-center gap-2 px-3 pt-2 pb-1">
                                 <Target className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
                                 <span className="font-medium text-xs">Recommendations</span>
                               </div>
-                              <div className="px-3 pb-2 max-h-[300px] overflow-y-auto">
-                                <ul className="space-y-1">
+                              <div className="px-3 pb-2 overflow-x-auto scrollbar-visible">
+                                <ul className="space-y-1 min-w-max">
                                   {message.data.whatToDo.map((action: string, i: number) => (
-                                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-2 whitespace-nowrap">
                                       <span className="text-emerald-500 mt-0.5 flex-shrink-0">✓</span>
-                                      <span className="break-words whitespace-normal">{action}</span>
+                                      <span>{action}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -885,26 +885,26 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                             </div>
                           )}
                           
-                          {/* Causal Drivers - Full with wrapping */}
+                          {/* Causal Drivers - Horizontal scroll */}
                           {message.data?.causalDrivers && message.data.causalDrivers.length > 0 && (
                             <div className="mt-3 rounded-lg border border-orange-500/20 bg-orange-500/10 overflow-hidden">
                               <div className="flex items-center gap-2 px-3 pt-2 pb-1">
                                 <Zap className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
                                 <span className="font-medium text-xs">Causal Drivers</span>
                               </div>
-                              <div className="px-3 pb-2 max-h-[300px] overflow-y-auto">
-                                <div className="grid grid-cols-1 gap-2">
+                              <div className="px-3 pb-2 overflow-x-auto scrollbar-visible">
+                                <div className="flex gap-2 min-w-max">
                                   {message.data.causalDrivers.map((driver: any, i: number) => (
-                                    <div key={i} className="bg-background/50 rounded p-2 border border-border/50">
+                                    <div key={i} className="bg-background/50 rounded p-2 border border-border/50 whitespace-nowrap flex-shrink-0">
                                       <div className="flex items-center justify-between mb-1 gap-2">
-                                        <span className="font-medium text-xs break-words">{driver.driver}</span>
+                                        <span className="font-medium text-xs">{driver.driver}</span>
                                         {driver.direction === 'positive' ? (
                                           <TrendingUp className="h-3 w-3 text-emerald-500 flex-shrink-0" />
                                         ) : (
                                           <TrendingDown className="h-3 w-3 text-red-500 flex-shrink-0" />
                                         )}
                                       </div>
-                                      <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+                                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                                         <span className={driver.direction === 'positive' ? 'text-emerald-500' : 'text-red-500'}>
                                           {driver.impact}
                                         </span>
@@ -919,7 +919,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                             </div>
                           )}
                           
-                          {/* ML Insights - Full with wrapping */}
+                          {/* ML Insights - Horizontal scroll */}
                           {message.data?.mlInsights && (
                             <div className="mt-3 rounded-lg border border-purple-500/20 bg-purple-500/10 overflow-hidden">
                               <div className="flex items-center gap-2 px-3 pt-2 pb-1">
@@ -929,53 +929,57 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                   {((message.data.mlInsights.confidence || 0) * 100).toFixed(0)}% confidence
                                 </Badge>
                               </div>
-                              <div className="px-3 pb-2 max-h-[300px] overflow-y-auto">
-                                <p className="text-xs text-muted-foreground mb-1 break-words whitespace-normal">
-                                  {message.data.mlInsights.patternDetected}
-                                </p>
-                                {message.data.mlInsights.businessSignificance && (
-                                  <p className="text-[10px] text-purple-600 dark:text-purple-400 break-words whitespace-normal">
-                                    <strong>Significance:</strong> {message.data.mlInsights.businessSignificance}
+                              <div className="px-3 pb-2 overflow-x-auto scrollbar-visible">
+                                <div className="min-w-max whitespace-nowrap">
+                                  <p className="text-xs text-muted-foreground mb-1">
+                                    {message.data.mlInsights.patternDetected}
                                   </p>
-                                )}
+                                  {message.data.mlInsights.businessSignificance && (
+                                    <p className="text-[10px] text-purple-600 dark:text-purple-400">
+                                      <strong>Significance:</strong> {message.data.mlInsights.businessSignificance}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                               <div className="h-2.5 bg-purple-500/5 border-t border-purple-500/10" />
                             </div>
                           )}
                           
-                          {/* Predictions - Full with wrapping */}
+                          {/* Predictions - Horizontal scroll */}
                           {message.data?.predictions && (
                             <div className="mt-3 rounded-lg border border-blue-500/20 bg-blue-500/10 overflow-hidden">
                               <div className="flex items-center gap-2 px-3 pt-2 pb-1">
                                 <TrendingUp className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
                                 <span className="font-medium text-xs">Predictions</span>
                               </div>
-                              <div className="px-3 pb-2 max-h-[300px] overflow-y-auto">
-                                <div className="flex flex-wrap items-center gap-4 text-xs">
-                                  <div>
-                                    <span className="text-[10px] text-muted-foreground">Trend: </span>
-                                    <span className={`font-medium capitalize ${
-                                      message.data.predictions.trend === 'increasing' ? 'text-emerald-500' :
-                                      message.data.predictions.trend === 'decreasing' ? 'text-red-500' : 'text-amber-500'
-                                    }`}>
-                                      {message.data.predictions.trend}
-                                    </span>
+                              <div className="px-3 pb-2 overflow-x-auto scrollbar-visible">
+                                <div className="min-w-max whitespace-nowrap">
+                                  <div className="flex items-center gap-4 text-xs">
+                                    <div>
+                                      <span className="text-[10px] text-muted-foreground">Trend: </span>
+                                      <span className={`font-medium capitalize ${
+                                        message.data.predictions.trend === 'increasing' ? 'text-emerald-500' :
+                                        message.data.predictions.trend === 'decreasing' ? 'text-red-500' : 'text-amber-500'
+                                      }`}>
+                                        {message.data.predictions.trend}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[10px] text-muted-foreground">Risk: </span>
+                                      <span className={`font-medium capitalize ${
+                                        message.data.predictions.riskLevel === 'low' ? 'text-emerald-500' :
+                                        message.data.predictions.riskLevel === 'high' ? 'text-red-500' : 'text-amber-500'
+                                      }`}>
+                                        {message.data.predictions.riskLevel}
+                                      </span>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <span className="text-[10px] text-muted-foreground">Risk: </span>
-                                    <span className={`font-medium capitalize ${
-                                      message.data.predictions.riskLevel === 'low' ? 'text-emerald-500' :
-                                      message.data.predictions.riskLevel === 'high' ? 'text-red-500' : 'text-amber-500'
-                                    }`}>
-                                      {message.data.predictions.riskLevel}
-                                    </span>
-                                  </div>
+                                  {message.data.predictions.forecast && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {message.data.predictions.forecast}
+                                    </p>
+                                  )}
                                 </div>
-                                {message.data.predictions.forecast && (
-                                  <p className="text-xs text-muted-foreground mt-1 break-words whitespace-normal">
-                                    {message.data.predictions.forecast}
-                                  </p>
-                                )}
                               </div>
                               <div className="h-2.5 bg-blue-500/5 border-t border-blue-500/10" />
                             </div>
