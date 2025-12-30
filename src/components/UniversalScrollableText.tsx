@@ -9,16 +9,16 @@ export default function UniversalScrollableText({
     <div
       style={{
         maxHeight: "260px",
-        overflowX: "auto",
+        overflowX: "hidden",
         overflowY: "auto",
       }}
     >
       <div
         style={{
-          display: "inline-block",
-          minWidth: "100%",
+          width: "100%",
           whiteSpace: "pre-wrap",
           wordBreak: "break-word",
+          overflowWrap: "break-word",
         }}
       >
         {children}
