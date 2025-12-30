@@ -787,8 +787,8 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
           
           {/* Chat Messages Shell */}
           <div ref={scrollAreaRef} className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-hidden">
-            <div className="flex-1 min-h-0 w-full max-w-full overflow-y-auto p-3">
-              <div className="space-y-4 w-full overflow-visible">
+            <div className="flex-1 min-h-0 w-full max-w-full overflow-y-auto overflow-x-hidden p-3">
+              <div className="space-y-4 w-full">
                 {messages.map((message) => (
                   <div
                     key={message.id}
@@ -800,7 +800,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                       </div>
                     )}
                     <div
-                      className={`max-w-[70%] rounded-2xl px-3 py-2 min-w-0 overflow-visible ${
+                      className={`max-w-[70%] rounded-2xl px-3 py-2 min-w-0 ${
                         message.role === 'user'
                           ? 'bg-blue-500 text-white'
                           : 'bg-slate-100 dark:bg-slate-800'
@@ -808,7 +808,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                     >
                       {/* User messages: wrap text, no scrollbar */}
                       {message.role === 'user' ? (
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words overflow-visible w-full">{message.content}</p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
                       ) : message.isLoading ? (
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -906,14 +906,14 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                     {message.data.causalDrivers.map((driver: any, i: number) => (
                                       <div key={i} className="bg-background/50 rounded p-2 border border-border/50 flex-shrink-0">
                                         <div className="flex items-center justify-between mb-1 gap-2">
-                                          <span className="font-medium text-xs whitespace-nowrap">{driver.driver}</span>
+                                          <span className="font-medium text-xs">{driver.driver}</span>
                                           {driver.direction === 'positive' ? (
                                             <TrendingUp className="h-3 w-3 text-emerald-500 flex-shrink-0" />
                                           ) : (
                                             <TrendingDown className="h-3 w-3 text-red-500 flex-shrink-0" />
                                           )}
                                         </div>
-                                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground whitespace-nowrap">
+                                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                                           <span className={driver.direction === 'positive' ? 'text-emerald-500' : 'text-red-500'}>
                                             {driver.impact}
                                           </span>

@@ -1438,9 +1438,9 @@ export default function ChatInterface({
       )}
 
       {/* Messages Area - Clean Chat Shell */}
-      <div className="flex flex-col flex-1 min-h-0 w-full max-w-full">
+      <div className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-hidden">
         <ScrollArea className="flex-1 min-h-0 w-full max-w-full" ref={scrollRef}>
-          <div className="space-y-4 px-6 py-4 w-full overflow-visible">
+          <div className="space-y-4 px-6 py-4 w-full">
             {messages.map((message) => (
               <div 
                 key={message.id} 
@@ -1459,7 +1459,7 @@ export default function ChatInterface({
 
                 {/* Message Content */}
                 <div 
-                  className={`max-w-[70%] rounded-2xl px-3 py-2 min-w-0 overflow-visible ${
+                  className={`max-w-[70%] rounded-2xl px-3 py-2 min-w-0 ${
                     message.type === 'user'
                       ? 'bg-blue-500 text-white'
                       : message.isError
@@ -1469,9 +1469,9 @@ export default function ChatInterface({
                 >
                   {/* User messages: wrap text, no scrollbar */}
                   {message.type === 'user' ? (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words overflow-visible w-full">{message.content}</p>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
                   ) : message.isError ? (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words overflow-visible w-full">{message.content}</p>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
                   ) : (
                     <UniversalScrollableText>
                       <FormattedInsight content={message.content} />
@@ -1530,14 +1530,14 @@ export default function ChatInterface({
                         {message.analyticsResult.causalDrivers.map((driver: any, i: number) => (
                           <div key={i} className="bg-background/50 rounded p-2 border border-border/50 flex-shrink-0">
                             <div className="flex items-center justify-between mb-1 gap-2">
-                              <span className="font-medium text-xs whitespace-nowrap">{driver.driver}</span>
+                              <span className="font-medium text-xs">{driver.driver}</span>
                               {driver.direction === 'positive' ? (
-                                <TrendingUp className="h-3 w-3 text-emerald-500 flex-shrink-0" />
+                                <TrendingUp className="h-3 w-3 text-emerald-500" />
                               ) : (
-                                <TrendingDown className="h-3 w-3 text-red-500 flex-shrink-0" />
+                                <TrendingDown className="h-3 w-3 text-red-500" />
                               )}
                             </div>
-                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground whitespace-nowrap">
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                               <span className={driver.direction === 'positive' ? 'text-emerald-500' : 'text-red-500'}>
                                 {driver.impact}
                               </span>
