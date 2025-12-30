@@ -62,7 +62,7 @@ export function ChatMessage({
       {/* Message Bubble */}
       <div
         className={cn(
-          "max-w-[70%] rounded-2xl px-3 py-2 min-w-0",
+          "max-w-[70%] rounded-2xl px-3 py-2 min-w-0 break-words",
           isUser
             ? "bg-blue-500 text-white"
             : isError
@@ -70,6 +70,7 @@ export function ChatMessage({
             : "bg-slate-100 dark:bg-slate-800 text-foreground",
           className
         )}
+        style={{ wordBreak: "break-word", overflowWrap: "break-word" }}
       >
         {renderContent()}
       </div>
