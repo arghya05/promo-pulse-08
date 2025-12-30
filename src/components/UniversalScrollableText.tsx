@@ -7,10 +7,12 @@ export default function UniversalScrollableText({
 }) {
   return (
     <div
+      className="scrollbar-visible"
       style={{
         maxHeight: "260px",
         overflowX: "auto",
         overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
       }}
     >
       <div
