@@ -73,7 +73,7 @@ export function ChatMessage({
       >
         {isUser ? (
           <div 
-            className="scrollbar-visible overflow-x-auto" 
+            className="user-message-scroll" 
             style={{ 
               maxWidth: '100%',
               WebkitOverflowScrolling: 'touch'
