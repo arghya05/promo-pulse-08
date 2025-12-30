@@ -803,7 +803,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                       className={`rounded-2xl px-3 py-2 ${
                         message.role === 'user'
                           ? 'bg-blue-500 text-white max-w-[85%]'
-                          : 'bg-slate-100 dark:bg-slate-800 max-w-[85%] min-w-0 overflow-hidden'
+                          : 'bg-slate-100 dark:bg-slate-800 max-w-[85%] min-w-0'
                       }`}
                     >
                       {/* User messages: horizontal scroll */}
