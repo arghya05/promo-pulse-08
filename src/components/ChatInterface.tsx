@@ -1463,8 +1463,8 @@ export default function ChatInterface({
                     message.type === 'user'
                       ? 'bg-blue-500 text-white max-w-[85%]'
                       : message.isError
-                      ? 'bg-destructive/10 text-foreground border border-destructive/30 max-w-[70%] min-w-0'
-                      : 'bg-slate-100 dark:bg-slate-800 text-foreground max-w-[70%] min-w-0'
+                      ? 'bg-destructive/10 text-foreground border border-destructive/30 max-w-[85%] min-w-0 overflow-hidden'
+                      : 'bg-slate-100 dark:bg-slate-800 text-foreground max-w-[85%] min-w-0 overflow-hidden'
                   }`}
                 >
                   {/* User messages: horizontal scroll */}
