@@ -172,34 +172,7 @@ All colors MUST be HSL.
   .scrollbar-visible::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--primary) / 0.8);
   }
-
-  /* User message scrollbar (white on blue background) */
-  .user-message-scroll {
-    overflow-x: auto !important;
-    scrollbar-width: auto;
-    scrollbar-color: rgba(255, 255, 255, 0.7) rgba(255, 255, 255, 0.2);
-  }
   
-  .user-message-scroll::-webkit-scrollbar {
-    height: 8px;
-    display: block !important;
-  }
-  
-  .user-message-scroll::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-  }
-  
-  .user-message-scroll::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 4px;
-    min-width: 30px;
-  }
-  
-  .user-message-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.9);
-  }
-
   /* AI Answer horizontal scroll - ensures scrollbar always visible */
   .ai-answer-scroll {
     overflow-x: auto !important;

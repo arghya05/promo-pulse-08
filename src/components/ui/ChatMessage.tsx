@@ -62,30 +62,16 @@ export function ChatMessage({
       {/* Message Bubble */}
       <div
         className={cn(
-          "rounded-2xl px-3 py-2",
+          "max-w-[70%] rounded-2xl px-3 py-2 min-w-0",
           isUser
-            ? "bg-blue-500 text-white max-w-[85%]"
+            ? "bg-blue-500 text-white"
             : isError
-            ? "bg-destructive/10 text-foreground border border-destructive/30 max-w-[85%] min-w-0"
-            : "bg-slate-100 dark:bg-slate-800 text-foreground max-w-[85%] min-w-0",
+            ? "bg-destructive/10 text-foreground border border-destructive/30"
+            : "bg-slate-100 dark:bg-slate-800 text-foreground",
           className
         )}
       >
-        {isUser ? (
-          <div 
-            className="user-message-scroll" 
-            style={{ 
-              maxWidth: '100%',
-              WebkitOverflowScrolling: 'touch'
-            }}
-          >
-            <span className="text-sm leading-relaxed whitespace-nowrap">
-              {typeof content === "string" ? content : content}
-            </span>
-          </div>
-        ) : (
-          renderContent()
-        )}
+        {renderContent()}
       </div>
 
       {/* Avatar for user */}

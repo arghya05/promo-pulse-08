@@ -112,9 +112,9 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
         
         return (
           <ScrollableRow key={idx} bgColor={bgColor} borderColor={borderColor}>
-            <div className="flex gap-3 items-start">
+            <div className="flex gap-3 items-center">
               <InsightIcon type={type} />
-              <span className="text-sm leading-relaxed break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+              <span className="text-sm leading-relaxed">
                 {highlightMetrics(insight)}
               </span>
             </div>

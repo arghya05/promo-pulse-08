@@ -979,8 +979,7 @@ function detectAmbiguousTerms(question: string, moduleId: string): AmbiguityChec
   }
   
   // Check for metric ambiguity only if no metric context
-  // Include supply chain metrics (on-time, delivery, lead time) and other domain-specific metrics
-  const hasMetricContext = /\b(revenue|margin|roi|sales|units|lift|spend|profit|growth|on.time|delivery|lead.time|reliability|fill.rate|cost|velocity|turnover|stock|inventory|forecast|accuracy)\b/i.test(q);
+  const hasMetricContext = /\b(revenue|margin|roi|sales|units|lift|spend|profit|growth)\b/i.test(q);
   
   // Executive-level questions that should NOT trigger clarification
   // These are high-level overview questions that expect comprehensive answers
