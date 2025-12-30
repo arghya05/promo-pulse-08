@@ -604,25 +604,39 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                             </div>
                           </div>
                         </div>
-                        {result.predictions.forecast && (
+                        {result.predictions.forecast && Array.isArray(result.predictions.forecast) && result.predictions.forecast.length > 0 && (
                           <div className="space-y-2">
                             <span className="text-xs font-medium text-muted-foreground">Forecast</span>
                             <div className="flex flex-wrap gap-2">
-                              {(Array.isArray(result.predictions.forecast) 
-                                ? result.predictions.forecast 
-                                : [result.predictions.forecast]
-                              ).map((f: any, i: number) => (
-                                <Badge key={i} variant="outline" className="text-xs whitespace-normal break-words">
-                                  {f.period}: {typeof f.value === 'number' ? f.value.toFixed(1) : String(f.value || '')}
-                                  {f.confidence !== undefined && (
-                                    <span className="ml-1 text-muted-foreground">
-                                      ({(Number(f.confidence) * 100).toFixed(0)}%)
-                                    </span>
-                                  )}
-                                </Badge>
-                              ))}
+                              {result.predictions.forecast.map((f: any, i: number) => {
+                                // Handle both string format and object format
+                                if (typeof f === 'string') {
+                                  return (
+                                    <Badge key={i} variant="outline" className="text-xs whitespace-normal break-words">
+                                      {f}
+                                    </Badge>
+                                  );
+                                }
+                                // Object format with period/value
+                                return (
+                                  <Badge key={i} variant="outline" className="text-xs whitespace-normal break-words">
+                                    {f.period}: {typeof f.value === 'number' ? f.value.toFixed(1) : String(f.value || '')}
+                                    {f.confidence !== undefined && (
+                                      <span className="ml-1 text-muted-foreground">
+                                        ({(Number(f.confidence) * 100).toFixed(0)}%)
+                                      </span>
+                                    )}
+                                  </Badge>
+                                );
+                              })}
                             </div>
                           </div>
+                        )}
+                        {/* Show message when no forecast data available */}
+                        {(!result.predictions.forecast || (Array.isArray(result.predictions.forecast) && result.predictions.forecast.length === 0)) && (
+                          <p className="text-sm text-muted-foreground italic">
+                            Forecast data not available for this analysis. Try asking a forecasting-specific question.
+                          </p>
                         )}
                       </div>
                     </CollapsibleContent>
