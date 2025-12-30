@@ -1010,7 +1010,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                                         message.data.predictions.forecast.map((item: any, idx: number) => (
                                           <div key={idx} className="flex items-start gap-2 text-xs">
                                             <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-blue-500 flex-shrink-0" />
-                                            <span className="text-foreground">
+                                            <span className="text-foreground whitespace-pre-wrap break-words">
                                               {typeof item === 'string' ? item : `${item.period}: ${item.value}`}
                                             </span>
                                           </div>
