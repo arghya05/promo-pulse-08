@@ -800,15 +800,16 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                       </div>
                     )}
                     <div
-                      className={`rounded-2xl px-3 py-2 min-w-0 ${
+                      className={`rounded-2xl px-3 py-2 ${
                         message.role === 'user'
-                          ? 'bg-blue-500 text-white max-w-[85%]'
-                          : 'bg-slate-100 dark:bg-slate-800 max-w-[70%]'
+                          ? 'bg-blue-500 text-white max-w-[85%] break-words'
+                          : 'bg-slate-100 dark:bg-slate-800 max-w-[70%] min-w-0'
                       }`}
+                      style={message.role === 'user' ? { wordBreak: 'break-word', overflowWrap: 'break-word' } : undefined}
                     >
                       {/* User messages: wrap text, no scrollbar */}
                       {message.role === 'user' ? (
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words overflow-wrap-anywhere" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{message.content}</p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'break-word', wordWrap: 'break-word' }}>{message.content}</p>
                       ) : message.isLoading ? (
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
