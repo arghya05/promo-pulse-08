@@ -62,16 +62,22 @@ export function ChatMessage({
       {/* Message Bubble */}
       <div
         className={cn(
-          "max-w-[70%] rounded-2xl px-3 py-2 min-w-0",
+          "rounded-2xl px-3 py-2 min-w-0",
           isUser
-            ? "bg-blue-500 text-white"
+            ? "bg-blue-500 text-white max-w-[85%]"
             : isError
-            ? "bg-destructive/10 text-foreground border border-destructive/30"
-            : "bg-slate-100 dark:bg-slate-800 text-foreground",
+            ? "bg-destructive/10 text-foreground border border-destructive/30 max-w-[70%]"
+            : "bg-slate-100 dark:bg-slate-800 text-foreground max-w-[70%]",
           className
         )}
       >
-        {renderContent()}
+        {isUser ? (
+          <span className="text-sm leading-relaxed whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+            {typeof content === "string" ? content : content}
+          </span>
+        ) : (
+          renderContent()
+        )}
       </div>
 
       {/* Avatar for user */}
