@@ -1469,7 +1469,13 @@ export default function ChatInterface({
                 >
                   {/* User messages: horizontal scroll */}
                   {message.type === 'user' ? (
-                    <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-white/30 scrollbar-track-transparent" style={{ maxWidth: '100%' }}>
+                    <div 
+                      className="scrollbar-visible overflow-x-auto" 
+                      style={{ 
+                        maxWidth: '100%',
+                        WebkitOverflowScrolling: 'touch'
+                      }}
+                    >
                       <p className="text-sm leading-relaxed whitespace-nowrap">{message.content}</p>
                     </div>
                   ) : message.isError ? (
