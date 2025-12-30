@@ -3331,14 +3331,6 @@ When the user asks follow-up questions like "why did it work", "give me recommen
 
 function generateModuleFallback(moduleId: string): any {
   const defaults: Record<string, any> = {
-    promotion: {
-      whatHappened: ['Top 5 promotions generated $1.2M in incremental revenue', 'Average promotional ROI is 3.2x', 'BOGO mechanics outperformed percentage-off by 18%'],
-      why: ['Holiday promotions drove highest engagement', 'Category-specific targeting improved conversion rates'],
-      whatToDo: ['Increase allocation to high-ROI mechanics', 'Reduce frequency of underperforming promotions'],
-      causalDrivers: [{ driver: 'Promotion timing', impact: '+28% lift', correlation: 0.85, direction: 'positive' }],
-      mlInsights: { patternDetected: 'Weekend promotions show 15% higher response rates', confidence: 0.82, businessSignificance: 'Shift promotional calendar to weekends' },
-      predictions: { forecast: [{ period: 'Next Month', value: 3.5, confidence: 0.85 }, { period: 'Q2', value: 3.8, confidence: 0.78 }], trend: 'increasing', riskLevel: 'low' }
-    },
     pricing: {
       whatHappened: ['Average margin across products is 32.5%', 'Price elasticity varies by category', 'Competitive gap is 2.3% vs major retailers'],
       why: ['Premium positioning in Dairy drives higher margins', 'Competitive pressure in Beverages'],
@@ -3378,14 +3370,6 @@ function generateModuleFallback(moduleId: string): any {
       causalDrivers: [{ driver: 'Eye-level placement', impact: '+23% sales', correlation: 0.87, direction: 'positive' }],
       mlInsights: { patternDetected: 'Frozen section suboptimal space-to-sales ratio', confidence: 0.81, businessSignificance: 'Reduce frozen space' },
       predictions: { forecast: [{ period: 'Q2', value: 218.5, confidence: 0.76 }], trend: 'increasing', riskLevel: 'low' }
-    },
-    executive: {
-      whatHappened: ['Total revenue is $4.2B YTD', 'Gross margin is 34.2%', 'YoY growth is 5.8%'],
-      why: ['Strong performance in premium categories', 'Pricing optimization driving margin improvement'],
-      whatToDo: ['Continue focus on high-margin categories', 'Address underperforming regions'],
-      causalDrivers: [{ driver: 'Category mix shift', impact: '+1.2% margin', correlation: 0.79, direction: 'positive' }],
-      mlInsights: { patternDetected: 'Regional performance divergence detected', confidence: 0.85, businessSignificance: 'Focus on underperforming regions' },
-      predictions: { forecast: [{ period: 'Q2', value: 4.5, confidence: 0.82 }, { period: 'Q3', value: 4.8, confidence: 0.75 }], trend: 'increasing', riskLevel: 'low' }
     }
   };
 
@@ -4230,61 +4214,9 @@ function ensureCompleteResponse(
     };
   }
   
-  // Ensure predictions exist and have valid forecast data
-  const hasValidForecast = response.predictions && 
-    response.predictions.forecast && 
-    Array.isArray(response.predictions.forecast) && 
-    response.predictions.forecast.length > 0;
-  
-  if (!response.predictions || !hasValidForecast) {
+  if (!response.predictions) {
     const revRaw = calculatedKPIs?.revenue_raw || 25000;
-    const roi = calculatedKPIs?.promo_roi || 3.2;
-    
-    // Generate module-specific forecast data
-    const moduleForecast: Record<string, any> = {
-      promotion: {
-        forecast: [
-          { period: 'Next Month', value: Number(roi) * 1.05, confidence: 0.85 },
-          { period: 'Next Quarter', value: Number(roi) * 1.12, confidence: 0.78 }
-        ],
-        trend: 'increasing',
-        riskLevel: 'low'
-      },
-      pricing: {
-        forecast: [
-          { period: 'Next Month', value: 33.5, confidence: 0.82 },
-          { period: 'Next Quarter', value: 34.2, confidence: 0.75 }
-        ],
-        trend: 'stable',
-        riskLevel: 'low'
-      },
-      demand: {
-        forecast: [
-          { period: 'Week 1', value: revRaw * 0.25, confidence: 0.88 },
-          { period: 'Week 2', value: revRaw * 0.27, confidence: 0.82 }
-        ],
-        trend: 'increasing',
-        riskLevel: 'low'
-      },
-      'supply-chain': {
-        forecast: [
-          { period: 'Next Month', value: 94.5, confidence: 0.79 },
-          { period: 'Next Quarter', value: 96.2, confidence: 0.72 }
-        ],
-        trend: 'stable',
-        riskLevel: 'medium'
-      },
-      executive: {
-        forecast: [
-          { period: 'Q2', value: revRaw * 1.08, confidence: 0.82 },
-          { period: 'Q3', value: revRaw * 1.15, confidence: 0.75 }
-        ],
-        trend: 'increasing',
-        riskLevel: 'low'
-      }
-    };
-    
-    response.predictions = moduleForecast[moduleId] || {
+    response.predictions = {
       forecast: [
         { period: 'Next Month', value: revRaw * 1.05, confidence: 0.82 },
         { period: 'Next Quarter', value: revRaw * 3.15, confidence: 0.75 }
