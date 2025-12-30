@@ -49,6 +49,22 @@ export default function PredictiveInsights({ predictions, causalDrivers, mlInsig
     return "Weak";
   };
 
+  // Safely parse confidence value - handle various input formats
+  const getConfidenceValue = (confidence: any): number => {
+    if (typeof confidence === 'number' && !isNaN(confidence)) {
+      return confidence > 1 ? confidence : confidence * 100; // Handle both 0.85 and 85 formats
+    }
+    if (typeof confidence === 'string') {
+      const parsed = parseFloat(confidence);
+      if (!isNaN(parsed)) {
+        return parsed > 1 ? parsed : parsed * 100;
+      }
+    }
+    return 85; // Default fallback
+  };
+
+  const confidencePercent = predictions ? getConfidenceValue(predictions.confidence) : 0;
+
   return (
     <div className="space-y-6 w-full max-w-full min-w-0 overflow-x-hidden">
       {/* Predictive Forecasts */}
@@ -58,16 +74,16 @@ export default function PredictiveInsights({ predictions, causalDrivers, mlInsig
             <TrendingUp className="h-5 w-5 text-primary flex-shrink-0" />
             <h2 className="text-lg font-bold">PREDICTIVE FORECAST</h2>
             <Badge variant="secondary" className="ml-auto">
-              {(predictions.confidence * 100).toFixed(0)}% Confidence
+              {confidencePercent.toFixed(0)}% Confidence
             </Badge>
           </div>
           
           <div className="mb-4">
             <div className="flex justify-between text-sm mb-2">
               <span className="text-muted-foreground">Model Confidence</span>
-              <span className="font-semibold">{predictions.timeframe}</span>
+              <span className="font-semibold">{predictions.timeframe || 'Next Quarter'}</span>
             </div>
-            <Progress value={predictions.confidence * 100} className="h-2" />
+            <Progress value={confidencePercent} className="h-2" />
           </div>
 
           <div className="max-h-80 overflow-y-auto overflow-x-hidden pr-2">
