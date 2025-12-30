@@ -809,7 +809,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                       {/* User messages: horizontal scroll */}
                       {message.role === 'user' ? (
                         <div 
-                          className="scrollbar-visible overflow-x-auto" 
+                          className="user-message-scroll" 
                           style={{ 
                             maxWidth: '100%',
                             WebkitOverflowScrolling: 'touch'

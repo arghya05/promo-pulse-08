@@ -1470,7 +1470,7 @@ export default function ChatInterface({
                   {/* User messages: horizontal scroll */}
                   {message.type === 'user' ? (
                     <div 
-                      className="scrollbar-visible overflow-x-auto" 
+                      className="user-message-scroll" 
                       style={{ 
                         maxWidth: '100%',
                         WebkitOverflowScrolling: 'touch'
