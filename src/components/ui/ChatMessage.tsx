@@ -72,7 +72,13 @@ export function ChatMessage({
         )}
       >
         {isUser ? (
-          <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-white/30 scrollbar-track-transparent" style={{ maxWidth: '100%' }}>
+          <div 
+            className="scrollbar-visible overflow-x-auto" 
+            style={{ 
+              maxWidth: '100%',
+              WebkitOverflowScrolling: 'touch'
+            }}
+          >
             <span className="text-sm leading-relaxed whitespace-nowrap">
               {typeof content === "string" ? content : content}
             </span>
