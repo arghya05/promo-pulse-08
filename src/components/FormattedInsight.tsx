@@ -66,18 +66,16 @@ const InsightIcon: React.FC<{ type: 'positive' | 'negative' | 'neutral' | 'compa
   }
 };
 
-// Scrollable row with horizontal scroll for long content
+// Scrollable row with text wrapping and vertical scroll
 const ScrollableRow: React.FC<{ 
   children: React.ReactNode;
   bgColor?: string;
   borderColor?: string;
 }> = ({ children, bgColor = "bg-muted/30", borderColor = "border-border/50" }) => {
   return (
-    <div className={cn("rounded-lg border", bgColor, borderColor)}>
-      <div className="p-3">
-        <UniversalScrollableText>
-          {children}
-        </UniversalScrollableText>
+    <div className={cn("rounded-lg border w-full", bgColor, borderColor)}>
+      <div className="p-3 max-h-[260px] overflow-y-auto w-full">
+        {children}
       </div>
     </div>
   );
@@ -112,9 +110,9 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
         
         return (
           <ScrollableRow key={idx} bgColor={bgColor} borderColor={borderColor}>
-            <div className="flex gap-3 items-center">
+            <div className="flex gap-3 items-start w-full">
               <InsightIcon type={type} />
-              <span className="text-sm leading-relaxed">
+              <span className="text-sm leading-relaxed flex-1 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                 {highlightMetrics(insight)}
               </span>
             </div>
