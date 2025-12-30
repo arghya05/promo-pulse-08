@@ -979,7 +979,8 @@ function detectAmbiguousTerms(question: string, moduleId: string): AmbiguityChec
   }
   
   // Check for metric ambiguity only if no metric context
-  const hasMetricContext = /\b(revenue|margin|roi|sales|units|lift|spend|profit|growth)\b/i.test(q);
+  // Include supply-chain, demand, space planning metrics to avoid over-clarification
+  const hasMetricContext = /\b(revenue|margin|roi|sales|units|lift|spend|profit|growth|on.?time|delivery|lead.?time|reliability|fill.?rate|cost|forecast|accuracy|stockout|utilization|compliance|sqft|facing|traffic)\b/i.test(q);
   
   // Executive-level questions that should NOT trigger clarification
   // These are high-level overview questions that expect comprehensive answers
