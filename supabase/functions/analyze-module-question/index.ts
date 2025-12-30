@@ -4214,56 +4214,16 @@ function ensureCompleteResponse(
     };
   }
   
-  if (!response.predictions || !response.predictions.confidence || !response.predictions.timeframe) {
-    const revRaw = Number(calculatedKPIs?.revenue_raw) || 25000;
-    const marginRaw = Number(calculatedKPIs?.gross_margin_raw) || 32;
-    const forecastRevenue = Math.round(revRaw * 1.08);
-    const forecastMargin = Math.round(forecastRevenue * (marginRaw / 100));
-    
+  if (!response.predictions) {
+    const revRaw = calculatedKPIs?.revenue_raw || 25000;
     response.predictions = {
       forecast: [
-        `Next Month: Projected revenue of $${(forecastRevenue / 1000).toFixed(1)}K (+5% vs current)`,
-        `Next Quarter: Projected revenue of $${(forecastRevenue * 3 / 1000).toFixed(1)}K with ${marginRaw.toFixed(1)}% margin`,
-        `Risk Level: Low - stable demand patterns expected`
+        { period: 'Next Month', value: revRaw * 1.05, confidence: 0.82 },
+        { period: 'Next Quarter', value: revRaw * 3.15, confidence: 0.75 }
       ],
-      confidence: 0.82,
-      timeframe: 'Next Quarter',
-      projectedImpact: {
-        revenue: forecastRevenue * 3,
-        margin: forecastMargin * 3,
-        roi: 2.4
-      },
       trend: 'stable',
       riskLevel: 'low'
     };
-  } else if (response.predictions && response.predictions.forecast && Array.isArray(response.predictions.forecast)) {
-    // Convert object format to string format if needed
-    if (response.predictions.forecast[0] && typeof response.predictions.forecast[0] === 'object') {
-      const revRaw = Number(calculatedKPIs?.revenue_raw) || 25000;
-      const marginRaw = Number(calculatedKPIs?.gross_margin_raw) || 32;
-      
-      response.predictions.forecast = response.predictions.forecast.map((f: any) => {
-        if (typeof f === 'string') return f;
-        const value = Number(f.value) || revRaw;
-        const conf = Number(f.confidence) || 0.8;
-        return `${f.period || 'Forecast'}: $${(value / 1000).toFixed(1)}K (${(conf * 100).toFixed(0)}% confidence)`;
-      });
-      
-      // Ensure top-level confidence and timeframe exist
-      if (!response.predictions.confidence) {
-        response.predictions.confidence = 0.8;
-      }
-      if (!response.predictions.timeframe) {
-        response.predictions.timeframe = 'Next Quarter';
-      }
-      if (!response.predictions.projectedImpact) {
-        response.predictions.projectedImpact = {
-          revenue: revRaw * 3,
-          margin: Math.round(revRaw * 3 * (marginRaw / 100)),
-          roi: 2.2
-        };
-      }
-    }
   }
   
   // Generate specific why/whatToDo based on causal drivers if missing or generic

@@ -955,95 +955,39 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                             </div>
                           )}
                           
-                          {/* Predictions - Full display with confidence and forecasts */}
+                          {/* Predictions - Horizontal scroll */}
                           {message.data?.predictions && (
                             <div className="mt-3 rounded-lg border border-blue-500/20 bg-blue-500/10">
-                              <div className="flex items-center justify-between gap-2 px-3 pt-2 pb-1">
-                                <div className="flex items-center gap-2">
-                                  <TrendingUp className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
-                                  <span className="font-medium text-xs">Predictive Forecast</span>
-                                </div>
-                                {message.data.predictions.confidence && (
-                                  <Badge variant="secondary" className="text-[10px]">
-                                    {(Number(message.data.predictions.confidence) * 100).toFixed(0)}% Confidence
-                                  </Badge>
-                                )}
+                              <div className="flex items-center gap-2 px-3 pt-2 pb-1">
+                                <TrendingUp className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                                <span className="font-medium text-xs">Predictions</span>
                               </div>
                               <div className="px-3 pb-2">
                                 <UniversalScrollableText>
-                                  <div className="flex items-center gap-4 text-xs mb-2">
-                                    {message.data.predictions.trend && (
-                                      <div>
-                                        <span className="text-[10px] text-muted-foreground">Trend: </span>
-                                        <span className={`font-medium capitalize ${
-                                          message.data.predictions.trend === 'increasing' ? 'text-emerald-500' :
-                                          message.data.predictions.trend === 'decreasing' ? 'text-red-500' : 'text-amber-500'
-                                        }`}>
-                                          {message.data.predictions.trend}
-                                        </span>
-                                      </div>
-                                    )}
-                                    {message.data.predictions.riskLevel && (
-                                      <div>
-                                        <span className="text-[10px] text-muted-foreground">Risk: </span>
-                                        <span className={`font-medium capitalize ${
-                                          message.data.predictions.riskLevel === 'low' ? 'text-emerald-500' :
-                                          message.data.predictions.riskLevel === 'high' ? 'text-red-500' : 'text-amber-500'
-                                        }`}>
-                                          {message.data.predictions.riskLevel}
-                                        </span>
-                                      </div>
-                                    )}
-                                    {message.data.predictions.timeframe && (
-                                      <div>
-                                        <span className="text-[10px] text-muted-foreground">Timeframe: </span>
-                                        <span className="font-medium text-blue-500">
-                                          {message.data.predictions.timeframe}
-                                        </span>
-                                      </div>
-                                    )}
+                                  <div className="flex items-center gap-4 text-xs">
+                                    <div>
+                                      <span className="text-[10px] text-muted-foreground">Trend: </span>
+                                      <span className={`font-medium capitalize ${
+                                        message.data.predictions.trend === 'increasing' ? 'text-emerald-500' :
+                                        message.data.predictions.trend === 'decreasing' ? 'text-red-500' : 'text-amber-500'
+                                      }`}>
+                                        {message.data.predictions.trend}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[10px] text-muted-foreground">Risk: </span>
+                                      <span className={`font-medium capitalize ${
+                                        message.data.predictions.riskLevel === 'low' ? 'text-emerald-500' :
+                                        message.data.predictions.riskLevel === 'high' ? 'text-red-500' : 'text-amber-500'
+                                      }`}>
+                                        {message.data.predictions.riskLevel}
+                                      </span>
+                                    </div>
                                   </div>
-                                  {/* Render forecast as array or string */}
                                   {message.data.predictions.forecast && (
-                                    <div className="space-y-1">
-                                      {Array.isArray(message.data.predictions.forecast) ? (
-                                        message.data.predictions.forecast.map((item: any, idx: number) => (
-                                          <div key={idx} className="flex items-start gap-2 text-xs">
-                                            <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-blue-500 flex-shrink-0" />
-                                            <span className="text-foreground whitespace-pre-wrap break-words">
-                                              {typeof item === 'string' ? item : `${item.period}: ${item.value}`}
-                                            </span>
-                                          </div>
-                                        ))
-                                      ) : (
-                                        <p className="text-xs text-muted-foreground">
-                                          {String(message.data.predictions.forecast)}
-                                        </p>
-                                      )}
-                                    </div>
-                                  )}
-                                  {/* Projected Impact */}
-                                  {message.data.predictions.projectedImpact && (
-                                    <div className="mt-2 pt-2 border-t border-blue-500/20 grid grid-cols-3 gap-2 text-center">
-                                      <div className="bg-emerald-500/10 rounded px-2 py-1">
-                                        <div className="text-[10px] text-emerald-600">Revenue</div>
-                                        <div className="text-xs font-bold text-emerald-600">
-                                          ${(Number(message.data.predictions.projectedImpact.revenue) / 1000).toFixed(1)}K
-                                        </div>
-                                      </div>
-                                      <div className="bg-blue-500/10 rounded px-2 py-1">
-                                        <div className="text-[10px] text-blue-600">Margin</div>
-                                        <div className="text-xs font-bold text-blue-600">
-                                          ${(Number(message.data.predictions.projectedImpact.margin) / 1000).toFixed(1)}K
-                                        </div>
-                                      </div>
-                                      <div className="bg-purple-500/10 rounded px-2 py-1">
-                                        <div className="text-[10px] text-purple-600">ROI</div>
-                                        <div className="text-xs font-bold text-purple-600">
-                                          {Number(message.data.predictions.projectedImpact.roi).toFixed(1)}x
-                                        </div>
-                                      </div>
-                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {message.data.predictions.forecast}
+                                    </p>
                                   )}
                                 </UniversalScrollableText>
                               </div>
