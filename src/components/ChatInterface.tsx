@@ -1461,16 +1461,17 @@ export default function ChatInterface({
                 <div 
                   className={`rounded-2xl px-3 py-2 ${
                     message.type === 'user'
-                      ? 'bg-blue-500 text-white max-w-[85%] break-words'
+                      ? 'bg-blue-500 text-white max-w-[85%]'
                       : message.isError
                       ? 'bg-destructive/10 text-foreground border border-destructive/30 max-w-[70%] min-w-0'
                       : 'bg-slate-100 dark:bg-slate-800 text-foreground max-w-[70%] min-w-0'
                   }`}
-                  style={message.type === 'user' ? { wordBreak: 'break-word', overflowWrap: 'break-word' } : undefined}
                 >
-                  {/* User messages: wrap text, no scrollbar */}
+                  {/* User messages: horizontal scroll */}
                   {message.type === 'user' ? (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'break-word', wordWrap: 'break-word' }}>{message.content}</p>
+                    <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-white/30 scrollbar-track-transparent" style={{ maxWidth: '100%' }}>
+                      <p className="text-sm leading-relaxed whitespace-nowrap">{message.content}</p>
+                    </div>
                   ) : message.isError ? (
                     <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
                   ) : (
