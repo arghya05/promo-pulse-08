@@ -625,30 +625,38 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                   </div>
                   
                   <Select value={persona} onValueChange={(value: Persona) => setPersona(value)}>
-                    <SelectTrigger className="w-[380px] h-12 bg-background border-border shadow-sm hover:bg-accent/50 transition-colors">
+                    <SelectTrigger className="w-[420px] h-14 bg-background border-border shadow-sm hover:bg-accent/50 transition-colors">
                       <SelectValue>
                         <div className="flex items-center gap-3">
-                          <span className="text-lg">{personaConfig[persona].icon}</span>
-                          <div className="text-left">
+                          <span className="text-xl">{personaConfig[persona].icon}</span>
+                          <div className="text-left flex-1">
                             <div className="font-semibold text-foreground">{personaConfig[persona].label}</div>
                             <div className="text-xs text-muted-foreground">{personaConfig[persona].description}</div>
                           </div>
                         </div>
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent className="bg-popover border-border shadow-lg">
+                    <SelectContent className="bg-popover border-border shadow-lg w-[420px]">
                       {Object.entries(personaConfig).map(([key, config]) => (
                         <SelectItem 
                           key={key} 
                           value={key}
                           className="py-3 px-3 cursor-pointer hover:bg-accent focus:bg-accent"
                         >
-                          <div className="flex items-center gap-3">
-                            <span className="text-lg">{config.icon}</span>
-                            <div>
+                          <div className="flex items-center gap-3 w-full">
+                            <span className="text-xl">{config.icon}</span>
+                            <div className="flex-1">
                               <div className="font-semibold text-foreground">{config.label}</div>
                               <div className="text-xs text-muted-foreground">{config.description}</div>
                             </div>
+                            <Badge 
+                              variant="outline" 
+                              className="ml-2 text-xs shrink-0 border-primary/30 text-primary"
+                            >
+                              {config.categories 
+                                ? `${config.categories.length} categories` 
+                                : 'All'}
+                            </Badge>
                           </div>
                         </SelectItem>
                       ))}
@@ -657,12 +665,28 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                   
                   <Badge 
                     variant="secondary" 
-                    className="px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary border-0"
+                    className="px-4 py-2 text-sm font-medium bg-primary/10 text-primary border border-primary/20 rounded-full"
                   >
                     {personaConfig[persona].categories 
                       ? `${personaConfig[persona].categories.length} categories` 
                       : 'All categories'}
                   </Badge>
+                  
+                  {/* Category list for non-executive personas */}
+                  {personaConfig[persona].categories && (
+                    <div className="hidden lg:flex items-center gap-1.5 flex-wrap max-w-[400px]">
+                      {personaConfig[persona].categories.slice(0, 4).map((cat, idx) => (
+                        <Badge key={idx} variant="outline" className="text-xs bg-muted/50">
+                          {cat}
+                        </Badge>
+                      ))}
+                      {personaConfig[persona].categories.length > 4 && (
+                        <Badge variant="outline" className="text-xs bg-muted/50">
+                          +{personaConfig[persona].categories.length - 4} more
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
               </Card>
             </div>
@@ -874,30 +898,38 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                   </div>
                   
                   <Select value={persona} onValueChange={(value: Persona) => setPersona(value)}>
-                    <SelectTrigger className="w-[380px] h-12 bg-background border-border shadow-sm hover:bg-accent/50 transition-colors">
+                    <SelectTrigger className="w-[420px] h-14 bg-background border-border shadow-sm hover:bg-accent/50 transition-colors">
                       <SelectValue>
                         <div className="flex items-center gap-3">
-                          <span className="text-lg">{personaConfig[persona].icon}</span>
-                          <div className="text-left">
+                          <span className="text-xl">{personaConfig[persona].icon}</span>
+                          <div className="text-left flex-1">
                             <div className="font-semibold text-foreground">{personaConfig[persona].label}</div>
                             <div className="text-xs text-muted-foreground">{personaConfig[persona].description}</div>
                           </div>
                         </div>
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent className="bg-popover border-border shadow-lg">
+                    <SelectContent className="bg-popover border-border shadow-lg w-[420px]">
                       {Object.entries(personaConfig).map(([key, config]) => (
                         <SelectItem 
                           key={key} 
                           value={key}
                           className="py-3 px-3 cursor-pointer hover:bg-accent focus:bg-accent"
                         >
-                          <div className="flex items-center gap-3">
-                            <span className="text-lg">{config.icon}</span>
-                            <div>
+                          <div className="flex items-center gap-3 w-full">
+                            <span className="text-xl">{config.icon}</span>
+                            <div className="flex-1">
                               <div className="font-semibold text-foreground">{config.label}</div>
                               <div className="text-xs text-muted-foreground">{config.description}</div>
                             </div>
+                            <Badge 
+                              variant="outline" 
+                              className="ml-2 text-xs shrink-0 border-primary/30 text-primary"
+                            >
+                              {config.categories 
+                                ? `${config.categories.length} categories` 
+                                : 'All'}
+                            </Badge>
                           </div>
                         </SelectItem>
                       ))}
@@ -906,12 +938,28 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                   
                   <Badge 
                     variant="secondary" 
-                    className="px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary border-0"
+                    className="px-4 py-2 text-sm font-medium bg-primary/10 text-primary border border-primary/20 rounded-full"
                   >
                     {personaConfig[persona].categories 
                       ? `${personaConfig[persona].categories.length} categories` 
                       : 'All categories'}
                   </Badge>
+                  
+                  {/* Category list for non-executive personas */}
+                  {personaConfig[persona].categories && (
+                    <div className="hidden lg:flex items-center gap-1.5 flex-wrap max-w-[400px]">
+                      {personaConfig[persona].categories.slice(0, 4).map((cat, idx) => (
+                        <Badge key={idx} variant="outline" className="text-xs bg-muted/50">
+                          {cat}
+                        </Badge>
+                      ))}
+                      {personaConfig[persona].categories.length > 4 && (
+                        <Badge variant="outline" className="text-xs bg-muted/50">
+                          +{personaConfig[persona].categories.length - 4} more
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
               </Card>
             </div>
