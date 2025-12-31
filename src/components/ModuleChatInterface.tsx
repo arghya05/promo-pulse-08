@@ -995,69 +995,110 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                             </div>
                           )}
                           
-                          {/* KPIs */}
+                          {/* KPIs - KEY METRICS SECTION */}
                           {message.data?.kpis && Object.keys(message.data.kpis).length > 0 && (
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {Object.entries(message.data.kpis).slice(0, 6).map(([key, value]) => (
-                                <Badge key={key} variant="outline" className="text-xs">
-                                  {key}: {String(value)}
-                                </Badge>
-                              ))}
+                            <div className="mt-3 p-3 rounded-lg border border-border bg-secondary/30">
+                              <div className="flex items-center gap-2 mb-2">
+                                <BarChart3 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                                <span className="font-medium text-xs">Key Metrics</span>
+                              </div>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                {Object.entries(message.data.kpis).slice(0, 8).map(([key, value]) => {
+                                  // Format KPI values properly
+                                  let formattedValue = String(value);
+                                  const numValue = typeof value === 'number' ? value : parseFloat(String(value));
+                                  
+                                  if (!isNaN(numValue)) {
+                                    const keyLower = key.toLowerCase();
+                                    if (keyLower.includes('roi') || keyLower.includes('ratio')) {
+                                      formattedValue = `${numValue.toFixed(2)}x`;
+                                    } else if (keyLower.includes('lift') || keyLower.includes('percent') || keyLower.includes('rate') || keyLower.includes('margin') && numValue < 100) {
+                                      formattedValue = `${numValue.toFixed(1)}%`;
+                                    } else if (keyLower.includes('revenue') || keyLower.includes('margin') || keyLower.includes('spend') || keyLower.includes('sales') || keyLower.includes('cost')) {
+                                      formattedValue = numValue >= 1000000 ? `$${(numValue / 1000000).toFixed(1)}M` : numValue >= 1000 ? `$${(numValue / 1000).toFixed(0)}K` : `$${numValue.toFixed(0)}`;
+                                    } else if (numValue >= 1000000) {
+                                      formattedValue = `${(numValue / 1000000).toFixed(1)}M`;
+                                    } else if (numValue >= 1000) {
+                                      formattedValue = `${(numValue / 1000).toFixed(0)}K`;
+                                    } else {
+                                      formattedValue = numValue.toFixed(numValue % 1 === 0 ? 0 : 1);
+                                    }
+                                  }
+                                  
+                                  // Determine color based on key and value
+                                  const isPositive = String(value).includes('+') || (typeof value === 'number' && value > 0 && key.toLowerCase().includes('growth'));
+                                  const valueColor = isPositive ? 'text-emerald-600' : key.toLowerCase().includes('risk') ? 'text-amber-600' : 'text-foreground';
+                                  
+                                  return (
+                                    <div key={key} className="bg-background/50 rounded p-2 border border-border/50">
+                                      <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">{key}</div>
+                                      <div className={`text-sm font-semibold ${valueColor}`}>{formattedValue}</div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </div>
                           )}
                           
                           {/* Charts are displayed in the right panel - Drill-down buttons for data exploration */}
                           {message.data?.chartData && message.data.chartData.length > 0 && (
                             <div className="mt-3 space-y-2">
-                              <span className="text-xs text-muted-foreground font-medium">Drill into data:</span>
+                              <span className="text-xs text-muted-foreground font-medium">Quick View:</span>
                               <div className="flex flex-wrap gap-2 overflow-visible">
-                                {message.data.chartData.slice(0, 6).map((item: any, idx: number) => {
-                                  const name = item.name || item.label || item.category || `Item ${idx + 1}`;
-                                  let metricLabel = '';
-                                  let metricValue: number | undefined;
-                                  let formattedValue = '';
+                                {(() => {
+                                  // Calculate total for percentage display
+                                  const chartData = message.data.chartData.slice(0, 6);
+                                  const totalValue = chartData.reduce((sum: number, item: any) => {
+                                    const val = item.value ?? item.revenue ?? item.margin ?? item.incrementalMargin ?? 0;
+                                    return sum + (typeof val === 'number' ? val : 0);
+                                  }, 0);
                                   
-                                  if (item.incrementalMargin !== undefined && item.incrementalMargin !== 0) {
-                                    metricLabel = 'Margin';
-                                    metricValue = item.incrementalMargin;
-                                    formattedValue = metricValue >= 1000000 ? `$${(metricValue/1000000).toFixed(1)}M` : metricValue >= 1000 ? `$${(metricValue/1000).toFixed(0)}K` : `$${metricValue.toFixed(0)}`;
-                                  } else if (item.margin !== undefined && item.margin !== 0) {
-                                    metricLabel = 'Margin';
-                                    metricValue = item.margin;
-                                    formattedValue = metricValue >= 1000000 ? `$${(metricValue/1000000).toFixed(1)}M` : metricValue >= 1000 ? `$${(metricValue/1000).toFixed(0)}K` : `$${metricValue.toFixed(0)}`;
-                                  } else if (item.revenue !== undefined && item.revenue !== 0) {
-                                    metricLabel = 'Revenue';
-                                    metricValue = item.revenue;
-                                    formattedValue = metricValue >= 1000000 ? `$${(metricValue/1000000).toFixed(1)}M` : metricValue >= 1000 ? `$${(metricValue/1000).toFixed(0)}K` : `$${metricValue.toFixed(0)}`;
-                                  } else if (item.roi !== undefined) {
-                                    metricLabel = 'ROI';
-                                    metricValue = item.roi;
-                                    formattedValue = `${metricValue.toFixed(1)}x`;
-                                  } else if (item.value !== undefined) {
-                                    metricLabel = 'Value';
-                                    metricValue = item.value;
-                                    formattedValue = typeof metricValue === 'number' ? (metricValue >= 1000000 ? `$${(metricValue/1000000).toFixed(1)}M` : metricValue >= 1000 ? `$${(metricValue/1000).toFixed(0)}K` : metricValue.toFixed(1)) : String(metricValue);
-                                  }
-                                  
-                                  return (
-                                    <Button
-                                      key={idx}
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-auto py-1.5 px-3 text-xs hover:bg-primary/10 hover:border-primary"
-                                      onClick={() => handleDrillInto('item', name, 1)}
-                                    >
-                                      <TrendingUp className="h-3 w-3 mr-1.5 text-primary" />
-                                      <span className="font-medium truncate max-w-[120px]" title={name}>{name}</span>
-                                      {metricValue !== undefined && (
-                                        <Badge variant="secondary" className="ml-2 text-[10px] h-5 px-1.5">
-                                          <span className="text-muted-foreground mr-1">{metricLabel}:</span>
-                                          <span className="font-semibold">{formattedValue}</span>
-                                        </Badge>
-                                      )}
-                                    </Button>
-                                  );
-                                })}
+                                  return chartData.map((item: any, idx: number) => {
+                                    const name = item.name || item.label || item.category || `Item ${idx + 1}`;
+                                    let metricValue: number | undefined;
+                                    let formattedValue = '';
+                                    let percentValue = 0;
+                                    
+                                    // Get the primary metric value
+                                    if (item.incrementalMargin !== undefined && item.incrementalMargin !== 0) {
+                                      metricValue = item.incrementalMargin;
+                                    } else if (item.margin !== undefined && item.margin !== 0) {
+                                      metricValue = item.margin;
+                                    } else if (item.revenue !== undefined && item.revenue !== 0) {
+                                      metricValue = item.revenue;
+                                    } else if (item.roi !== undefined) {
+                                      metricValue = item.roi;
+                                    } else if (item.value !== undefined) {
+                                      metricValue = item.value;
+                                    }
+                                    
+                                    // Calculate percentage of total for display
+                                    if (metricValue !== undefined && typeof metricValue === 'number' && totalValue > 0) {
+                                      percentValue = (metricValue / totalValue) * 100;
+                                      formattedValue = `${percentValue.toFixed(1)}%`;
+                                    } else if (metricValue !== undefined) {
+                                      formattedValue = typeof metricValue === 'number' ? `${metricValue.toFixed(1)}` : String(metricValue);
+                                    }
+                                    
+                                    return (
+                                      <Button
+                                        key={idx}
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-auto py-1.5 px-3 text-xs hover:bg-primary/10 hover:border-primary"
+                                        onClick={() => handleDrillInto('item', name, 1)}
+                                      >
+                                        <TrendingUp className="h-3 w-3 mr-1.5 text-primary" />
+                                        <span className="font-medium truncate max-w-[120px]" title={name}>{name}</span>
+                                        {formattedValue && (
+                                          <Badge variant="secondary" className="ml-2 text-[10px] h-5 px-1.5">
+                                            <span className="font-semibold text-primary">{formattedValue}</span>
+                                          </Badge>
+                                        )}
+                                      </Button>
+                                    );
+                                  });
+                                })()}
                               </div>
                             </div>
                           )}
