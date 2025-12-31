@@ -751,12 +751,16 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                           // Get the most meaningful KPIs from result
                           const kpis = (result.kpis || {}) as Record<string, any>;
                           const calculatedKPIs = ((result as any).calculatedKPIs || {}) as Record<string, any>;
+                          const chartData = result.chartData || [];
                           
                           // Build dynamic KPI list based on what's available
                           const kpiList: { label: string; value: string; color?: string }[] = [];
                           
+                          // Helper to safely get first non-null value
+                          const getFirst = (...values: any[]) => values.find(v => v !== undefined && v !== null);
+                          
                           // Try to get ROI
-                          const roiVal = kpis['roi'] || kpis['promo_roi'] || calculatedKPIs['promo_roi'];
+                          const roiVal = getFirst(kpis['roi'], kpis['promo_roi'], kpis['ROI'], calculatedKPIs['promo_roi'], calculatedKPIs['roi']);
                           if (roiVal) {
                             const parsed = parseKPIValue(roiVal);
                             const displayVal = parsed.type === 'ratio' ? parsed.formatted : `${parsed.raw.toFixed(2)}x`;
@@ -768,7 +772,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                           }
                           
                           // Try to get Lift
-                          const liftVal = kpis['liftPct'] || kpis['lift_pct'] || calculatedKPIs['lift_pct'];
+                          const liftVal = getFirst(kpis['liftPct'], kpis['lift_pct'], kpis['Lift'], kpis['lift'], calculatedKPIs['lift_pct']);
                           if (liftVal) {
                             const parsed = parseKPIValue(liftVal);
                             const displayVal = parsed.type === 'percent' ? parsed.formatted : `${parsed.raw.toFixed(1)}%`;
@@ -780,39 +784,79 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                           }
                           
                           // Try to get Margin
-                          const marginVal = kpis['incrementalMargin'] || kpis['gross_margin'] || kpis['Avg Gross Margin %'] || calculatedKPIs['gross_margin'];
+                          const marginVal = getFirst(kpis['incrementalMargin'], kpis['gross_margin'], kpis['margin'], kpis['Margin'], kpis['Avg Gross Margin %'], calculatedKPIs['gross_margin']);
                           if (marginVal) {
                             const parsed = parseKPIValue(marginVal);
                             kpiList.push({ label: 'Margin', value: parsed.formatted, color: 'text-foreground' });
                           }
                           
                           // Try to get Revenue
-                          const revenueVal = kpis['revenue'] || kpis['Total Revenue'] || calculatedKPIs['revenue'];
+                          const revenueVal = getFirst(kpis['revenue'], kpis['Revenue'], kpis['Total Revenue'], kpis['totalRevenue'], calculatedKPIs['revenue']);
                           if (revenueVal) {
                             const parsed = parseKPIValue(revenueVal);
                             kpiList.push({ label: 'Revenue', value: parsed.formatted, color: 'text-foreground' });
                           }
                           
                           // Try to get Spend
-                          const spendVal = kpis['spend'] || kpis['total_discount'] || calculatedKPIs['total_discount'];
+                          const spendVal = getFirst(kpis['spend'], kpis['Spend'], kpis['total_discount'], kpis['totalSpend'], calculatedKPIs['total_discount']);
                           if (spendVal) {
                             const parsed = parseKPIValue(spendVal);
                             kpiList.push({ label: 'Spend', value: parsed.formatted, color: 'text-foreground' });
                           }
                           
                           // Try to get Units
-                          const unitsVal = kpis['units_sold'] || calculatedKPIs['units_sold'];
+                          const unitsVal = getFirst(kpis['units_sold'], kpis['units'], kpis['Units'], calculatedKPIs['units_sold']);
                           if (unitsVal) {
                             const parsed = parseKPIValue(unitsVal);
                             kpiList.push({ label: 'Units', value: parsed.formatted, color: 'text-foreground' });
                           }
                           
-                          // If no KPIs found, add fallback showing all available
-                          if (kpiList.length === 0) {
-                            Object.entries(kpis).slice(0, 4).forEach(([key, value]) => {
-                              const parsed = parseKPIValue(value);
-                              kpiList.push({ label: key.replace(/_/g, ' '), value: parsed.formatted, color: 'text-foreground' });
+                          // If no specific KPIs found, try to extract from chartData
+                          if (kpiList.length === 0 && chartData.length > 0) {
+                            // Aggregate from chart data
+                            const numericKeys = Object.keys(chartData[0]).filter(k => 
+                              k !== 'name' && typeof chartData[0][k] === 'number'
+                            );
+                            
+                            numericKeys.slice(0, 4).forEach(key => {
+                              const total = chartData.reduce((sum, item) => sum + (Number(item[key]) || 0), 0);
+                              const parsed = parseKPIValue(total);
+                              const formattedLabel = key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').trim();
+                              kpiList.push({ 
+                                label: formattedLabel.charAt(0).toUpperCase() + formattedLabel.slice(1), 
+                                value: parsed.formatted, 
+                                color: 'text-foreground' 
+                              });
                             });
+                          }
+                          
+                          // If still no KPIs, show any available kpis
+                          if (kpiList.length === 0) {
+                            Object.entries({ ...kpis, ...calculatedKPIs }).slice(0, 4).forEach(([key, value]) => {
+                              if (value !== undefined && value !== null) {
+                                const parsed = parseKPIValue(value);
+                                const formattedLabel = key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').trim();
+                                kpiList.push({ 
+                                  label: formattedLabel.charAt(0).toUpperCase() + formattedLabel.slice(1), 
+                                  value: parsed.formatted, 
+                                  color: 'text-foreground' 
+                                });
+                              }
+                            });
+                          }
+                          
+                          // If still empty, show placeholder metrics from analysis
+                          if (kpiList.length === 0) {
+                            const whatHappened = result.whatHappened || [];
+                            // Try to extract numbers from whatHappened text
+                            const text = whatHappened.join(' ');
+                            const roiMatch = text.match(/(\d+\.?\d*)x\s*ROI/i);
+                            const pctMatch = text.match(/(\d+\.?\d*)%/);
+                            const dollarMatch = text.match(/\$[\d,.]+[KMB]?/);
+                            
+                            if (roiMatch) kpiList.push({ label: 'ROI', value: `${roiMatch[1]}x`, color: 'text-primary' });
+                            if (pctMatch) kpiList.push({ label: 'Change', value: `${pctMatch[1]}%`, color: 'text-foreground' });
+                            if (dollarMatch) kpiList.push({ label: 'Value', value: dollarMatch[0], color: 'text-foreground' });
                           }
                           
                           return kpiList.slice(0, 4).map((kpi, idx) => (
