@@ -839,189 +839,136 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                         </div>
                       ) : (
                         <>
-                          {/* Drill level indicator */}
+                          {/* Drill level indicator - minimal */}
                           {message.drillContext && (
-                            <Badge variant="outline" className="mb-2 text-[10px]">
-                              Level {message.drillContext.level}: {message.drillContext.value}
+                            <Badge variant="outline" className="mb-2 text-[10px] h-5">
+                              {message.drillContext.value}
                             </Badge>
                           )}
                           
-                          {/* Main answer - Concise summary */}
-                          <div className="text-sm leading-relaxed">
-                            <FormattedInsight content={message.content} />
-                          </div>
+                          {/* HERO HEADLINE - The key insight in one powerful line */}
+                          {(() => {
+                            // Extract headline from whatHappened or create from content
+                            const headline = message.data?.whatHappened?.[0] || 
+                              (typeof message.content === 'string' ? message.content.split('.')[0] : '');
+                            return headline && (
+                              <p className="text-sm font-medium leading-snug">
+                                {headline.length > 120 ? headline.substring(0, 120) + '...' : headline}
+                              </p>
+                            );
+                          })()}
                           
-                          {/* Compact Key Metrics - Only show top 4 inline */}
+                          {/* IMPACT METRICS - 3 key numbers as visual cards */}
                           {message.data?.kpis && Object.keys(message.data.kpis).length > 0 && (
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {Object.entries(message.data.kpis).slice(0, 4).map(([key, value]) => {
-                                let formattedValue = String(value);
+                            <div className="mt-3 grid grid-cols-3 gap-2">
+                              {Object.entries(message.data.kpis).slice(0, 3).map(([key, value]) => {
                                 const numValue = typeof value === 'number' ? value : parseFloat(String(value));
+                                const keyLower = key.toLowerCase();
+                                let formattedValue = String(value);
+                                let isPositive = numValue > 0;
                                 
                                 if (!isNaN(numValue)) {
-                                  const keyLower = key.toLowerCase();
                                   if (keyLower.includes('roi') || keyLower.includes('ratio')) {
-                                    formattedValue = `${numValue.toFixed(2)}x`;
-                                  } else if (keyLower.includes('lift') || keyLower.includes('percent') || keyLower.includes('rate') || keyLower.includes('margin') && numValue < 100) {
-                                    formattedValue = `${numValue.toFixed(1)}%`;
-                                  } else if (keyLower.includes('revenue') || keyLower.includes('margin') || keyLower.includes('spend') || keyLower.includes('sales') || keyLower.includes('cost')) {
-                                    formattedValue = numValue >= 1000000 ? `$${(numValue / 1000000).toFixed(1)}M` : numValue >= 1000 ? `$${(numValue / 1000).toFixed(0)}K` : `$${numValue.toFixed(0)}`;
-                                  } else if (numValue >= 1000000) {
-                                    formattedValue = `${(numValue / 1000000).toFixed(1)}M`;
-                                  } else if (numValue >= 1000) {
-                                    formattedValue = `${(numValue / 1000).toFixed(0)}K`;
+                                    formattedValue = `${numValue.toFixed(1)}x`;
+                                    isPositive = numValue >= 1;
+                                  } else if (keyLower.includes('lift') || keyLower.includes('percent') || keyLower.includes('rate') || keyLower.includes('margin') || keyLower.includes('growth')) {
+                                    formattedValue = `${numValue > 0 ? '+' : ''}${numValue.toFixed(1)}%`;
+                                  } else if (keyLower.includes('revenue') || keyLower.includes('sales') || keyLower.includes('spend')) {
+                                    formattedValue = numValue >= 1000000 ? `$${(numValue / 1000000).toFixed(1)}M` : `$${(numValue / 1000).toFixed(0)}K`;
                                   } else {
-                                    formattedValue = numValue.toFixed(numValue % 1 === 0 ? 0 : 1);
+                                    formattedValue = numValue >= 1000 ? `${(numValue / 1000).toFixed(1)}K` : numValue.toFixed(0);
                                   }
                                 }
                                 
                                 return (
-                                  <Badge key={key} variant="secondary" className="text-xs py-1 px-2.5">
-                                    <span className="text-muted-foreground mr-1">{key}:</span>
-                                    <span className="font-semibold">{formattedValue}</span>
-                                  </Badge>
+                                  <div key={key} className="p-2 rounded-lg bg-muted/50 text-center">
+                                    <div className={`text-base font-bold ${isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                                      {formattedValue}
+                                    </div>
+                                    <div className="text-[10px] text-muted-foreground truncate">{key}</div>
+                                  </div>
                                 );
                               })}
                             </div>
                           )}
                           
-                          {/* Top recommendation highlight - Just show first one prominently */}
+                          {/* ACTION BUTTON - One clear next step */}
                           {message.data?.whatToDo && message.data.whatToDo.length > 0 && (
-                            <div className="mt-3 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                              <div className="flex items-start gap-2">
-                                <Target className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                                <div className="flex-1 min-w-0">
-                                  <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">Top Action: </span>
-                                  <span className="text-xs text-foreground">{message.data.whatToDo[0]}</span>
-                                </div>
-                              </div>
+                            <div className="mt-3 flex items-center gap-2 p-2 rounded-lg bg-primary/5 border border-primary/10">
+                              <Target className="h-4 w-4 text-primary flex-shrink-0" />
+                              <span className="text-xs font-medium text-foreground line-clamp-1 flex-1">
+                                {message.data.whatToDo[0].length > 80 ? message.data.whatToDo[0].substring(0, 80) + '...' : message.data.whatToDo[0]}
+                              </span>
                             </div>
                           )}
                           
-                          {/* Expandable Details Section */}
-                          {(message.data?.why || message.data?.causalDrivers || message.data?.mlInsights || message.data?.predictions) && (
+                          {/* QUICK INSIGHTS - Expandable for details */}
+                          {(message.data?.causalDrivers || message.data?.predictions || message.data?.why) && (
                             <Collapsible className="mt-3">
                               <CollapsibleTrigger asChild>
-                                <Button variant="ghost" size="sm" className="w-full justify-between h-8 text-xs text-muted-foreground hover:text-foreground">
-                                  <span className="flex items-center gap-2">
-                                    <Layers className="h-3.5 w-3.5" />
-                                    View detailed analysis
+                                <Button variant="ghost" size="sm" className="w-full justify-between h-7 text-[11px] text-muted-foreground hover:text-foreground px-2">
+                                  <span className="flex items-center gap-1.5">
+                                    <Layers className="h-3 w-3" />
+                                    See insights
                                   </span>
-                                  <ChevronRight className="h-3.5 w-3.5 transition-transform data-[state=open]:rotate-90" />
+                                  <ChevronRight className="h-3 w-3 transition-transform duration-200 group-data-[state=open]:rotate-90" />
                                 </Button>
                               </CollapsibleTrigger>
                               <CollapsibleContent className="mt-2 space-y-2">
-                                {/* Why section */}
-                                {message.data?.why && message.data.why.length > 0 && (
-                                  <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                                    <div className="flex items-center gap-2 mb-1.5">
-                                      <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
-                                      <span className="font-medium text-xs text-amber-700 dark:text-amber-400">Why It Happened</span>
-                                    </div>
-                                    <ul className="space-y-1 pl-5">
-                                      {message.data.why.slice(0, 2).map((reason: string, i: number) => (
-                                        <li key={i} className="text-xs text-muted-foreground list-disc">{reason}</li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
-                                
-                                {/* Causal Drivers - Compact */}
+                                {/* Key drivers as compact chips */}
                                 {message.data?.causalDrivers && message.data.causalDrivers.length > 0 && (
-                                  <div className="p-2.5 rounded-lg bg-orange-500/10 border border-orange-500/20">
-                                    <div className="flex items-center gap-2 mb-1.5">
-                                      <Zap className="h-3.5 w-3.5 text-orange-500" />
-                                      <span className="font-medium text-xs text-orange-700 dark:text-orange-400">Key Drivers</span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {message.data.causalDrivers.slice(0, 3).map((driver: any, i: number) => (
-                                        <Badge key={i} variant="outline" className="text-[10px] py-0.5">
-                                          {driver.direction === 'positive' ? (
-                                            <TrendingUp className="h-2.5 w-2.5 text-emerald-500 mr-1" />
-                                          ) : (
-                                            <TrendingDown className="h-2.5 w-2.5 text-red-500 mr-1" />
-                                          )}
-                                          {driver.driver}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                {/* ML Insights - Compact */}
-                                {message.data?.mlInsights && (
-                                  <div className="p-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <Brain className="h-3.5 w-3.5 text-purple-500" />
-                                      <span className="font-medium text-xs text-purple-700 dark:text-purple-400">ML Insight</span>
-                                      <Badge variant="secondary" className="text-[9px] h-4 px-1.5">
-                                        {((message.data.mlInsights.confidence || 0) * 100).toFixed(0)}%
+                                  <div className="flex flex-wrap gap-1">
+                                    {message.data.causalDrivers.slice(0, 3).map((driver: any, i: number) => (
+                                      <Badge key={i} variant="outline" className="text-[10px] py-0.5 gap-1">
+                                        {driver.direction === 'positive' ? (
+                                          <TrendingUp className="h-2.5 w-2.5 text-emerald-500" />
+                                        ) : (
+                                          <TrendingDown className="h-2.5 w-2.5 text-red-500" />
+                                        )}
+                                        {driver.driver}
                                       </Badge>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground line-clamp-2">
-                                      {message.data.mlInsights.patternDetected}
-                                    </p>
+                                    ))}
                                   </div>
                                 )}
                                 
-                                {/* Predictions - Compact */}
+                                {/* Prediction as single line */}
                                 {message.data?.predictions && (
-                                  <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
-                                      <span className="font-medium text-xs text-blue-700 dark:text-blue-400">Forecast</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-xs">
-                                      <Badge variant="outline" className={`text-[10px] ${
-                                        message.data.predictions.trend === 'increasing' ? 'border-emerald-500 text-emerald-600' :
-                                        message.data.predictions.trend === 'decreasing' ? 'border-red-500 text-red-600' : 'border-amber-500 text-amber-600'
-                                      }`}>
-                                        {message.data.predictions.trend}
-                                      </Badge>
-                                      <span className="text-muted-foreground">
-                                        Risk: <span className={`font-medium ${
-                                          message.data.predictions.riskLevel === 'low' ? 'text-emerald-500' :
-                                          message.data.predictions.riskLevel === 'high' ? 'text-red-500' : 'text-amber-500'
-                                        }`}>{message.data.predictions.riskLevel}</span>
-                                      </span>
-                                    </div>
+                                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                                    <TrendingUp className="h-3 w-3 text-blue-500" />
+                                    <span>Trend: <span className={`font-medium ${
+                                      message.data.predictions.trend === 'increasing' ? 'text-emerald-500' : 
+                                      message.data.predictions.trend === 'decreasing' ? 'text-red-500' : 'text-amber-500'
+                                    }`}>{message.data.predictions.trend}</span></span>
                                   </div>
                                 )}
                                 
-                                {/* Additional recommendations */}
-                                {message.data?.whatToDo && message.data.whatToDo.length > 1 && (
-                                  <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                                    <div className="flex items-center gap-2 mb-1.5">
-                                      <Target className="h-3.5 w-3.5 text-emerald-500" />
-                                      <span className="font-medium text-xs text-emerald-700 dark:text-emerald-400">More Actions</span>
-                                    </div>
-                                    <ul className="space-y-1 pl-5">
-                                      {message.data.whatToDo.slice(1, 3).map((action: string, i: number) => (
-                                        <li key={i} className="text-xs text-muted-foreground list-disc">{action}</li>
-                                      ))}
-                                    </ul>
+                                {/* ML confidence if available */}
+                                {message.data?.mlInsights && (
+                                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                                    <Brain className="h-3 w-3 text-purple-500" />
+                                    <span>Confidence: <span className="font-medium text-purple-500">{((message.data.mlInsights.confidence || 0) * 100).toFixed(0)}%</span></span>
                                   </div>
                                 )}
                               </CollapsibleContent>
                             </Collapsible>
                           )}
                           
-                          {/* Quick View Chart Data - Compact pills */}
+                          {/* DRILL-DOWN - Clean horizontal scroll */}
                           {message.data?.chartData && message.data.chartData.length > 0 && (
-                            <div className="mt-3 pt-2 border-t border-border/50">
-                              <div className="flex flex-wrap gap-1.5">
-                                {message.data.chartData.slice(0, 5).map((item: any, idx: number) => {
+                            <div className="mt-3 -mx-1">
+                              <div className="flex gap-1 overflow-x-auto pb-1 px-1 scrollbar-thin">
+                                {message.data.chartData.slice(0, 4).map((item: any, idx: number) => {
                                   const name = item.name || item.label || item.category || `Item ${idx + 1}`;
                                   return (
                                     <Button
                                       key={idx}
-                                      variant="ghost"
+                                      variant="outline"
                                       size="sm"
-                                      className="h-7 px-2.5 text-[11px] hover:bg-primary/10 gap-1.5"
+                                      className="h-6 px-2 text-[10px] flex-shrink-0 gap-1"
                                       onClick={() => handleDrillInto('item', name, 1)}
                                     >
-                                      <span className="truncate max-w-[100px]" title={name}>{name}</span>
-                                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                                      {name}
+                                      <ChevronRight className="h-2.5 w-2.5" />
                                     </Button>
                                   );
                                 })}
@@ -1029,24 +976,20 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                             </div>
                           )}
                           
-                          {/* Follow-up Questions - Clean list */}
+                          {/* FOLLOW-UP - Single prominent question */}
                           {(message.data?.drillDownQuestions || message.data?.nextQuestions) && (
-                            <div className="mt-3 pt-2 border-t border-border/50 space-y-1.5">
-                              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Explore further</span>
-                              {(message.data.drillDownQuestions || message.data.nextQuestions).slice(0, 2).map((q: string, i: number) => (
-                                <Button
-                                  key={i}
-                                  variant="ghost"
-                                  size="sm"
-                                  className="w-full justify-start text-left h-auto py-2 px-2 text-xs hover:bg-primary/5 rounded-md"
-                                  onClick={() => handleSend(q)}
-                                  disabled={isLoading}
-                                >
-                                  <ArrowRight className="h-3 w-3 mr-2 text-primary flex-shrink-0" />
-                                  <span className="line-clamp-1">{q}</span>
-                                </Button>
-                              ))}
-                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="mt-3 w-full justify-start text-left h-auto py-2 px-2 text-[11px] hover:bg-muted/50 rounded-lg border border-dashed border-border/50"
+                              onClick={() => handleSend((message.data.drillDownQuestions || message.data.nextQuestions)[0])}
+                              disabled={isLoading}
+                            >
+                              <ArrowRight className="h-3 w-3 mr-2 text-primary flex-shrink-0" />
+                              <span className="line-clamp-1 text-muted-foreground">
+                                {(message.data.drillDownQuestions || message.data.nextQuestions)[0]}
+                              </span>
+                            </Button>
                           )}
                         </>
                       )}
