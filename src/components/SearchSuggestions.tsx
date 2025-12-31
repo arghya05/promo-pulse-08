@@ -9,6 +9,7 @@ interface SearchSuggestionsProps {
   isVisible: boolean;
   persona: string;
   moduleId?: string;
+  position?: 'bottom' | 'top';
 }
 
 // Persona-specific category suggestions
@@ -18,7 +19,7 @@ const personaCategorySuggestions = {
   non_consumables: ["for Personal Care", "for Home Care", "for Soap products", "for Cleaning products"],
 };
 
-export default function SearchSuggestions({ query, onSelect, isVisible, persona, moduleId = 'promotion' }: SearchSuggestionsProps) {
+export default function SearchSuggestions({ query, onSelect, isVisible, persona, moduleId = 'promotion', position = 'bottom' }: SearchSuggestionsProps) {
   const suggestions = useMemo(() => {
     if (!query || query.length < 2) return [];
 
@@ -93,8 +94,12 @@ export default function SearchSuggestions({ query, onSelect, isVisible, persona,
 
   if (!isVisible || suggestions.length === 0) return null;
 
+  const positionClass = position === 'top' 
+    ? 'bottom-full mb-1' 
+    : 'top-full mt-1';
+
   return (
-    <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+    <div className={cn("absolute left-0 right-0 bg-popover border border-border rounded-lg shadow-lg z-50 overflow-hidden", positionClass)}>
       <div className="p-2 border-b border-border/50 bg-secondary/30">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Sparkles className="h-3 w-3 text-primary" />
