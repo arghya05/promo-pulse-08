@@ -881,6 +881,27 @@ function detectAmbiguousTerms(question: string, moduleId: string): AmbiguityChec
     return { needsClarification: false };
   }
   
+  // MODULE-SPECIFIC CONTEXT OVERRIDE: Skip clarification when question context makes intent obvious
+  // For pricing module: "optimal price", "price for", "pricing" clearly means products
+  const pricingProductContext = /\b(optimal\s+price|price\s+for|pricing|margin|elasticity|price\s+point|competitive\s+price)\b/i.test(q);
+  // For demand module: "forecast", "stockout", "replenishment" clearly means products
+  const demandProductContext = /\b(forecast|stockout|replenish|inventory|reorder|demand)\b/i.test(q);
+  // For space module: "shelf", "planogram", "placement" clearly means products
+  const spaceProductContext = /\b(shelf|planogram|placement|facing|display)\b/i.test(q);
+  // For supply chain: "supplier", "delivery", "lead time" context is about suppliers
+  const supplyChainContext = /\b(supplier|delivery|lead\s+time|logistics|shipping|purchase\s+order)\b/i.test(q);
+  
+  // If module context makes entity type obvious, skip entity ambiguity detection
+  const hasObviousContext = (moduleId === 'pricing' && pricingProductContext) ||
+                            (moduleId === 'demand' && demandProductContext) ||
+                            (moduleId === 'space' && spaceProductContext) ||
+                            (moduleId === 'supply-chain' && supplyChainContext) ||
+                            (moduleId === 'assortment'); // Assortment is always about products
+  
+  if (hasObviousContext) {
+    console.log(`[${moduleId}] Skipping entity clarification - module context makes intent clear`);
+  }
+  
   // Entity-ambiguous terms: ALWAYS ask what type of entity regardless of metric
   // (e.g., "top seller by revenue" still needs clarification: product, vendor, or store?)
   // Using regex patterns to handle common typos
@@ -965,9 +986,10 @@ function detectAmbiguousTerms(question: string, moduleId: string): AmbiguityChec
   
   for (const config of entityAmbiguousTerms) {
     const patternMatches = config.pattern.test(q);
-    console.log(`Checking term "${config.term}": pattern=${config.pattern}, matches=${patternMatches}, noEntityContext=${!hasEntityContext}`);
+    console.log(`Checking term "${config.term}": pattern=${config.pattern}, matches=${patternMatches}, noEntityContext=${!hasEntityContext}, hasObviousContext=${hasObviousContext}`);
     
-    if (patternMatches && !hasEntityContext) {
+    // Skip entity clarification if module context makes intent obvious OR if explicit entity context exists
+    if (patternMatches && !hasEntityContext && !hasObviousContext) {
       console.log(`ENTITY AMBIGUITY DETECTED: "${config.term}" in question`);
       return {
         needsClarification: true,
