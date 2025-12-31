@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Bot, User, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ChatMessageData, ProcessedChatResponse } from './types';
@@ -27,6 +27,7 @@ export const ExecutiveChatMessage: React.FC<ExecutiveChatMessageProps> = ({
   className
 }) => {
   const isUser = message.role === 'user';
+  const [showDetails, setShowDetails] = useState(false);
 
   // Process the response if it's an assistant message with data
   const processedResponse: ProcessedChatResponse | null = React.useMemo(() => {
@@ -56,76 +57,78 @@ export const ExecutiveChatMessage: React.FC<ExecutiveChatMessageProps> = ({
       {/* Avatar for assistant */}
       {!isUser && (
         <div className={cn(
-          "h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 mr-3",
+          "h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 mr-2",
           message.isError
             ? "bg-destructive/20 text-destructive"
             : "bg-secondary text-secondary-foreground"
         )}>
-          {moduleIcon || <Bot className="h-4 w-4" />}
+          {moduleIcon || <Bot className="h-3.5 w-3.5" />}
         </div>
       )}
 
       {/* Message Content */}
       <div className={cn(
-        "max-w-[85%] min-w-0",
-        isUser && "max-w-[70%]"
+        "max-w-[90%] min-w-0",
+        isUser && "max-w-[75%]"
       )}>
         {isUser ? (
           // User message bubble
-          <div className="bg-blue-500 text-white rounded-2xl px-4 py-2.5">
+          <div className="bg-blue-500 text-white rounded-2xl px-3 py-2">
             <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
               {message.content}
             </p>
           </div>
         ) : message.isLoading ? (
           // Loading state
-          <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-3 flex items-center gap-3">
-            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            <span className="text-sm text-muted-foreground">Analyzing...</span>
+          <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl px-3 py-2.5 flex items-center gap-2">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+            <span className="text-xs text-muted-foreground">Analyzing...</span>
           </div>
         ) : message.isError ? (
           // Error state
-          <div className="bg-destructive/10 border border-destructive/30 rounded-2xl px-4 py-3">
-            <p className="text-sm text-destructive whitespace-pre-wrap break-words">
+          <div className="bg-destructive/10 border border-destructive/30 rounded-2xl px-3 py-2.5">
+            <p className="text-xs text-destructive whitespace-pre-wrap break-words">
               {message.content}
             </p>
           </div>
         ) : message.clarificationOptions ? (
           // Clarification options
-          <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-3 space-y-3">
-            <p className="text-sm font-medium">{message.content}</p>
-            <div className="flex flex-wrap gap-2">
+          <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl px-3 py-2.5 space-y-2">
+            <p className="text-xs font-medium">{message.content}</p>
+            <div className="flex flex-wrap gap-1.5">
               {message.clarificationOptions.map((option, idx) => (
                 <Button
                   key={idx}
                   variant="outline"
                   size="sm"
-                  className="h-auto py-2 px-3 text-left hover:bg-primary/10 hover:border-primary"
+                  className="h-auto py-1.5 px-2 text-left hover:bg-primary/10 hover:border-primary"
                   onClick={() => onClarificationSelect?.(option.refinedQuestion)}
                   disabled={isLoading}
                 >
                   <div className="flex flex-col items-start">
-                    <span className="font-medium text-sm">{option.label}</span>
-                    <span className="text-xs text-muted-foreground">{option.description}</span>
+                    <span className="font-medium text-xs">{option.label}</span>
+                    <span className="text-[10px] text-muted-foreground">{option.description}</span>
                   </div>
                 </Button>
               ))}
             </div>
           </div>
         ) : processedResponse ? (
-          // Executive Brief + Details Accordion
-          <div className="space-y-2">
+          // Executive Brief + Details Accordion (collapsed by default)
+          <div className="space-y-1.5">
             <ExecutiveBriefCard
               brief={processedResponse.brief}
               onNextQuestion={onNextQuestion}
               isLoading={isLoading}
+              showDetails={showDetails}
+              onToggleDetails={() => setShowDetails(!showDetails)}
             />
-            <DetailsAccordion details={processedResponse.details} />
+            {showDetails && <DetailsAccordion details={processedResponse.details} />}
           </div>
         ) : (
           // Fallback plain text
-          <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-3">
-            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+          <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl px-3 py-2.5">
+            <p className="text-xs leading-relaxed whitespace-pre-wrap break-words">
               {message.content}
             </p>
           </div>
@@ -134,8 +137,8 @@ export const ExecutiveChatMessage: React.FC<ExecutiveChatMessageProps> = ({
 
       {/* Avatar for user */}
       {isUser && (
-        <div className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ml-3 bg-primary/10">
-          <User className="h-4 w-4 text-primary" />
+        <div className="h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 ml-2 bg-primary/10">
+          <User className="h-3.5 w-3.5 text-primary" />
         </div>
       )}
     </div>

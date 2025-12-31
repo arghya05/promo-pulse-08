@@ -1,7 +1,18 @@
 // Universal post-processor for AI responses
 // Transforms raw AI output into standardized executive brief format
+// STRICT LIMITS: No truncation with "..." - compress to word limits instead
 
 import { ProcessedChatResponse, ExecutiveBrief, DetailSection } from './types';
+
+// STRICT WORD LIMITS
+const LIMITS = {
+  title: 7,           // max 7 words
+  insightWords: 12,   // max 12 words per insight
+  actionWords: 12,    // max 12 words per action
+  insights: 3,        // exactly 3 insights
+  actions: 2,         // exactly 2 actions
+  nextQuestions: 2,   // max 2 next question chips
+};
 
 // Extract metrics from text (%, $, numbers)
 const extractMetrics = (text: string): string[] => {
@@ -9,28 +20,30 @@ const extractMetrics = (text: string): string[] => {
   return text.match(metricPattern) || [];
 };
 
-// Truncate text to max length with ellipsis
-const truncate = (text: string, maxLength: number): string => {
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength - 3) + '...';
+// Compress text to max word count (NO truncation with "...")
+const compressToWords = (text: string, maxWords: number): string => {
+  if (!text) return '';
+  const words = text.trim().split(/\s+/);
+  if (words.length <= maxWords) return text.trim();
+  
+  // Take first maxWords, ensure it reads naturally
+  return words.slice(0, maxWords).join(' ');
 };
 
-// Extract a short title from the response
+// Extract a short title from the response (max 7 words)
 const extractTitle = (data: any, question: string): string => {
   // Try to get title from whatHappened first line
   if (data?.whatHappened?.[0]) {
     const firstLine = data.whatHappened[0];
-    // Extract first sentence or key phrase
-    const match = firstLine.match(/^([^.!?]{10,60})/);
+    // Extract key phrase and compress to 7 words
+    const match = firstLine.match(/^([^.!?]+)/);
     if (match) {
-      const words = match[1].split(' ').slice(0, 8);
-      return words.join(' ');
+      return compressToWords(match[1], LIMITS.title);
     }
   }
   
-  // Fall back to question-based title
-  const questionWords = question.split(' ').slice(0, 6);
-  return questionWords.join(' ') + ' Analysis';
+  // Fall back to question-based title (compressed)
+  return compressToWords(question, LIMITS.title - 1) + ' Analysis';
 };
 
 // Extract the key metric from the response
@@ -117,44 +130,52 @@ const formatCurrency = (value: number): string => {
   return `$${value.toFixed(0)}`;
 };
 
-// Extract top insights (max 3, 120 chars each)
+// Extract top insights (exactly 3, max 12 words each - NO truncation with "...")
 const extractInsights = (data: any): ExecutiveBrief['insights'] => {
   const insights: ExecutiveBrief['insights'] = [];
   
   // From whatHappened
   if (data?.whatHappened) {
     const items = Array.isArray(data.whatHappened) ? data.whatHappened : [data.whatHappened];
-    items.slice(0, 3).forEach((item: string, idx: number) => {
+    items.slice(0, LIMITS.insights).forEach((item: string, idx: number) => {
       insights.push({
-        text: truncate(item, 120),
+        text: compressToWords(item, LIMITS.insightWords),
         isTopInsight: idx === 0
       });
     });
   }
   
   // If not enough, try to extract from content
-  if (insights.length < 3 && data?.content) {
-    const sentences = data.content.split(/[.!?]/).filter((s: string) => s.trim().length > 20);
-    sentences.slice(0, 3 - insights.length).forEach((sentence: string) => {
+  if (insights.length < LIMITS.insights && data?.content) {
+    const sentences = data.content.split(/[.!?]/).filter((s: string) => s.trim().length > 10);
+    sentences.slice(0, LIMITS.insights - insights.length).forEach((sentence: string) => {
       insights.push({
-        text: truncate(sentence.trim(), 120),
+        text: compressToWords(sentence.trim(), LIMITS.insightWords),
         isTopInsight: insights.length === 0
       });
     });
   }
   
-  return insights.slice(0, 3);
+  // Pad with placeholders if needed to ensure exactly 3
+  while (insights.length < LIMITS.insights) {
+    insights.push({
+      text: 'Additional analysis available in details',
+      isTopInsight: false
+    });
+  }
+  
+  return insights.slice(0, LIMITS.insights);
 };
 
-// Extract top actions (max 2, 120 chars each)
+// Extract top actions (exactly 2, max 12 words each - NO truncation)
 const extractActions = (data: any): ExecutiveBrief['actions'] => {
   const actions: ExecutiveBrief['actions'] = [];
   
   if (data?.whatToDo) {
     const items = Array.isArray(data.whatToDo) ? data.whatToDo : [data.whatToDo];
-    items.slice(0, 2).forEach((item: string) => {
+    items.slice(0, LIMITS.actions).forEach((item: string) => {
       actions.push({
-        text: truncate(item, 120)
+        text: compressToWords(item, LIMITS.actionWords)
       });
     });
   }
@@ -163,21 +184,28 @@ const extractActions = (data: any): ExecutiveBrief['actions'] => {
   if (actions.length === 0 && data?.chartData?.[0]) {
     const top = data.chartData[0];
     actions.push({
-      text: `Focus on ${top.name || 'top performer'} for maximum impact`
+      text: compressToWords(`Focus on ${top.name || 'top performer'} for maximum impact`, LIMITS.actionWords)
     });
   }
   
-  return actions.slice(0, 2);
+  // Pad with placeholders if needed to ensure exactly 2
+  while (actions.length < LIMITS.actions) {
+    actions.push({
+      text: 'Review detailed recommendations below'
+    });
+  }
+  
+  return actions.slice(0, LIMITS.actions);
 };
 
-// Determine confidence level
+// Determine confidence level (returns just 1 word: Low/Med/High)
 const determineConfidence = (data: any): ExecutiveBrief['confidence'] => {
   // Check for explicit confidence
   if (data?.predictions?.confidence) {
     const conf = data.predictions.confidence;
-    if (conf >= 0.8) return { level: 'High', reason: `${(conf * 100).toFixed(0)}% model confidence` };
-    if (conf >= 0.5) return { level: 'Medium', reason: `${(conf * 100).toFixed(0)}% model confidence` };
-    return { level: 'Low', reason: `${(conf * 100).toFixed(0)}% model confidence` };
+    if (conf >= 0.8) return { level: 'High', reason: '' };
+    if (conf >= 0.5) return { level: 'Medium', reason: '' };
+    return { level: 'Low', reason: '' };
   }
   
   // Check data completeness
@@ -187,9 +215,9 @@ const determineConfidence = (data: any): ExecutiveBrief['confidence'] => {
   
   const score = [hasKpis, hasChartData, hasCausalDrivers].filter(Boolean).length;
   
-  if (score >= 3) return { level: 'High', reason: 'Rich data with multiple sources' };
-  if (score >= 2) return { level: 'Medium', reason: 'Good data coverage' };
-  return { level: 'Low', reason: 'Limited data available' };
+  if (score >= 3) return { level: 'High', reason: '' };
+  if (score >= 2) return { level: 'Medium', reason: '' };
+  return { level: 'Low', reason: '' };
 };
 
 // Safely convert to array
@@ -199,10 +227,10 @@ const toArray = (val: any): any[] => {
   return [val];
 };
 
-// Extract next questions
+// Extract next questions (max 2)
 const extractNextQuestions = (data: any): string[] => {
   if (data?.nextQuestions) {
-    return toArray(data.nextQuestions).slice(0, 3);
+    return toArray(data.nextQuestions).slice(0, LIMITS.nextQuestions);
   }
   return [];
 };
