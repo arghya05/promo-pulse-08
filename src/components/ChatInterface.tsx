@@ -5,18 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import UniversalScrollableText from "@/components/UniversalScrollableText";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Separator } from "@/components/ui/separator";
 import VoiceRecorder from "./VoiceRecorder";
 import KPISelector from "./KPISelector";
 import DrillBreadcrumbs from "./DrillBreadcrumbs";
 import ConversationContextPanel from "./ConversationContextPanel";
 import CrossModuleNavigator from "./CrossModuleNavigator";
-import FormattedInsight from "./FormattedInsight";
 import { useToast } from "@/hooks/use-toast";
 import type { AnalyticsResult } from "@/lib/analytics";
 import { getSuggestedKPIs, KPI } from "@/lib/data/kpi-library";
 import { useGlobalSession, detectTargetModule } from "@/contexts/GlobalSessionContext";
+import { 
+  ExecutiveChatMessage, 
+  processResponse,
+  ChatMessageData 
+} from "@/components/chat";
 
 const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
@@ -1426,351 +1430,76 @@ export default function ChatInterface({
       <div className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-hidden">
         <ScrollArea className="flex-1 min-h-0 w-full max-w-full" ref={scrollRef}>
           <div className="space-y-4 px-6 py-4 w-full">
-            {messages.map((message) => (
-              <div 
-                key={message.id} 
-                className={`flex w-full ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                {/* Avatar for assistant */}
-                {message.type !== 'user' && (
-                  <div className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 mr-3 ${
-                    message.isError 
-                      ? 'bg-destructive/20 text-destructive'
-                      : 'bg-secondary text-secondary-foreground'
-                  }`}>
-                    <Bot className="h-4 w-4" />
-                  </div>
-                )}
+            {messages.map((message) => {
+              // Convert legacy message format to ChatMessageData for ExecutiveChatMessage
+              const chatMessage: ChatMessageData = {
+                id: message.id,
+                role: message.type === 'user' ? 'user' : 'assistant',
+                content: message.content,
+                timestamp: message.timestamp,
+                isLoading: false,
+                isError: message.isError,
+                rawData: message.analyticsResult,
+                clarificationOptions: message.clarificationOptions?.map((opt, idx) => ({
+                  label: opt,
+                  description: '',
+                  refinedQuestion: message.actionButtons?.[idx]?.question || opt
+                }))
+              };
 
-                {/* Message Content */}
-                <div 
-                  className={`max-w-[70%] rounded-2xl px-3 py-2 min-w-0 ${
-                    message.type === 'user'
-                      ? 'bg-blue-500 text-white'
-                      : message.isError
-                      ? 'bg-destructive/10 text-foreground border border-destructive/30'
-                      : 'bg-slate-100 dark:bg-slate-800 text-foreground'
-                  }`}
-                >
-                  {/* User messages: wrap text, no scrollbar */}
-                  {message.type === 'user' ? (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
-                  ) : message.isError ? (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
-                  ) : (
-                    <UniversalScrollableText>
-                      <FormattedInsight content={message.content} />
-                    </UniversalScrollableText>
-                  )}
-
-                {/* Why section - Horizontal scroll */}
-                {message.analyticsResult?.why && message.analyticsResult.why.length > 0 && (
-                  <div className="mt-3 p-2 bg-amber-500/10 rounded border border-amber-500/20 w-full">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
-                      <span className="font-medium text-xs">Why It Happened</span>
+              // For greeting/guide messages, show simple format
+              if (message.type === 'guide' || message.id === 'greeting') {
+                return (
+                  <div key={message.id} className="flex w-full justify-start">
+                    <div className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 mr-3 bg-secondary text-secondary-foreground">
+                      <Bot className="h-4 w-4" />
                     </div>
-                    <UniversalScrollableText>
-                      <ul className="space-y-1">
-                        {message.analyticsResult.why.map((reason: string, i: number) => (
-                          <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
-                            <span className="text-amber-500 mt-0.5">•</span>
-                            <span>{reason}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </UniversalScrollableText>
-                  </div>
-                )}
-                
-                {/* What To Do (Recommendations) - Horizontal scroll */}
-                {message.analyticsResult?.whatToDo && message.analyticsResult.whatToDo.length > 0 && (
-                  <div className="mt-3 p-2 bg-emerald-500/10 rounded border border-emerald-500/20 w-full">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Target className="h-3.5 w-3.5 text-emerald-500" />
-                      <span className="font-medium text-xs">Recommendations</span>
-                    </div>
-                    <UniversalScrollableText>
-                      <ul className="space-y-1">
-                        {message.analyticsResult.whatToDo.map((action: string, i: number) => (
-                          <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
-                            <span className="text-emerald-500 mt-0.5">✓</span>
-                            <span>{action}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </UniversalScrollableText>
-                  </div>
-                )}
-                
-
-                {/* Clarification Options */}
-                {message.needsClarification && message.clarificationOptions && (
-                  <div className="mt-2 space-y-2">
-                    <p className="text-[10px] text-muted-foreground">Choose an option:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {message.clarificationOptions.map((option, idx) => {
-                        // If actionButtons exist, use the refined question from there
-                        const refinedQuestion = message.actionButtons?.[idx]?.question;
-                        return (
-                          <Button
-                            key={idx}
-                            variant="outline"
-                            size="sm"
-                            className="text-xs h-8 px-3 border-primary/30 hover:bg-primary/10 hover:border-primary"
-                            onClick={() => handleSuggestionClick(refinedQuestion || option)}
-                            disabled={isLoading}
-                          >
-                            {option}
-                          </Button>
-                        );
-                      })}
+                    <div className="max-w-[85%] bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-3">
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+                      {message.guideTip && (
+                        <div className="flex items-start gap-2 mt-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg">
+                          <Zap className="h-3.5 w-3.5 text-primary flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-muted-foreground">{message.guideTip}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
-                )}
+                );
+              }
 
-                {/* Guide Tip */}
-                {message.guideTip && (
-                  <div className="flex items-start gap-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg max-w-full">
-                    <Zap className="h-3.5 w-3.5 text-primary flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-muted-foreground">{message.guideTip}</p>
-                  </div>
-                )}
-
-                {/* Feedback Buttons - Feature #5 */}
-                {message.analyticsResult && message.type === 'assistant' && (
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] text-muted-foreground">Was this helpful?</span>
-                    <Button
-                      variant={message.feedback === 'positive' ? 'default' : 'ghost'}
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={() => handleFeedback(message.id, 'positive')}
-                    >
-                      <ThumbsUp className={`h-3 w-3 ${message.feedback === 'positive' ? 'text-primary-foreground' : ''}`} />
-                    </Button>
-                    <Button
-                      variant={message.feedback === 'negative' ? 'destructive' : 'ghost'}
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={() => handleFeedback(message.id, 'negative')}
-                    >
-                      <ThumbsDown className={`h-3 w-3 ${message.feedback === 'negative' ? 'text-destructive-foreground' : ''}`} />
-                    </Button>
-                  </div>
-                )}
-
-                {/* KPI Exploration Probing - Collapsible */}
-                {message.kpiExploration && message.kpiExploration.length > 0 && message.analyticsResult && (
-                  <CollapsibleKPISection
-                    kpis={message.kpiExploration}
-                    originalQuestion={message.originalQuestion}
-                    onKPIClick={(kpiLabel) => handleSuggestionClick(`${message.originalQuestion || 'Show analysis'} focusing on ${kpiLabel}`)}
+              return (
+                <div key={message.id} className="space-y-2">
+                  <ExecutiveChatMessage
+                    message={chatMessage}
+                    onNextQuestion={(q) => handleSuggestionClick(q)}
+                    onClarificationSelect={(q) => handleSuggestionClick(q)}
                     isLoading={isLoading}
-                    isOpen={!getCollapsedState(message.id).kpi}
-                    onToggle={() => toggleSection(message.id, 'kpi')}
                   />
-                )}
-
-                {/* Action Buttons */}
-                {message.actionButtons && message.actionButtons.length > 0 && (
-                  <div className="flex gap-2 mt-1">
-                    {message.actionButtons.map((btn, idx) => (
-                      <Button
-                        key={idx}
-                        variant="default"
-                        size="sm"
-                        className="text-xs h-8 gap-1.5"
-                        onClick={() => handleSuggestionClick(btn.question)}
-                        disabled={isLoading}
-                      >
-                        <ChevronRight className="h-3 w-3" />
-                        {btn.label}
-                      </Button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Charts are displayed in the right panel - Drill-down buttons for data exploration */}
-                {message.analyticsResult?.chartData && message.analyticsResult.chartData.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    <span className="text-xs text-muted-foreground font-medium">Drill into data:</span>
-                    <div className="flex flex-wrap gap-2">
-                      {message.analyticsResult.chartData.slice(0, 6).map((item: any, idx: number) => {
-                        const name = item.name || item.label || item.category || `Item ${idx + 1}`;
-                        const value = item.value || item.revenue || item.roi || item.margin;
-                        return (
-                          <Button
-                            key={idx}
-                            variant="outline"
-                            size="sm"
-                            className="h-auto py-1.5 px-3 text-xs hover:bg-primary/10 hover:border-primary"
-                            onClick={() => handleDrillInto(name)}
-                          >
-                            <TrendingUp className="h-3 w-3 mr-1.5 text-primary" />
-                            <span className="font-medium">{name}</span>
-                            {value !== undefined && (
-                              <Badge variant="secondary" className="ml-2 text-[10px] h-4">
-                                {typeof value === 'number' ? (value > 1000 ? `$${(value/1000).toFixed(1)}K` : value.toFixed(1)) : value}
-                              </Badge>
-                            )}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Inline Refinement Input - Feature #3 */}
-                {message.analyticsResult && (
-                  <div className="mt-2">
-                    {showRefinement === message.id ? (
-                      <div className="flex gap-2 items-center">
-                        <Input
-                          value={refinementInput}
-                          onChange={(e) => setRefinementInput(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleRefinement(message.id)}
-                          placeholder="e.g., 'focus on Dairy only' or 'for Q1'"
-                          className="text-xs h-8 w-48"
-                          autoFocus
-                        />
-                        <Button
-                          size="sm"
-                          className="h-8"
-                          onClick={() => handleRefinement(message.id)}
-                          disabled={!refinementInput.trim() || isLoading}
-                        >
-                          <RefreshCw className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8"
-                          onClick={() => setShowRefinement(null)}
-                        >
-                          ✕
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-[10px] h-6 text-muted-foreground hover:text-primary"
-                        onClick={() => setShowRefinement(message.id)}
-                      >
-                        <Filter className="h-3 w-3 mr-1" />
-                        Refine this analysis...
-                      </Button>
-                    )}
-                  </div>
-                )}
-
-                {/* Suggestions */}
-                {message.suggestions && message.suggestions.length > 0 && (
-                  <div className="mt-2 space-y-3">
-                    {/* Collapse All Button */}
-                    {message.analyticsResult && (
-                      <div className="flex justify-end">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-[10px] h-5 px-2 text-muted-foreground hover:text-primary"
-                          onClick={() => collapseAllSections(message.id)}
-                        >
-                          <ChevronDown className={`h-3 w-3 mr-1 transition-transform ${
-                            getCollapsedState(message.id).timePeriod && getCollapsedState(message.id).fineTune ? 'rotate-180' : ''
-                          }`} />
-                          {getCollapsedState(message.id).timePeriod && getCollapsedState(message.id).fineTune ? 'Expand all' : 'Collapse all'}
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* Time Filter Pills - Collapsible */}
-                    {message.analyticsResult && (
-                      <div className="p-2 bg-secondary/30 border border-border/50 rounded-lg">
-                        <CollapsibleSection
-                          title="Refine by time period"
-                          icon={<Clock className="h-3 w-3 text-muted-foreground" />}
-                          isOpen={!getCollapsedState(message.id).timePeriod}
-                          onToggle={() => toggleSection(message.id, 'timePeriod')}
-                        >
-                          <div className="flex flex-wrap gap-1.5">
-                            {contextualPrompts.timeFilters.map((filter, idx) => (
-                              <Button
-                                key={idx}
-                                variant="outline"
-                                size="sm"
-                                className="text-[10px] h-6 px-2 bg-secondary/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-                                onClick={() => handleSuggestionClick(`${message.analyticsResult?.sources || 'Analysis'} for ${filter.filter}`)}
-                                disabled={isLoading}
-                              >
-                                {filter.text}
-                              </Button>
-                            ))}
-                          </div>
-                        </CollapsibleSection>
-                      </div>
-                    )}
-
-                    {/* Refinement Options - Collapsible */}
-                    {message.analyticsResult && (
-                      <div className="p-2 bg-secondary/30 border border-border/50 rounded-lg">
-                        <CollapsibleSection
-                          title="Fine-tune analysis"
-                          icon={<Filter className="h-3 w-3 text-muted-foreground" />}
-                          isOpen={!getCollapsedState(message.id).fineTune}
-                          onToggle={() => toggleSection(message.id, 'fineTune')}
-                        >
-                          <div className="flex flex-wrap gap-1.5">
-                            {contextualPrompts.refinements.map((ref, idx) => (
-                              <Button
-                                key={idx}
-                                variant="outline"
-                                size="sm"
-                                className="text-[10px] h-6 px-2 bg-secondary/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-                                onClick={() => handleSuggestionClick(`Show me the same analysis ${ref.filter}`)}
-                                disabled={isLoading}
-                              >
-                                {ref.text}
-                              </Button>
-                            ))}
-                          </div>
-                        </CollapsibleSection>
-                      </div>
-                    )}
-
-                    {/* Follow-up Questions */}
-                    <div>
-                      <p className="text-[10px] text-muted-foreground mb-1.5 flex items-center gap-1">
-                        <Compass className="h-3 w-3" />
-                        Explore further:
-                      </p>
+                  
+                  {/* Follow-up suggestions for assistant messages with analytics */}
+                  {message.type === 'assistant' && message.analyticsResult && message.suggestions && message.suggestions.length > 0 && (
+                    <div className="ml-11 space-y-2">
+                      <Separator className="my-2" />
                       <div className="flex flex-wrap gap-2">
-                        {message.suggestions.map((suggestion, idx) => (
+                        {message.suggestions.slice(0, 3).map((suggestion, idx) => (
                           <Button
                             key={idx}
                             variant="outline"
                             size="sm"
-                            className="text-xs h-7 px-2.5 bg-background hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
+                            className="text-xs h-7 px-3 hover:bg-primary/10 hover:border-primary"
                             onClick={() => handleSuggestionClick(suggestion)}
                             disabled={isLoading}
                           >
                             <ArrowRight className="h-3 w-3 mr-1" />
-                            {suggestion}
+                            {suggestion.length > 50 ? suggestion.substring(0, 47) + '...' : suggestion}
                           </Button>
                         ))}
                       </div>
                     </div>
-                  </div>
-                )}
-
-                {/* Timestamp */}
-                <span className="text-[10px] text-muted-foreground">
-                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-            </div>
-          ))}
+                  )}
+                </div>
+              );
+            })}
 
           {/* Loading indicator with progress - Feature #4 */}
           {isLoading && (

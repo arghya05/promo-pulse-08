@@ -6,8 +6,7 @@ import { getModuleChatContent } from '@/lib/data/module-suggestions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import UniversalScrollableText from '@/components/UniversalScrollableText';
-import FormattedInsight from './FormattedInsight';
+import { Separator } from '@/components/ui/separator';
 import { 
   Send, 
   User, 
@@ -19,9 +18,7 @@ import {
   RefreshCw,
   Calendar,
   Maximize2,
-  Minimize2,
-  Target,
-  BarChart3
+  Minimize2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +27,11 @@ import ConversationContextPanel from './ConversationContextPanel';
 import CrossModuleNavigator from './CrossModuleNavigator';
 import { useGlobalSession, detectTargetModule } from '@/contexts/GlobalSessionContext';
 import KPISelector from './KPISelector';
+import { 
+  ExecutiveChatMessage, 
+  processResponse,
+  ChatMessageData
+} from '@/components/chat';
 
 interface ClarificationOption {
   label: string;
@@ -774,250 +776,68 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
           <div ref={scrollAreaRef} className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-hidden">
             <div className="flex-1 min-h-0 w-full max-w-full overflow-y-auto overflow-x-hidden p-3">
               <div className="space-y-4 w-full">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex w-full ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {message.role === 'assistant' && (
-                      <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit flex-shrink-0 mr-2`}>
-                        <Icon className={`h-4 w-4 ${module.color}`} />
-                      </div>
-                    )}
-                    <div
-                      className={`max-w-[70%] rounded-2xl px-3 py-2 min-w-0 ${
-                        message.role === 'user'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-slate-100 dark:bg-slate-800'
-                      }`}
-                    >
-                      {/* User messages: wrap text, no scrollbar */}
-                      {message.role === 'user' ? (
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
-                      ) : message.isLoading ? (
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span className="text-sm">Analyzing {module.name}...</span>
+                {messages.map((message) => {
+                  // Convert to ChatMessageData for ExecutiveChatMessage
+                  const chatMessage: ChatMessageData = {
+                    id: message.id,
+                    role: message.role,
+                    content: message.content,
+                    timestamp: message.timestamp,
+                    isLoading: message.isLoading,
+                    isError: false,
+                    rawData: message.data,
+                    clarificationOptions: message.clarificationOptions,
+                    drillContext: message.drillContext
+                  };
+
+                  // For greeting messages, show simple format
+                  if (message.id === 'greeting') {
+                    return (
+                      <div key={message.id} className="flex w-full justify-start">
+                        <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit flex-shrink-0 mr-2`}>
+                          <Icon className={`h-4 w-4 ${module.color}`} />
                         </div>
-                      ) : message.clarificationOptions ? (
-                        <div className="space-y-3">
-                          <p className="text-sm font-medium whitespace-pre-wrap break-words">{message.content}</p>
+                        <div className="max-w-[85%] bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-3">
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={message.id} className="space-y-2">
+                      <ExecutiveChatMessage
+                        message={chatMessage}
+                        onNextQuestion={(q) => handleSend(q)}
+                        onClarificationSelect={(q) => handleSend(q)}
+                        isLoading={isLoading}
+                        moduleIcon={<Icon className={`h-4 w-4 ${module.color}`} />}
+                      />
+                      
+                      {/* Follow-up suggestions for assistant messages with data */}
+                      {message.role === 'assistant' && message.data && (message.data.drillDownQuestions || message.data.nextQuestions) && (
+                        <div className="ml-11 space-y-2">
+                          <Separator className="my-2" />
                           <div className="flex flex-wrap gap-2">
-                            {message.clarificationOptions.map((option, idx) => (
+                            {(message.data.drillDownQuestions || message.data.nextQuestions).slice(0, 3).map((q: string, i: number) => (
                               <Button
-                                key={idx}
+                                key={i}
                                 variant="outline"
                                 size="sm"
-                                className="h-auto py-2 px-3 text-left hover:bg-primary/10 hover:border-primary"
-                                onClick={() => handleSend(option.refinedQuestion)}
+                                className="text-xs h-7 px-3 hover:bg-primary/10 hover:border-primary"
+                                onClick={() => handleSend(q)}
+                                disabled={isLoading}
                               >
-                                <div className="flex flex-col items-start">
-                                  <span className="font-medium text-sm">{option.label}</span>
-                                  <span className="text-xs text-muted-foreground">{option.description}</span>
-                                </div>
+                                <ChevronRight className="h-3 w-3 mr-1" />
+                                {q.length > 50 ? q.substring(0, 47) + '...' : q}
                               </Button>
                             ))}
                           </div>
                         </div>
-                      ) : (
-                        <>
-                          {/* Drill level indicator */}
-                          {message.drillContext && (
-                            <Badge variant="outline" className="mb-2 text-[10px]">
-                              Level {message.drillContext.level}: {message.drillContext.value}
-                            </Badge>
-                          )}
-                          
-                          <UniversalScrollableText>
-                            <FormattedInsight content={message.content} />
-                          </UniversalScrollableText>
-                          
-                          {/* Why section - Horizontal scroll */}
-                          {message.data?.why && message.data.why.length > 0 && (
-                            <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10">
-                              <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-                                <Lightbulb className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
-                                <span className="font-medium text-xs">Why It Happened</span>
-                              </div>
-                              <div className="px-3 pb-2">
-                                <UniversalScrollableText>
-                                  <ul className="space-y-1">
-                                    {message.data.why.map((reason: string, i: number) => (
-                                      <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
-                                        <span className="text-amber-500 mt-0.5 flex-shrink-0">•</span>
-                                        <span>{reason}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </UniversalScrollableText>
-                              </div>
-                              <div className="h-2.5 bg-amber-500/5 border-t border-amber-500/10" />
-                            </div>
-                          )}
-                          
-                          {/* What To Do (Recommendations) - Horizontal scroll */}
-                          {message.data?.whatToDo && message.data.whatToDo.length > 0 && (
-                            <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10">
-                              <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-                                <Target className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
-                                <span className="font-medium text-xs">Recommendations</span>
-                              </div>
-                              <div className="px-3 pb-2">
-                                <UniversalScrollableText>
-                                  <ul className="space-y-1">
-                                    {message.data.whatToDo.map((action: string, i: number) => (
-                                      <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
-                                        <span className="text-emerald-500 mt-0.5 flex-shrink-0">✓</span>
-                                        <span>{action}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </UniversalScrollableText>
-                              </div>
-                              <div className="h-2.5 bg-emerald-500/5 border-t border-emerald-500/10" />
-                            </div>
-                          )}
-                          
-                          
-                          {/* KPIs - KEY METRICS SECTION */}
-                          {message.data?.kpis && Object.keys(message.data.kpis).length > 0 && (
-                            <div className="mt-3 p-3 rounded-lg border border-border bg-secondary/30">
-                              <div className="flex items-center gap-2 mb-2">
-                                <BarChart3 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                                <span className="font-medium text-xs">Key Metrics</span>
-                              </div>
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                {Object.entries(message.data.kpis).slice(0, 8).map(([key, value]) => {
-                                  // Format KPI values properly
-                                  let formattedValue = String(value);
-                                  const numValue = typeof value === 'number' ? value : parseFloat(String(value));
-                                  
-                                  if (!isNaN(numValue)) {
-                                    const keyLower = key.toLowerCase();
-                                    if (keyLower.includes('roi') || keyLower.includes('ratio')) {
-                                      formattedValue = `${numValue.toFixed(2)}x`;
-                                    } else if (keyLower.includes('lift') || keyLower.includes('percent') || keyLower.includes('rate') || keyLower.includes('margin') && numValue < 100) {
-                                      formattedValue = `${numValue.toFixed(1)}%`;
-                                    } else if (keyLower.includes('revenue') || keyLower.includes('margin') || keyLower.includes('spend') || keyLower.includes('sales') || keyLower.includes('cost')) {
-                                      formattedValue = numValue >= 1000000 ? `$${(numValue / 1000000).toFixed(1)}M` : numValue >= 1000 ? `$${(numValue / 1000).toFixed(0)}K` : `$${numValue.toFixed(0)}`;
-                                    } else if (numValue >= 1000000) {
-                                      formattedValue = `${(numValue / 1000000).toFixed(1)}M`;
-                                    } else if (numValue >= 1000) {
-                                      formattedValue = `${(numValue / 1000).toFixed(0)}K`;
-                                    } else {
-                                      formattedValue = numValue.toFixed(numValue % 1 === 0 ? 0 : 1);
-                                    }
-                                  }
-                                  
-                                  // Determine color based on key and value
-                                  const isPositive = String(value).includes('+') || (typeof value === 'number' && value > 0 && key.toLowerCase().includes('growth'));
-                                  const valueColor = isPositive ? 'text-emerald-600' : key.toLowerCase().includes('risk') ? 'text-amber-600' : 'text-foreground';
-                                  
-                                  return (
-                                    <div key={key} className="bg-background/50 rounded p-2 border border-border/50">
-                                      <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">{key}</div>
-                                      <div className={`text-sm font-semibold ${valueColor}`}>{formattedValue}</div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Charts are displayed in the right panel - Drill-down buttons for data exploration */}
-                          {message.data?.chartData && message.data.chartData.length > 0 && (
-                            <div className="mt-3 space-y-2">
-                              <span className="text-xs text-muted-foreground font-medium">Quick View:</span>
-                              <div className="flex flex-wrap gap-2 overflow-visible">
-                                {(() => {
-                                  // Calculate total for percentage display
-                                  const chartData = message.data.chartData.slice(0, 6);
-                                  const totalValue = chartData.reduce((sum: number, item: any) => {
-                                    const val = item.value ?? item.revenue ?? item.margin ?? item.incrementalMargin ?? 0;
-                                    return sum + (typeof val === 'number' ? val : 0);
-                                  }, 0);
-                                  
-                                  return chartData.map((item: any, idx: number) => {
-                                    const name = item.name || item.label || item.category || `Item ${idx + 1}`;
-                                    let metricValue: number | undefined;
-                                    let formattedValue = '';
-                                    let percentValue = 0;
-                                    
-                                    // Get the primary metric value
-                                    if (item.incrementalMargin !== undefined && item.incrementalMargin !== 0) {
-                                      metricValue = item.incrementalMargin;
-                                    } else if (item.margin !== undefined && item.margin !== 0) {
-                                      metricValue = item.margin;
-                                    } else if (item.revenue !== undefined && item.revenue !== 0) {
-                                      metricValue = item.revenue;
-                                    } else if (item.roi !== undefined) {
-                                      metricValue = item.roi;
-                                    } else if (item.value !== undefined) {
-                                      metricValue = item.value;
-                                    }
-                                    
-                                    // Calculate percentage of total for display
-                                    if (metricValue !== undefined && typeof metricValue === 'number' && totalValue > 0) {
-                                      percentValue = (metricValue / totalValue) * 100;
-                                      formattedValue = `${percentValue.toFixed(1)}%`;
-                                    } else if (metricValue !== undefined) {
-                                      formattedValue = typeof metricValue === 'number' ? `${metricValue.toFixed(1)}` : String(metricValue);
-                                    }
-                                    
-                                    return (
-                                      <Button
-                                        key={idx}
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-auto py-1.5 px-3 text-xs hover:bg-primary/10 hover:border-primary"
-                                        onClick={() => handleDrillInto('item', name, 1)}
-                                      >
-                                        <TrendingUp className="h-3 w-3 mr-1.5 text-primary" />
-                                        <span className="font-medium truncate max-w-[120px]" title={name}>{name}</span>
-                                        {formattedValue && (
-                                          <Badge variant="secondary" className="ml-2 text-[10px] h-5 px-1.5">
-                                            <span className="font-semibold text-primary">{formattedValue}</span>
-                                          </Badge>
-                                        )}
-                                      </Button>
-                                    );
-                                  });
-                                })()}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Follow-up Questions - More prominent */}
-                          {(message.data?.drillDownQuestions || message.data?.nextQuestions) && (
-                            <div className="mt-3 space-y-2 border-t pt-3">
-                              <span className="text-xs text-muted-foreground font-medium">Continue exploring:</span>
-                              <div className="flex flex-col gap-2">
-                                {(message.data.drillDownQuestions || message.data.nextQuestions).slice(0, 3).map((q: string, i: number) => (
-                                  <Button
-                                    key={i}
-                                    variant="secondary"
-                                    size="sm"
-                                    className="w-full justify-start text-left h-auto py-2.5 px-3 text-xs hover:bg-primary/10 whitespace-normal break-words"
-                                    onClick={() => handleSend(q)}
-                                    disabled={isLoading}
-                                  >
-                                    <ChevronRight className="h-3 w-3 mr-2 text-primary flex-shrink-0 mt-0.5" />
-                                    <span className="text-left leading-relaxed">{q}</span>
-                                  </Button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </>
                       )}
                     </div>
-                    {message.role === 'user' && (
-                      <div className="p-2 rounded-lg bg-primary/10 h-fit">
-                        <User className="h-4 w-4 text-primary" />
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
                 <div ref={messagesEndRef} />
               </div>
             </div>
