@@ -838,160 +838,102 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                           </div>
                         </div>
                       ) : (
-                        <>
-                          {/* Drill level indicator - minimal */}
+                        <div className="space-y-2">
+                          {/* Context badge if drilling */}
                           {message.drillContext && (
-                            <Badge variant="outline" className="mb-2 text-[10px] h-5">
+                            <Badge variant="secondary" className="text-[10px] h-5 font-medium">
                               {message.drillContext.value}
                             </Badge>
                           )}
                           
-                          {/* HERO HEADLINE - The key insight in one powerful line */}
-                          {(() => {
-                            // Extract headline from whatHappened or create from content
-                            const headline = message.data?.whatHappened?.[0] || 
-                              (typeof message.content === 'string' ? message.content.split('.')[0] : '');
-                            return headline && (
-                              <p className="text-sm font-medium leading-snug">
-                                {headline.length > 120 ? headline.substring(0, 120) + '...' : headline}
-                              </p>
-                            );
-                          })()}
+                          {/* HEADLINE - One powerful insight */}
+                          <p className="text-sm font-medium leading-snug">
+                            {(() => {
+                              const text = message.data?.whatHappened?.[0] || 
+                                (typeof message.content === 'string' ? message.content : '');
+                              // Extract first sentence, max 100 chars
+                              const sentence = text.split(/[.!?]/)[0].trim();
+                              return sentence.length > 100 ? sentence.substring(0, 97) + '...' : sentence;
+                            })()}
+                          </p>
                           
-                          {/* IMPACT METRICS - 3 key numbers as visual cards */}
+                          {/* KEY METRICS - 3 numbers that matter */}
                           {message.data?.kpis && Object.keys(message.data.kpis).length > 0 && (
-                            <div className="mt-3 grid grid-cols-3 gap-2">
+                            <div className="flex gap-3 py-1">
                               {Object.entries(message.data.kpis).slice(0, 3).map(([key, value]) => {
-                                const numValue = typeof value === 'number' ? value : parseFloat(String(value));
-                                const keyLower = key.toLowerCase();
-                                let formattedValue = String(value);
-                                let isPositive = numValue > 0;
+                                const num = typeof value === 'number' ? value : parseFloat(String(value));
+                                const k = key.toLowerCase();
+                                let display = String(value);
+                                let positive = num > 0;
                                 
-                                if (!isNaN(numValue)) {
-                                  if (keyLower.includes('roi') || keyLower.includes('ratio')) {
-                                    formattedValue = `${numValue.toFixed(1)}x`;
-                                    isPositive = numValue >= 1;
-                                  } else if (keyLower.includes('lift') || keyLower.includes('percent') || keyLower.includes('rate') || keyLower.includes('margin') || keyLower.includes('growth')) {
-                                    formattedValue = `${numValue > 0 ? '+' : ''}${numValue.toFixed(1)}%`;
-                                  } else if (keyLower.includes('revenue') || keyLower.includes('sales') || keyLower.includes('spend')) {
-                                    formattedValue = numValue >= 1000000 ? `$${(numValue / 1000000).toFixed(1)}M` : `$${(numValue / 1000).toFixed(0)}K`;
-                                  } else {
-                                    formattedValue = numValue >= 1000 ? `${(numValue / 1000).toFixed(1)}K` : numValue.toFixed(0);
-                                  }
+                                if (!isNaN(num)) {
+                                  if (k.includes('roi')) { display = `${num.toFixed(1)}x`; positive = num >= 1; }
+                                  else if (k.includes('lift') || k.includes('margin') || k.includes('growth')) { display = `${num > 0 ? '+' : ''}${num.toFixed(0)}%`; }
+                                  else if (k.includes('revenue') || k.includes('sales')) { display = num >= 1e6 ? `$${(num/1e6).toFixed(1)}M` : `$${(num/1e3).toFixed(0)}K`; }
+                                  else { display = num >= 1e3 ? `${(num/1e3).toFixed(0)}K` : String(Math.round(num)); }
                                 }
                                 
                                 return (
-                                  <div key={key} className="p-2 rounded-lg bg-muted/50 text-center">
-                                    <div className={`text-base font-bold ${isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                                      {formattedValue}
-                                    </div>
-                                    <div className="text-[10px] text-muted-foreground truncate">{key}</div>
+                                  <div key={key} className="text-center">
+                                    <div className={`text-lg font-bold ${positive ? 'text-emerald-600' : 'text-red-500'}`}>{display}</div>
+                                    <div className="text-[9px] text-muted-foreground uppercase tracking-wide">{key.replace(/([A-Z])/g, ' $1').trim().split(' ').slice(0,2).join(' ')}</div>
                                   </div>
                                 );
                               })}
                             </div>
                           )}
                           
-                          {/* ACTION BUTTON - One clear next step */}
-                          {message.data?.whatToDo && message.data.whatToDo.length > 0 && (
-                            <div className="mt-3 flex items-center gap-2 p-2 rounded-lg bg-primary/5 border border-primary/10">
-                              <Target className="h-4 w-4 text-primary flex-shrink-0" />
-                              <span className="text-xs font-medium text-foreground line-clamp-1 flex-1">
-                                {message.data.whatToDo[0].length > 80 ? message.data.whatToDo[0].substring(0, 80) + '...' : message.data.whatToDo[0]}
+                          {/* TOP ACTION - What to do next */}
+                          {message.data?.whatToDo?.[0] && (
+                            <div className="flex items-start gap-2 p-2 rounded-md bg-primary/5">
+                              <Target className="h-3.5 w-3.5 text-primary mt-0.5 flex-shrink-0" />
+                              <span className="text-xs leading-snug">
+                                {message.data.whatToDo[0].length > 60 ? message.data.whatToDo[0].substring(0, 57) + '...' : message.data.whatToDo[0]}
                               </span>
                             </div>
                           )}
                           
-                          {/* QUICK INSIGHTS - Expandable for details */}
-                          {(message.data?.causalDrivers || message.data?.predictions || message.data?.why) && (
-                            <Collapsible className="mt-3">
-                              <CollapsibleTrigger asChild>
-                                <Button variant="ghost" size="sm" className="w-full justify-between h-7 text-[11px] text-muted-foreground hover:text-foreground px-2">
-                                  <span className="flex items-center gap-1.5">
-                                    <Layers className="h-3 w-3" />
-                                    See insights
-                                  </span>
-                                  <ChevronRight className="h-3 w-3 transition-transform duration-200 group-data-[state=open]:rotate-90" />
-                                </Button>
-                              </CollapsibleTrigger>
-                              <CollapsibleContent className="mt-2 space-y-2">
-                                {/* Key drivers as compact chips */}
-                                {message.data?.causalDrivers && message.data.causalDrivers.length > 0 && (
-                                  <div className="flex flex-wrap gap-1">
-                                    {message.data.causalDrivers.slice(0, 3).map((driver: any, i: number) => (
-                                      <Badge key={i} variant="outline" className="text-[10px] py-0.5 gap-1">
-                                        {driver.direction === 'positive' ? (
-                                          <TrendingUp className="h-2.5 w-2.5 text-emerald-500" />
-                                        ) : (
-                                          <TrendingDown className="h-2.5 w-2.5 text-red-500" />
-                                        )}
-                                        {driver.driver}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                )}
-                                
-                                {/* Prediction as single line */}
-                                {message.data?.predictions && (
-                                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                                    <TrendingUp className="h-3 w-3 text-blue-500" />
-                                    <span>Trend: <span className={`font-medium ${
-                                      message.data.predictions.trend === 'increasing' ? 'text-emerald-500' : 
-                                      message.data.predictions.trend === 'decreasing' ? 'text-red-500' : 'text-amber-500'
-                                    }`}>{message.data.predictions.trend}</span></span>
-                                  </div>
-                                )}
-                                
-                                {/* ML confidence if available */}
-                                {message.data?.mlInsights && (
-                                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                                    <Brain className="h-3 w-3 text-purple-500" />
-                                    <span>Confidence: <span className="font-medium text-purple-500">{((message.data.mlInsights.confidence || 0) * 100).toFixed(0)}%</span></span>
-                                  </div>
-                                )}
-                              </CollapsibleContent>
-                            </Collapsible>
-                          )}
-                          
-                          {/* DRILL-DOWN - Clean horizontal scroll */}
-                          {message.data?.chartData && message.data.chartData.length > 0 && (
-                            <div className="mt-3 -mx-1">
-                              <div className="flex gap-1 overflow-x-auto pb-1 px-1 scrollbar-thin">
-                                {message.data.chartData.slice(0, 4).map((item: any, idx: number) => {
-                                  const name = item.name || item.label || item.category || `Item ${idx + 1}`;
-                                  return (
-                                    <Button
-                                      key={idx}
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-6 px-2 text-[10px] flex-shrink-0 gap-1"
-                                      onClick={() => handleDrillInto('item', name, 1)}
-                                    >
-                                      {name}
-                                      <ChevronRight className="h-2.5 w-2.5" />
-                                    </Button>
-                                  );
-                                })}
-                              </div>
+                          {/* DRIVERS - Just icons + short labels */}
+                          {message.data?.causalDrivers?.length > 0 && (
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[10px] text-muted-foreground">Drivers:</span>
+                              {message.data.causalDrivers.slice(0, 3).map((d: any, i: number) => (
+                                <span key={i} className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                                  {d.direction === 'positive' ? <TrendingUp className="h-2.5 w-2.5 text-emerald-500" /> : <TrendingDown className="h-2.5 w-2.5 text-red-500" />}
+                                  {d.driver?.split(' ').slice(0, 2).join(' ')}
+                                </span>
+                              ))}
                             </div>
                           )}
                           
-                          {/* FOLLOW-UP - Single prominent question */}
-                          {(message.data?.drillDownQuestions || message.data?.nextQuestions) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="mt-3 w-full justify-start text-left h-auto py-2 px-2 text-[11px] hover:bg-muted/50 rounded-lg border border-dashed border-border/50"
+                          {/* DRILL OPTIONS - Compact pills */}
+                          {message.data?.chartData?.length > 0 && (
+                            <div className="flex gap-1 overflow-x-auto -mx-1 px-1">
+                              {message.data.chartData.slice(0, 3).map((item: any, idx: number) => (
+                                <Button
+                                  key={idx}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-5 px-2 text-[10px] flex-shrink-0 text-muted-foreground hover:text-foreground"
+                                  onClick={() => handleDrillInto('item', item.name || item.label || item.category, 1)}
+                                >
+                                  {(item.name || item.label || item.category || '').split(' ').slice(0, 2).join(' ')} →
+                                </Button>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* FOLLOW-UP - Clean link style */}
+                          {(message.data?.drillDownQuestions?.[0] || message.data?.nextQuestions?.[0]) && (
+                            <button
+                              className="text-[11px] text-primary hover:underline text-left"
                               onClick={() => handleSend((message.data.drillDownQuestions || message.data.nextQuestions)[0])}
                               disabled={isLoading}
                             >
-                              <ArrowRight className="h-3 w-3 mr-2 text-primary flex-shrink-0" />
-                              <span className="line-clamp-1 text-muted-foreground">
-                                {(message.data.drillDownQuestions || message.data.nextQuestions)[0]}
-                              </span>
-                            </Button>
+                              → {((message.data.drillDownQuestions || message.data.nextQuestions)[0]).substring(0, 50)}...
+                            </button>
                           )}
-                        </>
+                        </div>
                       )}
                     </div>
                     {message.role === 'user' && (
