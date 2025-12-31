@@ -3016,41 +3016,43 @@ You are analyzing "${hierarchyAnalysis.entityName}" at the ${hierarchyAnalysis.l
 - Each recommendation must reference THIS specific ${hierarchyAnalysis.level} ("${hierarchyAnalysis.entityName}")
 ` : ''}
 
+EXECUTIVE BREVITY RULES - MANDATORY:
+- Each bullet in whatHappened, why, whatToDo MUST be 15-25 words MAX
+- Lead with the NUMBER or KEY INSIGHT first
+- NO filler words like "Additionally", "Furthermore", "It's worth noting"
+- Pattern: "[Metric/Product]: [Key insight] - [Number]" 
+- Example: "Winter Skin Care Bundle: Top performer at $165K revenue, 2.3x ROI"
+- Example: "Snacks multi-buy: $2 discount drove 18% lift, 1.8x ROI"
+
 Respond with a JSON object:
 {
-  "whatHappened": ["3-4 bullet points with SPECIFIC product names and metrics from data above - NO vague statements"],
-  "why": ["2-3 CAUSAL EXPLANATIONS - not just numbers. Example: 'Sharp Cheddar drives Dairy because premium $14.99 price point captures 35% margin while maintaining strong volume - 537 units shows price inelastic demand'"],
-  "whatToDo": ["2-3 ACTIONABLE RECOMMENDATIONS with SPECIFIC product names AND expected impact percentages. Example: 'Test 5% price increase on Sharp Cheddar (current margin 35% supports it) → Expected +$150-200 additional quarterly margin'"],
+  "whatHappened": ["3 punchy bullets - lead with entity name + key metric. Max 20 words each. Example: 'Winter Skin Care Bundle leads at $165K - 2.3x ROI, highest in Personal Care'"],
+  "why": ["2 crisp causal explanations. Example: 'Bundle pricing captures impulse buyers - 40% of transactions include add-ons'"],
+  "whatToDo": ["2 action bullets with clear targets. Example: 'Expand Winter Bundle to 3 more stores → +$25K projected'"],
   "kpis": {"metric_name": "value with units", ...},
-  "chartData": [{"name": "Specific Product/Category Name", "value": number}, ...],
-  "nextQuestions": ["${moduleId}-specific follow-up 1", "${moduleId}-specific follow-up 2"],
+  "chartData": [{"name": "Entity Name", "value": number}, ...],
+  "nextQuestions": ["follow-up 1", "follow-up 2"],
   "causalDrivers": [
-    {"driver": "Primary driver: [specific product/category name] with quantified reason", "impact": "percentage or dollar value", "correlation": 0.85, "direction": "positive"},
-    {"driver": "Secondary driver: [specific entity] - business explanation", "impact": "percentage or value", "correlation": 0.72, "direction": "positive/negative"},
-    {"driver": "Third driver: [specific factor]", "impact": "value", "correlation": 0.65, "direction": "positive/negative"}
+    {"driver": "Primary driver - brief", "impact": "X%", "correlation": 0.85, "direction": "positive"}
   ],
   "mlInsights": {
-    "patternDetected": "Specific pattern with product names",
+    "patternDetected": "Brief pattern",
     "confidence": 0.87,
-    "businessSignificance": "What this means for business decisions"
+    "businessSignificance": "Brief significance"
   },
   "predictions": {
-    "forecast": [{"period": "Week 1", "value": number, "confidence": 0.8}],
+    "forecast": [{"period": "Next Month", "value": number, "confidence": 0.8}],
     "trend": "increasing/decreasing/stable",
     "riskLevel": "low/medium/high"
   }${isSimulation ? `,
   "simulation": {
     "baseline": {"metric": "current value"},
-    "projected": {"metric": "projected value after change"},
-    "impact": {"revenue": "+/-X%", "margin": "+/-X%", "units": "+/-X%"},
-    "confidence": 0.75,
-    "assumptions": ["assumption 1", "assumption 2"],
-    "risks": ["risk 1", "risk 2"],
-    "sensitivity": [{"factor": "factor name", "lowCase": value, "baseCase": value, "highCase": value}]
+    "projected": {"metric": "projected value"},
+    "impact": {"revenue": "+/-X%"},
+    "confidence": 0.75
   }` : ''}${isCrossModule ? `,
   "crossModuleImpacts": [
-    {"sourceModule": "pricing", "targetModule": "demand", "impact": "description", "magnitude": "high/medium/low"},
-    {"sourceModule": "demand", "targetModule": "supply-chain", "impact": "description", "magnitude": "high/medium/low"}
+    {"sourceModule": "pricing", "targetModule": "demand", "impact": "brief", "magnitude": "high/medium/low"}
   ]` : ''}
 }`;
 
