@@ -810,6 +810,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                         message={chatMessage}
                         onNextQuestion={(q) => handleSend(q)}
                         onClarificationSelect={(q) => handleSend(q)}
+                        onDrillDown={(item) => handleSend(`Tell me more about ${item.name}`)}
                         isLoading={isLoading}
                         moduleIcon={<Icon className={`h-4 w-4 ${module.color}`} />}
                       />

@@ -11,6 +11,7 @@ interface ExecutiveChatMessageProps {
   message: ChatMessageData;
   onNextQuestion?: (question: string) => void;
   onClarificationSelect?: (refinedQuestion: string) => void;
+  onDrillDown?: (item: { name: string; value: any; type?: string }) => void;
   isLoading?: boolean;
   moduleIcon?: React.ReactNode;
   moduleColor?: string;
@@ -21,6 +22,7 @@ export const ExecutiveChatMessage: React.FC<ExecutiveChatMessageProps> = ({
   message,
   onNextQuestion,
   onClarificationSelect,
+  onDrillDown,
   isLoading = false,
   moduleIcon,
   moduleColor = 'text-primary',
@@ -123,7 +125,7 @@ export const ExecutiveChatMessage: React.FC<ExecutiveChatMessageProps> = ({
               showDetails={showDetails}
               onToggleDetails={() => setShowDetails(!showDetails)}
             />
-            {showDetails && <DetailsAccordion details={processedResponse.details} />}
+            {showDetails && <DetailsAccordion details={processedResponse.details} onDrillDown={onDrillDown} />}
           </div>
         ) : (
           // Fallback plain text
