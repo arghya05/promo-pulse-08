@@ -25,8 +25,11 @@ import {
   Zap,
   Brain,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Layers,
+  ArrowRight
 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import FormattedInsight from './FormattedInsight';
 import {
   BarChart,
@@ -843,285 +846,206 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                             </Badge>
                           )}
                           
-                          <UniversalScrollableText>
+                          {/* Main answer - Concise summary */}
+                          <div className="text-sm leading-relaxed">
                             <FormattedInsight content={message.content} />
-                          </UniversalScrollableText>
+                          </div>
                           
-                          {/* Why section - Horizontal scroll */}
-                          {message.data?.why && message.data.why.length > 0 && (
-                            <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10">
-                              <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-                                <Lightbulb className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
-                                <span className="font-medium text-xs">Why It Happened</span>
-                              </div>
-                              <div className="px-3 pb-2">
-                                <UniversalScrollableText>
-                                  <ul className="space-y-1">
-                                    {message.data.why.map((reason: string, i: number) => (
-                                      <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
-                                        <span className="text-amber-500 mt-0.5 flex-shrink-0">•</span>
-                                        <span>{reason}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </UniversalScrollableText>
-                              </div>
-                              <div className="h-2.5 bg-amber-500/5 border-t border-amber-500/10" />
+                          {/* Compact Key Metrics - Only show top 4 inline */}
+                          {message.data?.kpis && Object.keys(message.data.kpis).length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {Object.entries(message.data.kpis).slice(0, 4).map(([key, value]) => {
+                                let formattedValue = String(value);
+                                const numValue = typeof value === 'number' ? value : parseFloat(String(value));
+                                
+                                if (!isNaN(numValue)) {
+                                  const keyLower = key.toLowerCase();
+                                  if (keyLower.includes('roi') || keyLower.includes('ratio')) {
+                                    formattedValue = `${numValue.toFixed(2)}x`;
+                                  } else if (keyLower.includes('lift') || keyLower.includes('percent') || keyLower.includes('rate') || keyLower.includes('margin') && numValue < 100) {
+                                    formattedValue = `${numValue.toFixed(1)}%`;
+                                  } else if (keyLower.includes('revenue') || keyLower.includes('margin') || keyLower.includes('spend') || keyLower.includes('sales') || keyLower.includes('cost')) {
+                                    formattedValue = numValue >= 1000000 ? `$${(numValue / 1000000).toFixed(1)}M` : numValue >= 1000 ? `$${(numValue / 1000).toFixed(0)}K` : `$${numValue.toFixed(0)}`;
+                                  } else if (numValue >= 1000000) {
+                                    formattedValue = `${(numValue / 1000000).toFixed(1)}M`;
+                                  } else if (numValue >= 1000) {
+                                    formattedValue = `${(numValue / 1000).toFixed(0)}K`;
+                                  } else {
+                                    formattedValue = numValue.toFixed(numValue % 1 === 0 ? 0 : 1);
+                                  }
+                                }
+                                
+                                return (
+                                  <Badge key={key} variant="secondary" className="text-xs py-1 px-2.5">
+                                    <span className="text-muted-foreground mr-1">{key}:</span>
+                                    <span className="font-semibold">{formattedValue}</span>
+                                  </Badge>
+                                );
+                              })}
                             </div>
                           )}
                           
-                          {/* What To Do (Recommendations) - Horizontal scroll */}
+                          {/* Top recommendation highlight - Just show first one prominently */}
                           {message.data?.whatToDo && message.data.whatToDo.length > 0 && (
-                            <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10">
-                              <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-                                <Target className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
-                                <span className="font-medium text-xs">Recommendations</span>
+                            <div className="mt-3 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                              <div className="flex items-start gap-2">
+                                <Target className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">Top Action: </span>
+                                  <span className="text-xs text-foreground">{message.data.whatToDo[0]}</span>
+                                </div>
                               </div>
-                              <div className="px-3 pb-2">
-                                <UniversalScrollableText>
-                                  <ul className="space-y-1">
-                                    {message.data.whatToDo.map((action: string, i: number) => (
-                                      <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
-                                        <span className="text-emerald-500 mt-0.5 flex-shrink-0">✓</span>
-                                        <span>{action}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </UniversalScrollableText>
-                              </div>
-                              <div className="h-2.5 bg-emerald-500/5 border-t border-emerald-500/10" />
                             </div>
                           )}
                           
-                          {/* Causal Drivers - Horizontal scroll */}
-                          {message.data?.causalDrivers && message.data.causalDrivers.length > 0 && (
-                            <div className="mt-3 rounded-lg border border-orange-500/20 bg-orange-500/10">
-                              <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-                                <Zap className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
-                                <span className="font-medium text-xs">Causal Drivers</span>
-                              </div>
-                              <div className="px-3 pb-2">
-                                <UniversalScrollableText>
-                                  <div className="flex gap-2">
-                                    {message.data.causalDrivers.map((driver: any, i: number) => (
-                                      <div key={i} className="bg-background/50 rounded p-2 border border-border/50 flex-shrink-0">
-                                        <div className="flex items-center justify-between mb-1 gap-2">
-                                          <span className="font-medium text-xs">{driver.driver}</span>
-                                          {driver.direction === 'positive' ? (
-                                            <TrendingUp className="h-3 w-3 text-emerald-500 flex-shrink-0" />
-                                          ) : (
-                                            <TrendingDown className="h-3 w-3 text-red-500 flex-shrink-0" />
-                                          )}
-                                        </div>
-                                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                                          <span className={driver.direction === 'positive' ? 'text-emerald-500' : 'text-red-500'}>
-                                            {driver.impact}
-                                          </span>
-                                          <span>•</span>
-                                          <span>Correlation: {((driver.correlation || 0) * 100).toFixed(0)}%</span>
-                                        </div>
-                                      </div>
-                                    ))}
+                          {/* Expandable Details Section */}
+                          {(message.data?.why || message.data?.causalDrivers || message.data?.mlInsights || message.data?.predictions) && (
+                            <Collapsible className="mt-3">
+                              <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="sm" className="w-full justify-between h-8 text-xs text-muted-foreground hover:text-foreground">
+                                  <span className="flex items-center gap-2">
+                                    <Layers className="h-3.5 w-3.5" />
+                                    View detailed analysis
+                                  </span>
+                                  <ChevronRight className="h-3.5 w-3.5 transition-transform data-[state=open]:rotate-90" />
+                                </Button>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="mt-2 space-y-2">
+                                {/* Why section */}
+                                {message.data?.why && message.data.why.length > 0 && (
+                                  <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                      <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
+                                      <span className="font-medium text-xs text-amber-700 dark:text-amber-400">Why It Happened</span>
+                                    </div>
+                                    <ul className="space-y-1 pl-5">
+                                      {message.data.why.slice(0, 2).map((reason: string, i: number) => (
+                                        <li key={i} className="text-xs text-muted-foreground list-disc">{reason}</li>
+                                      ))}
+                                    </ul>
                                   </div>
-                                </UniversalScrollableText>
-                              </div>
-                              <div className="h-2.5 bg-orange-500/5 border-t border-orange-500/10" />
-                            </div>
-                          )}
-                          
-                          {/* ML Insights - Horizontal scroll */}
-                          {message.data?.mlInsights && (
-                            <div className="mt-3 rounded-lg border border-purple-500/20 bg-purple-500/10">
-                              <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-                                <Brain className="h-3.5 w-3.5 text-purple-500 flex-shrink-0" />
-                                <span className="font-medium text-xs">ML Insights</span>
-                                <Badge variant="secondary" className="text-[10px] h-4">
-                                  {((message.data.mlInsights.confidence || 0) * 100).toFixed(0)}% confidence
-                                </Badge>
-                              </div>
-                              <div className="px-3 pb-2">
-                                <UniversalScrollableText>
-                                  <p className="text-xs text-muted-foreground mb-1">
-                                    {message.data.mlInsights.patternDetected}
-                                  </p>
-                                  {message.data.mlInsights.businessSignificance && (
-                                    <p className="text-[10px] text-purple-600 dark:text-purple-400">
-                                      <strong>Significance:</strong> {message.data.mlInsights.businessSignificance}
+                                )}
+                                
+                                {/* Causal Drivers - Compact */}
+                                {message.data?.causalDrivers && message.data.causalDrivers.length > 0 && (
+                                  <div className="p-2.5 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                      <Zap className="h-3.5 w-3.5 text-orange-500" />
+                                      <span className="font-medium text-xs text-orange-700 dark:text-orange-400">Key Drivers</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {message.data.causalDrivers.slice(0, 3).map((driver: any, i: number) => (
+                                        <Badge key={i} variant="outline" className="text-[10px] py-0.5">
+                                          {driver.direction === 'positive' ? (
+                                            <TrendingUp className="h-2.5 w-2.5 text-emerald-500 mr-1" />
+                                          ) : (
+                                            <TrendingDown className="h-2.5 w-2.5 text-red-500 mr-1" />
+                                          )}
+                                          {driver.driver}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* ML Insights - Compact */}
+                                {message.data?.mlInsights && (
+                                  <div className="p-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <Brain className="h-3.5 w-3.5 text-purple-500" />
+                                      <span className="font-medium text-xs text-purple-700 dark:text-purple-400">ML Insight</span>
+                                      <Badge variant="secondary" className="text-[9px] h-4 px-1.5">
+                                        {((message.data.mlInsights.confidence || 0) * 100).toFixed(0)}%
+                                      </Badge>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground line-clamp-2">
+                                      {message.data.mlInsights.patternDetected}
                                     </p>
-                                  )}
-                                </UniversalScrollableText>
-                              </div>
-                              <div className="h-2.5 bg-purple-500/5 border-t border-purple-500/10" />
-                            </div>
-                          )}
-                          
-                          {/* Predictions - Horizontal scroll */}
-                          {message.data?.predictions && (
-                            <div className="mt-3 rounded-lg border border-blue-500/20 bg-blue-500/10">
-                              <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-                                <TrendingUp className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
-                                <span className="font-medium text-xs">Predictions</span>
-                              </div>
-                              <div className="px-3 pb-2">
-                                <UniversalScrollableText>
-                                  <div className="flex items-center gap-4 text-xs">
-                                    <div>
-                                      <span className="text-[10px] text-muted-foreground">Trend: </span>
-                                      <span className={`font-medium capitalize ${
-                                        message.data.predictions.trend === 'increasing' ? 'text-emerald-500' :
-                                        message.data.predictions.trend === 'decreasing' ? 'text-red-500' : 'text-amber-500'
+                                  </div>
+                                )}
+                                
+                                {/* Predictions - Compact */}
+                                {message.data?.predictions && (
+                                  <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
+                                      <span className="font-medium text-xs text-blue-700 dark:text-blue-400">Forecast</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs">
+                                      <Badge variant="outline" className={`text-[10px] ${
+                                        message.data.predictions.trend === 'increasing' ? 'border-emerald-500 text-emerald-600' :
+                                        message.data.predictions.trend === 'decreasing' ? 'border-red-500 text-red-600' : 'border-amber-500 text-amber-600'
                                       }`}>
                                         {message.data.predictions.trend}
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <span className="text-[10px] text-muted-foreground">Risk: </span>
-                                      <span className={`font-medium capitalize ${
-                                        message.data.predictions.riskLevel === 'low' ? 'text-emerald-500' :
-                                        message.data.predictions.riskLevel === 'high' ? 'text-red-500' : 'text-amber-500'
-                                      }`}>
-                                        {message.data.predictions.riskLevel}
+                                      </Badge>
+                                      <span className="text-muted-foreground">
+                                        Risk: <span className={`font-medium ${
+                                          message.data.predictions.riskLevel === 'low' ? 'text-emerald-500' :
+                                          message.data.predictions.riskLevel === 'high' ? 'text-red-500' : 'text-amber-500'
+                                        }`}>{message.data.predictions.riskLevel}</span>
                                       </span>
                                     </div>
                                   </div>
-                                  {message.data.predictions.forecast && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      {message.data.predictions.forecast}
-                                    </p>
-                                  )}
-                                </UniversalScrollableText>
-                              </div>
-                              <div className="h-2.5 bg-blue-500/5 border-t border-blue-500/10" />
-                            </div>
+                                )}
+                                
+                                {/* Additional recommendations */}
+                                {message.data?.whatToDo && message.data.whatToDo.length > 1 && (
+                                  <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                      <Target className="h-3.5 w-3.5 text-emerald-500" />
+                                      <span className="font-medium text-xs text-emerald-700 dark:text-emerald-400">More Actions</span>
+                                    </div>
+                                    <ul className="space-y-1 pl-5">
+                                      {message.data.whatToDo.slice(1, 3).map((action: string, i: number) => (
+                                        <li key={i} className="text-xs text-muted-foreground list-disc">{action}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </CollapsibleContent>
+                            </Collapsible>
                           )}
                           
-                          {/* KPIs - KEY METRICS SECTION */}
-                          {message.data?.kpis && Object.keys(message.data.kpis).length > 0 && (
-                            <div className="mt-3 p-3 rounded-lg border border-border bg-secondary/30">
-                              <div className="flex items-center gap-2 mb-2">
-                                <BarChart3 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                                <span className="font-medium text-xs">Key Metrics</span>
-                              </div>
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                {Object.entries(message.data.kpis).slice(0, 8).map(([key, value]) => {
-                                  // Format KPI values properly
-                                  let formattedValue = String(value);
-                                  const numValue = typeof value === 'number' ? value : parseFloat(String(value));
-                                  
-                                  if (!isNaN(numValue)) {
-                                    const keyLower = key.toLowerCase();
-                                    if (keyLower.includes('roi') || keyLower.includes('ratio')) {
-                                      formattedValue = `${numValue.toFixed(2)}x`;
-                                    } else if (keyLower.includes('lift') || keyLower.includes('percent') || keyLower.includes('rate') || keyLower.includes('margin') && numValue < 100) {
-                                      formattedValue = `${numValue.toFixed(1)}%`;
-                                    } else if (keyLower.includes('revenue') || keyLower.includes('margin') || keyLower.includes('spend') || keyLower.includes('sales') || keyLower.includes('cost')) {
-                                      formattedValue = numValue >= 1000000 ? `$${(numValue / 1000000).toFixed(1)}M` : numValue >= 1000 ? `$${(numValue / 1000).toFixed(0)}K` : `$${numValue.toFixed(0)}`;
-                                    } else if (numValue >= 1000000) {
-                                      formattedValue = `${(numValue / 1000000).toFixed(1)}M`;
-                                    } else if (numValue >= 1000) {
-                                      formattedValue = `${(numValue / 1000).toFixed(0)}K`;
-                                    } else {
-                                      formattedValue = numValue.toFixed(numValue % 1 === 0 ? 0 : 1);
-                                    }
-                                  }
-                                  
-                                  // Determine color based on key and value
-                                  const isPositive = String(value).includes('+') || (typeof value === 'number' && value > 0 && key.toLowerCase().includes('growth'));
-                                  const valueColor = isPositive ? 'text-emerald-600' : key.toLowerCase().includes('risk') ? 'text-amber-600' : 'text-foreground';
-                                  
+                          {/* Quick View Chart Data - Compact pills */}
+                          {message.data?.chartData && message.data.chartData.length > 0 && (
+                            <div className="mt-3 pt-2 border-t border-border/50">
+                              <div className="flex flex-wrap gap-1.5">
+                                {message.data.chartData.slice(0, 5).map((item: any, idx: number) => {
+                                  const name = item.name || item.label || item.category || `Item ${idx + 1}`;
                                   return (
-                                    <div key={key} className="bg-background/50 rounded p-2 border border-border/50">
-                                      <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">{key}</div>
-                                      <div className={`text-sm font-semibold ${valueColor}`}>{formattedValue}</div>
-                                    </div>
+                                    <Button
+                                      key={idx}
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 px-2.5 text-[11px] hover:bg-primary/10 gap-1.5"
+                                      onClick={() => handleDrillInto('item', name, 1)}
+                                    >
+                                      <span className="truncate max-w-[100px]" title={name}>{name}</span>
+                                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                                    </Button>
                                   );
                                 })}
                               </div>
                             </div>
                           )}
                           
-                          {/* Charts are displayed in the right panel - Drill-down buttons for data exploration */}
-                          {message.data?.chartData && message.data.chartData.length > 0 && (
-                            <div className="mt-3 space-y-2">
-                              <span className="text-xs text-muted-foreground font-medium">Quick View:</span>
-                              <div className="flex flex-wrap gap-2 overflow-visible">
-                                {(() => {
-                                  // Calculate total for percentage display
-                                  const chartData = message.data.chartData.slice(0, 6);
-                                  const totalValue = chartData.reduce((sum: number, item: any) => {
-                                    const val = item.value ?? item.revenue ?? item.margin ?? item.incrementalMargin ?? 0;
-                                    return sum + (typeof val === 'number' ? val : 0);
-                                  }, 0);
-                                  
-                                  return chartData.map((item: any, idx: number) => {
-                                    const name = item.name || item.label || item.category || `Item ${idx + 1}`;
-                                    let metricValue: number | undefined;
-                                    let formattedValue = '';
-                                    let percentValue = 0;
-                                    
-                                    // Get the primary metric value
-                                    if (item.incrementalMargin !== undefined && item.incrementalMargin !== 0) {
-                                      metricValue = item.incrementalMargin;
-                                    } else if (item.margin !== undefined && item.margin !== 0) {
-                                      metricValue = item.margin;
-                                    } else if (item.revenue !== undefined && item.revenue !== 0) {
-                                      metricValue = item.revenue;
-                                    } else if (item.roi !== undefined) {
-                                      metricValue = item.roi;
-                                    } else if (item.value !== undefined) {
-                                      metricValue = item.value;
-                                    }
-                                    
-                                    // Calculate percentage of total for display
-                                    if (metricValue !== undefined && typeof metricValue === 'number' && totalValue > 0) {
-                                      percentValue = (metricValue / totalValue) * 100;
-                                      formattedValue = `${percentValue.toFixed(1)}%`;
-                                    } else if (metricValue !== undefined) {
-                                      formattedValue = typeof metricValue === 'number' ? `${metricValue.toFixed(1)}` : String(metricValue);
-                                    }
-                                    
-                                    return (
-                                      <Button
-                                        key={idx}
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-auto py-1.5 px-3 text-xs hover:bg-primary/10 hover:border-primary"
-                                        onClick={() => handleDrillInto('item', name, 1)}
-                                      >
-                                        <TrendingUp className="h-3 w-3 mr-1.5 text-primary" />
-                                        <span className="font-medium truncate max-w-[120px]" title={name}>{name}</span>
-                                        {formattedValue && (
-                                          <Badge variant="secondary" className="ml-2 text-[10px] h-5 px-1.5">
-                                            <span className="font-semibold text-primary">{formattedValue}</span>
-                                          </Badge>
-                                        )}
-                                      </Button>
-                                    );
-                                  });
-                                })()}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Follow-up Questions - More prominent */}
+                          {/* Follow-up Questions - Clean list */}
                           {(message.data?.drillDownQuestions || message.data?.nextQuestions) && (
-                            <div className="mt-3 space-y-2 border-t pt-3">
-                              <span className="text-xs text-muted-foreground font-medium">Continue exploring:</span>
-                              <div className="flex flex-col gap-2">
-                                {(message.data.drillDownQuestions || message.data.nextQuestions).slice(0, 3).map((q: string, i: number) => (
-                                  <Button
-                                    key={i}
-                                    variant="secondary"
-                                    size="sm"
-                                    className="w-full justify-start text-left h-auto py-2.5 px-3 text-xs hover:bg-primary/10 whitespace-normal break-words"
-                                    onClick={() => handleSend(q)}
-                                    disabled={isLoading}
-                                  >
-                                    <ChevronRight className="h-3 w-3 mr-2 text-primary flex-shrink-0 mt-0.5" />
-                                    <span className="text-left leading-relaxed">{q}</span>
-                                  </Button>
-                                ))}
-                              </div>
+                            <div className="mt-3 pt-2 border-t border-border/50 space-y-1.5">
+                              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Explore further</span>
+                              {(message.data.drillDownQuestions || message.data.nextQuestions).slice(0, 2).map((q: string, i: number) => (
+                                <Button
+                                  key={i}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full justify-start text-left h-auto py-2 px-2 text-xs hover:bg-primary/5 rounded-md"
+                                  onClick={() => handleSend(q)}
+                                  disabled={isLoading}
+                                >
+                                  <ArrowRight className="h-3 w-3 mr-2 text-primary flex-shrink-0" />
+                                  <span className="line-clamp-1">{q}</span>
+                                </Button>
+                              ))}
                             </div>
                           )}
                         </>
