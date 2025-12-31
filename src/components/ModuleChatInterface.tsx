@@ -818,18 +818,18 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                       {message.role === 'assistant' && message.data && (message.data.drillDownQuestions || message.data.nextQuestions) && (
                         <div className="ml-11 space-y-2">
                           <Separator className="my-2" />
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-col gap-2">
                             {(message.data.drillDownQuestions || message.data.nextQuestions).slice(0, 3).map((q: string, i: number) => (
                               <Button
                                 key={i}
                                 variant="outline"
                                 size="sm"
-                                className="text-xs h-7 px-3 hover:bg-primary/10 hover:border-primary"
+                                className="text-xs h-auto min-h-[28px] px-3 py-1.5 hover:bg-primary/10 hover:border-primary text-left whitespace-normal leading-snug justify-start"
                                 onClick={() => handleSend(q)}
                                 disabled={isLoading}
                               >
-                                <ChevronRight className="h-3 w-3 mr-1" />
-                                {q.length > 50 ? q.substring(0, 47) + '...' : q}
+                                <ChevronRight className="h-3 w-3 mr-1 flex-shrink-0" />
+                                <span>{q}</span>
                               </Button>
                             ))}
                           </div>

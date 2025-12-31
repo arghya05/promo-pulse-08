@@ -1480,18 +1480,18 @@ export default function ChatInterface({
                   {message.type === 'assistant' && message.analyticsResult && message.suggestions && message.suggestions.length > 0 && (
                     <div className="ml-11 space-y-2">
                       <Separator className="my-2" />
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-col gap-2">
                         {message.suggestions.slice(0, 3).map((suggestion, idx) => (
                           <Button
                             key={idx}
                             variant="outline"
                             size="sm"
-                            className="text-xs h-7 px-3 hover:bg-primary/10 hover:border-primary"
+                            className="text-xs h-auto min-h-[28px] px-3 py-1.5 hover:bg-primary/10 hover:border-primary text-left whitespace-normal leading-snug justify-start"
                             onClick={() => handleSuggestionClick(suggestion)}
                             disabled={isLoading}
                           >
-                            <ArrowRight className="h-3 w-3 mr-1" />
-                            {suggestion.length > 50 ? suggestion.substring(0, 47) + '...' : suggestion}
+                            <ArrowRight className="h-3 w-3 mr-1 flex-shrink-0" />
+                            <span>{suggestion}</span>
                           </Button>
                         ))}
                       </div>
