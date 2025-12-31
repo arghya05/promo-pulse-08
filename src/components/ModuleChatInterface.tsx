@@ -5,9 +5,9 @@ import { ModuleKPI } from '@/lib/data/module-kpis';
 import { getModuleChatContent } from '@/lib/data/module-suggestions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import UniversalScrollableText from '@/components/UniversalScrollableText';
+import FormattedInsight from './FormattedInsight';
 import { 
   Send, 
   User, 
@@ -15,29 +15,14 @@ import {
   Loader2,
   Lightbulb,
   TrendingUp,
-  TrendingDown,
-  ChevronDown,
   ChevronRight,
   RefreshCw,
   Calendar,
-  BarChart3,
-  Target,
-  Zap,
-  Brain,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Target,
+  BarChart3
 } from 'lucide-react';
-import FormattedInsight from './FormattedInsight';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer
-} from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import DrillBreadcrumbs from './DrillBreadcrumbs';
