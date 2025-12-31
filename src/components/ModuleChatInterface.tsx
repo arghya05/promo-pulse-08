@@ -25,6 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import DrillBreadcrumbs from './DrillBreadcrumbs';
 import ConversationContextPanel from './ConversationContextPanel';
 import CrossModuleNavigator from './CrossModuleNavigator';
+import SearchSuggestions from './SearchSuggestions';
 import { useGlobalSession, detectTargetModule } from '@/contexts/GlobalSessionContext';
 import KPISelector from './KPISelector';
 import { 
@@ -84,9 +85,10 @@ interface ModuleChatInterfaceProps {
   questions: ModuleQuestion[];
   popularQuestions: ModuleQuestion[];
   kpis: ModuleKPI[];
+  persona?: string;
 }
 
-const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: ModuleChatInterfaceProps) => {
+const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, persona = 'executive' }: ModuleChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -101,8 +103,10 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
   const [selectedKPIs, setSelectedKPIs] = useState<string[]>(kpis.slice(0, 4).map(k => k.id));
   const [selectedTimePeriod, setSelectedTimePeriod] = useState<string>('last_quarter');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const inputContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const Icon = module.icon;
   
@@ -846,29 +850,49 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
 
           {/* Input Area */}
           <div className="p-4 border-t">
-            <div className="flex items-end gap-2">
-              <textarea
-                value={input}
-                onChange={(e) => {
-                  setInput(e.target.value);
-                  // Auto-expand height
-                  e.target.style.height = 'auto';
-                  e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
-                }}
-                placeholder={conversationContext.lastCategory 
-                  ? `Continue asking about ${conversationContext.lastCategory}...` 
-                  : chatContent.placeholder}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend(input);
-                  }
-                }}
-                disabled={isLoading}
-                rows={1}
-                className="flex-1 min-h-[44px] max-h-[150px] px-4 py-3 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 placeholder:text-muted-foreground resize-none overflow-y-auto disabled:cursor-not-allowed disabled:opacity-50"
-              />
-              <Button onClick={() => handleSend(input)} disabled={isLoading || !input.trim()} className="h-11">
+            <div className="relative flex items-end gap-2" ref={inputContainerRef}>
+              <div className="flex-1 relative">
+                <textarea
+                  value={input}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    setShowSuggestions(e.target.value.length >= 2);
+                    // Auto-expand height
+                    e.target.style.height = 'auto';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                  }}
+                  onFocus={() => setShowSuggestions(input.length >= 2)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  placeholder={conversationContext.lastCategory 
+                    ? `Continue asking about ${conversationContext.lastCategory}...` 
+                    : chatContent.placeholder}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      setShowSuggestions(false);
+                      handleSend(input);
+                    }
+                    if (e.key === 'Escape') {
+                      setShowSuggestions(false);
+                    }
+                  }}
+                  disabled={isLoading}
+                  rows={1}
+                  className="w-full min-h-[44px] max-h-[150px] px-4 py-3 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 placeholder:text-muted-foreground resize-none overflow-y-auto disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                <SearchSuggestions
+                  query={input}
+                  onSelect={(suggestion) => {
+                    setInput(suggestion);
+                    setShowSuggestions(false);
+                    handleSend(suggestion);
+                  }}
+                  isVisible={showSuggestions}
+                  persona={persona}
+                  moduleId={module.id}
+                />
+              </div>
+              <Button onClick={() => { setShowSuggestions(false); handleSend(input); }} disabled={isLoading || !input.trim()} className="h-11">
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
             </div>
