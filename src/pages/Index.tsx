@@ -685,53 +685,156 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
               <div className="col-span-3 space-y-4">
                 {result ? (
                   <>
-                    {/* Quick KPIs */}
+                    {/* Quick KPIs - Dynamic based on available data */}
                     <Card className="p-4">
                       <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Key Metrics</h3>
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-secondary/50 rounded-lg p-3">
-                          <div className="text-xs text-muted-foreground mb-0.5">ROI</div>
-                          <div className={`text-xl font-bold ${getKPIStatus("roi", Number(result.kpis?.roi) || 0) === "good" ? "text-status-good" : getKPIStatus("roi", Number(result.kpis?.roi) || 0) === "warning" ? "text-status-warning" : "text-status-bad"}`}>
-                            {(Number(result.kpis?.roi) || 0).toFixed(2)}x
-                          </div>
-                        </div>
-                        <div className="bg-secondary/50 rounded-lg p-3">
-                          <div className="text-xs text-muted-foreground mb-0.5">Lift</div>
-                          <div className={`text-xl font-bold ${getKPIStatus("liftPct", Number(result.kpis?.liftPct) || 0) === "good" ? "text-status-good" : "text-status-warning"}`}>
-                            {(Number(result.kpis?.liftPct) || 0).toFixed(1)}%
-                          </div>
-                        </div>
-                        <div className="bg-secondary/50 rounded-lg p-3">
-                          <div className="text-xs text-muted-foreground mb-0.5">Margin</div>
-                          <div className="text-xl font-bold text-foreground">
-                            {formatKPIValue(Number(result.kpis?.incrementalMargin) || 0)}
-                          </div>
-                        </div>
-                        <div className="bg-secondary/50 rounded-lg p-3">
-                          <div className="text-xs text-muted-foreground mb-0.5">Spend</div>
-                          <div className="text-xl font-bold text-foreground">
-                            {formatKPIValue(Number(result.kpis?.spend) || 0)}
-                          </div>
-                        </div>
+                        {(() => {
+                          // Helper to parse and format KPI values from various formats
+                          const parseKPIValue = (value: any): { raw: number; formatted: string; type: 'currency' | 'percent' | 'ratio' | 'number' } => {
+                            if (value === undefined || value === null) return { raw: 0, formatted: '0', type: 'number' };
+                            
+                            // If it's already a number
+                            if (typeof value === 'number') {
+                              return { raw: value, formatted: String(value), type: 'number' };
+                            }
+                            
+                            const strValue = String(value);
+                            
+                            // Handle formatted strings like "$3.8K", "$954", "71.7%", "32.47x"
+                            if (strValue.includes('$')) {
+                              // Currency
+                              const cleaned = strValue.replace(/[$,]/g, '');
+                              let numVal = parseFloat(cleaned);
+                              if (strValue.includes('K')) numVal *= 1000;
+                              if (strValue.includes('M')) numVal *= 1000000;
+                              if (strValue.includes('B')) numVal *= 1000000000;
+                              return { raw: numVal || 0, formatted: strValue, type: 'currency' };
+                            }
+                            if (strValue.includes('%')) {
+                              const numVal = parseFloat(strValue.replace('%', ''));
+                              return { raw: numVal || 0, formatted: strValue, type: 'percent' };
+                            }
+                            if (strValue.includes('x')) {
+                              const numVal = parseFloat(strValue.replace('x', ''));
+                              return { raw: numVal || 0, formatted: strValue, type: 'ratio' };
+                            }
+                            
+                            const numVal = parseFloat(strValue);
+                            return { raw: numVal || 0, formatted: strValue, type: 'number' };
+                          };
+                          
+                          // Get the most meaningful KPIs from result
+                          const kpis = (result.kpis || {}) as Record<string, any>;
+                          const calculatedKPIs = ((result as any).calculatedKPIs || {}) as Record<string, any>;
+                          
+                          // Build dynamic KPI list based on what's available
+                          const kpiList: { label: string; value: string; color?: string }[] = [];
+                          
+                          // Try to get ROI
+                          const roiVal = kpis['roi'] || kpis['promo_roi'] || calculatedKPIs['promo_roi'];
+                          if (roiVal) {
+                            const parsed = parseKPIValue(roiVal);
+                            const displayVal = parsed.type === 'ratio' ? parsed.formatted : `${parsed.raw.toFixed(2)}x`;
+                            kpiList.push({ 
+                              label: 'ROI', 
+                              value: displayVal,
+                              color: parsed.raw >= 1.5 ? 'text-status-good' : parsed.raw >= 1 ? 'text-status-warning' : 'text-status-bad'
+                            });
+                          }
+                          
+                          // Try to get Lift
+                          const liftVal = kpis['liftPct'] || kpis['lift_pct'] || calculatedKPIs['lift_pct'];
+                          if (liftVal) {
+                            const parsed = parseKPIValue(liftVal);
+                            const displayVal = parsed.type === 'percent' ? parsed.formatted : `${parsed.raw.toFixed(1)}%`;
+                            kpiList.push({ 
+                              label: 'Lift', 
+                              value: displayVal,
+                              color: parsed.raw >= 15 ? 'text-status-good' : 'text-status-warning'
+                            });
+                          }
+                          
+                          // Try to get Margin
+                          const marginVal = kpis['incrementalMargin'] || kpis['gross_margin'] || kpis['Avg Gross Margin %'] || calculatedKPIs['gross_margin'];
+                          if (marginVal) {
+                            const parsed = parseKPIValue(marginVal);
+                            kpiList.push({ label: 'Margin', value: parsed.formatted, color: 'text-foreground' });
+                          }
+                          
+                          // Try to get Revenue
+                          const revenueVal = kpis['revenue'] || kpis['Total Revenue'] || calculatedKPIs['revenue'];
+                          if (revenueVal) {
+                            const parsed = parseKPIValue(revenueVal);
+                            kpiList.push({ label: 'Revenue', value: parsed.formatted, color: 'text-foreground' });
+                          }
+                          
+                          // Try to get Spend
+                          const spendVal = kpis['spend'] || kpis['total_discount'] || calculatedKPIs['total_discount'];
+                          if (spendVal) {
+                            const parsed = parseKPIValue(spendVal);
+                            kpiList.push({ label: 'Spend', value: parsed.formatted, color: 'text-foreground' });
+                          }
+                          
+                          // Try to get Units
+                          const unitsVal = kpis['units_sold'] || calculatedKPIs['units_sold'];
+                          if (unitsVal) {
+                            const parsed = parseKPIValue(unitsVal);
+                            kpiList.push({ label: 'Units', value: parsed.formatted, color: 'text-foreground' });
+                          }
+                          
+                          // If no KPIs found, add fallback showing all available
+                          if (kpiList.length === 0) {
+                            Object.entries(kpis).slice(0, 4).forEach(([key, value]) => {
+                              const parsed = parseKPIValue(value);
+                              kpiList.push({ label: key.replace(/_/g, ' '), value: parsed.formatted, color: 'text-foreground' });
+                            });
+                          }
+                          
+                          return kpiList.slice(0, 4).map((kpi, idx) => (
+                            <div key={idx} className="bg-secondary/50 rounded-lg p-3">
+                              <div className="text-xs text-muted-foreground mb-0.5 truncate">{kpi.label}</div>
+                              <div className={`text-xl font-bold ${kpi.color || 'text-foreground'} truncate`}>
+                                {kpi.value}
+                              </div>
+                            </div>
+                          ));
+                        })()}
                       </div>
                     </Card>
 
-                    {/* Mini Chart */}
+                    {/* Mini Chart - Quick View with percentages */}
                     {result.chartData && result.chartData.length > 0 && (
                       <Card className="p-4">
                         <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Quick View</h3>
                         <div className="h-48">
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={result.chartData.slice(0, 5)} layout="vertical">
-                              <XAxis type="number" hide />
-                              <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 10 }} />
-                              <Tooltip />
-                              <Bar 
-                                dataKey={Object.keys(result.chartData[0]).find(k => k !== 'name' && typeof result.chartData[0][k] === 'number') || 'value'} 
-                                fill="hsl(var(--primary))" 
-                                radius={[0, 4, 4, 0]}
-                              />
-                            </BarChart>
+                            {(() => {
+                              const chartData = result.chartData.slice(0, 5);
+                              const dataKey = Object.keys(chartData[0]).find(k => k !== 'name' && typeof chartData[0][k] === 'number') || 'value';
+                              const total = chartData.reduce((sum, item) => sum + (Number(item[dataKey]) || 0), 0);
+                              
+                              // Add percentage to chart data
+                              const chartDataWithPct = chartData.map(item => ({
+                                ...item,
+                                pct: total > 0 ? ((Number(item[dataKey]) || 0) / total * 100).toFixed(1) : '0'
+                              }));
+                              
+                              return (
+                                <BarChart data={chartDataWithPct} layout="vertical">
+                                  <XAxis type="number" hide />
+                                  <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 10 }} />
+                                  <Tooltip 
+                                    formatter={(value: number) => [`${((value / total) * 100).toFixed(1)}%`, 'Share']}
+                                  />
+                                  <Bar 
+                                    dataKey={dataKey}
+                                    fill="hsl(var(--primary))" 
+                                    radius={[0, 4, 4, 0]}
+                                  />
+                                </BarChart>
+                              );
+                            })()}
                           </ResponsiveContainer>
                         </div>
                       </Card>
