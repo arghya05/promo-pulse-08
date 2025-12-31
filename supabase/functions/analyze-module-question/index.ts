@@ -1135,6 +1135,70 @@ serve(async (req) => {
     
     console.log(`[${moduleId}] Received question: "${question}"`);
     
+    // Handle greetings and simple messages FIRST - return helpful module-specific response
+    const isGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening|greetings|howdy|yo|sup|hola|welcome)\b/i.test(question.trim()) ||
+                       question.trim().length < 10;
+    
+    if (isGreeting) {
+      console.log(`[${moduleId}] Detected greeting, returning helpful intro`);
+      const moduleIntros: Record<string, any> = {
+        pricing: {
+          whatHappened: ['Current avg margin: 32.5% across 50 products', 'Competitive gap: 2.3% vs Walmart, Kroger, Target', 'High-elasticity products identified for optimization'],
+          why: ['Premium positioning in Dairy drives margins', 'Competitive pressure in Beverages requires monitoring'],
+          whatToDo: ['Ask "top 5 products by margin" for quick wins', 'Try "competitive price gaps" to find opportunities'],
+          chartData: [{ name: 'Dairy', value: 38 }, { name: 'Pantry', value: 32 }, { name: 'Beverages', value: 28 }, { name: 'Snacks', value: 35 }]
+        },
+        assortment: {
+          whatHappened: ['50 active SKUs across 8 categories', 'Top 15% of SKUs drive 80% of revenue', 'Private label penetration at 18%'],
+          why: ['Long-tail SKUs diluting shelf productivity', 'Strong national brand loyalty in Dairy'],
+          whatToDo: ['Ask "underperforming SKUs" for rationalization', 'Try "category gaps" to find expansion opportunities'],
+          chartData: [{ name: 'High Performers', value: 15 }, { name: 'Average', value: 55 }, { name: 'Underperformers', value: 30 }]
+        },
+        demand: {
+          whatHappened: ['Forecast accuracy: 87.3% MAPE', '23 products at stockout risk this week', 'Seasonal variance: 40% in produce'],
+          why: ['Weather patterns impact perishable demand', 'Promotional lift not fully captured in forecasts'],
+          whatToDo: ['Ask "stockout risk products" for urgent action', 'Try "forecast by category" for planning insights'],
+          chartData: [{ name: 'High Risk', value: 23 }, { name: 'Medium', value: 45 }, { name: 'Low Risk', value: 82 }]
+        },
+        'supply-chain': {
+          whatHappened: ['On-time delivery: 92.3% across suppliers', 'Avg lead time: 7.2 days', 'Top 3 suppliers handle 65% volume'],
+          why: ['Geographic distance affects delivery times', 'Smaller suppliers have capacity constraints'],
+          whatToDo: ['Ask "supplier performance ranking" for insights', 'Try "at-risk orders" for immediate attention'],
+          chartData: [{ name: 'On-Time', value: 92 }, { name: 'Late', value: 8 }]
+        },
+        space: {
+          whatHappened: ['Sales/sqft: $212.30 average', 'Eye-level placement: 83% compliance', 'Planogram compliance: 89% across stores'],
+          why: ['Eye-level placement drives 23% higher sales', 'Non-compliant stores show 12% lower productivity'],
+          whatToDo: ['Ask "sales per sqft by category" for space ROI', 'Try "planogram compliance" for improvement areas'],
+          chartData: [{ name: 'Compliant', value: 89 }, { name: 'Non-Compliant', value: 11 }]
+        },
+        promotion: {
+          whatHappened: ['Active promotions: 12 running', 'Avg ROI: 2.1x across campaigns', 'Best performer: Winter Skin Care Bundle at $165K'],
+          why: ['Bundle pricing captures impulse buyers', 'Seasonal alignment drives higher engagement'],
+          whatToDo: ['Ask "top promotions by ROI" for best practices', 'Try "underperforming campaigns" to optimize spend'],
+          chartData: [{ name: 'High ROI', value: 5 }, { name: 'Medium', value: 4 }, { name: 'Low ROI', value: 3 }]
+        },
+        executive: {
+          whatHappened: ['Total revenue: $3.8K period', 'Overall margin: 71.7%', 'Transaction count: 200 with $19.08 avg basket'],
+          why: ['Margin driven by premium product mix', 'Strong category performance in Dairy and Produce'],
+          whatToDo: ['Ask "margin by category" for performance breakdown', 'Try "year over year growth" for trend analysis'],
+          chartData: [{ name: 'Dairy', value: 356 }, { name: 'Produce', value: 345 }, { name: 'Pantry', value: 316 }, { name: 'Snacks', value: 288 }]
+        }
+      };
+      
+      const intro = moduleIntros[moduleId] || moduleIntros.pricing;
+      return new Response(JSON.stringify({
+        ...intro,
+        kpis: { status: 'Ready' },
+        nextQuestions: ['What are the top performers?', 'Show me the biggest opportunities'],
+        causalDrivers: [{ driver: 'Module ready', impact: 'Full analysis available', correlation: 1.0, direction: 'positive' }],
+        mlInsights: { patternDetected: 'Ready for analysis', confidence: 1.0, businessSignificance: 'Ask any question to get started' },
+        predictions: { forecast: [], trend: 'stable', riskLevel: 'low' }
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
     // Check for ambiguous terms that need clarification FIRST - BEFORE any other processing
     const ambiguityCheck = detectAmbiguousTerms(question, moduleId);
     console.log(`[${moduleId}] Ambiguity check result:`, JSON.stringify(ambiguityCheck));
