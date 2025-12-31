@@ -1141,18 +1141,29 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
 
           {/* Input Area */}
           <div className="p-4 border-t">
-            <div className="flex gap-2">
-              <Input
+            <div className="flex items-end gap-2">
+              <textarea
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  // Auto-expand height
+                  e.target.style.height = 'auto';
+                  e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                }}
                 placeholder={conversationContext.lastCategory 
                   ? `Continue asking about ${conversationContext.lastCategory}...` 
                   : chatContent.placeholder}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend(input)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend(input);
+                  }
+                }}
                 disabled={isLoading}
-                className="flex-1"
+                rows={1}
+                className="flex-1 min-h-[44px] max-h-[150px] px-4 py-3 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 placeholder:text-muted-foreground resize-none overflow-y-auto disabled:cursor-not-allowed disabled:opacity-50"
               />
-              <Button onClick={() => handleSend(input)} disabled={isLoading || !input.trim()}>
+              <Button onClick={() => handleSend(input)} disabled={isLoading || !input.trim()} className="h-11">
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
             </div>
