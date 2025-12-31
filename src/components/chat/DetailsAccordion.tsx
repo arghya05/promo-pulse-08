@@ -13,6 +13,7 @@ import { DetailSection } from './types';
 interface DetailsAccordionProps {
   details: DetailSection;
   className?: string;
+  onDrillDown?: (item: { name: string; value: any; type?: string }) => void;
 }
 
 // Safely get array from any value
@@ -24,7 +25,8 @@ const toSafeArray = (val: any): any[] => {
 
 export const DetailsAccordion: React.FC<DetailsAccordionProps> = ({
   details,
-  className
+  className,
+  onDrillDown
 }) => {
   // Safely access arrays with fallbacks
   const whyItems = toSafeArray(details?.why);
@@ -84,15 +86,19 @@ export const DetailsAccordion: React.FC<DetailsAccordionProps> = ({
           <AccordionContent className="px-3 pb-3 pt-2 bg-blue-500/5 rounded-b-lg">
             <div className="grid grid-cols-2 gap-2">
               {evidenceItems.slice(0, 6).map((item, idx) => (
-                <div 
+                <button 
                   key={idx} 
-                  className="flex items-center justify-between p-2 bg-background/50 rounded border border-border/50"
+                  onClick={() => onDrillDown?.({ name: item.name, value: item.value, type: 'evidence' })}
+                  className={cn(
+                    "flex items-center justify-between p-2 bg-background/50 rounded border border-border/50 text-left transition-all",
+                    onDrillDown && "hover:bg-primary/10 hover:border-primary/50 cursor-pointer"
+                  )}
                 >
                   <span className="text-xs font-medium truncate flex-1">{item.name}</span>
                   <Badge variant="outline" className="text-[10px] ml-2">
                     {item.value}
                   </Badge>
-                </div>
+                </button>
               ))}
             </div>
             {evidenceItems.length > 6 && (

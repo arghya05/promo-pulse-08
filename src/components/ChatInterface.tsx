@@ -1473,6 +1473,7 @@ export default function ChatInterface({
                     message={chatMessage}
                     onNextQuestion={(q) => handleSuggestionClick(q)}
                     onClarificationSelect={(q) => handleSuggestionClick(q)}
+                    onDrillDown={(item) => handleSuggestionClick(`Tell me more about ${item.name}`)}
                     isLoading={isLoading}
                   />
                   
