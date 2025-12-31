@@ -890,6 +890,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
                   isVisible={showSuggestions && input.length >= 2}
                   persona={persona}
                   moduleId={module.id}
+                  position="top"
                 />
               </div>
               <Button onClick={() => { setShowSuggestions(false); handleSend(input); }} disabled={isLoading || !input.trim()} className="h-11">
