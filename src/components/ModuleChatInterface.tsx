@@ -887,7 +887,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
                     setShowSuggestions(false);
                     handleSend(suggestion);
                   }}
-                  isVisible={showSuggestions}
+                  isVisible={showSuggestions && input.length >= 2}
                   persona={persona}
                   moduleId={module.id}
                 />
