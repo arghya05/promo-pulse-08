@@ -551,7 +551,9 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
         timestamp: new Date(),
         data: {
           ...data,
-          drillDownQuestions,
+          // Use drillDownQuestions as nextQuestions to avoid duplication
+          nextQuestions: drillDownQuestions,
+          drillDownQuestions: undefined, // Clear to prevent duplicate rendering
           conversationContext: updatedContext
         },
         drillContext
