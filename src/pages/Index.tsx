@@ -1011,15 +1011,18 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
             {/* Classic Mode Content */}
                 <div className="mb-8 space-y-6">
                   {/* Search Bar */}
-                  <Card className="p-2 bg-card border-border shadow-sm">
-                    <div className="flex items-center gap-2">
+                  <Card className="p-3 bg-card border-border shadow-sm">
+                    <div className="flex items-start gap-2">
                       <div className="relative flex-1">
-                        <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground/70 z-10" />
-                        <Input
+                        <Search className="absolute left-4 top-4 h-5 w-5 text-muted-foreground/70 z-10" />
+                        <textarea
                           value={query}
                           onChange={(e) => {
                             setQuery(e.target.value);
                             setShowSuggestions(e.target.value.length >= 2);
+                            // Auto-expand height
+                            e.target.style.height = 'auto';
+                            e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
                           }}
                           onFocus={() => setShowSuggestions(query.length >= 2)}
                           onBlur={() => {
@@ -1027,7 +1030,8 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                             setTimeout(() => setShowSuggestions(false), 200);
                           }}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter") {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
                               setShowSuggestions(false);
                               handleAsk();
                             }
@@ -1042,7 +1046,8 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                               ? "Ask about grocery ROI, dairy promotions, beverage trends..."
                               : "Ask about personal care ROI, home care promotions, soap trends..."
                           }
-                          className="pl-12 pr-4 h-12 text-base bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60"
+                          className="w-full pl-12 pr-4 py-3 min-h-[48px] max-h-[150px] text-base bg-transparent border-0 focus:outline-none focus:ring-0 placeholder:text-muted-foreground/60 resize-none overflow-y-auto"
+                          rows={1}
                         />
                         
                         {/* AI-powered search suggestions */}
