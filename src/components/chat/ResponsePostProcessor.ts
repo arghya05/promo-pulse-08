@@ -20,14 +20,10 @@ const extractMetrics = (text: string): string[] => {
   return text.match(metricPattern) || [];
 };
 
-// Compress text to max word count (NO truncation with "...")
-const compressToWords = (text: string, maxWords: number): string => {
+// NO truncation - show full text always
+const compressToWords = (text: string, _maxWords: number): string => {
   if (!text) return '';
-  const words = text.trim().split(/\s+/);
-  if (words.length <= maxWords) return text.trim();
-  
-  // Take first maxWords, ensure it reads naturally
-  return words.slice(0, maxWords).join(' ');
+  return text.trim();
 };
 
 // Extract a short title from the response (max 7 words)
