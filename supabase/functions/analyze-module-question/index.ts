@@ -874,150 +874,25 @@ interface AmbiguityCheck {
 function detectAmbiguousTerms(question: string, moduleId: string): AmbiguityCheck {
   const q = question.toLowerCase();
   
-  // EXECUTIVE MODULE OVERRIDE: Skip clarification for executive module
-  // Executive questions are strategic and should receive comprehensive answers without clarification
-  if (moduleId === 'executive') {
-    console.log('[executive] Skipping ambiguity detection for executive module - strategic questions get comprehensive answers');
+  // PERMISSIVE MODE: Default to answering directly for ALL modules
+  // Each module has inherent context that determines entity type:
+  // - Pricing, Assortment, Demand, Space, Promotion = Products/SKUs
+  // - Supply Chain = Suppliers by default
+  // User wants direct answers, not clarification prompts
+  
+  console.log(`[${moduleId}] Ambiguity check - defaulting to direct answer (permissive mode)`);
+  
+  // Only trigger clarification for extremely ambiguous standalone queries
+  // These are very short questions with no context at all
+  const isExtremelyAmbiguous = q.length < 15 && 
+    /^(top|best|worst|show|what|which)\s+(seller|mover|performer)s?\s*\??$/i.test(q.trim());
+  
+  if (isExtremelyAmbiguous) {
+    console.log(`[${moduleId}] Extremely ambiguous short query detected: "${q}"`);
+    // Even for ambiguous queries, use module default instead of asking
+    // Pricing/Assortment/Demand/Space/Promotion = products
+    // Supply Chain = suppliers
     return { needsClarification: false };
-  }
-  
-  // MODULE-SPECIFIC CONTEXT OVERRIDE: Skip clarification when question context makes intent obvious
-  // For pricing module: "optimal price", "price for", "pricing" clearly means products
-  const pricingProductContext = /\b(optimal\s+price|price\s+for|pricing|margin|elasticity|price\s+point|competitive\s+price)\b/i.test(q);
-  // For demand module: "forecast", "stockout", "replenishment" clearly means products
-  const demandProductContext = /\b(forecast|stockout|replenish|inventory|reorder|demand)\b/i.test(q);
-  // For space module: "shelf", "planogram", "placement" clearly means products
-  const spaceProductContext = /\b(shelf|planogram|placement|facing|display)\b/i.test(q);
-  // For supply chain: "supplier", "delivery", "lead time" context is about suppliers
-  const supplyChainContext = /\b(supplier|delivery|lead\s+time|logistics|shipping|purchase\s+order)\b/i.test(q);
-  
-  // If module context makes entity type obvious, skip entity ambiguity detection
-  const hasObviousContext = (moduleId === 'pricing' && pricingProductContext) ||
-                            (moduleId === 'demand' && demandProductContext) ||
-                            (moduleId === 'space' && spaceProductContext) ||
-                            (moduleId === 'supply-chain' && supplyChainContext) ||
-                            (moduleId === 'assortment'); // Assortment is always about products
-  
-  if (hasObviousContext) {
-    console.log(`[${moduleId}] Skipping entity clarification - module context makes intent clear`);
-  }
-  
-  // Entity-ambiguous terms: ALWAYS ask what type of entity regardless of metric
-  // (e.g., "top seller by revenue" still needs clarification: product, vendor, or store?)
-  // Using regex patterns to handle common typos
-  const entityAmbiguousTerms: Array<{ 
-    pattern: RegExp; 
-    term: string;
-    prompt: string; 
-    options: ClarificationOption[] 
-  }> = [
-    {
-      pattern: /sell[ea]?[r]+s?|sel+ers?/i, // matches seller, sellers, sellar, seleler, etc.
-      term: 'seller',
-      prompt: 'When you say "seller", do you mean:',
-      options: [
-        { label: 'Products/SKUs', description: 'Top performing products by sales', refinedQuestion: question.replace(/sell[ea]?[r]+s?|sel+ers?/gi, 'selling product') },
-        { label: 'Vendors/Suppliers', description: 'Suppliers by sales volume', refinedQuestion: question.replace(/sell[ea]?[r]+s?|sel+ers?/gi, 'vendor by sales') },
-        { label: 'Stores', description: 'Store locations by revenue', refinedQuestion: question.replace(/sell[ea]?[r]+s?|sel+ers?/gi, 'store by sales') }
-      ]
-    },
-    {
-      pattern: /moving/i,
-      term: 'moving',
-      prompt: 'When you say "moving" items, do you mean:',
-      options: [
-        { label: 'Products/SKUs', description: 'Products by velocity', refinedQuestion: question.replace(/moving/gi, 'selling product') },
-        { label: 'Categories', description: 'Categories by turnover', refinedQuestion: question.replace(/moving/gi, 'performing category') }
-      ]
-    }
-  ];
-  
-  // Metric-ambiguous terms: only ask if no metric context provided
-  // (e.g., "best performer" needs clarification on which metric, but "best performer by ROI" doesn't)
-  const metricAmbiguousTerms: Record<string, { prompt: string; options: ClarificationOption[] }> = {
-    'performer': {
-      prompt: 'When you say "performer", what do you want to measure by:',
-      options: [
-        { label: 'Revenue', description: 'Total sales revenue generated', refinedQuestion: question + ' by revenue' },
-        { label: 'Margin', description: 'Profit margin contribution', refinedQuestion: question + ' by margin' },
-        { label: 'Units Sold', description: 'Volume of units sold', refinedQuestion: question + ' by units sold' },
-        { label: 'ROI', description: 'Return on investment', refinedQuestion: question + ' by ROI' }
-      ]
-    },
-    'best': {
-      prompt: 'What metric should I use to determine "best":',
-      options: [
-        { label: 'Revenue', description: 'Highest sales revenue', refinedQuestion: question + ' by revenue' },
-        { label: 'Margin', description: 'Highest profit margin', refinedQuestion: question + ' by margin' },
-        { label: 'Growth', description: 'Fastest growth rate', refinedQuestion: question + ' by growth' }
-      ]
-    },
-    'worst': {
-      prompt: 'What metric should I use to determine "worst":',
-      options: [
-        { label: 'Revenue', description: 'Lowest sales revenue', refinedQuestion: question + ' by revenue' },
-        { label: 'Margin', description: 'Lowest or negative margin', refinedQuestion: question + ' by margin' },
-        { label: 'Decline', description: 'Biggest decline in performance', refinedQuestion: question + ' by decline' }
-      ]
-    },
-    'performance': {
-      prompt: 'What aspect of performance are you interested in:',
-      options: [
-        { label: 'Sales Performance', description: 'Revenue and units sold', refinedQuestion: question.replace(/performance/gi, 'sales performance by revenue') },
-        { label: 'Margin Performance', description: 'Profitability metrics', refinedQuestion: question.replace(/performance/gi, 'margin performance') },
-        { label: 'Promotion Performance', description: 'ROI and lift from promotions', refinedQuestion: question.replace(/performance/gi, 'promotion performance by ROI') }
-      ]
-    },
-    'trending': {
-      prompt: 'What kind of trend are you interested in:',
-      options: [
-        { label: 'Sales Trending Up', description: 'Products/categories with increasing sales', refinedQuestion: question.replace(/trending/gi, 'with increasing revenue') },
-        { label: 'Sales Trending Down', description: 'Products/categories with declining sales', refinedQuestion: question.replace(/trending/gi, 'with declining revenue') },
-        { label: 'Growth Rate', description: 'Fastest growing products', refinedQuestion: question.replace(/trending/gi, 'by growth rate') }
-      ]
-    }
-  };
-  
-  // Check for entity ambiguity FIRST - these always need clarification
-  // Also check if question contains a likely product name (contains oz, ct, pack, gallon, lb, rolls, etc.)
-  const hasProductNamePattern = /\d+\s*(oz|ct|pack|gallon|lb|lbs|rolls|can|cans|bags?|box|bottles?)\b/i.test(q);
-  const hasEntityContext = /\b(product|sku|vendor|supplier|store|brand|category)\b/i.test(q) || hasProductNamePattern;
-  console.log(`Entity context check: hasEntityContext=${hasEntityContext}, hasProductNamePattern=${hasProductNamePattern}, question="${q}"`);
-  
-  for (const config of entityAmbiguousTerms) {
-    const patternMatches = config.pattern.test(q);
-    console.log(`Checking term "${config.term}": pattern=${config.pattern}, matches=${patternMatches}, noEntityContext=${!hasEntityContext}, hasObviousContext=${hasObviousContext}`);
-    
-    // Skip entity clarification if module context makes intent obvious OR if explicit entity context exists
-    if (patternMatches && !hasEntityContext && !hasObviousContext) {
-      console.log(`ENTITY AMBIGUITY DETECTED: "${config.term}" in question`);
-      return {
-        needsClarification: true,
-        ambiguousTerm: config.term,
-        clarificationPrompt: config.prompt,
-        options: config.options
-      };
-    }
-  }
-  
-  // Check for metric ambiguity only if no metric context
-  // Include supply-chain, demand, space planning metrics to avoid over-clarification
-  const hasMetricContext = /\b(revenue|margin|roi|sales|units|lift|spend|profit|growth|on.?time|delivery|lead.?time|reliability|fill.?rate|cost|forecast|accuracy|stockout|utilization|compliance|sqft|facing|traffic)\b/i.test(q);
-  
-  // Executive-level questions that should NOT trigger clarification
-  // These are high-level overview questions that expect comprehensive answers
-  const isExecutiveOverviewQuestion = /\b(overall|executive|summary|health|dashboard|overview|quarterly|annual|ytd|yoy|year.over.year|this.quarter|this.year|merchandising.performance|business.performance)\b/i.test(q);
-  
-  for (const [term, config] of Object.entries(metricAmbiguousTerms)) {
-    // Skip clarification for executive overview questions - they expect comprehensive answers
-    if (q.includes(term) && !hasMetricContext && !isExecutiveOverviewQuestion) {
-      return {
-        needsClarification: true,
-        ambiguousTerm: term,
-        clarificationPrompt: config.prompt,
-        options: config.options
-      };
-    }
   }
   
   return { needsClarification: false };
