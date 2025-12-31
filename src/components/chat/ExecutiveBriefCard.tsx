@@ -17,6 +17,13 @@ interface ExecutiveBriefCardProps {
   className?: string;
 }
 
+// Safely get array from any value
+const toSafeArray = (val: any): any[] => {
+  if (Array.isArray(val)) return val;
+  if (val === null || val === undefined) return [];
+  return [val];
+};
+
 export const ExecutiveBriefCard: React.FC<ExecutiveBriefCardProps> = ({
   brief,
   onNextQuestion,
@@ -25,33 +32,40 @@ export const ExecutiveBriefCard: React.FC<ExecutiveBriefCardProps> = ({
 }) => {
   const { toast } = useToast();
   
+  // Safely access arrays
+  const insights = toSafeArray(brief?.insights);
+  const actions = toSafeArray(brief?.actions);
+  const nextQuestions = toSafeArray(brief?.nextQuestions);
+  const keyMetric = brief?.keyMetric || { label: 'Analysis', value: 'Complete', trend: 'neutral' };
+  const confidence = brief?.confidence || { level: 'Medium', reason: 'Standard analysis' };
+  
   const confidenceColors = {
     High: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
     Medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
     Low: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
   };
 
-  const trendIcon = brief.keyMetric.trend === 'up' ? TrendingUp :
-                    brief.keyMetric.trend === 'down' ? TrendingDown : Minus;
+  const trendIcon = keyMetric.trend === 'up' ? TrendingUp :
+                    keyMetric.trend === 'down' ? TrendingDown : Minus;
   const TrendIcon = trendIcon;
   
-  const trendColor = brief.keyMetric.trend === 'up' ? 'text-emerald-500' :
-                     brief.keyMetric.trend === 'down' ? 'text-red-500' : 'text-muted-foreground';
+  const trendColor = keyMetric.trend === 'up' ? 'text-emerald-500' :
+                     keyMetric.trend === 'down' ? 'text-red-500' : 'text-muted-foreground';
 
   // Copy executive brief to clipboard
   const handleCopy = () => {
     const briefText = `
-${brief.title}
+${brief?.title || 'Analysis'}
 
-KEY METRIC: ${brief.keyMetric.label}: ${brief.keyMetric.value}
+KEY METRIC: ${keyMetric.label}: ${keyMetric.value}
 
 TOP INSIGHTS:
-${brief.insights.map(i => `• ${i.text}`).join('\n')}
+${insights.map(i => `• ${i?.text || ''}`).join('\n')}
 
 ACTIONS:
-${brief.actions.map(a => `→ ${a.text}`).join('\n')}
+${actions.map(a => `→ ${a?.text || ''}`).join('\n')}
 
-Confidence: ${brief.confidence.level}
+Confidence: ${confidence.level}
     `.trim();
     
     navigator.clipboard.writeText(briefText);
@@ -63,11 +77,11 @@ Confidence: ${brief.confidence.level}
 
   // Format for Slack
   const handleShare = () => {
-    const slackText = `*${brief.title}*
-📊 ${brief.keyMetric.label}: *${brief.keyMetric.value}*
-${brief.insights[0]?.text || ''}
-➡️ ${brief.actions[0]?.text || ''}
-_Confidence: ${brief.confidence.level}_`;
+    const slackText = `*${brief?.title || 'Analysis'}*
+📊 ${keyMetric.label}: *${keyMetric.value}*
+${insights[0]?.text || ''}
+➡️ ${actions[0]?.text || ''}
+_Confidence: ${confidence.level}_`;
     
     navigator.clipboard.writeText(slackText);
     toast({
@@ -83,7 +97,7 @@ _Confidence: ${brief.confidence.level}_`;
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-base leading-tight truncate">
-              {brief.title}
+              {brief?.title || 'Analysis'}
             </h3>
           </div>
           
@@ -92,16 +106,16 @@ _Confidence: ${brief.confidence.level}_`;
             <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-lg border border-primary/20">
               <div className="text-right">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                  {brief.keyMetric.label}
+                  {keyMetric.label}
                 </p>
                 <p className="text-xl font-bold text-primary leading-none">
-                  {brief.keyMetric.value}
+                  {keyMetric.value}
                 </p>
               </div>
-              {brief.keyMetric.change && (
+              {keyMetric.change && (
                 <div className={cn("flex items-center gap-0.5", trendColor)}>
                   <TrendIcon className="h-4 w-4" />
-                  <span className="text-xs font-medium">{brief.keyMetric.change}</span>
+                  <span className="text-xs font-medium">{keyMetric.change}</span>
                 </div>
               )}
             </div>
@@ -119,11 +133,11 @@ _Confidence: ${brief.confidence.level}_`;
               Key Insights
             </span>
           </div>
-          {brief.insights.map((insight, idx) => (
+          {insights.map((insight, idx) => (
             <InsightBullet
               key={idx}
-              text={insight.text}
-              isTopInsight={insight.isTopInsight}
+              text={insight?.text || ''}
+              isTopInsight={insight?.isTopInsight}
             />
           ))}
         </div>
@@ -131,15 +145,15 @@ _Confidence: ${brief.confidence.level}_`;
         <Separator className="my-3" />
 
         {/* Top 2 Actions */}
-        {brief.actions.length > 0 && (
+        {actions.length > 0 && (
           <div className="space-y-1">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Recommended Actions
             </span>
-            {brief.actions.map((action, idx) => (
+            {actions.map((action, idx) => (
               <ActionBullet
                 key={idx}
-                text={action.text}
+                text={action?.text || ''}
                 priority={idx === 0 ? 'high' : 'medium'}
               />
             ))}
@@ -151,12 +165,12 @@ _Confidence: ${brief.confidence.level}_`;
           <div className="flex items-center gap-2">
             <Badge 
               variant="secondary" 
-              className={cn("text-[10px] px-2 py-0.5", confidenceColors[brief.confidence.level])}
+              className={cn("text-[10px] px-2 py-0.5", confidenceColors[confidence.level as keyof typeof confidenceColors] || confidenceColors.Medium)}
             >
-              {brief.confidence.level} Confidence
+              {confidence.level} Confidence
             </Badge>
             <span className="text-[10px] text-muted-foreground">
-              {brief.confidence.reason}
+              {confidence.reason}
             </span>
           </div>
           
@@ -183,11 +197,11 @@ _Confidence: ${brief.confidence.level}_`;
         </div>
 
         {/* Next Question Chips */}
-        {brief.nextQuestions.length > 0 && (
+        {nextQuestions.length > 0 && (
           <div className="pt-2">
             <Separator className="mb-3" />
             <div className="flex flex-wrap gap-2">
-              {brief.nextQuestions.slice(0, 3).map((question, idx) => (
+              {nextQuestions.slice(0, 3).map((question, idx) => (
                 <Button
                   key={idx}
                   variant="outline"
