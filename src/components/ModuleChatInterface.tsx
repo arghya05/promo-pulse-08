@@ -102,34 +102,6 @@ interface ModuleChatInterfaceProps {
   kpis: ModuleKPI[];
 }
 
-// Collapsible section helper for chat responses
-const CollapsibleSection = ({ 
-  icon: SectionIcon, 
-  title, 
-  children, 
-  defaultOpen = false 
-}: { 
-  icon: React.ElementType; 
-  title: string; 
-  children: React.ReactNode; 
-  defaultOpen?: boolean;
-}) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-  
-  return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger className="flex items-center gap-1.5 w-full text-left py-1 hover:bg-muted/50 rounded px-1 -mx-1 transition-colors">
-        {isOpen ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
-        <SectionIcon className="h-3 w-3 text-primary" />
-        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{title}</span>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="pl-5 pt-1">
-        {children}
-      </CollapsibleContent>
-    </Collapsible>
-  );
-};
-
 const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: ModuleChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -879,102 +851,64 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis }: Modu
                             {(() => {
                               const text = message.data?.whatHappened?.[0] || 
                                 (typeof message.content === 'string' ? message.content : '');
+                              // Extract first sentence, max 100 chars
                               const sentence = text.split(/[.!?]/)[0].trim();
                               return sentence.length > 100 ? sentence.substring(0, 97) + '...' : sentence;
                             })()}
                           </p>
                           
-                          {/* KEY METRICS - Collapsible */}
+                          {/* KEY METRICS - 3 numbers that matter */}
                           {message.data?.kpis && Object.keys(message.data.kpis).length > 0 && (
-                            <CollapsibleSection icon={BarChart3} title="Key Metrics" defaultOpen={true}>
-                              <div className="flex gap-3 py-1">
-                                {Object.entries(message.data.kpis).slice(0, 3).map(([key, value]) => {
-                                  const num = typeof value === 'number' ? value : parseFloat(String(value));
-                                  const k = key.toLowerCase();
-                                  let display = String(value);
-                                  let positive = num > 0;
-                                  
-                                  if (!isNaN(num)) {
-                                    if (k.includes('roi')) { display = `${num.toFixed(1)}x`; positive = num >= 1; }
-                                    else if (k.includes('lift') || k.includes('margin') || k.includes('growth')) { display = `${num > 0 ? '+' : ''}${num.toFixed(0)}%`; }
-                                    else if (k.includes('revenue') || k.includes('sales')) { display = num >= 1e6 ? `$${(num/1e6).toFixed(1)}M` : `$${(num/1e3).toFixed(0)}K`; }
-                                    else { display = num >= 1e3 ? `${(num/1e3).toFixed(0)}K` : String(Math.round(num)); }
-                                  }
-                                  
-                                  return (
-                                    <div key={key} className="text-center">
-                                      <div className={`text-lg font-bold ${positive ? 'text-emerald-600' : 'text-red-500'}`}>{display}</div>
-                                      <div className="text-[9px] text-muted-foreground uppercase tracking-wide">{key.replace(/([A-Z])/g, ' $1').trim().split(' ').slice(0,2).join(' ')}</div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </CollapsibleSection>
+                            <div className="flex gap-3 py-1">
+                              {Object.entries(message.data.kpis).slice(0, 3).map(([key, value]) => {
+                                const num = typeof value === 'number' ? value : parseFloat(String(value));
+                                const k = key.toLowerCase();
+                                let display = String(value);
+                                let positive = num > 0;
+                                
+                                if (!isNaN(num)) {
+                                  if (k.includes('roi')) { display = `${num.toFixed(1)}x`; positive = num >= 1; }
+                                  else if (k.includes('lift') || k.includes('margin') || k.includes('growth')) { display = `${num > 0 ? '+' : ''}${num.toFixed(0)}%`; }
+                                  else if (k.includes('revenue') || k.includes('sales')) { display = num >= 1e6 ? `$${(num/1e6).toFixed(1)}M` : `$${(num/1e3).toFixed(0)}K`; }
+                                  else { display = num >= 1e3 ? `${(num/1e3).toFixed(0)}K` : String(Math.round(num)); }
+                                }
+                                
+                                return (
+                                  <div key={key} className="text-center">
+                                    <div className={`text-lg font-bold ${positive ? 'text-emerald-600' : 'text-red-500'}`}>{display}</div>
+                                    <div className="text-[9px] text-muted-foreground uppercase tracking-wide">{key.replace(/([A-Z])/g, ' $1').trim().split(' ').slice(0,2).join(' ')}</div>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           )}
                           
-                          {/* RECOMMENDATION - Collapsible */}
+                          {/* TOP ACTION - What to do next */}
                           {message.data?.whatToDo?.[0] && (
-                            <CollapsibleSection icon={Target} title="Recommendation" defaultOpen={true}>
+                            <div className="flex items-start gap-2 p-2 rounded-md bg-primary/5">
+                              <Target className="h-3.5 w-3.5 text-primary mt-0.5 flex-shrink-0" />
                               <span className="text-xs leading-snug">
-                                {message.data.whatToDo[0]}
+                                {message.data.whatToDo[0].length > 60 ? message.data.whatToDo[0].substring(0, 57) + '...' : message.data.whatToDo[0]}
                               </span>
-                            </CollapsibleSection>
+                            </div>
                           )}
                           
-                          {/* CAUSAL DRIVERS - Collapsible */}
+                          {/* DRIVERS - Just icons + short labels */}
                           {message.data?.causalDrivers?.length > 0 && (
-                            <CollapsibleSection icon={Zap} title="Causal Drivers" defaultOpen={false}>
-                              <div className="space-y-1">
-                                {message.data.causalDrivers.slice(0, 5).map((d: any, i: number) => (
-                                  <div key={i} className="flex items-center gap-2 text-xs">
-                                    {d.direction === 'positive' ? 
-                                      <TrendingUp className="h-3 w-3 text-emerald-500 flex-shrink-0" /> : 
-                                      <TrendingDown className="h-3 w-3 text-red-500 flex-shrink-0" />
-                                    }
-                                    <span className="text-muted-foreground">{d.driver}</span>
-                                    {d.correlation && (
-                                      <Badge variant="outline" className="text-[9px] h-4 ml-auto">{Math.round(d.correlation * 100)}%</Badge>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </CollapsibleSection>
-                          )}
-                          
-                          {/* ML INSIGHTS - Collapsible */}
-                          {message.data?.mlInsights && (
-                            <CollapsibleSection icon={Brain} title="ML Insights" defaultOpen={false}>
-                              <div className="text-xs text-muted-foreground space-y-1">
-                                {message.data.mlInsights.confidence && (
-                                  <div className="flex justify-between">
-                                    <span>Confidence</span>
-                                    <span className="font-medium">{Math.round(message.data.mlInsights.confidence * 100)}%</span>
-                                  </div>
-                                )}
-                                {message.data.mlInsights.method && (
-                                  <div className="flex justify-between">
-                                    <span>Method</span>
-                                    <span className="font-medium">{message.data.mlInsights.method}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </CollapsibleSection>
-                          )}
-                          
-                          {/* WHY IT HAPPENED - Collapsible */}
-                          {message.data?.why?.length > 0 && (
-                            <CollapsibleSection icon={Lightbulb} title="Why It Happened" defaultOpen={false}>
-                              <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                                {message.data.why.slice(0, 3).map((reason: string, i: number) => (
-                                  <li key={i}>{reason}</li>
-                                ))}
-                              </ul>
-                            </CollapsibleSection>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[10px] text-muted-foreground">Drivers:</span>
+                              {message.data.causalDrivers.slice(0, 3).map((d: any, i: number) => (
+                                <span key={i} className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                                  {d.direction === 'positive' ? <TrendingUp className="h-2.5 w-2.5 text-emerald-500" /> : <TrendingDown className="h-2.5 w-2.5 text-red-500" />}
+                                  {d.driver?.split(' ').slice(0, 2).join(' ')}
+                                </span>
+                              ))}
+                            </div>
                           )}
                           
                           {/* DRILL OPTIONS - Compact pills */}
                           {message.data?.chartData?.length > 0 && (
-                            <div className="flex gap-1 overflow-x-auto -mx-1 px-1 pt-1">
+                            <div className="flex gap-1 overflow-x-auto -mx-1 px-1">
                               {message.data.chartData.slice(0, 3).map((item: any, idx: number) => (
                                 <Button
                                   key={idx}
