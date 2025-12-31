@@ -23,7 +23,7 @@ export default function SearchSuggestions({ query, onSelect, isVisible, persona,
     if (!query || query.length < 2) return [];
 
     const lowerQuery = query.toLowerCase().trim();
-    const words = lowerQuery.split(" ");
+    const words = lowerQuery.split(" ").filter(w => w.length > 0);
     const firstWord = words[0];
     
     let matches: Array<{ text: string; icon: any; highlight: boolean }> = [];
@@ -31,24 +31,40 @@ export default function SearchSuggestions({ query, onSelect, isVisible, persona,
     // Get module-specific templates
     const questionTemplates = getSuggestionsByModule(moduleId);
     
-    // Find matching templates
+    // Find matching templates - search ALL templates and match against text content
     Object.entries(questionTemplates).forEach(([key, templates]) => {
-      if (lowerQuery.includes(key) || key.startsWith(firstWord)) {
-        templates.forEach((template: SuggestionTemplate) => {
-          const text = template.text.replace("{n}", "5");
-          if (text.toLowerCase().includes(lowerQuery) || 
-              lowerQuery.split(" ").every(word => text.toLowerCase().includes(word))) {
-            matches.push({ text, icon: template.icon, highlight: true });
+      templates.forEach((template: SuggestionTemplate) => {
+        const text = template.text.replace("{n}", "5");
+        const lowerText = text.toLowerCase();
+        
+        // Match if: key matches, OR any query word is found in the text, OR text contains the full query
+        const keyMatches = key.startsWith(firstWord) || lowerQuery.includes(key);
+        const textMatchesQuery = lowerText.includes(lowerQuery);
+        const wordsMatchText = words.some(word => lowerText.includes(word));
+        
+        if (keyMatches || textMatchesQuery || wordsMatchText) {
+          // Avoid duplicates
+          if (!matches.find(m => m.text === text)) {
+            matches.push({ text, icon: template.icon, highlight: keyMatches || textMatchesQuery });
           }
-        });
-      }
+        }
+      });
     });
 
-    // Add persona-specific variations
+    // Sort by relevance: exact matches first, then partial matches
+    matches.sort((a, b) => {
+      const aExact = a.text.toLowerCase().includes(lowerQuery);
+      const bExact = b.text.toLowerCase().includes(lowerQuery);
+      if (aExact && !bExact) return -1;
+      if (!aExact && bExact) return 1;
+      return a.highlight === b.highlight ? 0 : a.highlight ? -1 : 1;
+    });
+
+    // Add persona-specific variations for top matches
     const categoryVariations = personaCategorySuggestions[persona as keyof typeof personaCategorySuggestions] || [];
     if (matches.length > 0 && matches.length < 6) {
       const baseQuestion = matches[0].text;
-      categoryVariations.slice(0, 3).forEach(cat => {
+      categoryVariations.slice(0, 2).forEach(cat => {
         const variation = `${baseQuestion} ${cat}`;
         if (!matches.find(m => m.text === variation)) {
           matches.push({ text: variation, icon: Package, highlight: false });
@@ -59,7 +75,7 @@ export default function SearchSuggestions({ query, onSelect, isVisible, persona,
     // If no template matches, generate module-specific smart suggestions based on query
     if (matches.length === 0) {
       const moduleSmartSuffixes = getModuleSmartSuffixes(moduleId);
-      moduleSmartSuffixes.forEach(suffix => {
+      moduleSmartSuffixes.slice(0, 4).forEach(suffix => {
         matches.push({ text: `${query} ${suffix}`, icon: Sparkles, highlight: false });
       });
     }
