@@ -115,6 +115,21 @@ export default function ModuleDataManagement({ moduleId }: ModuleDataManagementP
   const getUniqueValues = (data: any[], key: string) => 
     [...new Set(data.map(item => item[key]).filter(Boolean))].sort();
 
+  // Create a lookup map for store names by ID
+  const storeNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    stores.forEach(store => {
+      map.set(store.id, store.store_name || store.store_code || 'Unknown');
+    });
+    return map;
+  }, [stores]);
+
+  // Helper to get store display name from store_id
+  const getStoreName = (storeId: string | null) => {
+    if (!storeId) return '-';
+    return storeNameMap.get(storeId) || storeId;
+  };
+
   const getFilter = (table: string) => filters[table] || {};
   const setTableFilter = (table: string, key: string, value: string) => {
     setFilters(prev => ({
@@ -800,6 +815,7 @@ export default function ModuleDataManagement({ moduleId }: ModuleDataManagementP
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Store</TableHead>
                       <TableHead>SKU</TableHead>
                       <TableHead>Stock Level</TableHead>
                       <TableHead>Reorder Point</TableHead>
@@ -810,7 +826,8 @@ export default function ModuleDataManagement({ moduleId }: ModuleDataManagementP
                   <TableBody>
                     {inventoryLevels.map((inv) => (
                       <TableRow key={inv.id}>
-                        <TableCell className="font-medium">{inv.product_sku}</TableCell>
+                        <TableCell className="font-medium">{getStoreName(inv.store_id)}</TableCell>
+                        <TableCell>{inv.product_sku}</TableCell>
                         <TableCell>{inv.stock_level}</TableCell>
                         <TableCell>{inv.reorder_point}</TableCell>
                         <TableCell>
@@ -960,6 +977,7 @@ export default function ModuleDataManagement({ moduleId }: ModuleDataManagementP
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Store</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Foot Traffic</TableHead>
                       <TableHead>Avg Basket</TableHead>
@@ -970,6 +988,7 @@ export default function ModuleDataManagement({ moduleId }: ModuleDataManagementP
                   <TableBody>
                     {storePerformance.map((p) => (
                       <TableRow key={p.id}>
+                        <TableCell className="font-medium">{getStoreName(p.store_id)}</TableCell>
                         <TableCell>{p.metric_date}</TableCell>
                         <TableCell>{p.foot_traffic}</TableCell>
                         <TableCell>${Number(p.avg_basket_size || 0).toFixed(2)}</TableCell>

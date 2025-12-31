@@ -104,6 +104,21 @@ export default function DataManagement() {
   const getUniqueValues = (data: any[], key: string) => 
     [...new Set(data.map(item => item[key]).filter(Boolean))].sort();
 
+  // Create a lookup map for store names by ID
+  const storeNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    stores.forEach(store => {
+      map.set(store.id, store.store_name || store.store_code || 'Unknown');
+    });
+    return map;
+  }, [stores]);
+
+  // Helper to get store display name from store_id
+  const getStoreName = (storeId: string | null) => {
+    if (!storeId) return '-';
+    return storeNameMap.get(storeId) || storeId;
+  };
+
   // Filtered data for each tab
   const filteredStores = useMemo(() => stores.filter(s => {
     if (storeFilters.search && !s.store_name?.toLowerCase().includes(storeFilters.search.toLowerCase()) && 
@@ -725,7 +740,7 @@ export default function DataManagement() {
                   ) : (
                     filteredPerformance.map((perf) => (
                       <TableRow key={perf.id}>
-                        <TableCell className="font-medium">{perf.store_id}</TableCell>
+                        <TableCell className="font-medium">{getStoreName(perf.store_id)}</TableCell>
                         <TableCell>{perf.metric_date}</TableCell>
                         <TableCell>{perf.foot_traffic?.toLocaleString()}</TableCell>
                         <TableCell>${perf.avg_basket_size}</TableCell>
@@ -820,7 +835,7 @@ export default function DataManagement() {
                   ) : (
                     filteredInventory.map((inv) => (
                       <TableRow key={inv.id}>
-                        <TableCell className="font-medium">{inv.store_id}</TableCell>
+                        <TableCell className="font-medium">{getStoreName(inv.store_id)}</TableCell>
                         <TableCell>{inv.product_sku}</TableCell>
                         <TableCell>{inv.stock_level}</TableCell>
                         <TableCell>{inv.reorder_point}</TableCell>
