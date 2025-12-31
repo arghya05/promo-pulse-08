@@ -192,33 +192,56 @@ const determineConfidence = (data: any): ExecutiveBrief['confidence'] => {
   return { level: 'Low', reason: 'Limited data available' };
 };
 
+// Safely convert to array
+const toArray = (val: any): any[] => {
+  if (Array.isArray(val)) return val;
+  if (val === null || val === undefined) return [];
+  return [val];
+};
+
 // Extract next questions
 const extractNextQuestions = (data: any): string[] => {
   if (data?.nextQuestions) {
-    return data.nextQuestions.slice(0, 3);
+    return toArray(data.nextQuestions).slice(0, 3);
   }
   return [];
 };
 
 // Build detail sections
 const buildDetails = (data: any): DetailSection => {
+  const whyItems = toArray(data?.why);
+  const chartItems = toArray(data?.chartData);
+  const causalItems = toArray(data?.causalDrivers);
+  const mlItems = toArray(data?.mlInsights);
+  
+  // Handle predictions - could be array or object
+  let predictionsList: string[] = [];
+  if (data?.predictions) {
+    if (Array.isArray(data.predictions)) {
+      predictionsList = data.predictions.slice(0, 2);
+    } else if (typeof data.predictions === 'object') {
+      if (data.predictions.forecast) {
+        predictionsList = toArray(data.predictions.forecast).slice(0, 2);
+      }
+    }
+  }
+  
   return {
-    why: data?.why?.slice(0, 3) || [],
-    evidence: (data?.chartData || []).slice(0, 6).map((item: any) => ({
+    why: whyItems.slice(0, 3),
+    evidence: chartItems.slice(0, 6).map((item: any) => ({
       name: item.name || item.category || 'Item',
       metric: Object.keys(item).find(k => k !== 'name' && k !== 'category') || 'value',
       value: formatNumber(item.value || item.revenue || item.margin || 0)
     })),
-    drivers: (data?.causalDrivers || []).slice(0, 4).concat(
-      (data?.mlInsights || []).slice(0, 2)
+    drivers: causalItems.slice(0, 4).concat(
+      mlItems.slice(0, 2)
     ).map((d: any) => ({
       driver: d.driver || d.name || d.insight || 'Driver',
       impact: d.impact || d.businessSignificance || 'Impact unknown',
       correlation: d.correlation
     })),
     forecast: {
-      predictions: data?.predictions?.slice?.(0, 2) || 
-        (data?.predictions?.forecast ? [data.predictions.forecast] : []),
+      predictions: predictionsList,
       riskTag: data?.predictions?.risk || undefined
     }
   };
