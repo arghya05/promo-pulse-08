@@ -874,27 +874,98 @@ interface AmbiguityCheck {
 function detectAmbiguousTerms(question: string, moduleId: string): AmbiguityCheck {
   const q = question.toLowerCase();
   
-  // PERMISSIVE MODE: Default to answering directly for ALL modules
-  // Each module has inherent context that determines entity type:
-  // - Pricing, Assortment, Demand, Space, Promotion = Products/SKUs
-  // - Supply Chain = Suppliers by default
-  // User wants direct answers, not clarification prompts
+  console.log(`[${moduleId}] Ambiguity check for: "${q}"`);
   
-  console.log(`[${moduleId}] Ambiguity check - defaulting to direct answer (permissive mode)`);
-  
-  // Only trigger clarification for extremely ambiguous standalone queries
-  // These are very short questions with no context at all
-  const isExtremelyAmbiguous = q.length < 15 && 
-    /^(top|best|worst|show|what|which)\s+(seller|mover|performer)s?\s*\??$/i.test(q.trim());
-  
-  if (isExtremelyAmbiguous) {
-    console.log(`[${moduleId}] Extremely ambiguous short query detected: "${q}"`);
-    // Even for ambiguous queries, use module default instead of asking
-    // Pricing/Assortment/Demand/Space/Promotion = products
-    // Supply Chain = suppliers
+  // EXECUTIVE MODULE: Skip all clarification - strategic questions get comprehensive answers
+  if (moduleId === 'executive') {
+    console.log('[executive] Skipping ambiguity detection for executive module');
     return { needsClarification: false };
   }
   
+  // Skip clarification for greetings and very short messages
+  if (q.length < 12 || /^(hi|hello|hey|thanks|ok|yes|no)\b/i.test(q.trim())) {
+    return { needsClarification: false };
+  }
+  
+  // Check if question already has explicit metric context
+  const hasMetricContext = /\b(revenue|margin|roi|sales|units|lift|spend|profit|growth|on.?time|delivery|lead.?time|reliability|fill.?rate|cost|forecast|accuracy|stockout|utilization|compliance|sqft|facing|traffic|price|elasticity)\b/i.test(q);
+  
+  // Check if question already has explicit time context
+  const hasTimeContext = /\b(today|yesterday|this\s+week|last\s+week|this\s+month|last\s+month|this\s+quarter|last\s+quarter|this\s+year|last\s+year|ytd|yoy|q[1-4]|january|february|march|april|may|june|july|august|september|october|november|december|2024|2025|daily|weekly|monthly|quarterly|annually)\b/i.test(q);
+  
+  // Detect comparison/ranking questions that need metric clarification
+  const isRankingQuestion = /\b(top|best|worst|highest|lowest|biggest|smallest|leading|lagging|underperform|outperform|compare|rank)\b/i.test(q);
+  
+  // Detect trend/forecast questions that may need time clarification  
+  const isTrendQuestion = /\b(trend|forecast|predict|project|growth|decline|change|over\s+time|performance)\b/i.test(q);
+  
+  // ASK FOR KPI CLARIFICATION: Ranking questions without metric context
+  if (isRankingQuestion && !hasMetricContext) {
+    console.log(`[${moduleId}] Ranking question without metric - asking for KPI clarification`);
+    
+    // Build module-specific KPI options
+    const kpiOptions: Record<string, ClarificationOption[]> = {
+      pricing: [
+        { label: 'By Margin', description: 'Profit margin performance', refinedQuestion: question + ' by margin' },
+        { label: 'By Revenue', description: 'Total sales revenue', refinedQuestion: question + ' by revenue' },
+        { label: 'By Price Gap', description: 'Competitive price difference', refinedQuestion: question + ' by competitive price gap' }
+      ],
+      assortment: [
+        { label: 'By Revenue', description: 'Total sales revenue', refinedQuestion: question + ' by revenue' },
+        { label: 'By Units Sold', description: 'Volume of units sold', refinedQuestion: question + ' by units sold' },
+        { label: 'By Margin', description: 'Profit contribution', refinedQuestion: question + ' by margin' }
+      ],
+      demand: [
+        { label: 'By Forecast Accuracy', description: 'Prediction accuracy (MAPE)', refinedQuestion: question + ' by forecast accuracy' },
+        { label: 'By Demand Volume', description: 'Units demanded', refinedQuestion: question + ' by demand volume' },
+        { label: 'By Stockout Risk', description: 'Risk of running out', refinedQuestion: question + ' by stockout risk' }
+      ],
+      'supply-chain': [
+        { label: 'By On-Time Delivery', description: 'Delivery reliability', refinedQuestion: question + ' by on-time delivery' },
+        { label: 'By Lead Time', description: 'Days to receive orders', refinedQuestion: question + ' by lead time' },
+        { label: 'By Fill Rate', description: 'Order fulfillment rate', refinedQuestion: question + ' by fill rate' }
+      ],
+      space: [
+        { label: 'By Sales/SqFt', description: 'Space productivity', refinedQuestion: question + ' by sales per square foot' },
+        { label: 'By Compliance', description: 'Planogram compliance', refinedQuestion: question + ' by compliance rate' },
+        { label: 'By Turnover', description: 'Inventory turnover', refinedQuestion: question + ' by turnover' }
+      ],
+      promotion: [
+        { label: 'By ROI', description: 'Return on investment', refinedQuestion: question + ' by ROI' },
+        { label: 'By Lift', description: 'Sales lift percentage', refinedQuestion: question + ' by lift' },
+        { label: 'By Revenue', description: 'Total revenue generated', refinedQuestion: question + ' by revenue' }
+      ]
+    };
+    
+    const options = kpiOptions[moduleId] || kpiOptions.promotion;
+    
+    return {
+      needsClarification: true,
+      ambiguousTerm: 'metric',
+      clarificationPrompt: 'Which metric would you like to rank by?',
+      options
+    };
+  }
+  
+  // ASK FOR TIME PERIOD CLARIFICATION: Trend questions without time context
+  if (isTrendQuestion && !hasTimeContext && !hasMetricContext) {
+    console.log(`[${moduleId}] Trend question without time period - asking for time clarification`);
+    
+    return {
+      needsClarification: true,
+      ambiguousTerm: 'time',
+      clarificationPrompt: 'What time period should I analyze?',
+      options: [
+        { label: 'Last Month', description: 'Past 30 days', refinedQuestion: question + ' for last month' },
+        { label: 'Last Quarter', description: 'Past 90 days', refinedQuestion: question + ' for last quarter' },
+        { label: 'Last Year', description: 'Past 12 months', refinedQuestion: question + ' for last year' },
+        { label: 'Year to Date', description: 'January to now', refinedQuestion: question + ' year to date' }
+      ]
+    };
+  }
+  
+  // No clarification needed - proceed with analysis
+  console.log(`[${moduleId}] No clarification needed - proceeding with analysis`);
   return { needsClarification: false };
 }
 
