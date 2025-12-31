@@ -219,21 +219,24 @@ _Confidence: ${confidence.level}_`;
           </div>
         </div>
 
-        {/* Next Question Chips - max 2 */}
+        {/* Next Question Chips - max 2, full text */}
         {nextQuestions.length > 0 && (
           <div className="pt-1.5">
             <Separator className="mb-2" />
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-col gap-1.5">
               {nextQuestions.map((question, idx) => (
                 <Button
                   key={idx}
                   variant="outline"
                   size="sm"
-                  className="h-6 text-[10px] px-2 hover:bg-primary/10 hover:border-primary"
+                  className="h-auto min-h-[24px] text-[10px] px-2 py-1.5 hover:bg-primary/10 hover:border-primary text-left whitespace-normal leading-snug justify-start"
                   onClick={() => onNextQuestion?.(question)}
                   disabled={isLoading}
                 >
-                  {question.length > 35 ? question.substring(0, 32) + '...' : question}
+                  <span className="flex items-start gap-1">
+                    <span className="text-muted-foreground">→</span>
+                    <span>{question}</span>
+                  </span>
                 </Button>
               ))}
             </div>
