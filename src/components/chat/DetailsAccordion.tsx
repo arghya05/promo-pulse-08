@@ -15,14 +15,28 @@ interface DetailsAccordionProps {
   className?: string;
 }
 
+// Safely get array from any value
+const toSafeArray = (val: any): any[] => {
+  if (Array.isArray(val)) return val;
+  if (val === null || val === undefined) return [];
+  return [val];
+};
+
 export const DetailsAccordion: React.FC<DetailsAccordionProps> = ({
   details,
   className
 }) => {
-  const hasWhy = details.why.length > 0;
-  const hasEvidence = details.evidence.length > 0;
-  const hasDrivers = details.drivers.length > 0;
-  const hasForecast = details.forecast.predictions.length > 0 || details.forecast.riskTag;
+  // Safely access arrays with fallbacks
+  const whyItems = toSafeArray(details?.why);
+  const evidenceItems = toSafeArray(details?.evidence);
+  const driverItems = toSafeArray(details?.drivers);
+  const forecastItems = toSafeArray(details?.forecast?.predictions);
+  const riskTag = details?.forecast?.riskTag;
+
+  const hasWhy = whyItems.length > 0;
+  const hasEvidence = evidenceItems.length > 0;
+  const hasDrivers = driverItems.length > 0;
+  const hasForecast = forecastItems.length > 0 || riskTag;
 
   if (!hasWhy && !hasEvidence && !hasDrivers && !hasForecast) {
     return null;
@@ -38,13 +52,13 @@ export const DetailsAccordion: React.FC<DetailsAccordionProps> = ({
               <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
               <span className="font-medium">Why This Happened</span>
               <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4">
-                {details.why.length}
+                {whyItems.length}
               </Badge>
             </div>
           </AccordionTrigger>
           <AccordionContent className="px-3 pb-3 pt-2 bg-amber-500/5 rounded-b-lg">
             <ul className="space-y-1.5">
-              {details.why.slice(0, 3).map((reason, idx) => (
+              {whyItems.slice(0, 3).map((reason, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm">
                   <span className="text-amber-500 mt-0.5">•</span>
                   <span className="text-muted-foreground">{reason}</span>
@@ -63,13 +77,13 @@ export const DetailsAccordion: React.FC<DetailsAccordionProps> = ({
               <Database className="h-3.5 w-3.5 text-blue-500" />
               <span className="font-medium">Evidence</span>
               <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4">
-                {details.evidence.length} items
+                {evidenceItems.length} items
               </Badge>
             </div>
           </AccordionTrigger>
           <AccordionContent className="px-3 pb-3 pt-2 bg-blue-500/5 rounded-b-lg">
             <div className="grid grid-cols-2 gap-2">
-              {details.evidence.slice(0, 6).map((item, idx) => (
+              {evidenceItems.slice(0, 6).map((item, idx) => (
                 <div 
                   key={idx} 
                   className="flex items-center justify-between p-2 bg-background/50 rounded border border-border/50"
@@ -81,9 +95,9 @@ export const DetailsAccordion: React.FC<DetailsAccordionProps> = ({
                 </div>
               ))}
             </div>
-            {details.evidence.length > 6 && (
+            {evidenceItems.length > 6 && (
               <button className="text-xs text-primary mt-2 hover:underline">
-                Show {details.evidence.length - 6} more...
+                Show {evidenceItems.length - 6} more...
               </button>
             )}
           </AccordionContent>
@@ -98,13 +112,13 @@ export const DetailsAccordion: React.FC<DetailsAccordionProps> = ({
               <Brain className="h-3.5 w-3.5 text-purple-500" />
               <span className="font-medium">Key Drivers</span>
               <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4">
-                {details.drivers.length}
+                {driverItems.length}
               </Badge>
             </div>
           </AccordionTrigger>
           <AccordionContent className="px-3 pb-3 pt-2 bg-purple-500/5 rounded-b-lg">
             <ul className="space-y-2">
-              {details.drivers.slice(0, 4).map((driver, idx) => (
+              {driverItems.slice(0, 4).map((driver, idx) => (
                 <li key={idx} className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{driver.driver}</p>
@@ -137,20 +151,20 @@ export const DetailsAccordion: React.FC<DetailsAccordionProps> = ({
             <div className="flex items-center gap-2">
               <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
               <span className="font-medium">Forecast & Risk</span>
-              {details.forecast.riskTag && (
+              {riskTag && (
                 <Badge 
                   variant="destructive" 
                   className="text-[9px] px-1.5 py-0 h-4"
                 >
                   <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
-                  {details.forecast.riskTag}
+                  {riskTag}
                 </Badge>
               )}
             </div>
           </AccordionTrigger>
           <AccordionContent className="px-3 pb-3 pt-2 bg-emerald-500/5 rounded-b-lg">
             <ul className="space-y-1.5">
-              {details.forecast.predictions.slice(0, 2).map((prediction, idx) => (
+              {forecastItems.slice(0, 2).map((prediction, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm">
                   <TrendingUp className="h-3.5 w-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
                   <span className="text-muted-foreground">{prediction}</span>
