@@ -824,19 +824,24 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
                       {/* Follow-up questions - rendered once here */}
                       {message.role === 'assistant' && message.data?.nextQuestions && message.data.nextQuestions.length > 0 && (
                         <div className="ml-11 flex flex-col gap-2">
-                          {message.data.nextQuestions.slice(0, 3).map((q: string, i: number) => (
-                            <Button
-                              key={i}
-                              variant="outline"
-                              size="sm"
-                              className="text-xs h-auto min-h-[28px] px-3 py-1.5 hover:bg-primary/10 hover:border-primary text-left whitespace-normal leading-snug justify-start"
-                              onClick={() => handleSend(q)}
-                              disabled={isLoading}
-                            >
-                              <ChevronRight className="h-3 w-3 mr-1 flex-shrink-0" />
-                              <span>{q}</span>
-                            </Button>
-                          ))}
+                          {message.data.nextQuestions.slice(0, 3).map((q: any, i: number) => {
+                            // Handle both string and object formats
+                            const questionText = typeof q === 'string' ? q : (q?.question || q?.text || '');
+                            if (!questionText) return null;
+                            return (
+                              <Button
+                                key={i}
+                                variant="outline"
+                                size="sm"
+                                className="text-xs h-auto min-h-[28px] px-3 py-1.5 hover:bg-primary/10 hover:border-primary text-left whitespace-normal leading-snug justify-start"
+                                onClick={() => handleSend(questionText)}
+                                disabled={isLoading}
+                              >
+                                <ChevronRight className="h-3 w-3 mr-1 flex-shrink-0" />
+                                <span>{questionText}</span>
+                              </Button>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
