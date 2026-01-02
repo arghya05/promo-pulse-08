@@ -99,7 +99,7 @@ export default function SearchSuggestions({ query, onSelect, isVisible, persona,
     : 'top-full mt-1';
 
   return (
-    <div className={cn("absolute left-0 right-0 bg-popover border border-border rounded-lg shadow-lg z-50 overflow-hidden", positionClass)}>
+    <div className={cn("absolute left-0 right-0 bg-popover border border-border rounded-lg shadow-lg z-[100] overflow-hidden", positionClass)}>
       <div className="p-2 border-b border-border/50 bg-secondary/30">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Sparkles className="h-3 w-3 text-primary" />

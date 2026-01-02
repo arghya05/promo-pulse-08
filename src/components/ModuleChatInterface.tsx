@@ -727,8 +727,8 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
       )}
 
       {/* Chat Area */}
-      <div className={`flex flex-col min-w-0 max-w-full overflow-x-hidden ${isExpanded ? 'lg:col-span-12' : 'lg:col-span-10'}`}>
-        <Card className="flex-1 flex flex-col min-h-0 min-w-0 max-w-full overflow-visible">
+      <div className={`flex flex-col min-w-0 max-w-full ${isExpanded ? 'lg:col-span-12' : 'lg:col-span-10'}`}>
+        <Card className="flex-1 flex flex-col min-h-0 min-w-0 max-w-full overflow-visible relative">
           {/* Header with Expand Button */}
           <div className="flex items-center justify-between px-4 pt-3 border-b pb-2">
             <div className="flex items-center gap-2">
@@ -853,9 +853,9 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
           </div>
 
           {/* Input Area */}
-          <div className="p-4 border-t overflow-visible">
-            <div className="relative flex items-end gap-2 overflow-visible" ref={inputContainerRef}>
-              <div className="flex-1 relative overflow-visible">
+          <div className="p-4 border-t relative z-20">
+            <div className="relative flex items-end gap-2" ref={inputContainerRef}>
+              <div className="flex-1 relative">
                 <textarea
                   value={input}
                   onChange={(e) => {
