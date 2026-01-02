@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronDown, Check, X, Sparkles, TrendingUp, DollarSign, Users, Package, Megaphone, Target, Store, ShoppingBag, Truck, BarChart3, Grid3X3, Gauge, Route, Layers } from "lucide-react";
-import { getKPIsByModule, type ModuleKPI } from "@/lib/data/module-kpis";
+import { getKPIsByModule, getKPIsWithData, hasKPIData, type ModuleKPI } from "@/lib/data/module-kpis";
 import { cn } from "@/lib/utils";
 
 interface KPISelectorProps {
@@ -58,15 +58,19 @@ const categoryLabels: Record<string, string> = {
 export default function KPISelector({ question, selectedKPIs, onKPIsChange, isLoading, moduleId = 'promotion' }: KPISelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   
-  // Get module-specific KPIs
+  // Get module-specific KPIs (all KPIs for browsing)
   const moduleKPIs = useMemo(() => getKPIsByModule(moduleId), [moduleId]);
   
-  // Get AI-suggested KPIs based on question and module
+  // Get only KPIs with actual data available (for suggestions)
+  const kpisWithData = useMemo(() => getKPIsWithData(moduleId), [moduleId]);
+  
+  // Get AI-suggested KPIs based on question and module - ONLY suggest KPIs with actual data
   const suggestedKPIs = useMemo(() => {
     if (!question.trim()) return [];
     
     const questionLower = question.toLowerCase();
-    const scored = moduleKPIs.map(kpi => {
+    // Only score KPIs that have actual data available
+    const scored = kpisWithData.map(kpi => {
       let score = 0;
       const kpiNameLower = kpi.name.toLowerCase();
       const kpiCatLower = kpi.category.toLowerCase();
@@ -88,6 +92,8 @@ export default function KPISelector({ question, selectedKPIs, onKPIsChange, isLo
       if (questionLower.includes('lead time') && kpi.id === 'lead_time') score += 10;
       if (questionLower.includes('shelf') && kpi.category === 'space') score += 8;
       if (questionLower.includes('space') && kpi.category === 'space') score += 8;
+      if (questionLower.includes('sales') && (kpi.id === 'revenue' || kpi.id === 'sales_per_sqft')) score += 8;
+      if (questionLower.includes('units') && kpi.id === 'units_sold') score += 8;
       // Base score for module-specific KPIs (not shared)
       if (!['revenue', 'margin', 'margin_percent', 'units_sold', 'avg_transaction_value'].includes(kpi.id)) {
         score += 2;
@@ -99,9 +105,9 @@ export default function KPISelector({ question, selectedKPIs, onKPIsChange, isLo
       .sort((a, b) => b.score - a.score)
       .slice(0, 8)
       .map(s => s.kpi);
-  }, [question, moduleKPIs]);
+  }, [question, kpisWithData]);
   
-  // Get all KPIs grouped by category for this module
+  // Get all KPIs grouped by category for this module (mark which have data)
   const kpisByCategory = useMemo(() => {
     const grouped: Record<string, ModuleKPI[]> = {};
     moduleKPIs.forEach(kpi => {
@@ -113,10 +119,10 @@ export default function KPISelector({ question, selectedKPIs, onKPIsChange, isLo
     return grouped;
   }, [moduleKPIs]);
   
-  // Auto-select suggested KPIs when question changes
+  // Auto-select suggested KPIs when question changes - only pick KPIs with data
   useEffect(() => {
     if (suggestedKPIs.length > 0 && selectedKPIs.length === 0) {
-      // Auto-select first 4 suggested KPIs
+      // Auto-select first 4 suggested KPIs (already filtered to have data)
       onKPIsChange(suggestedKPIs.slice(0, 4).map(kpi => kpi.id));
     }
   }, [suggestedKPIs]);
@@ -221,40 +227,46 @@ export default function KPISelector({ question, selectedKPIs, onKPIsChange, isLo
                 <TabsContent value="all" className="m-0">
                   <ScrollArea className="h-[300px] p-4">
                     <div className="space-y-4">
-                      {Object.entries(kpisByCategory).map(([category, kpis]) => (
-                        <div key={category}>
-                          <div className="flex items-center gap-2 mb-2 text-sm font-medium text-muted-foreground">
-                            {categoryIcons[category]}
-                            <span>{categoryLabels[category]}</span>
-                            <span className="text-xs">({kpis.length})</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-1.5">
-                            {kpis.map(kpi => (
-                              <div
-                                key={kpi.id}
-                                className={cn(
-                                  "flex items-center gap-2 p-2 rounded cursor-pointer transition-colors text-xs",
-                                  selectedKPIs.includes(kpi.id) 
-                                    ? "bg-primary/10 text-primary" 
-                                    : "hover:bg-accent"
-                                )}
-                                onClick={() => toggleKPI(kpi.id)}
-                                title={`Data source: ${kpi.dataSource}`}
-                              >
-                                <div className={cn(
-                                  "h-4 w-4 rounded border flex items-center justify-center flex-shrink-0",
-                                  selectedKPIs.includes(kpi.id) 
-                                    ? "bg-primary border-primary text-primary-foreground" 
-                                    : "border-border"
-                                )}>
-                                  {selectedKPIs.includes(kpi.id) && <Check className="h-2.5 w-2.5" />}
+                      {Object.entries(kpisByCategory).map(([category, kpis]) => {
+                        // Filter to show only KPIs with data
+                        const kpisWithDataInCategory = kpis.filter(kpi => hasKPIData(kpi.id));
+                        if (kpisWithDataInCategory.length === 0) return null;
+                        
+                        return (
+                          <div key={category}>
+                            <div className="flex items-center gap-2 mb-2 text-sm font-medium text-muted-foreground">
+                              {categoryIcons[category]}
+                              <span>{categoryLabels[category]}</span>
+                              <span className="text-xs">({kpisWithDataInCategory.length})</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {kpisWithDataInCategory.map(kpi => (
+                                <div
+                                  key={kpi.id}
+                                  className={cn(
+                                    "flex items-center gap-2 p-2 rounded cursor-pointer transition-colors text-xs",
+                                    selectedKPIs.includes(kpi.id) 
+                                      ? "bg-primary/10 text-primary" 
+                                      : "hover:bg-accent"
+                                  )}
+                                  onClick={() => toggleKPI(kpi.id)}
+                                  title={`Data source: ${kpi.dataSource}`}
+                                >
+                                  <div className={cn(
+                                    "h-4 w-4 rounded border flex items-center justify-center flex-shrink-0",
+                                    selectedKPIs.includes(kpi.id) 
+                                      ? "bg-primary border-primary text-primary-foreground" 
+                                      : "border-border"
+                                  )}>
+                                    {selectedKPIs.includes(kpi.id) && <Check className="h-2.5 w-2.5" />}
+                                  </div>
+                                  <span className="truncate">{kpi.name}</span>
                                 </div>
-                                <span className="truncate">{kpi.name}</span>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </ScrollArea>
                 </TabsContent>

@@ -172,14 +172,14 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
 
   // Re-run analysis when KPIs or time period change (if we have a question)
   useEffect(() => {
-    if (lastAnalyzedQuestion && selectedKPIs.length > 0) {
+    if (lastAnalyzedQuestion) {
       // Debounce the re-analysis
       const timer = setTimeout(() => {
         handleAnalyze(lastAnalyzedQuestion, selectedKPIs, selectedTimePeriod);
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [selectedKPIs, selectedTimePeriod]);
+  }, [selectedKPIs, selectedTimePeriod, handleAnalyze, lastAnalyzedQuestion]);
 
   const handleQuestionClick = (question: ModuleQuestion) => {
     setSelectedQuestion(question);

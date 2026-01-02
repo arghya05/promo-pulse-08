@@ -293,6 +293,39 @@ export const executiveKPIs: ModuleKPI[] = [
   { id: 'markdown_value', name: 'Markdown Value', category: 'financial', dataSource: 'markdowns', format: 'currency' },
 ];
 
+// KPIs that have actual calculated data in the backend
+// These are the only KPIs that will produce real values (not "data not available")
+export const kpisWithAvailableData: string[] = [
+  // Core calculated from transactions
+  'revenue',
+  'margin',
+  'margin_percent',
+  'gross_margin',
+  'units_sold',
+  'avg_transaction_value',
+  'total_discount',
+  'transaction_count',
+  // Pricing module
+  'avg_margin_pct',
+  'avg_elasticity',
+  'price_elasticity',
+  // Promotion module
+  'roi',
+  'promo_roi',
+  'lift_percent',
+  'lift_pct',
+  'promo_spend',
+  'incremental_margin',
+  // Space module
+  'sales_per_sqft',
+  'gmroi',
+  // Derived from products
+  'sku_count',
+  'category_penetration',
+  // Basic calculations
+  'units_per_transaction',
+];
+
 export const getKPIsByModule = (moduleId: string): ModuleKPI[] => {
   switch (moduleId) {
     case 'executive': return executiveKPIs;
@@ -306,10 +339,21 @@ export const getKPIsByModule = (moduleId: string): ModuleKPI[] => {
   }
 };
 
+// Get only KPIs that have actual data available (for suggestions)
+export const getKPIsWithData = (moduleId: string): ModuleKPI[] => {
+  const allKPIs = getKPIsByModule(moduleId);
+  return allKPIs.filter(kpi => kpisWithAvailableData.includes(kpi.id));
+};
+
 export const getSharedKPIs = (): ModuleKPI[] => sharedKPIs;
 
 export const getModuleSpecificKPIs = (moduleId: string): ModuleKPI[] => {
   const allKPIs = getKPIsByModule(moduleId);
   const sharedIds = sharedKPIs.map(k => k.id);
   return allKPIs.filter(kpi => !sharedIds.includes(kpi.id));
+};
+
+// Check if a KPI has actual data available
+export const hasKPIData = (kpiId: string): boolean => {
+  return kpisWithAvailableData.includes(kpiId);
 };
