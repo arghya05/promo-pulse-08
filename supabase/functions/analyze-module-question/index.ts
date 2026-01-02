@@ -148,10 +148,12 @@ function isSimulationQuestion(question: string): boolean {
 
 // Detect hierarchy-level analysis type (Category → Brand → SKU)
 interface HierarchyAnalysisType {
-  level: 'category' | 'brand' | 'product' | 'none';
-  analysisType: 'why' | 'recommendation' | 'forecast' | 'drivers' | 'general' | null;
+  level: 'product' | 'brand' | 'category' | 'none';
+  analysisType: 'why' | 'recommendation' | 'forecast' | 'drivers' | 'general';
   entityName: string | null;
-  entityData: any | null;
+  entityData: any;
+  // New: Support for multi-product questions
+  multipleEntities?: { name: string; data: any }[];
 }
 
 function detectHierarchyAnalysisType(question: string, products: any[]): HierarchyAnalysisType {
@@ -175,51 +177,99 @@ function detectHierarchyAnalysisType(question: string, products: any[]): Hierarc
     analysisType = 'drivers';
   }
   
-  // 1. Check for product/SKU match (most specific)
-  const mentionedProduct = products.find((p: any) => 
+  // MULTI-PRODUCT DETECTION: Check if question mentions multiple products with "and", "&", "," 
+  const multiProductPatterns = [' and ', ' & ', ', ', ' with '];
+  const hasMultiProductIndicator = multiProductPatterns.some(p => q.includes(p));
+  
+  // 1. Check for ALL product/SKU matches (not just first)
+  const mentionedProducts = products.filter((p: any) => 
     q.includes(p.product_name?.toLowerCase()) ||
     q.includes(p.product_sku?.toLowerCase())
   );
   
-  if (mentionedProduct) {
+  // If multiple products mentioned, return multi-product context
+  if (mentionedProducts.length > 1) {
+    const multipleEntities = mentionedProducts.map((p: any) => ({
+      name: p.product_name,
+      data: p
+    }));
     return { 
       level: 'product', 
       analysisType, 
-      entityName: mentionedProduct.product_name,
-      entityData: mentionedProduct
+      entityName: mentionedProducts.map((p: any) => p.product_name).join(' and '),
+      entityData: mentionedProducts[0], // Primary for backward compat
+      multipleEntities
     };
   }
   
-  // 2. Check for brand match
+  // Single product match
+  if (mentionedProducts.length === 1) {
+    return { 
+      level: 'product', 
+      analysisType, 
+      entityName: mentionedProducts[0].product_name,
+      entityData: mentionedProducts[0]
+    };
+  }
+  
+  // 2. Check for brand match (multiple brands)
   const brands = [...new Set(products.map((p: any) => p.brand).filter(Boolean))];
-  const mentionedBrand = brands.find((brand: string) => 
+  const mentionedBrands = brands.filter((brand: string) => 
     q.includes(brand.toLowerCase())
   );
   
-  if (mentionedBrand) {
-    const brandProducts = products.filter((p: any) => p.brand === mentionedBrand);
+  if (mentionedBrands.length > 1) {
+    const multipleEntities = mentionedBrands.map((brand: string) => ({
+      name: brand,
+      data: { brand, products: products.filter((p: any) => p.brand === brand) }
+    }));
     return { 
       level: 'brand', 
       analysisType, 
-      entityName: mentionedBrand,
-      entityData: { brand: mentionedBrand, products: brandProducts }
+      entityName: mentionedBrands.join(' and '),
+      entityData: { brand: mentionedBrands[0], products: products.filter((p: any) => p.brand === mentionedBrands[0]) },
+      multipleEntities
     };
   }
   
-  // 3. Check for category match
+  if (mentionedBrands.length === 1) {
+    const brandProducts = products.filter((p: any) => p.brand === mentionedBrands[0]);
+    return { 
+      level: 'brand', 
+      analysisType, 
+      entityName: mentionedBrands[0],
+      entityData: { brand: mentionedBrands[0], products: brandProducts }
+    };
+  }
+  
+  // 3. Check for category match (multiple categories)
   const categories = [...new Set(products.map((p: any) => p.category).filter(Boolean))];
-  const mentionedCategory = categories.find((cat: string) => 
+  const mentionedCategories = categories.filter((cat: string) => 
     q.includes(cat.toLowerCase())
   );
   
-  if (mentionedCategory) {
-    const categoryProducts = products.filter((p: any) => p.category === mentionedCategory);
+  if (mentionedCategories.length > 1) {
+    const multipleEntities = mentionedCategories.map((cat: string) => ({
+      name: cat,
+      data: { category: cat, products: products.filter((p: any) => p.category === cat) }
+    }));
+    return { 
+      level: 'category', 
+      analysisType, 
+      entityName: mentionedCategories.join(' and '),
+      entityData: { category: mentionedCategories[0], products: products.filter((p: any) => p.category === mentionedCategories[0]) },
+      multipleEntities
+    };
+  }
+  
+  if (mentionedCategories.length === 1) {
+    const categoryProducts = products.filter((p: any) => p.category === mentionedCategories[0]);
     const categoryBrands = [...new Set(categoryProducts.map((p: any) => p.brand).filter(Boolean))];
     return { 
       level: 'category', 
       analysisType, 
-      entityName: mentionedCategory,
-      entityData: { category: mentionedCategory, products: categoryProducts, brands: categoryBrands }
+      entityName: mentionedCategories[0],
+      entityData: { category: mentionedCategories[0], products: categoryProducts, brands: categoryBrands }
     };
   }
   
@@ -1288,54 +1338,149 @@ serve(async (req) => {
     if (hierarchyAnalysis.level !== 'none') {
       switch (hierarchyAnalysis.level) {
         case 'product':
-          // Find the product and build product-specific context
-          const mentionedProduct = products.find((p: any) => 
-            p.product_name?.toLowerCase() === hierarchyAnalysis.entityName?.toLowerCase() ||
-            question.toLowerCase().includes(p.product_name?.toLowerCase())
-          );
-          if (mentionedProduct) {
-            hierarchyContext = buildProductSpecificContext(
-              mentionedProduct,
-              hierarchyAnalysis.analysisType || 'general',
-              transactions,
-              products,
-              promotions,
-              forecasts,
-              inventoryLevels,
-              competitorPrices,
-              suppliers,
-              moduleId
+          // Check for MULTIPLE products first
+          if (hierarchyAnalysis.multipleEntities && hierarchyAnalysis.multipleEntities.length > 1) {
+            // Build context for ALL mentioned products
+            const productContexts: string[] = [];
+            for (const entity of hierarchyAnalysis.multipleEntities) {
+              const productContext = buildProductSpecificContext(
+                entity.data,
+                hierarchyAnalysis.analysisType || 'general',
+                transactions,
+                products,
+                promotions,
+                forecasts,
+                inventoryLevels,
+                competitorPrices,
+                suppliers,
+                moduleId
+              );
+              productContexts.push(productContext);
+            }
+            hierarchyContext = `
+═══════════════════════════════════════════════════════════════════
+MULTI-PRODUCT COMPARISON ANALYSIS
+═══════════════════════════════════════════════════════════════════
+PRODUCTS BEING ANALYZED: ${hierarchyAnalysis.multipleEntities.map(e => e.name).join(', ')}
+ANALYSIS TYPE: ${hierarchyAnalysis.analysisType?.toUpperCase() || 'GENERAL'}
+
+CRITICAL INSTRUCTION: You MUST provide analysis for EACH of these products:
+${hierarchyAnalysis.multipleEntities.map((e, i) => `${i + 1}. ${e.name}`).join('\n')}
+
+Include insights, metrics, and recommendations for ALL products listed above.
+Do NOT skip any product. Each product must appear in your response.
+
+${productContexts.join('\n\n═══════════════════════════════════════════════════════════════════\n\n')}
+`;
+            console.log(`[${moduleId}] Built MULTI-PRODUCT context for: ${hierarchyAnalysis.multipleEntities.map(e => e.name).join(', ')}`);
+          } else {
+            // Single product - find and build context
+            const mentionedProduct = products.find((p: any) => 
+              p.product_name?.toLowerCase() === hierarchyAnalysis.entityName?.toLowerCase() ||
+              question.toLowerCase().includes(p.product_name?.toLowerCase())
             );
-            console.log(`[${moduleId}] Built PRODUCT context for: ${mentionedProduct.product_name}`);
+            if (mentionedProduct) {
+              hierarchyContext = buildProductSpecificContext(
+                mentionedProduct,
+                hierarchyAnalysis.analysisType || 'general',
+                transactions,
+                products,
+                promotions,
+                forecasts,
+                inventoryLevels,
+                competitorPrices,
+                suppliers,
+                moduleId
+              );
+              console.log(`[${moduleId}] Built PRODUCT context for: ${mentionedProduct.product_name}`);
+            }
           }
           break;
         
         case 'brand':
-          hierarchyContext = buildBrandContext(
-            hierarchyAnalysis.entityData,
-            hierarchyAnalysis.analysisType || 'general',
-            transactions,
-            promotions,
-            forecasts,
-            inventoryLevels,
-            competitorPrices,
-            moduleId
-          );
-          console.log(`[${moduleId}] Built BRAND context for: ${hierarchyAnalysis.entityName}`);
+          // Check for MULTIPLE brands
+          if (hierarchyAnalysis.multipleEntities && hierarchyAnalysis.multipleEntities.length > 1) {
+            const brandContexts: string[] = [];
+            for (const entity of hierarchyAnalysis.multipleEntities) {
+              const brandContext = buildBrandContext(
+                entity.data,
+                hierarchyAnalysis.analysisType || 'general',
+                transactions,
+                promotions,
+                forecasts,
+                inventoryLevels,
+                competitorPrices,
+                moduleId
+              );
+              brandContexts.push(brandContext);
+            }
+            hierarchyContext = `
+═══════════════════════════════════════════════════════════════════
+MULTI-BRAND COMPARISON ANALYSIS
+═══════════════════════════════════════════════════════════════════
+BRANDS BEING ANALYZED: ${hierarchyAnalysis.multipleEntities.map(e => e.name).join(', ')}
+
+CRITICAL INSTRUCTION: You MUST provide analysis for EACH of these brands.
+
+${brandContexts.join('\n\n═══════════════════════════════════════════════════════════════════\n\n')}
+`;
+            console.log(`[${moduleId}] Built MULTI-BRAND context for: ${hierarchyAnalysis.multipleEntities.map(e => e.name).join(', ')}`);
+          } else {
+            hierarchyContext = buildBrandContext(
+              hierarchyAnalysis.entityData,
+              hierarchyAnalysis.analysisType || 'general',
+              transactions,
+              promotions,
+              forecasts,
+              inventoryLevels,
+              competitorPrices,
+              moduleId
+            );
+            console.log(`[${moduleId}] Built BRAND context for: ${hierarchyAnalysis.entityName}`);
+          }
           break;
         
         case 'category':
-          hierarchyContext = buildCategoryContext(
-            hierarchyAnalysis.entityData,
-            hierarchyAnalysis.analysisType || 'general',
-            transactions,
-            promotions,
-            forecasts,
-            inventoryLevels,
-            competitorPrices,
-            moduleId
-          );
-          console.log(`[${moduleId}] Built CATEGORY context for: ${hierarchyAnalysis.entityName}`);
+          // Check for MULTIPLE categories
+          if (hierarchyAnalysis.multipleEntities && hierarchyAnalysis.multipleEntities.length > 1) {
+            const categoryContexts: string[] = [];
+            for (const entity of hierarchyAnalysis.multipleEntities) {
+              const categoryContext = buildCategoryContext(
+                entity.data,
+                hierarchyAnalysis.analysisType || 'general',
+                transactions,
+                promotions,
+                forecasts,
+                inventoryLevels,
+                competitorPrices,
+                moduleId
+              );
+              categoryContexts.push(categoryContext);
+            }
+            hierarchyContext = `
+═══════════════════════════════════════════════════════════════════
+MULTI-CATEGORY COMPARISON ANALYSIS
+═══════════════════════════════════════════════════════════════════
+CATEGORIES BEING ANALYZED: ${hierarchyAnalysis.multipleEntities.map(e => e.name).join(', ')}
+
+CRITICAL INSTRUCTION: You MUST provide analysis for EACH of these categories.
+
+${categoryContexts.join('\n\n═══════════════════════════════════════════════════════════════════\n\n')}
+`;
+            console.log(`[${moduleId}] Built MULTI-CATEGORY context for: ${hierarchyAnalysis.multipleEntities.map(e => e.name).join(', ')}`);
+          } else {
+            hierarchyContext = buildCategoryContext(
+              hierarchyAnalysis.entityData,
+              hierarchyAnalysis.analysisType || 'general',
+              transactions,
+              promotions,
+              forecasts,
+              inventoryLevels,
+              competitorPrices,
+              moduleId
+            );
+            console.log(`[${moduleId}] Built CATEGORY context for: ${hierarchyAnalysis.entityName}`);
+          }
           break;
       }
     }
@@ -2914,15 +3059,44 @@ CROSS-MODULE ANALYSIS INSTRUCTIONS:
 ` : '';
 
     // Build hierarchy-specific analysis instructions (category, brand, or product level)
+    const isMultiEntity = hierarchyAnalysis.multipleEntities && hierarchyAnalysis.multipleEntities.length > 1;
+    const entityNames = isMultiEntity 
+      ? hierarchyAnalysis.multipleEntities!.map(e => e.name).join(', ')
+      : hierarchyAnalysis.entityName;
+    
+    const multiEntityInstructions = isMultiEntity ? `
+═══════════════════════════════════════════════════════════════════
+CRITICAL: MULTI-${hierarchyAnalysis.level.toUpperCase()} COMPARISON REQUIRED
+═══════════════════════════════════════════════════════════════════
+
+YOU MUST ANALYZE ALL OF THESE ${hierarchyAnalysis.level.toUpperCase()}S - DO NOT SKIP ANY:
+${hierarchyAnalysis.multipleEntities!.map((e, i) => `${i + 1}. ${e.name}`).join('\n')}
+
+MANDATORY REQUIREMENTS:
+1. Each ${hierarchyAnalysis.level} listed above MUST appear in your whatHappened section with specific metrics
+2. Each ${hierarchyAnalysis.level} MUST have its own insights in the why section
+3. Each ${hierarchyAnalysis.level} MUST have recommendations in whatToDo
+4. The chartData MUST include data points for EACH ${hierarchyAnalysis.level}
+5. If you cannot find data for a ${hierarchyAnalysis.level}, explicitly state "No data available for [name]" - DO NOT silently skip it
+
+EXAMPLE FORMAT FOR ${hierarchyAnalysis.multipleEntities!.length} ${hierarchyAnalysis.level.toUpperCase()}S:
+- whatHappened: ["${hierarchyAnalysis.multipleEntities![0].name}: [metrics]", "${hierarchyAnalysis.multipleEntities![1] ? hierarchyAnalysis.multipleEntities![1].name + ': [metrics]' : '[Next entity]: [metrics]'}", ...]
+- chartData: [{"name": "${hierarchyAnalysis.multipleEntities![0].name}", "value": X}, {"name": "${hierarchyAnalysis.multipleEntities![1] ? hierarchyAnalysis.multipleEntities![1].name : 'Next Entity'}", "value": Y}, ...]
+
+FAILURE TO INCLUDE ALL ${hierarchyAnalysis.level.toUpperCase()}S IS NOT ACCEPTABLE.
+` : '';
+    
     const hierarchyInstructions = hierarchyAnalysis.level !== 'none' ? `
 HIERARCHY-LEVEL ANALYSIS INSTRUCTIONS:
-This question is about a SPECIFIC ${hierarchyAnalysis.level.toUpperCase()}: "${hierarchyAnalysis.entityName}"
+This question is about ${isMultiEntity ? 'MULTIPLE' : 'a SPECIFIC'} ${hierarchyAnalysis.level.toUpperCase()}${isMultiEntity ? 'S' : ''}: "${entityNames}"
 Analysis Type: ${hierarchyAnalysis.analysisType?.toUpperCase() || 'GENERAL'}
 Hierarchy Level: ${hierarchyAnalysis.level.toUpperCase()}
 
+${multiEntityInstructions}
+
 ${hierarchyAnalysis.analysisType === 'why' ? `
 FOR "WHY" ANALYSIS:
-- Explain WHY this ${hierarchyAnalysis.level} is performing the way it is
+- Explain WHY ${isMultiEntity ? 'each of these ' + hierarchyAnalysis.level + 's is' : 'this ' + hierarchyAnalysis.level + ' is'} performing the way it is
 - Reference specific metrics: revenue, margin, unit velocity, price elasticity
 - Compare to ${hierarchyAnalysis.level === 'product' ? 'category average' : hierarchyAnalysis.level === 'brand' ? 'other brands' : 'other categories'} and identify gaps
 - List 3-5 specific causal factors with quantified impacts
@@ -2930,7 +3104,7 @@ FOR "WHY" ANALYSIS:
 ` : ''}
 ${hierarchyAnalysis.analysisType === 'recommendation' ? `
 FOR "RECOMMENDATION" ANALYSIS:
-- Provide 3-5 SPECIFIC, ACTIONABLE recommendations for this ${hierarchyAnalysis.level}
+- Provide 3-5 SPECIFIC, ACTIONABLE recommendations for ${isMultiEntity ? 'each ' + hierarchyAnalysis.level : 'this ' + hierarchyAnalysis.level}
 - Each recommendation should include: what to do, expected impact, timeline
 - Prioritize by impact (high/medium/low)
 - ${hierarchyAnalysis.level === 'product' ? 'Include pricing, promotion, placement, and inventory recommendations' : `Include recommendations for top/bottom products within this ${hierarchyAnalysis.level}`}
@@ -2938,7 +3112,7 @@ FOR "RECOMMENDATION" ANALYSIS:
 ` : ''}
 ${hierarchyAnalysis.analysisType === 'forecast' ? `
 FOR "FORECAST" ANALYSIS:
-- Provide demand/sales forecast for this ${hierarchyAnalysis.level}
+- Provide demand/sales forecast for ${isMultiEntity ? 'each ' + hierarchyAnalysis.level : 'this ' + hierarchyAnalysis.level}
 - Include forecasts for: next month, next quarter, next 3 months
 - Show confidence levels (%) for each forecast
 - Explain drivers affecting the forecast (seasonality, trends, promotions)
@@ -2947,14 +3121,15 @@ FOR "FORECAST" ANALYSIS:
 ` : ''}
 ${hierarchyAnalysis.analysisType === 'drivers' ? `
 FOR "DRIVERS" ANALYSIS:
-- Identify TOP 5 drivers that influence sales for this ${hierarchyAnalysis.level}
+- Identify TOP 5 drivers that influence sales for ${isMultiEntity ? 'each ' + hierarchyAnalysis.level : 'this ' + hierarchyAnalysis.level}
 - Quantify each driver's impact (correlation %, contribution %)
 - Include: price sensitivity, promotional lift, seasonality, competitive factors, brand loyalty
 - Rank drivers by importance
 - ${hierarchyAnalysis.level !== 'product' ? `Show which products within this ${hierarchyAnalysis.level} are most affected by each driver` : 'Suggest how to leverage each driver'}
 ` : ''}
 
-CRITICAL: Your ENTIRE response must focus on "${hierarchyAnalysis.entityName}" at the ${hierarchyAnalysis.level.toUpperCase()} level.
+CRITICAL: Your ENTIRE response must focus on "${entityNames}" at the ${hierarchyAnalysis.level.toUpperCase()} level.
+${isMultiEntity ? 'EACH entity listed above MUST appear in your response with specific analysis - NO EXCEPTIONS.' : ''}
 ${hierarchyAnalysis.level === 'category' ? 'Include analysis of TOP and BOTTOM products/brands within this category.' : ''}
 ${hierarchyAnalysis.level === 'brand' ? 'Include analysis of TOP and BOTTOM products within this brand.' : ''}
 ${hierarchyAnalysis.level === 'product' ? 'Do NOT provide generic category-level answers.' : ''}
