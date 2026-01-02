@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Sparkles, TrendingUp, Calendar, BarChart3, Target, Clock, MapPin, Users, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getSuggestionsByModule, SuggestionTemplate } from "@/lib/data/module-suggestions";
@@ -10,6 +11,7 @@ interface SearchSuggestionsProps {
   persona: string;
   moduleId?: string;
   position?: 'bottom' | 'top';
+  inputRef?: React.RefObject<HTMLElement>;
 }
 
 // Persona-specific category suggestions
@@ -19,7 +21,50 @@ const personaCategorySuggestions = {
   non_consumables: ["for Personal Care", "for Home Care", "for Soap products", "for Cleaning products"],
 };
 
-export default function SearchSuggestions({ query, onSelect, isVisible, persona, moduleId = 'promotion', position = 'bottom' }: SearchSuggestionsProps) {
+export default function SearchSuggestions({ query, onSelect, isVisible, persona, moduleId = 'promotion', position = 'bottom', inputRef }: SearchSuggestionsProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [portalPosition, setPortalPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  
+  // Update portal position based on parent input element
+  useEffect(() => {
+    if (!isVisible) {
+      setPortalPosition(null);
+      return;
+    }
+    
+    const updatePosition = () => {
+      const container = containerRef.current?.parentElement;
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+        
+        if (position === 'top') {
+          setPortalPosition({
+            top: rect.top + scrollTop,
+            left: rect.left + scrollLeft,
+            width: rect.width
+          });
+        } else {
+          setPortalPosition({
+            top: rect.bottom + scrollTop,
+            left: rect.left + scrollLeft,
+            width: rect.width
+          });
+        }
+      }
+    };
+    
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [isVisible, position]);
+
   const suggestions = useMemo(() => {
     if (!query || query.length < 2) return [];
 
@@ -92,14 +137,22 @@ export default function SearchSuggestions({ query, onSelect, isVisible, persona,
       .slice(0, 8);
   }, [query, persona, moduleId]);
 
-  if (!isVisible || suggestions.length === 0) return null;
+  if (!isVisible || suggestions.length === 0) return (
+    <div ref={containerRef} className="hidden" />
+  );
 
-  const positionClass = position === 'top' 
-    ? 'bottom-full mb-1' 
-    : 'top-full mt-1';
-
-  return (
-    <div className={cn("absolute left-0 right-0 bg-popover border border-border rounded-lg shadow-lg z-[100] overflow-hidden", positionClass)}>
+  const dropdownContent = (
+    <div 
+      className="bg-popover border border-border rounded-lg shadow-xl overflow-hidden"
+      style={portalPosition ? {
+        position: 'fixed',
+        top: position === 'top' ? (portalPosition.top - 8) : portalPosition.top,
+        left: portalPosition.left,
+        width: portalPosition.width,
+        transform: position === 'top' ? 'translateY(-100%)' : 'translateY(4px)',
+        zIndex: 99999,
+      } : undefined}
+    >
       <div className="p-2 border-b border-border/50 bg-secondary/30">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Sparkles className="h-3 w-3 text-primary" />
@@ -142,6 +195,14 @@ export default function SearchSuggestions({ query, onSelect, isVisible, persona,
         </p>
       </div>
     </div>
+  );
+
+  // Use portal to escape any overflow:hidden containers
+  return (
+    <>
+      <div ref={containerRef} className="absolute inset-0 pointer-events-none" />
+      {portalPosition && createPortal(dropdownContent, document.body)}
+    </>
   );
 }
 
