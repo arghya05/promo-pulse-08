@@ -223,10 +223,19 @@ const toArray = (val: any): any[] => {
   return [val];
 };
 
-// Extract next questions (max 2)
+// Extract next questions (max 2) - ensure only strings are returned
 const extractNextQuestions = (data: any): string[] => {
   if (data?.nextQuestions) {
-    return toArray(data.nextQuestions).slice(0, LIMITS.nextQuestions);
+    return toArray(data.nextQuestions)
+      .map((q: any) => {
+        // Handle both string and object formats
+        if (typeof q === 'string') return q;
+        if (q?.question) return q.question;
+        if (q?.text) return q.text;
+        return null;
+      })
+      .filter((q): q is string => typeof q === 'string' && q.length > 0)
+      .slice(0, LIMITS.nextQuestions);
   }
   return [];
 };
