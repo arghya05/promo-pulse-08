@@ -247,20 +247,38 @@ const buildDetails = (data: any): DetailSection => {
   const causalItems = toArray(data?.causalDrivers);
   const mlItems = toArray(data?.mlInsights);
   
-  // Handle predictions - could be array or object
+  // Handle predictions - could be array, object, or array of objects with period/value/confidence
   let predictionsList: string[] = [];
   if (data?.predictions) {
     if (Array.isArray(data.predictions)) {
-      predictionsList = data.predictions.slice(0, 2);
+      // Filter and convert prediction items to strings
+      predictionsList = data.predictions
+        .slice(0, 2)
+        .map((p: any) => {
+          if (typeof p === 'string') return p;
+          if (p?.text) return p.text;
+          if (p?.forecast) return p.forecast;
+          if (p?.period && p?.value) return `${p.period}: ${p.value}`;
+          return null;
+        })
+        .filter((p): p is string => typeof p === 'string' && p.length > 0);
     } else if (typeof data.predictions === 'object') {
       if (data.predictions.forecast) {
-        predictionsList = toArray(data.predictions.forecast).slice(0, 2);
+        const forecasts = toArray(data.predictions.forecast);
+        predictionsList = forecasts.slice(0, 2).map((f: any) => {
+          if (typeof f === 'string') return f;
+          if (f?.period && f?.value) return `${f.period}: ${f.value}`;
+          return String(f);
+        }).filter((p): p is string => typeof p === 'string' && p.length > 0);
+      } else if (data.predictions.period && data.predictions.value) {
+        // Single prediction object with period/value
+        predictionsList = [`${data.predictions.period}: ${data.predictions.value}`];
       }
     }
   }
   
   return {
-    why: whyItems.slice(0, 3),
+    why: whyItems.slice(0, 3).map((item: any) => typeof item === 'string' ? item : item?.text || item?.reason || String(item)),
     evidence: chartItems.slice(0, 6).map((item: any) => ({
       name: item.name || item.category || 'Item',
       metric: Object.keys(item).find(k => k !== 'name' && k !== 'category') || 'value',
