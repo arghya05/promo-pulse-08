@@ -887,20 +887,24 @@ function detectAmbiguousTerms(question: string, moduleId: string): AmbiguityChec
     return { needsClarification: false };
   }
   
-  // Check if question already has explicit metric context
-  const hasMetricContext = /\b(revenue|margin|roi|sales|units|lift|spend|profit|growth|on.?time|delivery|lead.?time|reliability|fill.?rate|cost|forecast|accuracy|stockout|utilization|compliance|sqft|facing|traffic|price|elasticity)\b/i.test(q);
+  // Check if question already has explicit metric context - comprehensive list
+  const hasMetricContext = /\b(revenue|margin|roi|sales|units|lift|spend|profit|growth|on.?time|delivery|lead.?time|reliability|fill.?rate|cost|cogs|cost\s+of\s+goods|forecast|accuracy|stockout|utilization|compliance|sqft|facing|traffic|price|elasticity|turnover|velocity|contribution|gmroi|basket|aov|atv|conversion|penetration|frequency|spend|budget|investment|return|yield|efficiency|productivity|inventory|days\s+of\s+supply|dos|safety\s+stock|reorder|fill|service\s+level)\b/i.test(q);
   
   // Check if question already has explicit time context
-  const hasTimeContext = /\b(today|yesterday|this\s+week|last\s+week|this\s+month|last\s+month|this\s+quarter|last\s+quarter|this\s+year|last\s+year|ytd|yoy|q[1-4]|january|february|march|april|may|june|july|august|september|october|november|december|2024|2025|daily|weekly|monthly|quarterly|annually)\b/i.test(q);
+  const hasTimeContext = /\b(today|yesterday|this\s+week|last\s+week|this\s+month|last\s+month|this\s+quarter|last\s+quarter|this\s+year|last\s+year|ytd|yoy|q[1-4]|january|february|march|april|may|june|july|august|september|october|november|december|2024|2025|2026|daily|weekly|monthly|quarterly|annually)\b/i.test(q);
   
   // Detect comparison/ranking questions that need metric clarification
   const isRankingQuestion = /\b(top|best|worst|highest|lowest|biggest|smallest|leading|lagging|underperform|outperform|compare|rank)\b/i.test(q);
+  
+  // If the question is already asking for specific data (e.g., "what are the COGS", "show me the prices"), skip clarification
+  const isSpecificDataRequest = /\b(what\s+(is|are)\s+the|show\s+me\s+the|give\s+me\s+the|list\s+the|get\s+the|display|specific|exact|actual)\b/i.test(q);
   
   // Detect trend/forecast questions that may need time clarification  
   const isTrendQuestion = /\b(trend|forecast|predict|project|growth|decline|change|over\s+time|performance)\b/i.test(q);
   
   // ASK FOR KPI CLARIFICATION: Ranking questions without metric context
-  if (isRankingQuestion && !hasMetricContext) {
+  // Skip if user is making a specific data request (already has intent)
+  if (isRankingQuestion && !hasMetricContext && !isSpecificDataRequest) {
     console.log(`[${moduleId}] Ranking question without metric - asking for KPI clarification`);
     
     // Build module-specific KPI options
