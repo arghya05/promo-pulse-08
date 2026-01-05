@@ -2016,6 +2016,65 @@ INVENTORY STATUS:
 - Below reorder point: ${inventory.filter((i: any) => Number(i.stock_level) < Number(i.reorder_point)).length}
 - Overstocked items (>60 DOS): ${deadStock.length}
 
+═══════════════════════════════════════════════════════════════════
+BRAND REPRESENTATION OPTIMIZATION BY CATEGORY (MUST-PASS):
+Optimize brand mix within each category for profitable growth and balanced assortment
+═══════════════════════════════════════════════════════════════════
+${(() => {
+  const brandBalanceOutput: string[] = [];
+  Object.entries(categoryPerformance).forEach(([category, catData]) => {
+    const categoryBrands = productVelocity.filter(p => p.category === category);
+    const brandInCategory: Record<string, { revenue: number; units: number; margin: number; skuCount: number; velocity: number; sellThrough: number }> = {};
+    
+    categoryBrands.forEach(p => {
+      if (!brandInCategory[p.brand]) brandInCategory[p.brand] = { revenue: 0, units: 0, margin: 0, skuCount: 0, velocity: 0, sellThrough: 0 };
+      brandInCategory[p.brand].revenue += p.revenue;
+      brandInCategory[p.brand].units += p.units;
+      brandInCategory[p.brand].margin += p.margin;
+      brandInCategory[p.brand].skuCount++;
+      brandInCategory[p.brand].velocity += p.velocity;
+      brandInCategory[p.brand].sellThrough += p.sellThroughPct;
+    });
+    
+    const catTotalRevenue = catData.revenue || 1;
+    const brandAnalysis = Object.entries(brandInCategory).map(([brand, data]) => {
+      const avgMargin = data.skuCount > 0 ? data.margin / data.skuCount : 0;
+      const avgVelocity = data.skuCount > 0 ? data.velocity / data.skuCount : 0;
+      const avgSellThrough = data.skuCount > 0 ? data.sellThrough / data.skuCount : 0;
+      const revenueShare = (data.revenue / catTotalRevenue) * 100;
+      
+      const healthScore = (avgMargin / 10) + (avgVelocity / 2) + (avgSellThrough / 20);
+      let brandStatus = 'Maintain';
+      if (healthScore >= 10) brandStatus = 'Grow';
+      else if (healthScore >= 5) brandStatus = 'Maintain';
+      else if (healthScore >= 2) brandStatus = 'Reduce';
+      else brandStatus = 'Exit';
+      
+      const isOverRepresented = revenueShare > 40 && avgMargin < 25;
+      const isUnderRepresented = revenueShare < 10 && avgMargin > 35 && avgVelocity > 5;
+      
+      return { brand, revenue: data.revenue, revenueShare, skuCount: data.skuCount, avgMargin, avgVelocity, avgSellThrough, healthScore, brandStatus, isOverRepresented, isUnderRepresented };
+    }).sort((a, b) => b.revenue - a.revenue);
+    
+    const overRepBrands = brandAnalysis.filter(b => b.isOverRepresented);
+    const underRepBrands = brandAnalysis.filter(b => b.isUnderRepresented);
+    const exitBrands = brandAnalysis.filter(b => b.brandStatus === 'Exit');
+    const growBrands = brandAnalysis.filter(b => b.brandStatus === 'Grow');
+    
+    let catOutput = category.toUpperCase() + ' - Brand Portfolio (' + brandAnalysis.length + ' brands, $' + catTotalRevenue.toFixed(0) + '):\n';
+    brandAnalysis.slice(0, 5).forEach((b, i) => {
+      catOutput += '   ' + (i + 1) + '. ' + b.brand + ': ' + b.revenueShare.toFixed(1) + '% share, ' + b.skuCount + ' SKUs, ' + b.avgMargin.toFixed(1) + '% margin, ' + b.avgSellThrough.toFixed(1) + '% sell-through -> ' + b.brandStatus + '\n';
+    });
+    if (overRepBrands.length > 0) catOutput += '   Over-Represented (high share, low margin): ' + overRepBrands.map(b => b.brand).join(', ') + '\n';
+    if (underRepBrands.length > 0) catOutput += '   Under-Represented (growth opportunity): ' + underRepBrands.map(b => b.brand).join(', ') + '\n';
+    if (exitBrands.length > 0) catOutput += '   Exit Candidates: ' + exitBrands.map(b => b.brand).join(', ') + '\n';
+    if (growBrands.length > 0) catOutput += '   Grow Investments: ' + growBrands.map(b => b.brand).join(', ') + '\n';
+    
+    brandBalanceOutput.push(catOutput);
+  });
+  return brandBalanceOutput.join('\n');
+})()}
+
 MARKET TRENDS & SIGNALS:
 ${marketTrends.slice(0, 6).map((mt: any) => `- ${mt.metric_name} (${mt.product_category || 'All'}): ${mt.metric_value}`).join('\n')}
 
