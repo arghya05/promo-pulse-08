@@ -8288,11 +8288,100 @@ function ensureCompleteResponse(
   
   console.log(`[ChartData] Requested count: ${requestedCount}, Categories: ${shouldUseCategories}, Products: ${shouldUseProducts}, Suppliers: ${shouldUseSuppliers}, Planograms: ${shouldUsePlanograms}, Stores: ${shouldUseStores}, Promotions: ${shouldUsePromotions}`);
   
+  // ===========================================================================
+  // UNIVERSAL ENTITY PROFITABILITY CALCULATOR
+  // Works for ALL entity types by aggregating actual transaction data
+  // ===========================================================================
+  
+  // Create product lookup for cost/margin calculation
+  const productLookup: Record<string, { cost: number; margin: number; category: string; brand: string; name: string }> = {};
+  if (products && products.length > 0) {
+    products.forEach((p: any) => {
+      productLookup[p.product_sku] = {
+        cost: Number(p.cost || p.base_price * 0.6 || 5),
+        margin: Number(p.margin_percent || 35),
+        category: p.category || 'Other',
+        brand: p.brand || 'Unknown',
+        name: p.product_name || p.product_sku
+      };
+    });
+  }
+  
+  // Universal aggregation function - works for any entity dimension
+  const aggregateByDimension = (
+    dimension: 'store' | 'category' | 'product' | 'brand' | 'supplier' | 'promotion',
+    getDimensionKey: (t: any) => string | null,
+    getEntityInfo: (key: string) => any
+  ): any[] => {
+    const aggregation: Record<string, { 
+      revenue: number; 
+      profit: number; 
+      transactions: number; 
+      units: number; 
+      info: any 
+    }> = {};
+    
+    if (transactions && transactions.length > 0) {
+      transactions.forEach((t: any) => {
+        const key = getDimensionKey(t);
+        if (!key) return;
+        
+        if (!aggregation[key]) {
+          aggregation[key] = { 
+            revenue: 0, 
+            profit: 0, 
+            transactions: 0, 
+            units: 0, 
+            info: getEntityInfo(key) 
+          };
+        }
+        
+        const revenue = Number(t.total_amount || t.net_sales || 0);
+        const sku = t.product_sku;
+        const productInfo = productLookup[sku];
+        const cost = productInfo 
+          ? productInfo.cost * Number(t.quantity || 1)
+          : revenue * 0.65;
+        const profit = revenue - cost;
+        
+        aggregation[key].revenue += revenue;
+        aggregation[key].profit += profit;
+        aggregation[key].transactions++;
+        aggregation[key].units += Number(t.quantity || 1);
+      });
+    }
+    
+    return Object.entries(aggregation)
+      .filter(([_, data]) => data.revenue > 0)
+      .sort((a, b) => b[1].profit - a[1].profit)
+      .slice(0, requestedCount)
+      .map(([key, data]) => {
+        const marginPct = data.revenue > 0 ? (data.profit / data.revenue * 100) : 0;
+        return {
+          name: data.info?.name || key,
+          value: Math.round(data.profit),
+          revenue: Math.round(data.revenue),
+          profit: Math.round(data.profit),
+          marginPct: marginPct.toFixed(1) + '%',
+          transactions: data.transactions,
+          unitsSold: data.units,
+          ...data.info
+        };
+      });
+  };
+  
   // Generate entity-specific chart data based on question type
   let entityChartData: any[] | null = null;
   let entityType = 'items';
   
   if (shouldUseSuppliers && suppliers && suppliers.length > 0) {
+    // Create supplier lookup
+    const supplierLookup: Record<string, any> = {};
+    suppliers.forEach((s: any) => {
+      supplierLookup[s.id] = s;
+      supplierLookup[s.supplier_name?.toLowerCase()] = s;
+    });
+    
     // For supplier questions, show on-time delivery % prominently
     entityChartData = suppliers.slice(0, requestedCount).map((s: any) => {
       const onTimeRate = Math.round(Number(s.reliability_score || 0.95) * 100);
@@ -8306,9 +8395,10 @@ function ensureCompleteResponse(
         leadTime: `${s.lead_time_days || 7} days`,
         location: `${s.city || ''}, ${s.state || ''}`.trim() || 'Unknown'
       };
-    }).sort((a: any, b: any) => b.value - a.value); // Sort by on-time % descending
+    }).sort((a: any, b: any) => b.value - a.value);
     entityType = 'suppliers';
     console.log(`[ChartData] Using ${entityChartData.length} suppliers with on-time delivery %`);
+    
   } else if (shouldUsePlanograms && planograms && planograms.length > 0) {
     entityChartData = planograms.slice(0, requestedCount).map((p: any) => ({
       name: p.planogram_name || p.planogram_code || p.category,
@@ -8317,75 +8407,32 @@ function ensureCompleteResponse(
     }));
     entityType = 'planograms';
     console.log(`[ChartData] Using ${entityChartData.length} planograms`);
-  } else if (shouldUseStores && stores && stores.length > 0) {
-    // Calculate ACTUAL store profitability from transactions data
-    const storeProfitability: Record<string, { revenue: number; profit: number; transactions: number; units: number; store: any }> = {};
     
-    // Initialize with all stores
+  } else if (shouldUseStores && stores && stores.length > 0) {
+    // Create store lookup
+    const storeLookup: Record<string, any> = {};
     stores.forEach((s: any) => {
-      storeProfitability[s.id] = { 
-        revenue: 0, 
-        profit: 0, 
-        transactions: 0, 
-        units: 0,
-        store: s 
+      storeLookup[s.id] = { 
+        name: s.store_name || s.store_code, 
+        region: s.region, 
+        format: s.store_format,
+        size: s.store_size_sqft
       };
     });
     
-    // Aggregate transactions by store
-    if (transactions && transactions.length > 0) {
-      // Create product lookup for cost calculation
-      const productCostLookup: Record<string, number> = {};
-      if (products) {
-        products.forEach((p: any) => { 
-          productCostLookup[p.product_sku] = Number(p.cost || 0); 
-        });
-      }
-      
-      transactions.forEach((t: any) => {
-        const storeId = t.store_id;
-        if (storeId && storeProfitability[storeId]) {
-          const revenue = Number(t.total_amount || 0);
-          const cost = productCostLookup[t.product_sku] 
-            ? productCostLookup[t.product_sku] * Number(t.quantity || 1)
-            : revenue * 0.65; // Default 65% cost
-          const profit = revenue - cost;
-          
-          storeProfitability[storeId].revenue += revenue;
-          storeProfitability[storeId].profit += profit;
-          storeProfitability[storeId].transactions++;
-          storeProfitability[storeId].units += Number(t.quantity || 0);
-        }
-      });
-    }
+    entityChartData = aggregateByDimension(
+      'store',
+      (t) => t.store_id,
+      (key) => storeLookup[key] || { name: key }
+    );
     
-    // Sort by profit and take top N
-    entityChartData = Object.values(storeProfitability)
-      .filter((s: any) => s.revenue > 0 || s.transactions > 0) // Only stores with activity
-      .sort((a: any, b: any) => b.profit - a.profit)
-      .slice(0, requestedCount)
-      .map((data: any) => {
-        const marginPct = data.revenue > 0 ? (data.profit / data.revenue * 100) : 0;
-        return {
-          name: data.store.store_name || data.store.store_code,
-          value: Math.round(data.profit),
-          revenue: Math.round(data.revenue),
-          profit: Math.round(data.profit),
-          marginPct: marginPct.toFixed(1) + '%',
-          transactions: data.transactions,
-          unitsSold: data.units,
-          region: data.store.region,
-          format: data.store.store_format
-        };
-      });
-    
-    // If no transactions found, use store_performance table or estimate
+    // Fallback if no transactions
     if (entityChartData.length === 0) {
-      console.log(`[ChartData] No store transactions found, generating estimates from stores data`);
+      console.log(`[ChartData] No store transactions, generating estimates`);
       entityChartData = stores.slice(0, requestedCount).map((s: any) => {
         const sqft = Number(s.store_size_sqft || 10000);
-        const estimatedRevenue = sqft * 0.05 * (0.8 + Math.random() * 0.4); // $40-60 per sqft
-        const marginPct = 28 + Math.random() * 8; // 28-36% margin
+        const estimatedRevenue = sqft * 0.05 * (0.8 + Math.random() * 0.4);
+        const marginPct = 28 + Math.random() * 8;
         const profit = estimatedRevenue * (marginPct / 100);
         return {
           name: s.store_name || s.store_code,
@@ -8398,32 +8445,59 @@ function ensureCompleteResponse(
         };
       }).sort((a: any, b: any) => b.profit - a.profit);
     }
-    
     entityType = 'stores';
-    console.log(`[ChartData] Using ${entityChartData.length} stores with actual profitability data`);
+    console.log(`[ChartData] Using ${entityChartData.length} stores`);
+    
   } else if (shouldUsePromotions && promotions && promotions.length > 0) {
-    entityChartData = promotions.slice(0, requestedCount).map((p: any) => ({
-      name: p.promotion_name,
-      value: Math.round(Number(p.total_spend || 10000)),
-      type: p.promotion_type
-    }));
+    // Create promotion lookup
+    const promoLookup: Record<string, any> = {};
+    promotions.forEach((p: any) => {
+      promoLookup[p.id] = { 
+        name: p.promotion_name, 
+        type: p.promotion_type,
+        discount: p.discount_percent || p.discount_amount
+      };
+    });
+    
+    entityChartData = aggregateByDimension(
+      'promotion',
+      (t) => t.promotion_id,
+      (key) => promoLookup[key] || { name: key }
+    );
+    
+    // Fallback if no transactions with promotions
+    if (entityChartData.length === 0) {
+      entityChartData = promotions.slice(0, requestedCount).map((p: any) => ({
+        name: p.promotion_name,
+        value: Math.round(Number(p.total_spend || 10000)),
+        type: p.promotion_type,
+        discount: `${p.discount_percent || 15}%`
+      }));
+    }
     entityType = 'promotions';
     console.log(`[ChartData] Using ${entityChartData.length} promotions`);
+    
   } else if (shouldUseCategories) {
-    // Use categoryBreakdown if available, otherwise generate from products
-    if (calculatedKPIs?.categoryBreakdown && calculatedKPIs.categoryBreakdown.length > 0) {
+    // Aggregate by category from transactions
+    entityChartData = aggregateByDimension(
+      'category',
+      (t) => productLookup[t.product_sku]?.category || null,
+      (key) => ({ name: key, category: key })
+    );
+    
+    // Fallback to calculated KPIs or products
+    if (entityChartData.length === 0 && calculatedKPIs && calculatedKPIs.categoryBreakdown?.length > 0) {
       entityChartData = calculatedKPIs.categoryBreakdown.slice(0, requestedCount).map((cat: any) => ({
         name: cat.name,
         value: Math.round(cat.value),
         revenue: cat.revenue
       }));
-    } else if (products && products.length > 0) {
-      // Fallback: Generate category data from products table
+    } else if (entityChartData.length === 0 && products && products.length > 0) {
       const categoryAgg: Record<string, { revenue: number; count: number }> = {};
       products.forEach((p: any) => {
         const cat = p.category || 'Other';
         if (!categoryAgg[cat]) categoryAgg[cat] = { revenue: 0, count: 0 };
-        categoryAgg[cat].revenue += Number(p.base_price || 0) * 1000; // Scale for realistic values
+        categoryAgg[cat].revenue += Number(p.base_price || 0) * 100;
         categoryAgg[cat].count += 1;
       });
       entityChartData = Object.entries(categoryAgg)
@@ -8438,12 +8512,27 @@ function ensureCompleteResponse(
     }
     entityType = 'categories';
     console.log(`[ChartData] Using ${entityChartData?.length || 0} categories`);
-  } else if (calculatedKPIs?.topProducts && calculatedKPIs.topProducts.length > 0) {
-    entityChartData = calculatedKPIs.topProducts.slice(0, requestedCount).map((prod: any) => ({
-      name: prod.name,
-      value: Math.round(prod.value),
-      revenue: prod.revenue
-    }));
+    
+  } else if (shouldUseProducts || (!shouldUseCategories && !shouldUseStores && !shouldUsePromotions && !shouldUseSuppliers && !shouldUsePlanograms)) {
+    // Aggregate by product from transactions
+    entityChartData = aggregateByDimension(
+      'product',
+      (t) => t.product_sku,
+      (sku) => ({ 
+        name: productLookup[sku]?.name || sku, 
+        category: productLookup[sku]?.category,
+        brand: productLookup[sku]?.brand
+      })
+    );
+    
+    // Fallback to calculated KPIs
+    if (entityChartData.length === 0 && calculatedKPIs && calculatedKPIs.topProducts?.length > 0) {
+      entityChartData = calculatedKPIs.topProducts.slice(0, requestedCount).map((prod: any) => ({
+        name: prod.name,
+        value: Math.round(prod.value),
+        revenue: prod.revenue
+      }));
+    }
     entityType = 'products';
     console.log(`[ChartData] Using ${entityChartData?.length || 0} products`);
   }
