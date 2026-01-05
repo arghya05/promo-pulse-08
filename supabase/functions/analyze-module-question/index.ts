@@ -6067,6 +6067,52 @@ PRODUCT AFFINITY BY TOP SEGMENTS:
       if (product?.category) supplierAggregation[supplierId].categories.add(product.category);
     });
     
+    // CUSTOMER SEGMENT AGGREGATION
+    // Build customer lookup for segment access
+    const customerLookup: Record<string, any> = {};
+    customers.forEach((c: any) => {
+      customerLookup[c.id] = c;
+    });
+    
+    const customerSegmentAggregation: Record<string, {
+      revenue: number;
+      margin: number;
+      transactions: number;
+      units: number;
+      customers: Set<string>;
+      avgBasket: number;
+      avgFrequency: number;
+    }> = {};
+    
+    transactions.forEach((t: any) => {
+      const customerId = t.customer_id || 'Unknown';
+      const customer = customerLookup[customerId];
+      const segment = customer?.segment || customer?.customer_segment || customer?.member_type || 'Unknown';
+      
+      if (!customerSegmentAggregation[segment]) {
+        customerSegmentAggregation[segment] = { 
+          revenue: 0, margin: 0, transactions: 0, units: 0, 
+          customers: new Set(), avgBasket: 0, avgFrequency: 0
+        };
+      }
+      const product = enrichmentProductLookup[t.product_sku];
+      const revenue = Number(t.total_amount || 0);
+      const cost = product ? Number(product.cost || 0) * Number(t.quantity || 1) : revenue * 0.65;
+      
+      customerSegmentAggregation[segment].revenue += revenue;
+      customerSegmentAggregation[segment].margin += Number(t.margin) || (revenue - cost);
+      customerSegmentAggregation[segment].transactions++;
+      customerSegmentAggregation[segment].units += Number(t.quantity || 1);
+      if (customerId !== 'Unknown') customerSegmentAggregation[segment].customers.add(customerId);
+    });
+    
+    // Calculate avg basket and frequency for each segment
+    Object.keys(customerSegmentAggregation).forEach(segment => {
+      const data = customerSegmentAggregation[segment];
+      data.avgBasket = data.transactions > 0 ? data.revenue / data.transactions : 0;
+      data.avgFrequency = data.customers.size > 0 ? data.transactions / data.customers.size : 0;
+    });
+    
     // KPI Measures enrichment with CATEGORY-LEVEL breakdown
     const kpiEnrichment = (() => {
       // Enterprise-level averages
@@ -6204,6 +6250,25 @@ PRODUCT AFFINITY BY TOP SEGMENTS:
         .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 20);
       
+      // Build customer segment performance table
+      const customerSegmentPerformance = Object.entries(customerSegmentAggregation)
+        .filter(([segment]) => segment !== 'Unknown')
+        .map(([segment, data]) => {
+          const marginPct = data.revenue > 0 ? (data.margin / data.revenue * 100) : 0;
+          return {
+            segment,
+            revenue: data.revenue,
+            margin: data.margin,
+            marginPct,
+            transactions: data.transactions,
+            units: data.units,
+            customers: data.customers.size,
+            avgBasket: data.avgBasket,
+            avgFrequency: data.avgFrequency
+          };
+        })
+        .sort((a, b) => b.revenue - a.revenue);
+      
       // Total enterprise metrics
       const totalRevenue = Object.values(categoryAggregation).reduce((s, d) => s + d.revenue, 0);
       const totalMargin = Object.values(categoryAggregation).reduce((s, d) => s + d.margin, 0);
@@ -6280,12 +6345,29 @@ SUPPLIER INSIGHTS:
 - Total Suppliers: ${supplierPerformance.length}
 - Suppliers with Reliability Data: ${supplierPerformance.filter(s => s.reliabilityScore).length}
 
+═══════════════════════════════════════════════════════════════════════════════
+CUSTOMER SEGMENT PERFORMANCE (RANKED BY REVENUE)
+═══════════════════════════════════════════════════════════════════════════════
+| Segment | Revenue | Margin $ | Margin % | Transactions | Customers | Avg Basket | Frequency |
+|---------|---------|----------|----------|--------------|-----------|------------|-----------|
+${customerSegmentPerformance.map(s => 
+  `| ${(s.segment || 'Unknown').slice(0, 15).padEnd(15)} | $${(s.revenue/1000).toFixed(0)}K | $${(s.margin/1000).toFixed(0)}K | ${s.marginPct.toFixed(1)}% | ${s.transactions} | ${s.customers} | $${s.avgBasket.toFixed(2)} | ${s.avgFrequency.toFixed(1)}x |`
+).join('\n')}
+
+CUSTOMER SEGMENT INSIGHTS:
+- Highest Revenue Segment: ${customerSegmentPerformance[0]?.segment || 'N/A'} with $${((customerSegmentPerformance[0]?.revenue || 0)/1000).toFixed(0)}K
+- Highest Margin Segment: ${customerSegmentPerformance.sort((a, b) => b.marginPct - a.marginPct)[0]?.segment || 'N/A'} at ${customerSegmentPerformance.sort((a, b) => b.marginPct - a.marginPct)[0]?.marginPct.toFixed(1) || 0}%
+- Most Loyal Segment: ${customerSegmentPerformance.sort((a, b) => b.avgFrequency - a.avgFrequency)[0]?.segment || 'N/A'} with ${customerSegmentPerformance.sort((a, b) => b.avgFrequency - a.avgFrequency)[0]?.avgFrequency.toFixed(1) || 0}x visits
+- Highest Basket Segment: ${customerSegmentPerformance.sort((a, b) => b.avgBasket - a.avgBasket)[0]?.segment || 'N/A'} at $${customerSegmentPerformance.sort((a, b) => b.avgBasket - a.avgBasket)[0]?.avgBasket.toFixed(2) || 0}
+- Total Unique Customers: ${customerSegmentPerformance.reduce((s, c) => s + c.customers, 0)}
+
 CRITICAL INSTRUCTION: USE THE SPECIFIC DATA ABOVE TO ANSWER QUESTIONS.
 - For category margin questions: Use the CATEGORY MARGIN PERFORMANCE table
 - For store questions: Use the STORE PERFORMANCE table
 - For brand questions: Use the BRAND PERFORMANCE table
 - For region questions: Use the REGION PERFORMANCE table
 - For supplier questions: Use the SUPPLIER PERFORMANCE table
+- For customer segment questions: Use the CUSTOMER SEGMENT PERFORMANCE table
 - NEVER say "data not available" when tables above contain data
 - ALWAYS reference specific numbers from these tables`;
     })();
