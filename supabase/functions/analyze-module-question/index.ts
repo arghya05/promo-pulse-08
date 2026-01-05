@@ -5712,7 +5712,14 @@ ${hierarchyAnalysis.level !== 'none' ?
     - Include actual vs forecasted comparison with accuracy percentage
     - Enable drill-down from category to SKU to store to time period
     - Include stockout risk products BY NAME, inventory levels, reorder points` :
-  moduleId === 'supply-chain' ? 'supplier performance, lead times, logistics, delivery rates' :
+  moduleId === 'supply-chain' ? `SUPPLY CHAIN FOCUS - SUPPLIER-CENTRIC ANSWERS REQUIRED:
+    - For supplier ranking questions: Show SUPPLIER NAMES with on-time delivery %, reliability scores, lead times, order counts
+    - For "top suppliers" questions: Rank by on-time delivery %, reliability score, or the metric asked
+    - NEVER answer supplier questions with product sales data - focus on SUPPLIER PERFORMANCE METRICS
+    - Key metrics to include: On-time delivery %, late order count, avg lead time, reliability score, categories supplied
+    - Include supplier tier (Platinum/Gold/Silver/Bronze/At-Risk) based on performance
+    - For each supplier show: order performance, revenue at risk, product availability impact
+    - Compare suppliers by location, category, and performance trend` :
   moduleId === 'space' ? 'shelf space, planograms, sales per sqft, fixture utilization' : 
   isCrossModule ? 'relationships between modules, integrated impacts, trade-offs' : 'relevant metrics')}
 
