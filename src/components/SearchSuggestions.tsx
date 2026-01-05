@@ -224,6 +224,11 @@ function getModuleSmartSuffixes(moduleId: string): string[] {
   }
 }
 
+// Helper to escape special regex characters
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // Helper to highlight matching text
 function highlightMatch(text: string, query: string): React.ReactNode {
   if (!query) return text;
@@ -237,7 +242,8 @@ function highlightMatch(text: string, query: string): React.ReactNode {
     const words = query.toLowerCase().split(" ").filter(w => w.length > 1);
     let result = text;
     words.forEach(word => {
-      const regex = new RegExp(`(${word})`, 'gi');
+      const escapedWord = escapeRegex(word);
+      const regex = new RegExp(`(${escapedWord})`, 'gi');
       result = result.replace(regex, '**$1**');
     });
     
