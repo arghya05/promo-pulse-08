@@ -6028,6 +6028,45 @@ PRODUCT AFFINITY BY TOP SEGMENTS:
       if (t.store_id) regionAggregation[region].stores.add(t.store_id);
     });
     
+    // SUPPLIER-LEVEL AGGREGATION
+    // Build supplier lookup from vendors table
+    const supplierLookup: Record<string, any> = {};
+    vendors.forEach((v: any) => {
+      supplierLookup[v.id] = v;
+    });
+    
+    const supplierAggregation: Record<string, {
+      revenue: number;
+      margin: number;
+      transactions: number;
+      units: number;
+      products: Set<string>;
+      categories: Set<string>;
+      supplierInfo: any;
+    }> = {};
+    
+    transactions.forEach((t: any) => {
+      const product = enrichmentProductLookup[t.product_sku];
+      const supplierId = product?.supplier_id || product?.vendor_id || 'Unknown';
+      if (!supplierAggregation[supplierId]) {
+        const supplierInfo = supplierLookup[supplierId] || vendors.find((v: any) => v.id === supplierId);
+        supplierAggregation[supplierId] = { 
+          revenue: 0, margin: 0, transactions: 0, units: 0, 
+          products: new Set(), categories: new Set(),
+          supplierInfo: supplierInfo || { vendor_name: 'Unknown Supplier', reliability_score: null, lead_time_days: null }
+        };
+      }
+      const revenue = Number(t.total_amount || 0);
+      const cost = product ? Number(product.cost || 0) * Number(t.quantity || 1) : revenue * 0.65;
+      
+      supplierAggregation[supplierId].revenue += revenue;
+      supplierAggregation[supplierId].margin += Number(t.margin) || (revenue - cost);
+      supplierAggregation[supplierId].transactions++;
+      supplierAggregation[supplierId].units += Number(t.quantity || 1);
+      supplierAggregation[supplierId].products.add(t.product_sku);
+      if (product?.category) supplierAggregation[supplierId].categories.add(product.category);
+    });
+    
     // KPI Measures enrichment with CATEGORY-LEVEL breakdown
     const kpiEnrichment = (() => {
       // Enterprise-level averages
@@ -6142,6 +6181,29 @@ PRODUCT AFFINITY BY TOP SEGMENTS:
         })
         .sort((a, b) => b.revenue - a.revenue);
       
+      // Build supplier performance table
+      const supplierPerformance = Object.entries(supplierAggregation)
+        .filter(([supplierId]) => supplierId !== 'Unknown')
+        .map(([supplierId, data]) => {
+          const marginPct = data.revenue > 0 ? (data.margin / data.revenue * 100) : 0;
+          return {
+            supplierId,
+            supplierName: data.supplierInfo?.vendor_name || data.supplierInfo?.supplier_name || 'Unknown Supplier',
+            reliabilityScore: data.supplierInfo?.reliability_score || null,
+            leadTimeDays: data.supplierInfo?.lead_time_days || null,
+            onTimeDeliveryPct: data.supplierInfo?.on_time_delivery_pct || null,
+            revenue: data.revenue,
+            margin: data.margin,
+            marginPct,
+            transactions: data.transactions,
+            units: data.units,
+            products: data.products.size,
+            categories: Array.from(data.categories).slice(0, 3).join(', ')
+          };
+        })
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 20);
+      
       // Total enterprise metrics
       const totalRevenue = Object.values(categoryAggregation).reduce((s, d) => s + d.revenue, 0);
       const totalMargin = Object.values(categoryAggregation).reduce((s, d) => s + d.margin, 0);
@@ -6203,11 +6265,27 @@ ${regionPerformance.map(r =>
   `| ${r.region.padEnd(12)} | $${(r.revenue/1000).toFixed(0)}K | $${(r.margin/1000).toFixed(0)}K | ${r.marginPct.toFixed(1)}% | ${r.transactions} | ${r.stores} |`
 ).join('\n')}
 
+═══════════════════════════════════════════════════════════════════════════════
+SUPPLIER PERFORMANCE (RANKED BY REVENUE - TOP 15)
+═══════════════════════════════════════════════════════════════════════════════
+| Supplier | Revenue | Margin $ | Margin % | Units | SKUs | Reliability | Lead Time |
+|----------|---------|----------|----------|-------|------|-------------|-----------|
+${supplierPerformance.slice(0, 15).map(s => 
+  `| ${(s.supplierName || 'Unknown').slice(0, 18).padEnd(18)} | $${(s.revenue/1000).toFixed(0)}K | $${(s.margin/1000).toFixed(0)}K | ${s.marginPct.toFixed(1)}% | ${s.units} | ${s.products} | ${s.reliabilityScore ? s.reliabilityScore.toFixed(0) + '%' : 'N/A'} | ${s.leadTimeDays ? s.leadTimeDays + 'd' : 'N/A'} |`
+).join('\n')}
+
+SUPPLIER INSIGHTS:
+- Top Performer: ${supplierPerformance[0]?.supplierName || 'N/A'} with $${((supplierPerformance[0]?.revenue || 0)/1000).toFixed(0)}K revenue
+- Highest Margin: ${supplierPerformance.sort((a, b) => b.marginPct - a.marginPct)[0]?.supplierName || 'N/A'} at ${supplierPerformance.sort((a, b) => b.marginPct - a.marginPct)[0]?.marginPct.toFixed(1) || 0}%
+- Total Suppliers: ${supplierPerformance.length}
+- Suppliers with Reliability Data: ${supplierPerformance.filter(s => s.reliabilityScore).length}
+
 CRITICAL INSTRUCTION: USE THE SPECIFIC DATA ABOVE TO ANSWER QUESTIONS.
 - For category margin questions: Use the CATEGORY MARGIN PERFORMANCE table
 - For store questions: Use the STORE PERFORMANCE table
 - For brand questions: Use the BRAND PERFORMANCE table
 - For region questions: Use the REGION PERFORMANCE table
+- For supplier questions: Use the SUPPLIER PERFORMANCE table
 - NEVER say "data not available" when tables above contain data
 - ALWAYS reference specific numbers from these tables`;
     })();
