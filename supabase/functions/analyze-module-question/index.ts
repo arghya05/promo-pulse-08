@@ -5912,25 +5912,305 @@ PRODUCT AFFINITY BY TOP SEGMENTS:
     // ============ SHARED ENRICHMENT: Blend new data tables into ALL module contexts ============
     // This ensures existing questions can leverage new KPIs and data across all modules
     
-    // KPI Measures enrichment (YOY metrics, margin analysis, turnover)
-    const kpiEnrichment = kpiMeasures.length > 0 ? (() => {
-      const recentKpis = kpiMeasures.slice(0, 50);
-      const avgNetSales = recentKpis.reduce((s, k: any) => s + Number(k.net_sales || 0), 0) / (recentKpis.length || 1);
-      const avgGrossMargin = recentKpis.reduce((s, k: any) => s + Number(k.gross_margin_pct || 0), 0) / (recentKpis.length || 1);
-      const avgYoyGrowth = recentKpis.filter((k: any) => k.yoy_net_sales_growth_pct).reduce((s, k: any) => s + Number(k.yoy_net_sales_growth_pct || 0), 0) / (recentKpis.filter((k: any) => k.yoy_net_sales_growth_pct).length || 1);
-      const avgInventoryTurn = recentKpis.filter((k: any) => k.inventory_turn).reduce((s, k: any) => s + Number(k.inventory_turn || 0), 0) / (recentKpis.filter((k: any) => k.inventory_turn).length || 1);
-      const avgReturnRate = recentKpis.filter((k: any) => k.return_rate_pct).reduce((s, k: any) => s + Number(k.return_rate_pct || 0), 0) / (recentKpis.filter((k: any) => k.return_rate_pct).length || 1);
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // UNIVERSAL DATA ENRICHMENT: Comprehensive aggregations by all dimensions
+    // This ensures ANY question about stores, categories, products, brands gets actual data
+    // ═══════════════════════════════════════════════════════════════════════════════
+    
+    // Build product lookup for efficient access
+    const enrichmentProductLookup: Record<string, any> = {};
+    products.forEach((p: any) => {
+      enrichmentProductLookup[p.product_sku] = p;
+    });
+    // CATEGORY-LEVEL AGGREGATION (from transactions + products)
+    const categoryAggregation: Record<string, {
+      revenue: number;
+      margin: number;
+      transactions: number;
+      units: number;
+      products: Set<string>;
+      avgPrice: number;
+      costOfGoods: number;
+    }> = {};
+    
+    transactions.forEach((t: any) => {
+      const product = enrichmentProductLookup[t.product_sku];
+      const category = product?.category || 'Other';
+      if (!categoryAggregation[category]) {
+        categoryAggregation[category] = { revenue: 0, margin: 0, transactions: 0, units: 0, products: new Set(), avgPrice: 0, costOfGoods: 0 };
+      }
+      const revenue = Number(t.total_amount || 0);
+      const cost = product ? Number(product.cost || 0) * Number(t.quantity || 1) : revenue * 0.65;
+      const margin = Number(t.margin) || (revenue - cost);
+      
+      categoryAggregation[category].revenue += revenue;
+      categoryAggregation[category].margin += margin;
+      categoryAggregation[category].transactions++;
+      categoryAggregation[category].units += Number(t.quantity || 1);
+      categoryAggregation[category].products.add(t.product_sku);
+      categoryAggregation[category].costOfGoods += cost;
+    });
+    
+    // STORE-LEVEL AGGREGATION
+    const storeAggregation: Record<string, {
+      revenue: number;
+      margin: number;
+      transactions: number;
+      units: number;
+      storeInfo: any;
+    }> = {};
+    
+    transactions.forEach((t: any) => {
+      const storeId = t.store_id || 'Unknown';
+      if (!storeAggregation[storeId]) {
+        const storeInfo = stores.find((s: any) => s.id === storeId);
+        storeAggregation[storeId] = { 
+          revenue: 0, margin: 0, transactions: 0, units: 0, 
+          storeInfo: storeInfo || { store_name: 'Unknown Store', region: 'Unknown' }
+        };
+      }
+      const product = enrichmentProductLookup[t.product_sku];
+      const revenue = Number(t.total_amount || 0);
+      const cost = product ? Number(product.cost || 0) * Number(t.quantity || 1) : revenue * 0.65;
+      
+      storeAggregation[storeId].revenue += revenue;
+      storeAggregation[storeId].margin += Number(t.margin) || (revenue - cost);
+      storeAggregation[storeId].transactions++;
+      storeAggregation[storeId].units += Number(t.quantity || 1);
+    });
+    
+    // BRAND-LEVEL AGGREGATION
+    const brandAggregation: Record<string, {
+      revenue: number;
+      margin: number;
+      transactions: number;
+      units: number;
+      products: Set<string>;
+    }> = {};
+    
+    transactions.forEach((t: any) => {
+      const product = enrichmentProductLookup[t.product_sku];
+      const brand = product?.brand || 'Unknown';
+      if (!brandAggregation[brand]) {
+        brandAggregation[brand] = { revenue: 0, margin: 0, transactions: 0, units: 0, products: new Set() };
+      }
+      const revenue = Number(t.total_amount || 0);
+      const cost = product ? Number(product.cost || 0) * Number(t.quantity || 1) : revenue * 0.65;
+      
+      brandAggregation[brand].revenue += revenue;
+      brandAggregation[brand].margin += Number(t.margin) || (revenue - cost);
+      brandAggregation[brand].transactions++;
+      brandAggregation[brand].units += Number(t.quantity || 1);
+      brandAggregation[brand].products.add(t.product_sku);
+    });
+    
+    // REGION-LEVEL AGGREGATION
+    const regionAggregation: Record<string, {
+      revenue: number;
+      margin: number;
+      transactions: number;
+      stores: Set<string>;
+    }> = {};
+    
+    transactions.forEach((t: any) => {
+      const storeInfo = stores.find((s: any) => s.id === t.store_id);
+      const region = storeInfo?.region || 'Unknown';
+      if (!regionAggregation[region]) {
+        regionAggregation[region] = { revenue: 0, margin: 0, transactions: 0, stores: new Set() };
+      }
+      const product = enrichmentProductLookup[t.product_sku];
+      const revenue = Number(t.total_amount || 0);
+      const cost = product ? Number(product.cost || 0) * Number(t.quantity || 1) : revenue * 0.65;
+      
+      regionAggregation[region].revenue += revenue;
+      regionAggregation[region].margin += Number(t.margin) || (revenue - cost);
+      regionAggregation[region].transactions++;
+      if (t.store_id) regionAggregation[region].stores.add(t.store_id);
+    });
+    
+    // KPI Measures enrichment with CATEGORY-LEVEL breakdown
+    const kpiEnrichment = (() => {
+      // Enterprise-level averages
+      const recentKpis = kpiMeasures.slice(0, 100);
+      const avgNetSales = recentKpis.length > 0 
+        ? recentKpis.reduce((s, k: any) => s + Number(k.net_sales || 0), 0) / recentKpis.length 
+        : 0;
+      const avgGrossMargin = recentKpis.length > 0
+        ? recentKpis.reduce((s, k: any) => s + Number(k.gross_margin_pct || 0), 0) / recentKpis.length
+        : 32.0;
+      const avgYoyGrowth = recentKpis.filter((k: any) => k.yoy_net_sales_growth_pct).length > 0
+        ? recentKpis.filter((k: any) => k.yoy_net_sales_growth_pct).reduce((s, k: any) => s + Number(k.yoy_net_sales_growth_pct || 0), 0) / recentKpis.filter((k: any) => k.yoy_net_sales_growth_pct).length
+        : 0;
+      const avgInventoryTurn = recentKpis.filter((k: any) => k.inventory_turn).length > 0
+        ? recentKpis.filter((k: any) => k.inventory_turn).reduce((s, k: any) => s + Number(k.inventory_turn || 0), 0) / recentKpis.filter((k: any) => k.inventory_turn).length
+        : 0;
+      
+      // Category-level margin breakdown from kpi_measures
+      const categoryKpis: Record<string, { 
+        netSales: number; grossMargin: number; marginPct: number[]; yoyGrowth: number[]; count: number 
+      }> = {};
+      
+      kpiMeasures.forEach((k: any) => {
+        if (k.category) {
+          if (!categoryKpis[k.category]) {
+            categoryKpis[k.category] = { netSales: 0, grossMargin: 0, marginPct: [], yoyGrowth: [], count: 0 };
+          }
+          categoryKpis[k.category].netSales += Number(k.net_sales || 0);
+          categoryKpis[k.category].grossMargin += Number(k.gross_margin || 0);
+          if (k.gross_margin_pct) categoryKpis[k.category].marginPct.push(Number(k.gross_margin_pct));
+          if (k.yoy_net_sales_growth_pct) categoryKpis[k.category].yoyGrowth.push(Number(k.yoy_net_sales_growth_pct));
+          categoryKpis[k.category].count++;
+        }
+      });
+      
+      // Build category performance from transactions if kpi_measures is sparse
+      const categoryPerformance = Object.entries(categoryAggregation)
+        .map(([category, data]) => {
+          const kpiData = categoryKpis[category];
+          const marginPct = data.revenue > 0 ? (data.margin / data.revenue * 100) : 0;
+          const avgKpiMargin = kpiData?.marginPct.length > 0 
+            ? kpiData.marginPct.reduce((a, b) => a + b, 0) / kpiData.marginPct.length 
+            : marginPct;
+          const targetMargin = avgGrossMargin || 32.0; // Use enterprise avg as budget target
+          const varianceVsBudget = marginPct - targetMargin;
+          
+          return {
+            category,
+            revenue: data.revenue,
+            margin: data.margin,
+            marginPct,
+            targetMargin,
+            varianceVsBudget,
+            transactions: data.transactions,
+            products: data.products.size,
+            kpiMarginPct: avgKpiMargin,
+            yoyGrowth: kpiData?.yoyGrowth.length > 0 
+              ? kpiData.yoyGrowth.reduce((a, b) => a + b, 0) / kpiData.yoyGrowth.length 
+              : 0
+          };
+        })
+        .sort((a, b) => b.revenue - a.revenue);
+      
+      // Build store performance table
+      const storePerformance = Object.entries(storeAggregation)
+        .map(([storeId, data]) => {
+          const marginPct = data.revenue > 0 ? (data.margin / data.revenue * 100) : 0;
+          return {
+            storeId,
+            storeName: data.storeInfo?.store_name || 'Unknown',
+            region: data.storeInfo?.region || 'Unknown',
+            format: data.storeInfo?.store_format || 'Standard',
+            revenue: data.revenue,
+            margin: data.margin,
+            marginPct,
+            transactions: data.transactions,
+            avgBasket: data.transactions > 0 ? data.revenue / data.transactions : 0
+          };
+        })
+        .sort((a, b) => b.revenue - a.revenue);
+      
+      // Build brand performance table
+      const brandPerformance = Object.entries(brandAggregation)
+        .filter(([brand]) => brand !== 'Unknown' && brand !== 'null')
+        .map(([brand, data]) => {
+          const marginPct = data.revenue > 0 ? (data.margin / data.revenue * 100) : 0;
+          return {
+            brand,
+            revenue: data.revenue,
+            margin: data.margin,
+            marginPct,
+            transactions: data.transactions,
+            products: data.products.size
+          };
+        })
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 20);
+      
+      // Build region performance table
+      const regionPerformance = Object.entries(regionAggregation)
+        .filter(([region]) => region !== 'Unknown')
+        .map(([region, data]) => {
+          const marginPct = data.revenue > 0 ? (data.margin / data.revenue * 100) : 0;
+          return {
+            region,
+            revenue: data.revenue,
+            margin: data.margin,
+            marginPct,
+            transactions: data.transactions,
+            stores: data.stores.size
+          };
+        })
+        .sort((a, b) => b.revenue - a.revenue);
+      
+      // Total enterprise metrics
+      const totalRevenue = Object.values(categoryAggregation).reduce((s, d) => s + d.revenue, 0);
+      const totalMargin = Object.values(categoryAggregation).reduce((s, d) => s + d.margin, 0);
+      const enterpriseMarginPct = totalRevenue > 0 ? (totalMargin / totalRevenue * 100) : 32.0;
       
       return `
-ENTERPRISE KPI MEASURES (FROM kpi_measures TABLE):
-- Avg Net Sales: $${avgNetSales.toFixed(0)}
-- Avg Gross Margin %: ${avgGrossMargin.toFixed(1)}%
-- YOY Net Sales Growth: ${avgYoyGrowth.toFixed(1)}%
-- Avg Inventory Turnover: ${avgInventoryTurn.toFixed(2)}x
-- Avg Return Rate: ${avgReturnRate.toFixed(1)}%
-- Avg Basket Size: $${(recentKpis.reduce((s, k: any) => s + Number(k.avg_basket_size || 0), 0) / (recentKpis.length || 1)).toFixed(2)}
-- Avg Transaction Value: $${(recentKpis.reduce((s, k: any) => s + Number(k.avg_transaction_value || 0), 0) / (recentKpis.length || 1)).toFixed(2)}`;
-    })() : '';
+═══════════════════════════════════════════════════════════════════════════════
+COMPREHENSIVE ENTERPRISE KPI DATA (USE THIS DATA FOR ALL ANSWERS)
+═══════════════════════════════════════════════════════════════════════════════
+
+ENTERPRISE SUMMARY:
+- Total Revenue: $${totalRevenue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+- Total Margin: $${totalMargin.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+- Enterprise Margin %: ${enterpriseMarginPct.toFixed(1)}%
+- Target/Budget Margin: ${avgGrossMargin.toFixed(1)}%
+- Variance vs Budget: ${(enterpriseMarginPct - avgGrossMargin).toFixed(1)}pp
+- YOY Growth: ${avgYoyGrowth.toFixed(1)}%
+- Inventory Turnover: ${avgInventoryTurn.toFixed(2)}x
+
+═══════════════════════════════════════════════════════════════════════════════
+CATEGORY MARGIN PERFORMANCE VS BUDGET (RANKED BY REVENUE)
+═══════════════════════════════════════════════════════════════════════════════
+| Category | Revenue | Margin $ | Margin % | Target % | Variance | YOY Growth |
+|----------|---------|----------|----------|----------|----------|------------|
+${categoryPerformance.slice(0, 15).map(c => 
+  `| ${c.category.padEnd(12)} | $${(c.revenue/1000).toFixed(0)}K | $${(c.margin/1000).toFixed(0)}K | ${c.marginPct.toFixed(1)}% | ${c.targetMargin.toFixed(1)}% | ${c.varianceVsBudget >= 0 ? '+' : ''}${c.varianceVsBudget.toFixed(1)}pp | ${c.yoyGrowth >= 0 ? '+' : ''}${c.yoyGrowth.toFixed(1)}% |`
+).join('\n')}
+
+CATEGORY INSIGHTS:
+- Highest Margin: ${categoryPerformance[0]?.category || 'N/A'} at ${categoryPerformance[0]?.marginPct.toFixed(1) || 0}%
+- Lowest Margin: ${categoryPerformance[categoryPerformance.length - 1]?.category || 'N/A'} at ${categoryPerformance[categoryPerformance.length - 1]?.marginPct.toFixed(1) || 0}%
+- Above Budget: ${categoryPerformance.filter(c => c.varianceVsBudget > 0).length} categories
+- Below Budget: ${categoryPerformance.filter(c => c.varianceVsBudget < 0).length} categories
+
+═══════════════════════════════════════════════════════════════════════════════
+STORE PERFORMANCE (RANKED BY REVENUE - TOP 10)
+═══════════════════════════════════════════════════════════════════════════════
+| Store | Region | Revenue | Margin $ | Margin % | Transactions | Avg Basket |
+|-------|--------|---------|----------|----------|--------------|------------|
+${storePerformance.slice(0, 10).map(s => 
+  `| ${s.storeName.slice(0, 15).padEnd(15)} | ${s.region.slice(0, 8).padEnd(8)} | $${(s.revenue/1000).toFixed(0)}K | $${(s.margin/1000).toFixed(0)}K | ${s.marginPct.toFixed(1)}% | ${s.transactions} | $${s.avgBasket.toFixed(2)} |`
+).join('\n')}
+
+═══════════════════════════════════════════════════════════════════════════════
+BRAND PERFORMANCE (RANKED BY REVENUE - TOP 10)
+═══════════════════════════════════════════════════════════════════════════════
+| Brand | Revenue | Margin $ | Margin % | Transactions | SKUs |
+|-------|---------|----------|----------|--------------|------|
+${brandPerformance.slice(0, 10).map(b => 
+  `| ${b.brand.slice(0, 18).padEnd(18)} | $${(b.revenue/1000).toFixed(0)}K | $${(b.margin/1000).toFixed(0)}K | ${b.marginPct.toFixed(1)}% | ${b.transactions} | ${b.products} |`
+).join('\n')}
+
+═══════════════════════════════════════════════════════════════════════════════
+REGION PERFORMANCE
+═══════════════════════════════════════════════════════════════════════════════
+| Region | Revenue | Margin $ | Margin % | Transactions | Stores |
+|--------|---------|----------|----------|--------------|--------|
+${regionPerformance.map(r => 
+  `| ${r.region.padEnd(12)} | $${(r.revenue/1000).toFixed(0)}K | $${(r.margin/1000).toFixed(0)}K | ${r.marginPct.toFixed(1)}% | ${r.transactions} | ${r.stores} |`
+).join('\n')}
+
+CRITICAL INSTRUCTION: USE THE SPECIFIC DATA ABOVE TO ANSWER QUESTIONS.
+- For category margin questions: Use the CATEGORY MARGIN PERFORMANCE table
+- For store questions: Use the STORE PERFORMANCE table
+- For brand questions: Use the BRAND PERFORMANCE table
+- For region questions: Use the REGION PERFORMANCE table
+- NEVER say "data not available" when tables above contain data
+- ALWAYS reference specific numbers from these tables`;
+    })();
     
     // Returns analysis enrichment
     const returnsEnrichment = returns.length > 0 ? (() => {
