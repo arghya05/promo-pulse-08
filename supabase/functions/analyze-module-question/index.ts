@@ -44,6 +44,56 @@ PRICING ANALYSIS CAPABILITIES:
 5. Price Change Impact: Track historical price changes and their effects on volume and revenue
 6. Markdown Strategy: Optimize markdowns for seasonal and slow-moving inventory
 
+═══════════════════════════════════════════════════════════════════════════════
+MUST-PASS: MARGIN DECLINE ANALYSIS REQUIREMENTS
+═══════════════════════════════════════════════════════════════════════════════
+When asked about margin decline, margin erosion, declining margins, or margin trends:
+
+1. MARGIN CHANGE TABLE - MANDATORY FORMAT:
+| Rank | Category | Current Margin % | Prior Period Margin % | Margin Change (pp) | Trend |
+|------|----------|------------------|----------------------|-------------------|-------|
+| 1 | Category A | 22.3% | 28.1% | -5.8pp | ↓↓ Critical |
+| 2 | Category B | 31.5% | 34.2% | -2.7pp | ↓ Declining |
+| 3 | Category C | 18.9% | 20.1% | -1.2pp | ↓ Declining |
+
+2. EXPLICIT PRIOR PERIOD COMPARISON - ALWAYS SHOW:
+   - Current period margin % (this quarter/month)
+   - Prior period margin % (last quarter/month)
+   - Absolute change in percentage points (pp)
+   - Calculate as: Current Margin % - Prior Period Margin %
+   - Format: "-X.Xpp" for decline, "+X.Xpp" for improvement
+
+3. RANK BY MARGIN DECLINE - MANDATORY:
+   - List categories from WORST decline (most negative) to LEAST decline
+   - Critical: > -3pp decline
+   - Declining: -1pp to -3pp decline
+   - Stable: -1pp to +1pp
+   - Improving: > +1pp improvement
+
+4. KEY DRIVERS FOR EACH CATEGORY - IDENTIFY ALL THAT APPLY:
+   - DISCOUNT CREEP: Increased promotional intensity or deeper discounts
+   - COST INCREASE: Rising COGS, supplier cost increases, freight costs
+   - MIX SHIFT: Shift toward lower-margin products/SKUs within category
+   - LOW-MARGIN SKU GROWTH: Fast-growing SKUs that have below-category-average margins
+   - COMPETITIVE PRESSURE: Price reductions to match competitors eroding margin
+   - MARKDOWN ACTIVITY: End-of-season or clearance markdowns
+
+5. ANSWER FORMAT FOR MARGIN DECLINE:
+whatHappened:
+- "[Category] margin declined -X.Xpp from XX.X% to XX.X% vs prior quarter"
+- "Primary driver: [specific driver] contributing -X.Xpp of the decline"
+- "[X] categories show margin erosion, led by [Category] at -X.Xpp"
+
+why:
+- "[Driver name]: [specific explanation with numbers, e.g., 'discount rate increased from 12% to 18%']"
+- "Mix shift: low-margin SKU [name] grew +XX% while high-margin [name] declined -XX%"
+- "COGS increase: [product/category] input costs up +X.X% YoY"
+
+whatToDo:
+- "Review discount depth in [Category] - current avg 18% vs target 12%"
+- "Reprice [specific low-margin SKUs] or reduce promotional frequency"
+- "Negotiate supplier costs for [specific products] to recover X.Xpp margin"
+
 PRICING DRIVERS TO REFERENCE:
 - Competitive pressure (competitor price changes and gaps)
 - Cost changes (COGS, supplier costs, commodity indices)
