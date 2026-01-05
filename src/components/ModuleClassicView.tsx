@@ -52,6 +52,7 @@ import KPISelector from './KPISelector';
 import ProductDrillDown from './ProductDrillDown';
 import InsightPanels from './InsightPanels';
 import MustPassSuggestions from './MustPassSuggestions';
+import GlobalFiltersPanel, { GlobalFilters, defaultFilters } from './GlobalFiltersPanel';
 
 interface ModuleClassicViewProps {
   module: Module;
@@ -92,6 +93,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
   const [selectedTimePeriod, setSelectedTimePeriod] = useState<string>('last_month');
   const [lastAnalyzedQuestion, setLastAnalyzedQuestion] = useState<string>('');
   const [analysisTimestamp, setAnalysisTimestamp] = useState<number>(0);
+  const [globalFilters, setGlobalFilters] = useState<GlobalFilters>(defaultFilters);
   const [expandedSections, setExpandedSections] = useState({
     whatHappened: true,
     why: true,
@@ -276,8 +278,17 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
   const drillPath = MODULE_DRILL_PATHS[module.id] || MODULE_DRILL_PATHS.promotion;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full max-w-full min-w-0 overflow-x-hidden">
-      {/* Left Panel - Questions */}
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 w-full max-w-full min-w-0 overflow-x-hidden">
+      {/* Left Panel - Global Filters */}
+      <div className="space-y-4 min-w-0 overflow-x-hidden">
+        <GlobalFiltersPanel 
+          filters={globalFilters}
+          onFiltersChange={setGlobalFilters}
+          moduleId={module.id}
+        />
+      </div>
+
+      {/* Middle Panel - Questions & Search */}
       <div className="space-y-4 min-w-0 overflow-x-hidden">
         {/* Search */}
         <Card>
