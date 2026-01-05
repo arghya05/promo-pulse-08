@@ -6444,14 +6444,18 @@ Respond with a JSON object:
       return false;
     };
     
-    // Only add context for drill-downs or EXPLICIT follow-up questions
-    // Ignore drillLevel from conversationContext unless it's a genuine drill
-    const needsConversationContext = isDrillDown || isFollowUpQuestion(question);
+    // ALWAYS use context if available - even for standalone questions, provide light context
+    const needsExplicitContext = isDrillDown || isFollowUpQuestion(question);
+    const hasConversationHistory = conversationHistory && conversationHistory.length > 0;
+    const hasConversationContext = conversationContext && Object.keys(conversationContext).some(k => conversationContext[k]);
     
-    // Only build context reference for actual follow-ups
+    console.log(`[${moduleId}] Conversation context:`, JSON.stringify(conversationContext || {}));
+    console.log(`[${moduleId}] Conversation history length: ${conversationHistory?.length || 0}`);
+    
+    // Build context reference for follow-ups
     const buildContextReference = () => {
-      if (!needsConversationContext) return '';
-      if (!conversationContext && (!conversationHistory || conversationHistory.length === 0)) {
+      if (!needsExplicitContext) return '';
+      if (!hasConversationContext && !hasConversationHistory) {
         return '';
       }
       
@@ -6471,17 +6475,73 @@ Respond with a JSON object:
     
     const contextReference = buildContextReference();
     
-    // ONLY add conversation context for follow-up questions or drill-downs
-    // Standalone questions (like "top 3 selling categories") get clean prompts
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // QUESTION FINGERPRINTING: Ensure different questions get meaningfully different answers
+    // ═══════════════════════════════════════════════════════════════════════════════
+    const questionFingerprint = {
+      asksAbout: [] as string[],
+      entityTypes: [] as string[],
+      metricFocus: [] as string[],
+      questionType: 'general'
+    };
+    
+    const qLower = question.toLowerCase();
+    
+    // Detect what entities the question is about
+    if (/store|location|branch/i.test(qLower)) questionFingerprint.entityTypes.push('stores');
+    if (/product|sku|item/i.test(qLower)) questionFingerprint.entityTypes.push('products');
+    if (/category|department/i.test(qLower)) questionFingerprint.entityTypes.push('categories');
+    if (/brand/i.test(qLower)) questionFingerprint.entityTypes.push('brands');
+    if (/supplier|vendor/i.test(qLower)) questionFingerprint.entityTypes.push('suppliers');
+    if (/promotion|campaign|promo/i.test(qLower)) questionFingerprint.entityTypes.push('promotions');
+    if (/customer|segment/i.test(qLower)) questionFingerprint.entityTypes.push('customers');
+    
+    // Detect what metrics are being asked about
+    if (/profit|margin|profitable/i.test(qLower)) questionFingerprint.metricFocus.push('profitability');
+    if (/revenue|sales|selling/i.test(qLower)) questionFingerprint.metricFocus.push('revenue');
+    if (/roi|return on investment/i.test(qLower)) questionFingerprint.metricFocus.push('roi');
+    if (/growth|trend|change/i.test(qLower)) questionFingerprint.metricFocus.push('growth');
+    if (/cost|expense|spend/i.test(qLower)) questionFingerprint.metricFocus.push('costs');
+    if (/volume|units|quantity/i.test(qLower)) questionFingerprint.metricFocus.push('volume');
+    if (/performance|performing/i.test(qLower)) questionFingerprint.metricFocus.push('performance');
+    
+    // Detect question type
+    if (/^why\b|reason|cause|explain/i.test(qLower)) questionFingerprint.questionType = 'why';
+    else if (/^how (much|many)|total|count/i.test(qLower)) questionFingerprint.questionType = 'quantity';
+    else if (/top|best|highest|most|leading/i.test(qLower)) questionFingerprint.questionType = 'ranking_top';
+    else if (/bottom|worst|lowest|least|underperform/i.test(qLower)) questionFingerprint.questionType = 'ranking_bottom';
+    else if (/compare|vs|versus|difference|between/i.test(qLower)) questionFingerprint.questionType = 'comparison';
+    else if (/forecast|predict|project|next/i.test(qLower)) questionFingerprint.questionType = 'forecast';
+    else if (/recommend|suggest|should|action/i.test(qLower)) questionFingerprint.questionType = 'recommendation';
+    
+    console.log(`[${moduleId}] Question fingerprint:`, JSON.stringify(questionFingerprint));
+    
+    // Build differentiation prompt based on fingerprint
+    const differentiationPrompt = `
+QUESTION ANALYSIS (Answer MUST focus on these specifics):
+- Entity focus: ${questionFingerprint.entityTypes.length > 0 ? questionFingerprint.entityTypes.join(', ') : 'general analysis'}
+- Metric focus: ${questionFingerprint.metricFocus.length > 0 ? questionFingerprint.metricFocus.join(', ') : 'overall performance'}
+- Question type: ${questionFingerprint.questionType}
+
+CRITICAL DIFFERENTIATION RULES:
+- Your answer MUST be specifically about ${questionFingerprint.entityTypes[0] || 'the requested entities'} and ${questionFingerprint.metricFocus[0] || 'relevant metrics'}
+- Do NOT give generic answers - reference SPECIFIC data points from the database
+- If asked about stores, show STORE-level data with store names
+- If asked about products, show PRODUCT-level data with product names
+- If asked about profitability, focus on margins, costs, and profit amounts
+- If asked about revenue, focus on sales figures and revenue trends
+- Every bullet point must contain at least one specific number from the data
+`;
+
+    // Build conversation context - ALWAYS include if available, even for standalone questions
     let conversationContextPrompt = '';
     
-    if (needsConversationContext && (conversationContext || (conversationHistory && conversationHistory.length > 0))) {
-      // Extract key entities from previous conversation for follow-up reference
+    if (hasConversationHistory || hasConversationContext) {
+      // Extract key entities from previous conversation
       const previousEntities: string[] = [];
-      if (conversationHistory && conversationHistory.length > 0) {
+      if (hasConversationHistory) {
         const lastAssistantMsg = conversationHistory.filter((m: any) => m.role === 'assistant').pop();
         if (lastAssistantMsg?.content) {
-          // Extract product/category names from previous response
           const entityPatterns = [
             /['"]([^'"]{3,50})['"]/, // Quoted names
             /(?:top|best|leading|performing)\s+(?:is\s+)?['"]?([A-Z][a-zA-Z\s]+)['"]?/gi,
@@ -6493,35 +6553,45 @@ Respond with a JSON object:
         }
       }
       
-      conversationContextPrompt = `
-CONVERSATION CONTEXT (use for continuity - IMPORTANT for follow-up questions):
+      // For explicit follow-ups, use full context
+      if (needsExplicitContext) {
+        conversationContextPrompt = `
+CONVERSATION CONTEXT (CRITICAL - use for continuity):
 - Previous category: ${conversationContext?.lastCategory || 'none'}
 - Previous product/promotion: ${conversationContext?.lastPromotion || 'none'}
 - Previous metric: ${conversationContext?.lastMetric || 'none'}
-- Drill level: ${conversationContext?.drillLevel || 0}
+- Topics discussed: ${conversationContext?.recentTopics?.join(', ') || 'none'}
 ${previousEntities.length > 0 ? `- Key entities from last answer: ${previousEntities.join(', ')}` : ''}
 
 ${contextReference ? `Start your first bullet with: "${contextReference}"` : ''}
 
 ${isDrillDown ? `DRILL-DOWN: Provide more granular detail than before. Start with "Drilling into ${drillPath[drillPath.length - 1] || 'the data'}..."` : ''}
 
-PREVIOUS CONVERSATION (use this to answer follow-up questions like "why did it work", "recommendations", etc.):
-${conversationHistory && conversationHistory.length > 0 ? conversationHistory.slice(-4).map((m: any) => {
+PREVIOUS CONVERSATION:
+${conversationHistory.slice(-4).map((m: any) => {
   const preview = m.content?.substring(0, 200) || '';
-  const context = m.context ? ` [Context: ${JSON.stringify(m.context)}]` : '';
-  return `${m.role.toUpperCase()}: ${preview}...${context}`;
-}).join('\n\n') : 'No previous context'}
+  return `${m.role.toUpperCase()}: ${preview}...`;
+}).join('\n\n')}
 
-When the user asks follow-up questions like "why did it work", "give me recommendations", or "forecast this":
-- Reference the SPECIFIC campaigns, products, or categories from the previous answer
-- Provide actionable recommendations based on the previous data
-- For "why" questions, explain the causal drivers specific to the mentioned entity
+FOLLOW-UP INSTRUCTIONS:
+- Reference SPECIFIC campaigns, products, or categories from the previous answer
+- For "why" questions, explain causal drivers specific to the mentioned entity
+- Build upon what was discussed - don't start from scratch
 `;
+      } else {
+        // For new questions, just provide light context awareness
+        conversationContextPrompt = `
+CONVERSATION AWARENESS (light context):
+- Previous topic: ${conversationContext?.lastCategory || conversationContext?.lastPromotion || 'new conversation'}
+- This is a NEW question - answer it fully without assuming the user wants to continue the previous topic
+- However, if the question relates to something discussed before, you may reference it briefly
+`;
+      }
     }
     
-    console.log(`[${moduleId}] Needs conversation context: ${needsConversationContext}, isDrillDown: ${isDrillDown}`);
+    console.log(`[${moduleId}] Needs explicit context: ${needsExplicitContext}, isDrillDown: ${isDrillDown}, hasHistory: ${hasConversationHistory}`);
 
-    const enhancedUserPrompt = conversationContextPrompt + userPrompt;
+    const enhancedUserPrompt = differentiationPrompt + conversationContextPrompt + userPrompt;
     
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
