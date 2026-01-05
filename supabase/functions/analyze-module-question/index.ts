@@ -1751,7 +1751,53 @@ ${competitorData.slice(0, 6).map((cd: any) => `- ${cd.competitor_name} (${cd.pro
           const inv = inventoryLookup[sku];
           const velocity = data.units / weeksOfData;
           const productivity = data.revenue / (product.base_price || 1);
-          const daysOfSupply = inv ? (inv.stock_level / (velocity / 7)) : 0;
+          const stockLevel = inv?.stock_level || 0;
+          const daysOfSupply = stockLevel > 0 && velocity > 0 ? (stockLevel / (velocity / 7)) : 999;
+          
+          // MUST-PASS: Calculate Sell-Through % = Units Sold / (Units Sold + On-Hand Units)
+          const totalAvailable = data.units + stockLevel;
+          const sellThroughPct = totalAvailable > 0 ? (data.units / totalAvailable) * 100 : 0;
+          
+          // MUST-PASS: Calculate SKU Attention Ranking based on multiple factors
+          // Factors: low velocity, low margin, overstock (high DOS), poor sell-through
+          const margin = Number(product.margin_percent || 0);
+          let attentionScore = 0;
+          const attentionReasons: string[] = [];
+          
+          // Low velocity (bottom 25%)
+          if (velocity < 2) { attentionScore += 3; attentionReasons.push('low velocity'); }
+          else if (velocity < 5) { attentionScore += 1; }
+          
+          // Low/negative margin
+          if (margin < 0) { attentionScore += 4; attentionReasons.push('negative margin'); }
+          else if (margin < 15) { attentionScore += 2; attentionReasons.push('low margin'); }
+          else if (margin < 25) { attentionScore += 1; }
+          
+          // Overstock (high days of supply)
+          if (daysOfSupply > 90) { attentionScore += 3; attentionReasons.push('overstock'); }
+          else if (daysOfSupply > 60) { attentionScore += 2; }
+          else if (daysOfSupply > 30) { attentionScore += 1; }
+          
+          // Poor sell-through
+          if (sellThroughPct < 10) { attentionScore += 3; attentionReasons.push('poor sell-through'); }
+          else if (sellThroughPct < 30) { attentionScore += 2; }
+          else if (sellThroughPct < 50) { attentionScore += 1; }
+          
+          // MUST-PASS: SKU Attention Ranking
+          let attentionRanking: 'High' | 'Medium' | 'Low' = 'Low';
+          if (attentionScore >= 6) attentionRanking = 'High';
+          else if (attentionScore >= 3) attentionRanking = 'Medium';
+          
+          // MUST-PASS: Action Recommendation
+          let actionRecommendation = 'Maintain';
+          if (attentionScore >= 8) actionRecommendation = 'Delist';
+          else if (attentionScore >= 6) actionRecommendation = 'Markdown';
+          else if (attentionScore >= 4) actionRecommendation = 'Promote';
+          else if (margin > 35 && velocity > 10) actionRecommendation = 'Maintain';
+          else if (margin > 30 && sellThroughPct > 60) actionRecommendation = 'Maintain';
+          else if (sellThroughPct < 40 && daysOfSupply > 45) actionRecommendation = 'Markdown';
+          else if (velocity < 3 && margin < 20) actionRecommendation = 'Promote';
+          
           return {
             sku,
             name: product.product_name || sku,
@@ -1762,10 +1808,16 @@ ${competitorData.slice(0, 6).map((cd: any) => `- ${cd.competitor_name} (${cd.pro
             units: data.units,
             transactions: data.transactions,
             productivity,
-            margin: product.margin_percent || 0,
-            stockLevel: inv?.stock_level || 0,
+            margin,
+            stockLevel,
             daysOfSupply: isFinite(daysOfSupply) ? daysOfSupply : 999,
-            stockoutRisk: inv?.stockout_risk || 'unknown'
+            stockoutRisk: inv?.stockout_risk || 'unknown',
+            // MUST-PASS METRICS:
+            sellThroughPct,
+            attentionRanking,
+            attentionScore,
+            attentionReasons,
+            actionRecommendation
           };
         }).sort((a, b) => b.velocity - a.velocity);
         
@@ -1867,6 +1919,16 @@ ${competitorData.slice(0, 6).map((cd: any) => `- ${cd.competitor_name} (${cd.pro
           }
         });
         
+        // Calculate High/Medium/Low attention counts for summary
+        const highAttentionSKUs = productVelocity.filter(p => p.attentionRanking === 'High');
+        const mediumAttentionSKUs = productVelocity.filter(p => p.attentionRanking === 'Medium');
+        const lowAttentionSKUs = productVelocity.filter(p => p.attentionRanking === 'Low');
+        
+        // Average sell-through for portfolio
+        const avgSellThrough = productVelocity.length > 0 
+          ? productVelocity.reduce((sum, p) => sum + p.sellThroughPct, 0) / productVelocity.length 
+          : 0;
+        
         dataContext = `
 ASSORTMENT DATA SUMMARY:
 - Total SKUs: ${products.length}
@@ -1875,6 +1937,39 @@ ASSORTMENT DATA SUMMARY:
 - Stores: ${stores.length} across ${[...new Set(stores.map((s: any) => s.region))].length} regions
 - Total Revenue: $${totalRevenue.toFixed(0)}
 - Total Units Sold: ${totalUnits}
+- Average Sell-Through %: ${avgSellThrough.toFixed(1)}%
+
+═══════════════════════════════════════════════════════════════════
+SKU ATTENTION SUMMARY (MUST-PASS REQUIREMENT):
+═══════════════════════════════════════════════════════════════════
+- HIGH Attention SKUs: ${highAttentionSKUs.length} (require immediate action)
+- MEDIUM Attention SKUs: ${mediumAttentionSKUs.length} (monitor closely)
+- LOW Attention SKUs: ${lowAttentionSKUs.length} (performing well)
+
+═══════════════════════════════════════════════════════════════════
+BOTTOM-PERFORMING SKUs WITH SELL-THROUGH % (MUST-PASS):
+Ranked by attention score - includes sell-through %, margin, and action recommendation
+═══════════════════════════════════════════════════════════════════
+${productVelocity
+  .filter(p => p.attentionRanking === 'High' || p.attentionRanking === 'Medium')
+  .sort((a, b) => b.attentionScore - a.attentionScore)
+  .slice(0, 15)
+  .map((p, i) => 
+    `${i + 1}. ${p.name} (${p.sku})
+   - Category: ${p.category} | Brand: ${p.brand}
+   - Attention: ${p.attentionRanking} | Score: ${p.attentionScore}
+   - Sell-Through: ${p.sellThroughPct.toFixed(1)}% | Margin: ${p.margin.toFixed(1)}%
+   - Velocity: ${p.velocity.toFixed(2)} units/week | DOS: ${p.daysOfSupply.toFixed(0)} days
+   - Drivers: ${p.attentionReasons.length > 0 ? p.attentionReasons.join(', ') : 'Multiple factors'}
+   → ACTION: ${p.actionRecommendation.toUpperCase()}`
+  ).join('\n\n')}
+
+═══════════════════════════════════════════════════════════════════
+SKUs REQUIRING IMMEDIATE ATTENTION (HIGH PRIORITY):
+═══════════════════════════════════════════════════════════════════
+${highAttentionSKUs.slice(0, 10).map((p, i) => 
+  `${i + 1}. ${p.name}: Sell-Through ${p.sellThroughPct.toFixed(1)}%, Margin ${p.margin.toFixed(1)}%, ${p.daysOfSupply.toFixed(0)} DOS → ${p.actionRecommendation}`
+).join('\n')}
 
 CATEGORY ASSORTMENT ANALYSIS:
 ${categoryProductivity.map(cp => 
@@ -1883,17 +1978,17 @@ ${categoryProductivity.map(cp =>
 
 TOP VELOCITY PRODUCTS (BEST PERFORMERS - USE THESE NAMES):
 ${topVelocityProducts.slice(0, 12).map(p => 
-  `- ${p.name} (${p.brand}, ${p.category}): ${p.velocity.toFixed(1)} units/week, $${p.revenue.toFixed(0)} revenue, ${p.margin.toFixed(1)}% margin`
+  `- ${p.name} (${p.brand}, ${p.category}): ${p.velocity.toFixed(1)} units/week, $${p.revenue.toFixed(0)} revenue, ${p.margin.toFixed(1)}% margin, Sell-Through: ${p.sellThroughPct.toFixed(1)}%`
 ).join('\n')}
 
 BOTTOM VELOCITY PRODUCTS (RATIONALIZATION CANDIDATES):
 ${bottomVelocityProducts.slice(0, 12).map(p => 
-  `- ${p.name} (${p.brand}, ${p.category}): ${p.velocity.toFixed(2)} units/week, $${p.revenue.toFixed(0)} revenue, ${p.daysOfSupply.toFixed(0)} DOS`
+  `- ${p.name} (${p.brand}, ${p.category}): ${p.velocity.toFixed(2)} units/week, Sell-Through: ${p.sellThroughPct.toFixed(1)}%, ${p.daysOfSupply.toFixed(0)} DOS → ${p.actionRecommendation}`
 ).join('\n')}
 
 DEAD STOCK (HIGH INVENTORY, LOW VELOCITY):
 ${deadStock.map(p => 
-  `- ${p.name} (${p.category}): ${p.stockLevel} units in stock, ${p.velocity.toFixed(2)} units/week, ${p.daysOfSupply.toFixed(0)} days of supply`
+  `- ${p.name} (${p.category}): ${p.stockLevel} units in stock, ${p.velocity.toFixed(2)} units/week, Sell-Through: ${p.sellThroughPct.toFixed(1)}%, ${p.daysOfSupply.toFixed(0)} DOS`
 ).join('\n')}
 
 TOP BRANDS BY REVENUE:
