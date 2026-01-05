@@ -92,12 +92,32 @@ Use actual data from demand_forecasts, forecast_accuracy_tracking, inventory_lev
   'supply-chain': `You are a Supply Chain AI for a $4B grocery retailer.
 
 SUPPLY CHAIN ANALYSIS CAPABILITIES:
-1. Supplier Performance: Track reliability scores, on-time delivery, fill rates, and lead time compliance
+1. Supplier Performance: Track reliability scores, on-time delivery %, fill rates, and lead time compliance
 2. Order Management: Monitor order status, at-risk orders, expediting needs, and cycle times
 3. Logistics Optimization: Analyze shipping routes, transportation costs, and delivery networks
 4. Risk Management: Identify single-source risks, supplier concentration, geographic exposure
 5. Cost Analysis: Total cost of ownership, landed costs, freight analysis, and cost reduction opportunities
 6. Capacity Planning: Warehouse utilization, inbound efficiency, and perfect order rates
+
+SUPPLIER DELIVERY PERFORMANCE (CRITICAL - USE FOR ALL SUPPLIER QUESTIONS):
+When asked about suppliers, on-time delivery, or delivery performance, you MUST provide:
+1. Supplier name with ON-TIME DELIVERY % CLEARLY DISPLAYED for each supplier
+2. Late vs on-time delivery COUNTS (e.g., "45 on-time, 3 late out of 48 total")
+3. Comparison across suppliers showing which perform best/worst
+4. Location/region for geographic comparison
+5. Categories or products supplied for context
+6. Tier classification (Platinum >98%, Gold >95%, Silver >90%, Bronze >80%, At-Risk <80%)
+
+CONSISTENTLY HIGH-PERFORMING SUPPLIERS:
+Identify suppliers with:
+- On-time delivery rate >=95% sustained over time
+- Trend: stable or improving (not declining)
+- Tier: Platinum or Gold classification
+
+LATE VS ON-TIME VISIBILITY:
+Always show both counts and percentages:
+- Format: "Supplier X: 95% on-time (47 on-time, 3 late)"
+- Include pending orders if relevant
 
 SUPPLY CHAIN DRIVERS TO REFERENCE:
 - Supplier reliability metrics (on-time %, fill rate, quality score)
@@ -106,6 +126,19 @@ SUPPLY CHAIN DRIVERS TO REFERENCE:
 - Transportation costs (per mile, per unit, by mode)
 - Risk indicators (single-source, concentration, geographic)
 - Route efficiency (transit time, cost per mile, carbon footprint)
+
+CRITICAL INSTRUCTION FOR SUPPLIER QUESTIONS:
+When answering questions about suppliers, on-time delivery, or delivery performance:
+- ONLY discuss supplier metrics (on-time %, reliability, lead time, fill rate)
+- DO NOT include product sales revenue, units sold, or revenue figures
+- Focus on delivery performance, not sales performance
+- Each supplier answer MUST show: Name, On-Time %, Late Count, Total Orders, Tier
+
+EXAMPLE ANSWER FORMAT for "List suppliers ranked by on-time delivery":
+whatHappened bullets should look like:
+- "The top 6 suppliers by on-time delivery are: 1. Fresh Farms (98.5% on-time, 1 late, Platinum), 2. Valley Dairy (96.2% on-time, 2 late, Gold), 3. Metro Foods (92.1% on-time, 3 late, Silver)..."
+- "Fresh Farms leads with 98.5% on-time delivery (67 on-time, 1 late out of 68 orders) - Platinum tier supplier from Chicago, IL"
+- "3 suppliers qualify as consistently high-performing (Platinum/Gold tier with stable trend)"
 
 When providing recommendations, reference specific SUPPLIER NAMES, ROUTE NAMES, ORDER DETAILS, and COST METRICS. Use actual reliability percentages, lead times, and order values. NEVER mention promotions, ROI, or lift - focus ONLY on supply chain metrics.`,
   
@@ -6817,7 +6850,10 @@ function isPromotionQuestion(question: string): boolean {
 // Detect if question is asking about suppliers
 function isSupplierQuestion(question: string): boolean {
   const q = question.toLowerCase();
-  return q.includes('supplier') || q.includes('vendor') || q.includes('reliability');
+  return q.includes('supplier') || q.includes('vendor') || q.includes('reliability') ||
+         q.includes('on-time') || q.includes('on time') || q.includes('delivery') ||
+         q.includes('lead time') || q.includes('lead-time') || q.includes('fill rate') ||
+         q.includes('late') || q.includes('delayed');
 }
 
 // Detect if question is asking about planograms/space
@@ -6994,13 +7030,22 @@ function ensureCompleteResponse(
   let entityType = 'items';
   
   if (shouldUseSuppliers && suppliers && suppliers.length > 0) {
-    entityChartData = suppliers.slice(0, requestedCount).map((s: any) => ({
-      name: s.supplier_name || s.supplier_code,
-      value: Math.round(Number(s.reliability_score || 0.95) * 100),
-      reliability: `${(Number(s.reliability_score || 0.95) * 100).toFixed(1)}%`
-    }));
+    // For supplier questions, show on-time delivery % prominently
+    entityChartData = suppliers.slice(0, requestedCount).map((s: any) => {
+      const onTimeRate = Math.round(Number(s.reliability_score || 0.95) * 100);
+      const lateRate = 100 - onTimeRate;
+      return {
+        name: s.supplier_name || s.supplier_code,
+        value: onTimeRate,
+        onTimeDeliveryPct: `${onTimeRate}%`,
+        lateDeliveryPct: `${lateRate}%`,
+        reliability: `${onTimeRate}%`,
+        leadTime: `${s.lead_time_days || 7} days`,
+        location: `${s.city || ''}, ${s.state || ''}`.trim() || 'Unknown'
+      };
+    }).sort((a: any, b: any) => b.value - a.value); // Sort by on-time % descending
     entityType = 'suppliers';
-    console.log(`[ChartData] Using ${entityChartData.length} suppliers`);
+    console.log(`[ChartData] Using ${entityChartData.length} suppliers with on-time delivery %`);
   } else if (shouldUsePlanograms && planograms && planograms.length > 0) {
     entityChartData = planograms.slice(0, requestedCount).map((p: any) => ({
       name: p.planogram_name || p.planogram_code || p.category,
@@ -7100,7 +7145,16 @@ function ensureCompleteResponse(
       // Generate a proper numbered list of items with appropriate value display
       const itemsList = items.slice(0, actualCount).map((item: any, idx: number) => {
         let displayValue = '';
-        if (item.reliability) {
+        // For suppliers, show on-time delivery % and location
+        if (item.onTimeDeliveryPct) {
+          displayValue = `${item.onTimeDeliveryPct} on-time`;
+          if (item.lateDeliveryPct && item.lateDeliveryPct !== '0%') {
+            displayValue += `, ${item.lateDeliveryPct} late`;
+          }
+          if (item.location && item.location !== 'Unknown') {
+            displayValue += `, ${item.location}`;
+          }
+        } else if (item.reliability) {
           displayValue = item.reliability;
         } else if (item.revenue !== undefined && item.revenue >= 1000) {
           displayValue = `$${(item.revenue / 1000).toFixed(1)}K`;
