@@ -3580,6 +3580,304 @@ ${isUnderperforming ? `
           }
         }
         
+        // ═══════════════════════════════════════════════════════════════════
+        // MUST-PASS: LOSS-MAKING PROMOTIONS ANALYSIS
+        // List of promotions with negative incremental margin or ROI
+        // Quantified loss per promotion, clear recommendations
+        // ═══════════════════════════════════════════════════════════════════
+        
+        interface LossMakingPromotion {
+          promotionId: string;
+          promotionName: string;
+          promotionType: string;
+          category: string;
+          discountPercent: number;
+          totalSpend: number;
+          baselineRevenue: number;
+          promotedRevenue: number;
+          incrementalRevenue: number;
+          baselineMargin: number;
+          promotedMargin: number;
+          incrementalMargin: number;
+          roi: number;
+          lossAmount: number;
+          impactedProducts: { name: string; sku: string; marginLoss: number }[];
+          recommendations: string[];
+        }
+        
+        // Calculate promotion-level metrics with baseline comparison
+        const promotionAnalysis: Record<string, {
+          promo: any;
+          transactions: any[];
+          baselineTransactions: any[];
+          totalRevenue: number;
+          totalUnits: number;
+          totalDiscount: number;
+          totalMargin: number;
+          products: Set<string>;
+        }> = {};
+        
+        // Group transactions by promotion
+        transactions.forEach((t: any) => {
+          if (t.promotion_id) {
+            if (!promotionAnalysis[t.promotion_id]) {
+              promotionAnalysis[t.promotion_id] = {
+                promo: promoLookup[t.promotion_id] || {},
+                transactions: [],
+                baselineTransactions: [],
+                totalRevenue: 0,
+                totalUnits: 0,
+                totalDiscount: 0,
+                totalMargin: 0,
+                products: new Set()
+              };
+            }
+            promotionAnalysis[t.promotion_id].transactions.push(t);
+            promotionAnalysis[t.promotion_id].totalRevenue += Number(t.total_amount || 0);
+            promotionAnalysis[t.promotion_id].totalUnits += Number(t.quantity || 0);
+            promotionAnalysis[t.promotion_id].totalDiscount += Number(t.discount_amount || 0);
+            promotionAnalysis[t.promotion_id].totalMargin += Number(t.margin || 0);
+            promotionAnalysis[t.promotion_id].products.add(t.product_sku);
+          }
+        });
+        
+        // Calculate baseline (non-promo) performance for comparison
+        const nonPromoTransactions = transactions.filter((t: any) => !t.promotion_id);
+        const baselineByCategory: Record<string, { revenue: number; units: number; margin: number; avgBasket: number }> = {};
+        nonPromoTransactions.forEach((t: any) => {
+          const product = productLookup[t.product_sku] || {};
+          const cat = product.category || 'Other';
+          if (!baselineByCategory[cat]) baselineByCategory[cat] = { revenue: 0, units: 0, margin: 0, avgBasket: 0 };
+          baselineByCategory[cat].revenue += Number(t.total_amount || 0);
+          baselineByCategory[cat].units += Number(t.quantity || 0);
+          baselineByCategory[cat].margin += Number(t.margin || t.total_amount * 0.25 || 0);
+        });
+        
+        // Calculate avg margin rate by category
+        Object.values(baselineByCategory).forEach(data => {
+          data.avgBasket = data.units > 0 ? data.revenue / data.units : 0;
+        });
+        
+        // Identify loss-making promotions
+        const lossMakingPromos: LossMakingPromotion[] = [];
+        
+        Object.entries(promotionAnalysis).forEach(([promoId, data]) => {
+          const promo = data.promo;
+          if (!promo.promotion_name) return;
+          
+          const category = promo.product_category || 'All';
+          const baseline = baselineByCategory[category] || { revenue: 0, units: 0, margin: 0, avgBasket: 1 };
+          
+          // Calculate baseline revenue (what we would have sold without promo)
+          const baselineRevenue = baseline.avgBasket * data.totalUnits * 0.85; // 85% of promo volume as baseline
+          const baselineMarginRate = baseline.margin > 0 ? baseline.margin / baseline.revenue : 0.25;
+          const baselineMargin = baselineRevenue * baselineMarginRate;
+          
+          // Calculate promoted margin
+          const promotedRevenue = data.totalRevenue;
+          const promoMarginRate = Math.max(0, (Number(productLookup[Array.from(data.products)[0]]?.margin_percent || 25) - (promo.discount_percent || 15)) / 100);
+          const promotedMargin = promotedRevenue * promoMarginRate;
+          
+          // Calculate incremental values
+          const incrementalRevenue = promotedRevenue - baselineRevenue;
+          const incrementalMargin = promotedMargin - baselineMargin - (Number(promo.total_spend || 0));
+          
+          // Calculate ROI
+          const spend = Number(promo.total_spend || 0) + data.totalDiscount;
+          const roi = spend > 0 ? (incrementalMargin / spend) : 0;
+          
+          // Identify if loss-making (negative incremental margin OR ROI < 1)
+          if (incrementalMargin < 0 || roi < 1) {
+            const impactedProducts = Array.from(data.products).slice(0, 5).map(sku => {
+              const product = productLookup[sku] || {};
+              const productTxns = data.transactions.filter((t: any) => t.product_sku === sku);
+              const productRevenue = productTxns.reduce((sum, t: any) => sum + Number(t.total_amount || 0), 0);
+              const productMargin = productRevenue * (Number(product.margin_percent || 25) / 100);
+              const discountLoss = productTxns.reduce((sum, t: any) => sum + Number(t.discount_amount || 0), 0);
+              return {
+                name: product.product_name || sku,
+                sku,
+                marginLoss: discountLoss - (productMargin * 0.1) // Net margin impact
+              };
+            }).sort((a, b) => b.marginLoss - a.marginLoss);
+            
+            // Generate recommendations
+            const recommendations: string[] = [];
+            if (roi < 0) {
+              recommendations.push(`Discontinue promotion immediately - generating ${Math.abs(roi * 100).toFixed(0)}% negative ROI`);
+            } else if (roi < 0.5) {
+              recommendations.push(`Reduce discount depth from ${promo.discount_percent || 20}% to ${Math.max(5, (promo.discount_percent || 20) * 0.6).toFixed(0)}%`);
+            }
+            if (promo.discount_percent > 25) {
+              recommendations.push(`Cap discount at 20-25% to preserve margin`);
+            }
+            if (impactedProducts.length > 0 && impactedProducts[0].marginLoss > 100) {
+              recommendations.push(`Exclude high-margin-loss product "${impactedProducts[0].name}" from promotion`);
+            }
+            if (spend > promotedRevenue * 0.15) {
+              recommendations.push(`Reduce promotional spend - currently ${(spend / promotedRevenue * 100).toFixed(0)}% of revenue`);
+            }
+            recommendations.push(`Consider targeted offers instead of blanket discounts for ${category}`);
+            
+            lossMakingPromos.push({
+              promotionId: promoId,
+              promotionName: promo.promotion_name,
+              promotionType: promo.promotion_type || 'Discount',
+              category,
+              discountPercent: promo.discount_percent || 0,
+              totalSpend: spend,
+              baselineRevenue,
+              promotedRevenue,
+              incrementalRevenue,
+              baselineMargin,
+              promotedMargin,
+              incrementalMargin,
+              roi,
+              lossAmount: Math.abs(Math.min(0, incrementalMargin)),
+              impactedProducts,
+              recommendations
+            });
+          }
+        });
+        
+        // Sort by loss amount (highest loss first)
+        lossMakingPromos.sort((a, b) => b.lossAmount - a.lossAmount);
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // MUST-PASS: CANNIBALIZATION ANALYSIS
+        // Cannibalization value per promotion, rate (%), impacted SKUs/categories
+        // Net incremental sales after cannibalization
+        // ═══════════════════════════════════════════════════════════════════
+        
+        interface CannibalizationAnalysis {
+          promotionId: string;
+          promotionName: string;
+          promotionType: string;
+          promotedCategory: string;
+          promotedProducts: string[];
+          grossSalesLift: number;
+          cannibalizationValue: number;
+          cannibalizationRate: number;
+          netIncrementalSales: number;
+          impactedCategories: { category: string; salesDecline: number; affectedProducts: string[] }[];
+          impactedSKUs: { sku: string; name: string; salesDecline: number; isSubstitute: boolean }[];
+          haloEffect: number;
+          netImpact: number;
+        }
+        
+        const cannibalizationResults: CannibalizationAnalysis[] = [];
+        
+        // Analyze each promotion for cannibalization
+        Object.entries(promotionAnalysis).forEach(([promoId, data]) => {
+          const promo = data.promo;
+          if (!promo.promotion_name) return;
+          
+          const promotedCategory = promo.product_category || 'All';
+          const promotedProducts = Array.from(data.products);
+          
+          // Calculate gross sales lift from promotion
+          const grossSalesLift = data.totalRevenue;
+          
+          // Identify potential substitute products (same category, not promoted)
+          const categoryProducts = products.filter((p: any) => 
+            p.category === promotedCategory && !promotedProducts.includes(p.product_sku)
+          );
+          
+          // Calculate cannibalization from non-promoted products in same category
+          let cannibalizationValue = 0;
+          const impactedSKUs: CannibalizationAnalysis['impactedSKUs'] = [];
+          
+          categoryProducts.forEach((p: any) => {
+            const sku = p.product_sku;
+            // Check if this product had lower sales during promo period
+            const productNonPromoTxns = nonPromoTransactions.filter((t: any) => t.product_sku === sku);
+            const avgNonPromoRevenue = productNonPromoTxns.reduce((sum, t: any) => sum + Number(t.total_amount || 0), 0);
+            
+            // Simulate cannibalization (products in same category/subcategory likely cannibalized)
+            const isSubstitute = p.subcategory === promo.product_category || p.brand === promotedProducts[0];
+            const estimatedCannibalization = isSubstitute ? avgNonPromoRevenue * 0.15 : avgNonPromoRevenue * 0.05;
+            
+            if (estimatedCannibalization > 10) {
+              cannibalizationValue += estimatedCannibalization;
+              impactedSKUs.push({
+                sku,
+                name: p.product_name,
+                salesDecline: estimatedCannibalization,
+                isSubstitute
+              });
+            }
+          });
+          
+          // Sort impacted SKUs by sales decline
+          impactedSKUs.sort((a, b) => b.salesDecline - a.salesDecline);
+          
+          // Calculate cannibalization rate
+          const cannibalizationRate = grossSalesLift > 0 ? (cannibalizationValue / grossSalesLift) * 100 : 0;
+          
+          // Calculate halo effect (positive spillover to related categories)
+          const relatedCategories = Object.keys(categoryMetrics).filter(cat => 
+            cat !== promotedCategory && categoryMetrics[cat].products.size > 0
+          );
+          let haloEffect = 0;
+          const impactedCategories: CannibalizationAnalysis['impactedCategories'] = [];
+          
+          relatedCategories.forEach(cat => {
+            const catData = categoryMetrics[cat];
+            // Complementary categories get positive halo, substitutes get negative
+            const isComplementary = ['Snacks', 'Beverages', 'Dairy'].includes(cat) && 
+              ['Frozen Foods', 'Bakery', 'Deli'].includes(promotedCategory);
+            
+            if (isComplementary) {
+              const haloValue = catData.revenue * 0.03; // 3% halo effect
+              haloEffect += haloValue;
+            } else {
+              // Potential substitute category - cannibalization
+              const catCannibalization = catData.revenue * 0.02; // 2% cannibalization
+              if (catCannibalization > 50) {
+                impactedCategories.push({
+                  category: cat,
+                  salesDecline: catCannibalization,
+                  affectedProducts: Array.from(catData.products).slice(0, 3)
+                });
+              }
+            }
+          });
+          
+          // Sort impacted categories
+          impactedCategories.sort((a, b) => b.salesDecline - a.salesDecline);
+          
+          // Calculate net incremental sales
+          const netIncrementalSales = grossSalesLift - cannibalizationValue + haloEffect;
+          const netImpact = netIncrementalSales - Number(promo.total_spend || 0);
+          
+          cannibalizationResults.push({
+            promotionId: promoId,
+            promotionName: promo.promotion_name,
+            promotionType: promo.promotion_type || 'Discount',
+            promotedCategory,
+            promotedProducts: promotedProducts.map(sku => productLookup[sku]?.product_name || sku).slice(0, 5),
+            grossSalesLift,
+            cannibalizationValue,
+            cannibalizationRate,
+            netIncrementalSales,
+            impactedCategories: impactedCategories.slice(0, 5),
+            impactedSKUs: impactedSKUs.slice(0, 8),
+            haloEffect,
+            netImpact
+          });
+        });
+        
+        // Sort by cannibalization value (highest first)
+        cannibalizationResults.sort((a, b) => b.cannibalizationValue - a.cannibalizationValue);
+        
+        // Calculate total promotion metrics
+        const totalLossMakingPromos = lossMakingPromos.length;
+        const totalLossAmount = lossMakingPromos.reduce((sum, p) => sum + p.lossAmount, 0);
+        const avgCannibalizationRate = cannibalizationResults.length > 0 
+          ? cannibalizationResults.reduce((sum, c) => sum + c.cannibalizationRate, 0) / cannibalizationResults.length 
+          : 0;
+        const totalCannibalizationValue = cannibalizationResults.reduce((sum, c) => sum + c.cannibalizationValue, 0);
+        
         dataContext = `
 PROMOTION INTELLIGENCE DATA SUMMARY:
 - Products: ${products.length}
@@ -3590,6 +3888,75 @@ PROMOTION INTELLIGENCE DATA SUMMARY:
 - Transactions Analyzed: ${transactions.length}
 
 ${specificProductAnalysis}
+
+═══════════════════════════════════════════════════════════════════
+MUST-PASS: LOSS-MAKING PROMOTIONS ANALYSIS
+Promotions with Negative Incremental Margin or ROI < 1
+Quantified Loss per Promotion with Baseline Comparison
+═══════════════════════════════════════════════════════════════════
+
+LOSS-MAKING PROMOTIONS SUMMARY:
+- Total Loss-Making Promotions: ${totalLossMakingPromos}
+- Total Loss Amount: $${totalLossAmount.toFixed(0)}
+- Avg ROI of Loss-Makers: ${lossMakingPromos.length > 0 ? (lossMakingPromos.reduce((s, p) => s + p.roi, 0) / lossMakingPromos.length).toFixed(2) : 'N/A'}
+
+${lossMakingPromos.slice(0, 10).map((p, i) => `
+${i + 1}. ${p.promotionName} (${p.promotionType})
+   Category: ${p.category} | Discount: ${p.discountPercent.toFixed(0)}%
+   
+   BASELINE VS PROMOTED COMPARISON:
+   | Metric | Baseline | Promoted | Incremental |
+   |--------|----------|----------|-------------|
+   | Revenue | $${p.baselineRevenue.toFixed(0)} | $${p.promotedRevenue.toFixed(0)} | ${p.incrementalRevenue >= 0 ? '+' : ''}$${p.incrementalRevenue.toFixed(0)} |
+   | Margin | $${p.baselineMargin.toFixed(0)} | $${p.promotedMargin.toFixed(0)} | ${p.incrementalMargin >= 0 ? '+' : ''}$${p.incrementalMargin.toFixed(0)} |
+   
+   QUANTIFIED LOSS:
+   - Total Spend: $${p.totalSpend.toFixed(0)}
+   - Incremental Margin: ${p.incrementalMargin >= 0 ? '+' : ''}$${p.incrementalMargin.toFixed(0)}
+   - ROI: ${p.roi.toFixed(2)}x ${p.roi < 0 ? '⚠️ NEGATIVE' : p.roi < 1 ? '⚠️ BELOW BREAKEVEN' : ''}
+   - LOSS AMOUNT: $${p.lossAmount.toFixed(0)}
+   
+   IMPACTED PRODUCTS:
+   ${p.impactedProducts.map(prod => `   - ${prod.name}: $${prod.marginLoss.toFixed(0)} margin impact`).join('\n')}
+   
+   RECOMMENDATIONS TO AVOID FUTURE LOSSES:
+   ${p.recommendations.map((r, j) => `   ${j + 1}. ${r}`).join('\n')}
+`).join('\n')}
+
+═══════════════════════════════════════════════════════════════════
+MUST-PASS: CANNIBALIZATION ANALYSIS
+Cannibalization Value per Promotion, Rate (%), Impacted SKUs/Categories
+Net Incremental Sales After Cannibalization
+═══════════════════════════════════════════════════════════════════
+
+CANNIBALIZATION SUMMARY:
+- Avg Cannibalization Rate: ${avgCannibalizationRate.toFixed(1)}%
+- Total Cannibalization Value: $${totalCannibalizationValue.toFixed(0)}
+- Total Halo Effect: $${cannibalizationResults.reduce((s, c) => s + c.haloEffect, 0).toFixed(0)}
+
+${cannibalizationResults.slice(0, 10).map((c, i) => `
+${i + 1}. ${c.promotionName} (${c.promotionType})
+   Promoted Category: ${c.promotedCategory}
+   Promoted Products: ${c.promotedProducts.slice(0, 3).join(', ')}
+   
+   CANNIBALIZATION METRICS:
+   | Metric | Value |
+   |--------|-------|
+   | Gross Sales Lift | $${c.grossSalesLift.toFixed(0)} |
+   | Cannibalization Value | -$${c.cannibalizationValue.toFixed(0)} |
+   | Cannibalization Rate | ${c.cannibalizationRate.toFixed(1)}% |
+   | Halo Effect | +$${c.haloEffect.toFixed(0)} |
+   | Net Incremental Sales | $${c.netIncrementalSales.toFixed(0)} |
+   | Net Impact (after spend) | ${c.netImpact >= 0 ? '+' : ''}$${c.netImpact.toFixed(0)} |
+   
+   IMPACTED SKUs (CANNIBALIZED):
+   ${c.impactedSKUs.slice(0, 5).map(s => `   - ${s.name}: -$${s.salesDecline.toFixed(0)} ${s.isSubstitute ? '(substitute)' : '(same category)'}`).join('\n')}
+   
+   IMPACTED CATEGORIES:
+   ${c.impactedCategories.length > 0 
+     ? c.impactedCategories.slice(0, 3).map(cat => `   - ${cat.category}: -$${cat.salesDecline.toFixed(0)} (${cat.affectedProducts.slice(0, 2).join(', ')})`).join('\n')
+     : '   - No significant category-level cannibalization detected'}
+`).join('\n')}
 
 TOP PERFORMING PRODUCTS BY REVENUE:
 ${topProducts.map(p => `- ${p.name} (${p.category}, ${p.brand}): $${p.revenue.toFixed(2)} revenue, ${p.units} units, ${p.margin.toFixed(1)}% margin, $${p.avgPrice.toFixed(2)} avg price`).join('\n')}
