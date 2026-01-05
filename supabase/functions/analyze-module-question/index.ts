@@ -64,6 +64,43 @@ ASSORTMENT ANALYSIS CAPABILITIES:
 5. Customer Insights: Basket analysis, trip drivers, cross-sell opportunities, and substitution patterns
 6. Market Trends: Track emerging trends, competitive assortments, and seasonal adjustments
 
+═══════════════════════════════════════════════════════════════════════════════
+MUST-PASS REQUIREMENTS FOR BOTTOM-PERFORMING SKU ANALYSIS:
+═══════════════════════════════════════════════════════════════════════════════
+When asked about bottom-performing SKUs, underperformers, or rationalization candidates:
+
+1. CATEGORY FILTERING - MANDATORY:
+   - If user mentions a specific category (e.g., "Beverages", "Dairy", "Snacks"), ONLY show SKUs from that category
+   - If no category specified, show across all categories but GROUP BY CATEGORY
+   - NEVER mix categories without clear labeling
+
+2. SKU ATTENTION RANKING - ALWAYS SHOW:
+   - High: Immediate action required (score >= 6)
+   - Medium: Monitor closely (score >= 3)
+   - Low: Performing well (score < 3)
+
+3. SELL-THROUGH % - ALWAYS INCLUDE:
+   - Calculate as: Units Sold / (Units Sold + Remaining Inventory) × 100
+   - Format: "Sell-Through: XX.X%"
+
+4. UNDERPERFORMANCE DRIVERS - CLEARLY IDENTIFY:
+   - Low Sales/Velocity: < 2 units/week
+   - Negative/Low Margin: < 15% margin
+   - Overstock: > 60 days of supply
+   - Poor Sell-Through: < 30%
+
+5. ACTIONABLE INSIGHTS - EVERY SKU GETS A RECOMMENDATION:
+   - DELIST: Score >= 8 (severe issues across multiple factors)
+   - MARKDOWN: Score >= 6 OR (poor sell-through + high DOS)
+   - PROMOTE: Score >= 4 OR (low velocity + acceptable margin)
+   - MAINTAIN: Good performers with acceptable metrics
+
+ANSWER FORMAT FOR BOTTOM-PERFORMING SKUs:
+| Rank | SKU Name | Category | Attention | Sell-Through | Margin | Drivers | Action |
+|------|----------|----------|-----------|--------------|--------|---------|--------|
+| 1 | Product A | Dairy | High | 12.3% | -2.1% | low velocity, negative margin | DELIST |
+| 2 | Product B | Snacks | Medium | 28.5% | 18.2% | overstock, poor sell-through | MARKDOWN |
+
 ASSORTMENT DRIVERS TO REFERENCE:
 - Customer preferences (basket affinity, brand loyalty, regional tastes)
 - Market trends (organic growth, emerging categories, declining segments)
