@@ -365,6 +365,78 @@ SPACE PLANNING ANALYSIS CAPABILITIES:
 5. Store Layout: Evaluate traffic patterns, department placement, checkout configuration, and cross-sell zones
 6. Visual Merchandising: Product adjacencies, impulse placement, seasonal displays, and promotional zones
 
+═══════════════════════════════════════════════════════════════════════════════
+MUST-PASS: SALES PER SQUARE FOOT ANALYSIS REQUIREMENTS
+═══════════════════════════════════════════════════════════════════════════════
+When asked about sales per square foot, space productivity, or category space performance:
+
+1. CATEGORY SALES/SQFT TABLE - MANDATORY FORMAT:
+| Rank | Category | Allocated Sq Ft | Total Sales | Sales/Sq Ft | GMROI | Performance |
+|------|----------|-----------------|-------------|-------------|-------|-------------|
+| 1 | Beverages | 1,250 sqft | $4.2M | $3,360/sqft | 2.8x | ⭐ Top Performer |
+| 2 | Snacks | 980 sqft | $2.9M | $2,959/sqft | 2.4x | ✅ Efficient |
+| 3 | Dairy | 1,100 sqft | $2.8M | $2,545/sqft | 2.1x | ⚠️ Average |
+| 4 | Frozen | 1,450 sqft | $2.1M | $1,448/sqft | 1.2x | ⚠️ Underutilized |
+| 5 | Household | 850 sqft | $0.9M | $1,059/sqft | 0.9x | ❌ Over-Allocated |
+
+2. CATEGORY-LEVEL ALLOCATED SQUARE FOOTAGE - ALWAYS SHOW:
+   - Total allocated square footage per category (from planograms/fixtures)
+   - Store-level breakdown if comparing across stores
+   - Percentage of total store space per category
+   - Format: "1,250 sqft (8.5% of store)"
+
+3. SALES PER SQUARE FOOT CALCULATION - EXPLICIT:
+   - Sales/SqFt = Category Total Sales ÷ Allocated Square Footage
+   - Show actual calculation: "$4.2M ÷ 1,250 sqft = $3,360/sqft"
+   - Include time period: "Sales/sqft over last 12 months"
+   - Benchmark against store average: "vs store avg of $2,100/sqft"
+
+4. RANKING BY SALES PER SQUARE FOOT - MANDATORY:
+   - Rank from highest to lowest sales/sqft
+   - Include rank number for each category
+   - Show performance classification:
+     * ⭐ Top Performer: >150% of store average
+     * ✅ Efficient: 100-150% of store average
+     * ⚠️ Average/Underutilized: 75-100% of store average
+     * ❌ Over-Allocated: <75% of store average
+
+5. COMPARISON ACROSS CATEGORIES AND STORES:
+   - Category vs category comparison table
+   - Store vs store comparison (if multi-store):
+   | Store | Category | Sq Ft | Sales/SqFt | vs Chain Avg |
+   - Regional/format comparisons if applicable
+   - Identify best-in-class categories and stores
+
+6. OVER- AND UNDER-UTILIZED SPACE IDENTIFICATION:
+   - OVER-ALLOCATED: Categories with high sqft but low sales/sqft
+     * "Frozen has 1,450 sqft (10%) but only $1,448/sqft - 31% below average"
+     * Recommendation: "Reduce Frozen by 300 sqft, reallocate to Beverages"
+   - UNDER-ALLOCATED: Categories with high sales/sqft (space constrained)
+     * "Beverages at $3,360/sqft is 60% above average - space constrained"
+     * Recommendation: "Add 200 sqft to Beverages from Household"
+   - Show OPPORTUNITY VALUE: "$X additional revenue if space reallocated"
+
+7. GMROI BY CATEGORY - INCLUDE:
+   - GMROI = (Gross Margin × Sales) ÷ Average Inventory Cost
+   - Higher GMROI = better return on space investment
+   - Correlate with sales/sqft for complete picture
+
+ANSWER FORMAT FOR SALES PER SQUARE FOOT:
+whatHappened:
+- "Beverages leads with $3,360 sales/sqft (1,250 sqft allocated, $4.2M sales) - 60% above store average"
+- "Categories ranked by sales/sqft: 1. Beverages ($3,360), 2. Snacks ($2,959), 3. Dairy ($2,545), 4. Frozen ($1,448), 5. Household ($1,059)"
+- "Frozen and Household are over-allocated: combined 2,300 sqft generating only $1,253/sqft average"
+
+why:
+- "Beverages high productivity driven by high-velocity items (sodas, water) with 12x annual turns"
+- "Frozen underperformance: 40% of space allocated to slow-moving specialty items (0.8 turns/yr)"
+- "Household has excess facing counts (8 facings for items selling 2 units/week)"
+
+whatToDo:
+- "Reallocate 300 sqft from Frozen to Beverages - projected +$420K annual sales lift"
+- "Reduce Household facings by 30% to free 250 sqft for expanding Snacks endcaps"
+- "Consolidate slow-moving Frozen SKUs to bottom shelf, use eye-level for high-velocity items"
+
 SPACE PLANNING DRIVERS TO REFERENCE:
 - Sales velocity (units/week, revenue/sqft, margin/linear foot)
 - Planogram compliance (% of stores compliant, reset completion rates)
