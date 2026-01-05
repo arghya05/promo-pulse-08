@@ -3338,16 +3338,20 @@ ${supplyChainSignals.slice(0, 5).map((s: any) => `- ${s.metric_name}: ${s.metric
       }
       
       case 'space': {
-        const [planogramsRes, allocationsRes, fixturesRes, storePerfRes] = await Promise.all([
+        const [planogramsRes, allocationsRes, fixturesRes, storePerfRes, transactionsSpaceRes, inventorySpaceRes] = await Promise.all([
           supabase.from('planograms').select('*').limit(50),
           supabase.from('shelf_allocations').select('*').limit(150),
           supabase.from('fixtures').select('*').limit(50),
           supabase.from('store_performance').select('*').limit(100),
+          supabase.from('transactions').select('*').limit(500),
+          supabase.from('inventory_levels').select('*').limit(200),
         ]);
         const planograms = planogramsRes.data || [];
         const allocations = allocationsRes.data || [];
         const fixtures = fixturesRes.data || [];
         const storePerf = storePerfRes.data || [];
+        const transactionsSpace = transactionsSpaceRes.data || [];
+        const inventorySpace = inventorySpaceRes.data || [];
         
         // Create product lookup for names
         const productLookup: Record<string, any> = {};
@@ -3424,6 +3428,306 @@ ${supplyChainSignals.slice(0, 5).map((s: any) => `- ${s.metric_name}: ${s.metric
         const avgConversion = storePerf.reduce((sum, s: any) => sum + Number(s.conversion_rate || 0), 0) / (storePerf.length || 1);
         const avgFootTraffic = storePerf.reduce((sum, s: any) => sum + Number(s.foot_traffic || 0), 0) / (storePerf.length || 1);
         
+        // ═══════════════════════════════════════════════════════════════════
+        // MUST-PASS: CATEGORY SALES PER SQUARE FOOT ANALYSIS
+        // Category-level allocated sqft, category-level sales/sqft, ranking,
+        // comparison across categories/stores, over/under-utilized space
+        // ═══════════════════════════════════════════════════════════════════
+        
+        interface CategorySpaceAnalysis {
+          category: string;
+          allocatedSqft: number;
+          totalSales: number;
+          salesPerSqft: number;
+          productCount: number;
+          storeCount: number;
+          avgFacings: number;
+          eyeLevelPct: number;
+          spaceUtilization: 'over-utilized' | 'optimal' | 'under-utilized';
+          utilizationScore: number;
+          recommendation: string;
+          storeBreakdown: { storeName: string; sales: number; sqft: number; salesPerSqft: number }[];
+        }
+        
+        // Calculate sales by category from transactions
+        const categorySales: Record<string, { revenue: number; units: number; transactions: Set<string>; stores: Set<string> }> = {};
+        transactionsSpace.forEach((t: any) => {
+          const product = productLookup[t.product_sku] || {};
+          const cat = product.category || 'Other';
+          if (!categorySales[cat]) {
+            categorySales[cat] = { revenue: 0, units: 0, transactions: new Set(), stores: new Set() };
+          }
+          categorySales[cat].revenue += Number(t.total_amount || 0);
+          categorySales[cat].units += Number(t.quantity || 0);
+          categorySales[cat].transactions.add(t.id);
+          if (t.store_id) categorySales[cat].stores.add(t.store_id);
+        });
+        
+        // Calculate space allocation by category from planograms and shelf allocations
+        const categorySpace: Record<string, { 
+          sqft: number; 
+          products: Set<string>; 
+          facings: number; 
+          eyeLevel: number; 
+          totalPositions: number;
+          storeAllocations: Record<string, number>;
+        }> = {};
+        
+        allocations.forEach((a: any) => {
+          const product = productLookup[a.product_sku] || {};
+          const cat = product.category || 'Other';
+          const planogram = planogramLookup[a.planogram_id] || {};
+          
+          if (!categorySpace[cat]) {
+            categorySpace[cat] = { sqft: 0, products: new Set(), facings: 0, eyeLevel: 0, totalPositions: 0, storeAllocations: {} };
+          }
+          
+          // Calculate allocated sqft from shelf dimensions
+          const shelfSqft = (Number(a.width_inches || 0) * Number(a.height_inches || 0)) / 144; // Convert sq inches to sq ft
+          categorySpace[cat].sqft += shelfSqft;
+          categorySpace[cat].products.add(a.product_sku);
+          categorySpace[cat].facings += Number(a.facings || 1);
+          if (a.is_eye_level) categorySpace[cat].eyeLevel++;
+          categorySpace[cat].totalPositions++;
+          
+          // Track by store type if available
+          const storeType = planogram.store_type || 'Standard';
+          if (!categorySpace[cat].storeAllocations[storeType]) {
+            categorySpace[cat].storeAllocations[storeType] = 0;
+          }
+          categorySpace[cat].storeAllocations[storeType] += shelfSqft;
+        });
+        
+        // Add planogram-level space
+        planograms.forEach((p: any) => {
+          const cat = p.category || 'Other';
+          if (!categorySpace[cat]) {
+            categorySpace[cat] = { sqft: 0, products: new Set(), facings: 0, eyeLevel: 0, totalPositions: 0, storeAllocations: {} };
+          }
+          // Add planogram's own space if not already counted
+          const planogramSqft = (Number(p.total_width_inches || 48) * Number(p.total_height_inches || 72)) / 144;
+          // Only add if no allocations found for this planogram
+          const hasAllocations = allocations.some((a: any) => a.planogram_id === p.id);
+          if (!hasAllocations) {
+            categorySpace[cat].sqft += planogramSqft;
+          }
+        });
+        
+        // Calculate category space performance
+        const categorySpaceAnalysis: CategorySpaceAnalysis[] = [];
+        const allCategories = [...new Set([...Object.keys(categorySales), ...Object.keys(categorySpace)])];
+        
+        // Calculate average sales/sqft for benchmark
+        let totalSalesAll = 0;
+        let totalSqftAll = 0;
+        allCategories.forEach(cat => {
+          totalSalesAll += categorySales[cat]?.revenue || 0;
+          totalSqftAll += categorySpace[cat]?.sqft || 0;
+        });
+        const avgSalesPerSqftBenchmark = totalSqftAll > 0 ? totalSalesAll / totalSqftAll : 100;
+        
+        allCategories.forEach(cat => {
+          const sales = categorySales[cat] || { revenue: 0, units: 0, transactions: new Set(), stores: new Set() };
+          const space = categorySpace[cat] || { sqft: 0, products: new Set(), facings: 0, eyeLevel: 0, totalPositions: 0, storeAllocations: {} };
+          
+          // Ensure minimum sqft for calculation
+          const allocatedSqft = Math.max(space.sqft, 1);
+          const salesPerSqft = sales.revenue / allocatedSqft;
+          const eyeLevelPct = space.totalPositions > 0 ? (space.eyeLevel / space.totalPositions) * 100 : 0;
+          
+          // Determine utilization status
+          const utilizationRatio = salesPerSqft / avgSalesPerSqftBenchmark;
+          let spaceUtilization: 'over-utilized' | 'optimal' | 'under-utilized' = 'optimal';
+          let utilizationScore = utilizationRatio * 100;
+          let recommendation = 'Maintain current allocation';
+          
+          if (utilizationRatio > 1.3) {
+            spaceUtilization = 'over-utilized';
+            recommendation = `Expand space by ${Math.round((utilizationRatio - 1) * 100)}% - high productivity category`;
+          } else if (utilizationRatio < 0.7) {
+            spaceUtilization = 'under-utilized';
+            recommendation = `Reduce space by ${Math.round((1 - utilizationRatio) * 100)}% or improve merchandising`;
+          }
+          
+          // Build store breakdown
+          const storeBreakdown = Object.entries(space.storeAllocations).map(([storeName, sqft]) => ({
+            storeName,
+            sales: sales.revenue * (sqft / allocatedSqft), // Proportional estimate
+            sqft: sqft as number,
+            salesPerSqft: (sales.revenue * (sqft / allocatedSqft)) / (sqft as number)
+          })).sort((a, b) => b.salesPerSqft - a.salesPerSqft);
+          
+          categorySpaceAnalysis.push({
+            category: cat,
+            allocatedSqft: Math.round(allocatedSqft * 10) / 10,
+            totalSales: Math.round(sales.revenue),
+            salesPerSqft: Math.round(salesPerSqft * 100) / 100,
+            productCount: space.products.size,
+            storeCount: sales.stores.size,
+            avgFacings: space.totalPositions > 0 ? Math.round((space.facings / space.totalPositions) * 10) / 10 : 0,
+            eyeLevelPct: Math.round(eyeLevelPct),
+            spaceUtilization,
+            utilizationScore: Math.round(utilizationScore),
+            recommendation,
+            storeBreakdown
+          });
+        });
+        
+        // Sort by sales per sqft (highest first)
+        categorySpaceAnalysis.sort((a, b) => b.salesPerSqft - a.salesPerSqft);
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // MUST-PASS: GMROI (Gross Margin Return on Inventory) BY CATEGORY
+        // Category-level gross margin, avg inventory cost, GMROI calculation,
+        // ranked by GMROI, identification of high/low GMROI categories
+        // ═══════════════════════════════════════════════════════════════════
+        
+        interface CategoryGMROI {
+          category: string;
+          grossMargin: number;
+          grossMarginPct: number;
+          avgInventoryCost: number;
+          gmroi: number;
+          annualizedGmroi: number;
+          ranking: 'High' | 'Medium' | 'Low';
+          inventoryTurns: number;
+          recommendation: string;
+          topProducts: { name: string; gmroi: number; margin: number }[];
+          bottomProducts: { name: string; gmroi: number; margin: number }[];
+        }
+        
+        // Calculate category-level metrics
+        const categoryMetricsGMROI: Record<string, {
+          revenue: number;
+          cost: number;
+          margin: number;
+          units: number;
+          products: Record<string, { revenue: number; cost: number; margin: number; marginPct: number; inventory: number }>;
+        }> = {};
+        
+        transactionsSpace.forEach((t: any) => {
+          const product = productLookup[t.product_sku] || {};
+          const cat = product.category || 'Other';
+          
+          if (!categoryMetricsGMROI[cat]) {
+            categoryMetricsGMROI[cat] = { revenue: 0, cost: 0, margin: 0, units: 0, products: {} };
+          }
+          
+          const revenue = Number(t.total_amount || 0);
+          const cost = Number(t.cost_of_goods_sold || t.total_amount * 0.65 || 0);
+          const margin = revenue - cost;
+          
+          categoryMetricsGMROI[cat].revenue += revenue;
+          categoryMetricsGMROI[cat].cost += cost;
+          categoryMetricsGMROI[cat].margin += margin;
+          categoryMetricsGMROI[cat].units += Number(t.quantity || 0);
+          
+          // Track product-level for top/bottom analysis
+          if (!categoryMetricsGMROI[cat].products[t.product_sku]) {
+            categoryMetricsGMROI[cat].products[t.product_sku] = { 
+              revenue: 0, cost: 0, margin: 0, marginPct: Number(product.margin_percent || 30), inventory: 0 
+            };
+          }
+          categoryMetricsGMROI[cat].products[t.product_sku].revenue += revenue;
+          categoryMetricsGMROI[cat].products[t.product_sku].cost += cost;
+          categoryMetricsGMROI[cat].products[t.product_sku].margin += margin;
+        });
+        
+        // Add inventory data
+        inventorySpace.forEach((inv: any) => {
+          const product = productLookup[inv.product_sku] || {};
+          const cat = product.category || 'Other';
+          
+          if (categoryMetricsGMROI[cat]?.products[inv.product_sku]) {
+            // Calculate inventory value at cost
+            const unitCost = product.cost || product.base_price * 0.65 || 5;
+            categoryMetricsGMROI[cat].products[inv.product_sku].inventory = Number(inv.stock_level || 0) * unitCost;
+          }
+        });
+        
+        // Calculate GMROI for each category
+        const categoryGMROIAnalysis: CategoryGMROI[] = [];
+        
+        Object.entries(categoryMetricsGMROI).forEach(([cat, data]) => {
+          // Calculate average inventory cost
+          let totalInventoryCost = 0;
+          let productCount = 0;
+          
+          Object.values(data.products).forEach(prod => {
+            if (prod.inventory > 0) {
+              totalInventoryCost += prod.inventory;
+              productCount++;
+            } else {
+              // Estimate inventory from cost (assume 30 days of inventory)
+              totalInventoryCost += (prod.cost / 12) * 30 / 365;
+              productCount++;
+            }
+          });
+          
+          const avgInventoryCost = productCount > 0 ? totalInventoryCost / productCount : 1;
+          const totalAvgInventory = totalInventoryCost > 0 ? totalInventoryCost : data.cost * 0.15; // Fallback: 15% of COGS as inventory
+          
+          // GMROI = Gross Margin / Average Inventory Cost at Cost
+          const gmroi = totalAvgInventory > 0 ? data.margin / totalAvgInventory : 0;
+          
+          // Annualized GMROI (assuming data is for ~3 months)
+          const annualizedGmroi = gmroi * 4;
+          
+          // Inventory turns = COGS / Average Inventory
+          const inventoryTurns = totalAvgInventory > 0 ? (data.cost * 4) / totalAvgInventory : 0;
+          
+          // Gross margin percentage
+          const grossMarginPct = data.revenue > 0 ? (data.margin / data.revenue) * 100 : 0;
+          
+          // Determine ranking
+          let ranking: 'High' | 'Medium' | 'Low' = 'Medium';
+          let recommendation = 'Maintain current inventory levels';
+          
+          if (annualizedGmroi >= 3.0) {
+            ranking = 'High';
+            recommendation = 'Invest in inventory depth - strong return on investment';
+          } else if (annualizedGmroi >= 1.5) {
+            ranking = 'Medium';
+            recommendation = 'Optimize assortment to improve turns';
+          } else {
+            ranking = 'Low';
+            recommendation = 'Reduce inventory investment or improve margin through pricing/markdown';
+          }
+          
+          // Calculate product-level GMROI for top/bottom
+          const productGMROI = Object.entries(data.products).map(([sku, prod]) => {
+            const product = productLookup[sku] || {};
+            const prodInventory = prod.inventory > 0 ? prod.inventory : prod.cost * 0.15;
+            const prodGmroi = prodInventory > 0 ? prod.margin / prodInventory : 0;
+            return {
+              name: product.product_name || sku,
+              gmroi: Math.round(prodGmroi * 100) / 100,
+              margin: prod.marginPct
+            };
+          }).sort((a, b) => b.gmroi - a.gmroi);
+          
+          categoryGMROIAnalysis.push({
+            category: cat,
+            grossMargin: Math.round(data.margin),
+            grossMarginPct: Math.round(grossMarginPct * 10) / 10,
+            avgInventoryCost: Math.round(totalAvgInventory),
+            gmroi: Math.round(gmroi * 100) / 100,
+            annualizedGmroi: Math.round(annualizedGmroi * 100) / 100,
+            ranking,
+            inventoryTurns: Math.round(inventoryTurns * 10) / 10,
+            recommendation,
+            topProducts: productGMROI.slice(0, 3),
+            bottomProducts: productGMROI.slice(-3).reverse()
+          });
+        });
+        
+        // Sort by GMROI (highest first)
+        categoryGMROIAnalysis.sort((a, b) => b.annualizedGmroi - a.annualizedGmroi);
+        
+        // Identify high and low GMROI categories
+        const highGMROICategories = categoryGMROIAnalysis.filter(c => c.ranking === 'High');
+        const lowGMROICategories = categoryGMROIAnalysis.filter(c => c.ranking === 'Low');
+        
         dataContext = `
 SPACE PLANNING DATA SUMMARY:
 - Planograms: ${planograms.length}
@@ -3457,7 +3761,87 @@ SHELF PERFORMANCE METRICS:
 STORE PERFORMANCE:
 - Average conversion rate: ${(avgConversion * 100).toFixed(1)}%
 - Average daily foot traffic: ${avgFootTraffic.toFixed(0)}
-${storePerformanceDetails.slice(0, 8).map(s => `- ${s.store} (${s.region}): ${s.footTraffic} visitors, ${(Number(s.conversion) * 100).toFixed(1)}% conversion, $${Number(s.basketSize).toFixed(0)} avg basket`).join('\n')}`;
+${storePerformanceDetails.slice(0, 8).map(s => `- ${s.store} (${s.region}): ${s.footTraffic} visitors, ${(Number(s.conversion) * 100).toFixed(1)}% conversion, $${Number(s.basketSize).toFixed(0)} avg basket`).join('\n')}
+
+═══════════════════════════════════════════════════════════════════
+MUST-PASS: CATEGORY SALES PER SQUARE FOOT ANALYSIS
+Ranked by sales/sqft, with allocated sqft, comparison across categories/stores
+═══════════════════════════════════════════════════════════════════
+
+BENCHMARK: Average sales per square foot = $${avgSalesPerSqftBenchmark.toFixed(2)}/sqft
+
+CATEGORIES RANKED BY SALES PER SQUARE FOOT:
+${categorySpaceAnalysis.slice(0, 12).map((cat, i) => {
+  const utilizationIcon = cat.spaceUtilization === 'over-utilized' ? '🔥' : 
+                          cat.spaceUtilization === 'under-utilized' ? '⚠️' : '✓';
+  return `
+${i + 1}. ${cat.category.toUpperCase()} - $${cat.salesPerSqft.toFixed(2)}/sqft ${utilizationIcon}
+   | Metric | Value |
+   |--------|-------|
+   | Allocated Space | ${cat.allocatedSqft} sq ft |
+   | Total Sales | $${cat.totalSales.toLocaleString()} |
+   | Sales per Sq Ft | $${cat.salesPerSqft.toFixed(2)} |
+   | Products | ${cat.productCount} |
+   | Avg Facings | ${cat.avgFacings} |
+   | Eye-Level % | ${cat.eyeLevelPct}% |
+   | Space Utilization | ${cat.spaceUtilization.toUpperCase()} (${cat.utilizationScore}% of benchmark) |
+   
+   Recommendation: ${cat.recommendation}${cat.storeBreakdown.length > 0 ? `
+   Store Performance: ${cat.storeBreakdown.slice(0, 3).map(s => `${s.storeName}: $${s.salesPerSqft.toFixed(2)}/sqft`).join(', ')}` : ''}`;
+}).join('\n')}
+
+OVER-UTILIZED CATEGORIES (Need Space Expansion):
+${categorySpaceAnalysis.filter(c => c.spaceUtilization === 'over-utilized').slice(0, 5).map(c => 
+  `- ${c.category}: $${c.salesPerSqft.toFixed(2)}/sqft (${c.utilizationScore}% of benchmark) - Expand by ${Math.round(c.utilizationScore - 100)}%`
+).join('\n') || '- None identified'}
+
+UNDER-UTILIZED CATEGORIES (Space Optimization Needed):
+${categorySpaceAnalysis.filter(c => c.spaceUtilization === 'under-utilized').slice(0, 5).map(c => 
+  `- ${c.category}: $${c.salesPerSqft.toFixed(2)}/sqft (${c.utilizationScore}% of benchmark) - Reduce by ${Math.round(100 - c.utilizationScore)}% or improve merchandising`
+).join('\n') || '- None identified'}
+
+═══════════════════════════════════════════════════════════════════
+MUST-PASS: GMROI (GROSS MARGIN RETURN ON INVENTORY) BY CATEGORY
+Category-level gross margin, avg inventory cost, GMROI calculation,
+ranked by GMROI with high/low identification
+═══════════════════════════════════════════════════════════════════
+
+GMROI FORMULA: Gross Margin ($) ÷ Average Inventory Cost at Cost ($)
+BENCHMARK: GMROI > 3.0 = High performance, 1.5-3.0 = Medium, < 1.5 = Low
+
+CATEGORIES RANKED BY GMROI:
+${categoryGMROIAnalysis.slice(0, 12).map((cat, i) => {
+  const rankIcon = cat.ranking === 'High' ? '🟢' : cat.ranking === 'Low' ? '🔴' : '🟡';
+  return `
+${i + 1}. ${cat.category.toUpperCase()} ${rankIcon} [${cat.ranking} GMROI]
+   | Metric | Value |
+   |--------|-------|
+   | Gross Margin | $${cat.grossMargin.toLocaleString()} (${cat.grossMarginPct}%) |
+   | Avg Inventory Cost | $${cat.avgInventoryCost.toLocaleString()} |
+   | GMROI (Period) | ${cat.gmroi} |
+   | GMROI (Annualized) | ${cat.annualizedGmroi} |
+   | Inventory Turns | ${cat.inventoryTurns}x |
+   
+   Recommendation: ${cat.recommendation}
+   
+   Top GMROI Products: ${cat.topProducts.map(p => `${p.name} (${p.gmroi})`).join(', ')}
+   Low GMROI Products: ${cat.bottomProducts.map(p => `${p.name} (${p.gmroi})`).join(', ')}`;
+}).join('\n')}
+
+HIGH-GMROI CATEGORIES (Strong Inventory Returns):
+${highGMROICategories.slice(0, 5).map(c => 
+  `- ${c.category}: GMROI ${c.annualizedGmroi} (${c.inventoryTurns}x turns) - ${c.grossMarginPct}% margin`
+).join('\n') || '- None identified at > 3.0 annualized GMROI'}
+
+LOW-GMROI CATEGORIES (Need Inventory Optimization):
+${lowGMROICategories.slice(0, 5).map(c => 
+  `- ${c.category}: GMROI ${c.annualizedGmroi} (${c.inventoryTurns}x turns) - Recommendation: ${c.recommendation}`
+).join('\n') || '- None identified at < 1.5 annualized GMROI'}
+
+INVENTORY-FOCUSED RECOMMENDATIONS:
+${categoryGMROIAnalysis.slice(0, 5).map(c => 
+  `- ${c.category}: ${c.recommendation}`
+).join('\n')}`;
         break;
       }
       
