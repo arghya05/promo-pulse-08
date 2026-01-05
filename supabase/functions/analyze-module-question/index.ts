@@ -3095,18 +3095,22 @@ DRILL-DOWN PATHS AVAILABLE:
       }
       
       case 'supply-chain': {
-        const [suppliersRes, ordersRes, routesRes, inventoryRes, supplyChainSignalsRes] = await Promise.all([
+        const [suppliersRes, ordersRes, routesRes, inventoryRes, supplyChainSignalsRes, transactionsScRes, storeScRes] = await Promise.all([
           supabase.from('suppliers').select('*').limit(30),
           supabase.from('supplier_orders').select('*').limit(300),
           supabase.from('shipping_routes').select('*').limit(50),
           supabase.from('inventory_levels').select('*').limit(150),
           supabase.from('third_party_data').select('*').in('data_type', ['supply_chain', 'logistics', 'freight']).limit(20),
+          supabase.from('transactions').select('*').limit(500),
+          supabase.from('stores').select('*').limit(50),
         ]);
         const suppliers = suppliersRes.data || [];
         const orders = ordersRes.data || [];
         const routes = routesRes.data || [];
         const inventory = inventoryRes.data || [];
         const supplyChainSignals = supplyChainSignalsRes.data || [];
+        const transactionsSC = transactionsScRes.data || [];
+        const storesSC = storeScRes.data || [];
         
         // Create product lookup for names
         const productLookup: Record<string, any> = {};
@@ -3116,9 +3120,70 @@ DRILL-DOWN PATHS AVAILABLE:
         const supplierLookup: Record<string, any> = {};
         suppliers.forEach((s: any) => { supplierLookup[s.id] = s; });
         
-        // Comprehensive supplier analysis
+        // Create store lookup
+        const storeLookupSC: Record<string, any> = {};
+        storesSC.forEach((s: any) => { storeLookupSC[s.id] = s; });
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // MUST-PASS: SUPPLIER DELIVERY PERFORMANCE WITH SALES-PERFORMANCE LINKAGE
+        // On-time delivery %, late vs on-time counts, comparison across suppliers/
+        // categories/locations, consistently high-performing suppliers,
+        // SALES-PERFORMANCE LINKAGE: product availability & revenue protection/uplift
+        // ═══════════════════════════════════════════════════════════════════
+        
+        interface SupplierDeliveryAnalysis {
+          name: string;
+          supplierId: string;
+          location: string;
+          onTimeDeliveryPct: number;
+          onTimeCount: number;
+          lateCount: number;
+          totalOrders: number;
+          avgLeadTime: number;
+          reliabilityScore: number;
+          totalOrderValue: number;
+          // Categories and products
+          categories: string[];
+          productCount: number;
+          // Sales-performance linkage
+          productsSupplied: string[];
+          salesFromProducts: number;
+          revenueAtRisk: number;
+          stockoutRiskProducts: number;
+          productAvailabilityPct: number;
+          revenueProtectionScore: number;
+          // Comparison
+          performanceTrend: 'improving' | 'stable' | 'declining';
+          ranking: number;
+          tier: 'Platinum' | 'Gold' | 'Silver' | 'Bronze' | 'At-Risk';
+          recommendation: string;
+        }
+        
+        // Calculate product sales by SKU
+        const productSales: Record<string, { revenue: number; units: number; transactions: number }> = {};
+        transactionsSC.forEach((t: any) => {
+          if (!productSales[t.product_sku]) {
+            productSales[t.product_sku] = { revenue: 0, units: 0, transactions: 0 };
+          }
+          productSales[t.product_sku].revenue += Number(t.total_amount || 0);
+          productSales[t.product_sku].units += Number(t.quantity || 0);
+          productSales[t.product_sku].transactions++;
+        });
+        
+        // Calculate inventory availability by product
+        const inventoryBySku: Record<string, { stockLevel: number; reorderPoint: number; stockoutRisk: string }> = {};
+        inventory.forEach((inv: any) => {
+          inventoryBySku[inv.product_sku] = {
+            stockLevel: Number(inv.stock_level || 0),
+            reorderPoint: Number(inv.reorder_point || 50),
+            stockoutRisk: inv.stockout_risk || 'low'
+          };
+        });
+        
+        // Comprehensive supplier analysis with sales linkage
         const supplierMetrics: Record<string, { 
           name: string; 
+          supplierId: string;
           orders: number; 
           onTime: number; 
           late: number; 
@@ -3128,15 +3193,24 @@ DRILL-DOWN PATHS AVAILABLE:
           products: Set<string>;
           categories: Set<string>;
           location: string;
+          // Sales linkage
+          productSales: number;
+          productsWithStockoutRisk: number;
+          totalProductStock: number;
+          productAvailability: number;
         }> = {};
         
         orders.forEach((o: any) => {
           const supplier = supplierLookup[o.supplier_id];
           const product = productLookup[o.product_sku] || {};
+          const sales = productSales[o.product_sku] || { revenue: 0 };
+          const invStatus = inventoryBySku[o.product_sku] || { stockLevel: 0, stockoutRisk: 'medium' };
+          
           if (supplier) {
             if (!supplierMetrics[supplier.id]) {
               supplierMetrics[supplier.id] = {
                 name: supplier.supplier_name,
+                supplierId: supplier.id,
                 orders: 0,
                 onTime: 0,
                 late: 0,
@@ -3145,7 +3219,11 @@ DRILL-DOWN PATHS AVAILABLE:
                 reliability: supplier.reliability_score || 0,
                 products: new Set(),
                 categories: new Set(),
-                location: `${supplier.city || ''}, ${supplier.state || ''}`
+                location: `${supplier.city || ''}, ${supplier.state || ''}`.trim() || 'Unknown',
+                productSales: 0,
+                productsWithStockoutRisk: 0,
+                totalProductStock: 0,
+                productAvailability: 0
               };
             }
             supplierMetrics[supplier.id].orders++;
@@ -3154,20 +3232,170 @@ DRILL-DOWN PATHS AVAILABLE:
             supplierMetrics[supplier.id].totalValue += Number(o.total_cost || 0);
             supplierMetrics[supplier.id].products.add(o.product_sku);
             if (product.category) supplierMetrics[supplier.id].categories.add(product.category);
+            
+            // Sales linkage
+            supplierMetrics[supplier.id].productSales += sales.revenue;
+            if (invStatus.stockoutRisk === 'high' || invStatus.stockoutRisk === 'critical') {
+              supplierMetrics[supplier.id].productsWithStockoutRisk++;
+            }
+            supplierMetrics[supplier.id].totalProductStock += invStatus.stockLevel;
           }
         });
         
-        // Convert to array and calculate on-time %
-        const supplierPerformance = Object.entries(supplierMetrics).map(([id, data]) => ({
-          ...data,
-          onTimeRate: data.orders > 0 ? (data.onTime / data.orders) * 100 : 0,
-          lateRate: data.orders > 0 ? (data.late / data.orders) * 100 : 0,
-          productCount: data.products.size,
-          categoryCount: data.categories.size
-        })).sort((a, b) => b.onTimeRate - a.onTimeRate);
+        // Calculate supplier delivery analysis with sales-performance linkage
+        const supplierDeliveryAnalysis: SupplierDeliveryAnalysis[] = [];
+        let rankCounter = 1;
         
-        const topSuppliers = supplierPerformance.slice(0, 10);
-        const lowSuppliers = supplierPerformance.filter(s => s.orders > 2).sort((a, b) => a.onTimeRate - b.onTimeRate).slice(0, 8);
+        // Sort by on-time rate first
+        const sortedSuppliers = Object.entries(supplierMetrics)
+          .map(([id, data]) => ({ id, ...data }))
+          .filter(s => s.orders > 0)
+          .sort((a, b) => {
+            const aRate = (a.onTime / a.orders) * 100;
+            const bRate = (b.onTime / b.orders) * 100;
+            return bRate - aRate;
+          });
+        
+        sortedSuppliers.forEach((data) => {
+          const onTimeRate = (data.onTime / data.orders) * 100;
+          const lateRate = (data.late / data.orders) * 100;
+          
+          // Calculate product availability %
+          const productCount = data.products.size;
+          const availableProducts = productCount - data.productsWithStockoutRisk;
+          const productAvailabilityPct = productCount > 0 ? (availableProducts / productCount) * 100 : 100;
+          
+          // Revenue at risk = sales from products with stockout risk
+          const productArray = Array.from(data.products);
+          let revenueAtRisk = 0;
+          productArray.forEach(sku => {
+            const inv = inventoryBySku[sku];
+            if (inv && (inv.stockoutRisk === 'high' || inv.stockoutRisk === 'critical')) {
+              revenueAtRisk += productSales[sku]?.revenue || 0;
+            }
+          });
+          
+          // Revenue protection score = combination of on-time delivery and product availability
+          const revenueProtectionScore = (onTimeRate * 0.6) + (productAvailabilityPct * 0.4);
+          
+          // Determine tier based on on-time rate and revenue protection
+          let tier: 'Platinum' | 'Gold' | 'Silver' | 'Bronze' | 'At-Risk' = 'Silver';
+          if (onTimeRate >= 98 && revenueProtectionScore >= 95) tier = 'Platinum';
+          else if (onTimeRate >= 95 && revenueProtectionScore >= 90) tier = 'Gold';
+          else if (onTimeRate >= 90 && revenueProtectionScore >= 80) tier = 'Silver';
+          else if (onTimeRate >= 80) tier = 'Bronze';
+          else tier = 'At-Risk';
+          
+          // Determine trend (simplified - based on reliability vs on-time comparison)
+          let trend: 'improving' | 'stable' | 'declining' = 'stable';
+          if (data.reliability > 0.9 && onTimeRate > 95) trend = 'improving';
+          else if (onTimeRate < 85 || data.reliability < 0.7) trend = 'declining';
+          
+          // Generate recommendation
+          let recommendation = 'Maintain current relationship';
+          if (tier === 'Platinum') {
+            recommendation = 'Strategic partner - consider volume increase and preferred terms';
+          } else if (tier === 'Gold') {
+            recommendation = 'Strong performer - prioritize for critical SKUs';
+          } else if (tier === 'Silver') {
+            recommendation = 'Monitor performance - review quarterly for improvement opportunities';
+          } else if (tier === 'Bronze') {
+            recommendation = 'Performance improvement required - establish SLAs with penalties';
+          } else {
+            recommendation = 'Risk mitigation required - develop backup supplier, reduce dependency';
+          }
+          
+          // Calculate sales lift/protection from on-time delivery
+          const salesFromProducts = data.productSales;
+          
+          supplierDeliveryAnalysis.push({
+            name: data.name,
+            supplierId: data.supplierId,
+            location: data.location,
+            onTimeDeliveryPct: Math.round(onTimeRate * 10) / 10,
+            onTimeCount: data.onTime,
+            lateCount: data.late,
+            totalOrders: data.orders,
+            avgLeadTime: data.avgLeadTime,
+            reliabilityScore: Math.round(data.reliability * 100),
+            totalOrderValue: Math.round(data.totalValue),
+            categories: Array.from(data.categories),
+            productCount: productCount,
+            productsSupplied: productArray.slice(0, 5).map(sku => productLookup[sku]?.product_name || sku),
+            salesFromProducts: Math.round(salesFromProducts),
+            revenueAtRisk: Math.round(revenueAtRisk),
+            stockoutRiskProducts: data.productsWithStockoutRisk,
+            productAvailabilityPct: Math.round(productAvailabilityPct * 10) / 10,
+            revenueProtectionScore: Math.round(revenueProtectionScore * 10) / 10,
+            performanceTrend: trend,
+            ranking: rankCounter++,
+            tier,
+            recommendation
+          });
+        });
+        
+        // Identify consistently high-performing suppliers (Platinum + Gold with stable/improving trend)
+        const consistentlyHighPerformers = supplierDeliveryAnalysis.filter(
+          s => (s.tier === 'Platinum' || s.tier === 'Gold') && s.performanceTrend !== 'declining'
+        );
+        
+        // Low performers needing attention
+        const lowPerformers = supplierDeliveryAnalysis.filter(s => s.tier === 'At-Risk' || s.tier === 'Bronze');
+        
+        // Calculate category-level supplier performance
+        const categorySupplierPerf: Record<string, { 
+          avgOnTime: number; 
+          suppliers: string[]; 
+          bestSupplier: string;
+          bestOnTime: number;
+          totalSales: number;
+        }> = {};
+        
+        supplierDeliveryAnalysis.forEach(s => {
+          s.categories.forEach(cat => {
+            if (!categorySupplierPerf[cat]) {
+              categorySupplierPerf[cat] = { avgOnTime: 0, suppliers: [], bestSupplier: '', bestOnTime: 0, totalSales: 0 };
+            }
+            categorySupplierPerf[cat].suppliers.push(s.name);
+            categorySupplierPerf[cat].totalSales += s.salesFromProducts;
+            if (s.onTimeDeliveryPct > categorySupplierPerf[cat].bestOnTime) {
+              categorySupplierPerf[cat].bestOnTime = s.onTimeDeliveryPct;
+              categorySupplierPerf[cat].bestSupplier = s.name;
+            }
+          });
+        });
+        
+        // Calculate avg on-time for each category
+        Object.keys(categorySupplierPerf).forEach(cat => {
+          const catSuppliers = supplierDeliveryAnalysis.filter(s => s.categories.includes(cat));
+          if (catSuppliers.length > 0) {
+            categorySupplierPerf[cat].avgOnTime = catSuppliers.reduce((sum, s) => sum + s.onTimeDeliveryPct, 0) / catSuppliers.length;
+          }
+        });
+        
+        // Location-based analysis
+        const locationPerf: Record<string, { suppliers: string[]; avgOnTime: number; count: number }> = {};
+        supplierDeliveryAnalysis.forEach(s => {
+          const loc = s.location || 'Unknown';
+          if (!locationPerf[loc]) {
+            locationPerf[loc] = { suppliers: [], avgOnTime: 0, count: 0 };
+          }
+          locationPerf[loc].suppliers.push(s.name);
+          locationPerf[loc].avgOnTime += s.onTimeDeliveryPct;
+          locationPerf[loc].count++;
+        });
+        Object.keys(locationPerf).forEach(loc => {
+          if (locationPerf[loc].count > 0) {
+            locationPerf[loc].avgOnTime /= locationPerf[loc].count;
+          }
+        });
+        
+        // Sales-performance impact summary
+        const totalSalesFromSuppliedProducts = supplierDeliveryAnalysis.reduce((sum, s) => sum + s.salesFromProducts, 0);
+        const totalRevenueAtRisk = supplierDeliveryAnalysis.reduce((sum, s) => sum + s.revenueAtRisk, 0);
+        const avgProductAvailability = supplierDeliveryAnalysis.length > 0 
+          ? supplierDeliveryAnalysis.reduce((sum, s) => sum + s.productAvailabilityPct, 0) / supplierDeliveryAnalysis.length 
+          : 0;
         
         // Single-source risk analysis
         const categorySuppliers: Record<string, Set<string>> = {};
@@ -3179,7 +3407,7 @@ DRILL-DOWN PATHS AVAILABLE:
         });
         const singleSourceRisks = Object.entries(categorySuppliers)
           .filter(([_, suppliers]) => suppliers.size === 1)
-          .map(([category, suppliers]) => ({ category, supplier: Array.from(suppliers)[0] }));
+          .map(([category, suppliersSet]) => ({ category, supplier: Array.from(suppliersSet)[0] }));
         
         // Order analysis
         const onTimeOrders = orders.filter((o: any) => o.on_time === true);
@@ -3278,20 +3506,90 @@ SUPPLY CHAIN DATA SUMMARY:
 - Total Order Value: $${totalOrderValue.toFixed(0)}
 - Total Logistics Cost: $${totalLogisticsCost.toFixed(0)}
 
+═══════════════════════════════════════════════════════════════════
+MUST-PASS: SUPPLIER DELIVERY PERFORMANCE ANALYSIS WITH SALES LINKAGE
+Ranked by on-time delivery %, with sales-performance connection
+═══════════════════════════════════════════════════════════════════
+
+OVERALL DELIVERY PERFORMANCE:
+- On-Time Delivery Rate: ${orders.length ? ((onTimeOrders.length / orders.length) * 100).toFixed(1) : 0}%
+- On-Time Deliveries: ${onTimeOrders.length} orders
+- Late Deliveries: ${lateOrders.length} orders
+- Pending Orders: ${pendingOrders.length}
+
+SALES-PERFORMANCE LINKAGE SUMMARY:
+- Total Sales from Supplier Products: $${totalSalesFromSuppliedProducts.toLocaleString()}
+- Revenue at Risk (from stockout-risk products): $${totalRevenueAtRisk.toLocaleString()}
+- Average Product Availability: ${avgProductAvailability.toFixed(1)}%
+- Revenue Protection Impact: ${avgProductAvailability > 95 ? 'Strong' : avgProductAvailability > 85 ? 'Moderate' : 'At Risk'}
+
+SUPPLIERS RANKED BY ON-TIME DELIVERY %:
+${supplierDeliveryAnalysis.slice(0, 15).map((s, i) => {
+  const tierIcon = s.tier === 'Platinum' ? '💎' : s.tier === 'Gold' ? '🥇' : s.tier === 'Silver' ? '🥈' : s.tier === 'Bronze' ? '🥉' : '⚠️';
+  return `
+${i + 1}. ${s.name} ${tierIcon} [${s.tier}]
+   | Metric | Value |
+   |--------|-------|
+   | On-Time Delivery % | ${s.onTimeDeliveryPct}% |
+   | On-Time Count | ${s.onTimeCount} orders |
+   | Late Count | ${s.lateCount} orders |
+   | Total Orders | ${s.totalOrders} |
+   | Avg Lead Time | ${s.avgLeadTime} days |
+   | Reliability Score | ${s.reliabilityScore}% |
+   | Location | ${s.location} |
+   
+   SALES-PERFORMANCE LINKAGE:
+   | Metric | Value |
+   |--------|-------|
+   | Products Supplied | ${s.productCount} SKUs |
+   | Sales from Products | $${s.salesFromProducts.toLocaleString()} |
+   | Product Availability | ${s.productAvailabilityPct}% |
+   | Revenue at Risk | $${s.revenueAtRisk.toLocaleString()} |
+   | Stockout Risk Products | ${s.stockoutRiskProducts} SKUs |
+   | Revenue Protection Score | ${s.revenueProtectionScore}/100 |
+   
+   Categories: ${s.categories.join(', ')}
+   Top Products: ${s.productsSupplied.slice(0, 3).join(', ')}
+   Trend: ${s.performanceTrend.toUpperCase()}
+   
+   Recommendation: ${s.recommendation}`;
+}).join('\n')}
+
+CONSISTENTLY HIGH-PERFORMING SUPPLIERS (Strategic Partners):
+${consistentlyHighPerformers.length > 0 
+  ? consistentlyHighPerformers.slice(0, 5).map(s => 
+      `- ${s.name}: ${s.onTimeDeliveryPct}% on-time, $${s.salesFromProducts.toLocaleString()} sales, ${s.tier} tier, ${s.productCount} SKUs`
+    ).join('\n')
+  : '- No Platinum/Gold suppliers with stable/improving trend identified'}
+
+LOW-PERFORMING SUPPLIERS (Need Attention):
+${lowPerformers.length > 0 
+  ? lowPerformers.slice(0, 5).map(s => 
+      `- ${s.name}: ${s.onTimeDeliveryPct}% on-time (${s.lateCount} late), $${s.revenueAtRisk.toLocaleString()} revenue at risk - ${s.recommendation}`
+    ).join('\n')
+  : '- No At-Risk or Bronze tier suppliers identified'}
+
+COMPARISON BY CATEGORY:
+${Object.entries(categorySupplierPerf).slice(0, 8).map(([cat, data]) => 
+  `- ${cat}: ${data.avgOnTime.toFixed(1)}% avg on-time, ${data.suppliers.length} suppliers, Best: ${data.bestSupplier} (${data.bestOnTime}%), $${data.totalSales.toLocaleString()} sales`
+).join('\n')}
+
+COMPARISON BY LOCATION:
+${Object.entries(locationPerf).slice(0, 8).map(([loc, data]) => 
+  `- ${loc}: ${data.avgOnTime.toFixed(1)}% avg on-time, ${data.count} suppliers (${data.suppliers.slice(0, 3).join(', ')})`
+).join('\n')}
+
+LATE VS ON-TIME VISIBILITY:
+| Status | Count | Percentage |
+|--------|-------|------------|
+| On-Time | ${onTimeOrders.length} | ${orders.length ? ((onTimeOrders.length / orders.length) * 100).toFixed(1) : 0}% |
+| Late | ${lateOrders.length} | ${orders.length ? ((lateOrders.length / orders.length) * 100).toFixed(1) : 0}% |
+| Pending | ${pendingOrders.length} | - |
+
 SUPPLIER PERFORMANCE SCORECARD:
 - Average On-Time Rate: ${orders.length ? ((onTimeOrders.length / orders.length) * 100).toFixed(1) : 0}%
 - Average Reliability Score: ${(avgReliability * 100).toFixed(1)}%
 - Average Lead Time: ${avgLeadTime.toFixed(1)} days
-
-TOP PERFORMING SUPPLIERS (USE THESE SPECIFIC NAMES):
-${topSuppliers.slice(0, 10).map(s => 
-  `- ${s.name}: ${s.onTimeRate.toFixed(1)}% on-time (${s.onTime}/${s.orders} orders), ${s.avgLeadTime} day lead time, $${s.totalValue.toFixed(0)} order value, ${s.categoryCount} categories`
-).join('\n')}
-
-LOW PERFORMING SUPPLIERS (NEED ATTENTION):
-${lowSuppliers.map(s => 
-  `- ${s.name}: ${s.onTimeRate.toFixed(1)}% on-time (${s.late} late orders), ${s.avgLeadTime} day lead time, Location: ${s.location}`
-).join('\n')}
 
 SINGLE-SOURCE RISKS (CRITICAL):
 ${singleSourceRisks.length > 0 
