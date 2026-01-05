@@ -1988,7 +1988,308 @@ ${i + 1}. ${rec.name} (${rec.category})
    ELASTICITY: ${rec.elasticity.toFixed(2)} | CONFIDENCE: ${rec.confidence}
 `;
 }).join('\n')}
-` : 'Insufficient data to generate optimal pricing recommendations.'}`;
+` : 'Insufficient data to generate optimal pricing recommendations.'}
+
+═══════════════════════════════════════════════════════════════════
+MUST-PASS: COMPETITOR PRICE GAP ANALYSIS BY CATEGORY
+Average price gap vs each competitor per category, competitive positioning, pricing action recommendations
+═══════════════════════════════════════════════════════════════════
+${(() => {
+  // Build category-competitor matrix
+  interface CategoryCompetitorGap {
+    category: string;
+    competitors: {
+      name: string;
+      avgGap: number;
+      productCount: number;
+      overPricedCount: number;
+      underPricedCount: number;
+      maxGapProduct: { name: string; gap: number };
+    }[];
+    overallAvgGap: number;
+    categoryRevenue: number;
+    competitivePosition: 'Premium' | 'Parity' | 'Value' | 'Mixed';
+    riskLevel: 'High' | 'Medium' | 'Low';
+    recommendation: string;
+  }
+  
+  const categoryCompetitorGaps: CategoryCompetitorGap[] = [];
+  
+  // Get unique categories with competitor data
+  const categoriesWithCompData = new Set<string>();
+  competitorPrices.forEach((cp: any) => {
+    const product = productLookup[cp.product_sku];
+    if (product?.category) categoriesWithCompData.add(product.category);
+  });
+  
+  categoriesWithCompData.forEach(category => {
+    const categoryCompPrices = competitorPrices.filter((cp: any) => {
+      const product = productLookup[cp.product_sku];
+      return product?.category === category;
+    });
+    
+    if (categoryCompPrices.length === 0) return;
+    
+    // Group by competitor
+    const competitorGaps: Record<string, { gaps: number[]; products: any[] }> = {};
+    categoryCompPrices.forEach((cp: any) => {
+      if (!competitorGaps[cp.competitor_name]) competitorGaps[cp.competitor_name] = { gaps: [], products: [] };
+      competitorGaps[cp.competitor_name].gaps.push(Number(cp.price_gap_percent || 0));
+      const product = productLookup[cp.product_sku];
+      competitorGaps[cp.competitor_name].products.push({
+        name: product?.product_name || cp.product_sku,
+        gap: Number(cp.price_gap_percent || 0)
+      });
+    });
+    
+    const competitors = Object.entries(competitorGaps).map(([name, data]) => {
+      const avgGap = data.gaps.reduce((s, g) => s + g, 0) / data.gaps.length;
+      const overPricedCount = data.gaps.filter(g => g > 5).length;
+      const underPricedCount = data.gaps.filter(g => g < -5).length;
+      const maxGapProduct = data.products.sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap))[0];
+      return { name, avgGap, productCount: data.gaps.length, overPricedCount, underPricedCount, maxGapProduct };
+    });
+    
+    const overallAvgGap = competitors.reduce((s, c) => s + c.avgGap, 0) / competitors.length;
+    const categoryRevenue = categoryAnalysis[category]?.revenue || 0;
+    
+    // Determine competitive position
+    let competitivePosition: CategoryCompetitorGap['competitivePosition'] = 'Parity';
+    if (overallAvgGap > 8) competitivePosition = 'Premium';
+    else if (overallAvgGap < -5) competitivePosition = 'Value';
+    else if (competitors.some(c => c.avgGap > 10) && competitors.some(c => c.avgGap < -5)) competitivePosition = 'Mixed';
+    
+    // Determine risk level
+    let riskLevel: CategoryCompetitorGap['riskLevel'] = 'Low';
+    const totalOverPriced = competitors.reduce((s, c) => s + c.overPricedCount, 0);
+    if (overallAvgGap > 10 || totalOverPriced > 10) riskLevel = 'High';
+    else if (overallAvgGap > 5 || totalOverPriced > 5) riskLevel = 'Medium';
+    
+    // Generate recommendation
+    let recommendation = '';
+    if (riskLevel === 'High' && competitivePosition === 'Premium') {
+      recommendation = 'Review pricing strategy - significant competitive disadvantage may be eroding market share';
+    } else if (competitivePosition === 'Value') {
+      recommendation = 'Margin capture opportunity - consider selective price increases on low-elasticity items';
+    } else if (competitivePosition === 'Mixed') {
+      recommendation = 'Normalize pricing - address specific over-priced SKUs while maintaining value positioning on others';
+    } else {
+      recommendation = 'Maintain current positioning - competitive parity achieved';
+    }
+    
+    categoryCompetitorGaps.push({
+      category,
+      competitors,
+      overallAvgGap,
+      categoryRevenue,
+      competitivePosition,
+      riskLevel,
+      recommendation
+    });
+  });
+  
+  // Sort by risk level then by gap magnitude
+  categoryCompetitorGaps.sort((a, b) => {
+    const riskOrder = { High: 0, Medium: 1, Low: 2 };
+    if (riskOrder[a.riskLevel] !== riskOrder[b.riskLevel]) return riskOrder[a.riskLevel] - riskOrder[b.riskLevel];
+    return Math.abs(b.overallAvgGap) - Math.abs(a.overallAvgGap);
+  });
+  
+  if (categoryCompetitorGaps.length === 0) return 'Insufficient competitor pricing data by category.';
+  
+  let output = 'COMPETITIVE POSITIONING SUMMARY:\n';
+  output += '| Category | Avg Gap | Position | Risk | Revenue |\n';
+  output += '|----------|---------|----------|------|---------|\n';
+  categoryCompetitorGaps.forEach(cg => {
+    output += '| ' + cg.category + ' | ' + (cg.overallAvgGap > 0 ? '+' : '') + cg.overallAvgGap.toFixed(1) + '% | ' + cg.competitivePosition + ' | ' + cg.riskLevel + ' | $' + cg.categoryRevenue.toLocaleString() + ' |\n';
+  });
+  
+  output += '\n\nDETAILED CATEGORY-COMPETITOR ANALYSIS:\n';
+  
+  categoryCompetitorGaps.slice(0, 8).forEach((cg, i) => {
+    output += '\n' + (i + 1) + '. ' + cg.category.toUpperCase() + ' - ' + cg.competitivePosition + ' POSITIONING\n';
+    output += '   Overall Gap: ' + (cg.overallAvgGap > 0 ? '+' : '') + cg.overallAvgGap.toFixed(1) + '% | Risk: ' + cg.riskLevel + ' | Revenue: $' + cg.categoryRevenue.toLocaleString() + '\n\n';
+    output += '   | Competitor | Avg Gap | Products | Over-Priced | Under-Priced |\n';
+    output += '   |------------|---------|----------|-------------|--------------|\n';
+    cg.competitors.forEach(comp => {
+      output += '   | ' + comp.name + ' | ' + (comp.avgGap > 0 ? '+' : '') + comp.avgGap.toFixed(1) + '% | ' + comp.productCount + ' | ' + comp.overPricedCount + ' | ' + comp.underPricedCount + ' |\n';
+    });
+    output += '\n   BIGGEST GAP: ' + (cg.competitors[0]?.maxGapProduct?.name || 'N/A') + ' (' + (cg.competitors[0]?.maxGapProduct?.gap?.toFixed(1) || 0) + '%)\n';
+    output += '   RECOMMENDATION: ' + cg.recommendation + '\n';
+  });
+  
+  return output;
+})()}
+
+═══════════════════════════════════════════════════════════════════
+MUST-PASS: PRICE ELASTICITY IMPACT ASSESSMENT
+Products ranked by elasticity, volume sensitivity analysis, pricing action recommendations
+═══════════════════════════════════════════════════════════════════
+${(() => {
+  interface ElasticityImpactAnalysis {
+    sku: string;
+    name: string;
+    category: string;
+    elasticity: number;
+    elasticityCategory: 'Highly Elastic' | 'Elastic' | 'Unit Elastic' | 'Inelastic' | 'Highly Inelastic';
+    currentPrice: number;
+    currentMargin: number;
+    revenue: number;
+    volumeSensitivity: string;
+    priceChangeScenarios: {
+      change: string;
+      expectedVolumeImpact: string;
+      expectedRevenueImpact: string;
+      marginImpact: string;
+    }[];
+    recommendation: string;
+    opportunityType: 'Price Increase' | 'Price Decrease' | 'Maintain' | 'Promote';
+  }
+  
+  const elasticityAnalysis: ElasticityImpactAnalysis[] = products
+    .filter((p: any) => p.price_elasticity !== null && p.price_elasticity !== undefined)
+    .map((p: any) => {
+      const elasticity = Math.abs(Number(p.price_elasticity || 1));
+      const currentPrice = Number(p.base_price || 0);
+      const currentMargin = Number(p.margin_percent || 0);
+      const cost = Number(p.cost || currentPrice * 0.65);
+      
+      // Get revenue from transactions
+      const productRevenue = productSales[p.product_sku]?.revenue || 0;
+      const productUnits = productSales[p.product_sku]?.units || 0;
+      
+      // Categorize elasticity
+      let elasticityCategory: ElasticityImpactAnalysis['elasticityCategory'] = 'Unit Elastic';
+      if (elasticity > 2) elasticityCategory = 'Highly Elastic';
+      else if (elasticity > 1.3) elasticityCategory = 'Elastic';
+      else if (elasticity >= 0.8) elasticityCategory = 'Unit Elastic';
+      else if (elasticity >= 0.4) elasticityCategory = 'Inelastic';
+      else elasticityCategory = 'Highly Inelastic';
+      
+      // Volume sensitivity description
+      const volumeSensitivity = elasticity > 1.5 
+        ? 'Very sensitive: 1% price change = ' + elasticity.toFixed(1) + '% volume change'
+        : elasticity > 1 
+          ? 'Moderately sensitive: 1% price change = ' + elasticity.toFixed(1) + '% volume change'
+          : 'Low sensitivity: 1% price change = only ' + elasticity.toFixed(1) + '% volume change';
+      
+      // Calculate price change scenarios
+      const scenarios = [
+        { change: '+5%', pctChange: 0.05 },
+        { change: '+10%', pctChange: 0.10 },
+        { change: '-5%', pctChange: -0.05 },
+        { change: '-10%', pctChange: -0.10 }
+      ].map(s => {
+        const volumeImpact = -s.pctChange * 100 * elasticity;
+        const newPrice = currentPrice * (1 + s.pctChange);
+        const newMargin = ((newPrice - cost) / newPrice) * 100;
+        const revenueImpact = (s.pctChange * 100) + volumeImpact + ((s.pctChange * 100) * volumeImpact / 100);
+        
+        return {
+          change: s.change,
+          expectedVolumeImpact: (volumeImpact > 0 ? '+' : '') + volumeImpact.toFixed(1) + '%',
+          expectedRevenueImpact: (revenueImpact > 0 ? '+' : '') + revenueImpact.toFixed(1) + '%',
+          marginImpact: currentMargin.toFixed(1) + '% to ' + newMargin.toFixed(1) + '%'
+        };
+      });
+      
+      // Determine recommendation and opportunity type
+      let recommendation = '';
+      let opportunityType: ElasticityImpactAnalysis['opportunityType'] = 'Maintain';
+      
+      if (elasticity < 0.8 && currentMargin < 35) {
+        opportunityType = 'Price Increase';
+        recommendation = 'Low elasticity (' + elasticity.toFixed(2) + ') supports 5-10% price increase with minimal volume loss. Target margin improvement of ' + ((currentPrice * 1.07 - cost) / (currentPrice * 1.07) * 100 - currentMargin).toFixed(1) + '%.';
+      } else if (elasticity > 1.5 && currentMargin > 40) {
+        opportunityType = 'Price Decrease';
+        recommendation = 'High elasticity (' + elasticity.toFixed(2) + ') - consider 5% price reduction to drive ' + (elasticity * 5).toFixed(0) + '% volume growth. Margin buffer available.';
+      } else if (elasticity > 1.3) {
+        opportunityType = 'Promote';
+        recommendation = 'Elastic demand (' + elasticity.toFixed(2) + ') - use targeted promotions rather than permanent price changes to drive volume spikes.';
+      } else {
+        opportunityType = 'Maintain';
+        recommendation = 'Current pricing is optimal for elasticity (' + elasticity.toFixed(2) + ') and margin (' + currentMargin.toFixed(1) + '%) profile.';
+      }
+      
+      return {
+        sku: p.product_sku,
+        name: p.product_name,
+        category: p.category,
+        elasticity,
+        elasticityCategory,
+        currentPrice,
+        currentMargin,
+        revenue: productRevenue,
+        volumeSensitivity,
+        priceChangeScenarios: scenarios,
+        recommendation,
+        opportunityType
+      };
+    })
+    .sort((a, b) => b.elasticity - a.elasticity);
+  
+  if (elasticityAnalysis.length === 0) return 'No elasticity data available for analysis.';
+  
+  // Summary statistics
+  const avgElasticityVal = elasticityAnalysis.reduce((s, p) => s + p.elasticity, 0) / elasticityAnalysis.length;
+  const highlyElasticCount = elasticityAnalysis.filter(p => p.elasticityCategory === 'Highly Elastic').length;
+  const elasticCount = elasticityAnalysis.filter(p => p.elasticityCategory === 'Elastic').length;
+  const inelasticCount = elasticityAnalysis.filter(p => p.elasticityCategory === 'Inelastic' || p.elasticityCategory === 'Highly Inelastic').length;
+  const priceIncreaseOpps = elasticityAnalysis.filter(p => p.opportunityType === 'Price Increase');
+  const priceDecreaseOpps = elasticityAnalysis.filter(p => p.opportunityType === 'Price Decrease');
+  
+  let output = 'ELASTICITY PORTFOLIO SUMMARY:\n';
+  output += '- Products with elasticity data: ' + elasticityAnalysis.length + '\n';
+  output += '- Average elasticity: ' + avgElasticityVal.toFixed(2) + '\n';
+  output += '- Highly Elastic (>2.0): ' + highlyElasticCount + ' products\n';
+  output += '- Elastic (1.3-2.0): ' + elasticCount + ' products\n';
+  output += '- Inelastic (<0.8): ' + inelasticCount + ' products\n\n';
+  
+  output += 'PRICING OPPORTUNITIES IDENTIFIED:\n';
+  output += '- Price Increase Candidates: ' + priceIncreaseOpps.length + ' products (inelastic with margin headroom)\n';
+  output += '- Price Decrease Candidates: ' + priceDecreaseOpps.length + ' products (elastic with high margins)\n\n';
+  
+  output += 'ELASTICITY DISTRIBUTION BY CATEGORY:\n';
+  const categoryElasticity: Record<string, { elasticities: number[]; products: string[] }> = {};
+  elasticityAnalysis.forEach(p => {
+    if (!categoryElasticity[p.category]) categoryElasticity[p.category] = { elasticities: [], products: [] };
+    categoryElasticity[p.category].elasticities.push(p.elasticity);
+    categoryElasticity[p.category].products.push(p.name);
+  });
+  
+  Object.entries(categoryElasticity)
+    .sort((a, b) => (b[1].elasticities.reduce((s, e) => s + e, 0) / b[1].elasticities.length) - (a[1].elasticities.reduce((s, e) => s + e, 0) / a[1].elasticities.length))
+    .forEach(([cat, data]) => {
+      const avgCatElasticity = data.elasticities.reduce((s, e) => s + e, 0) / data.elasticities.length;
+      const sensitivity = avgCatElasticity > 1.3 ? 'High Sensitivity' : avgCatElasticity > 0.8 ? 'Moderate' : 'Low Sensitivity';
+      output += '- ' + cat + ': Avg elasticity ' + avgCatElasticity.toFixed(2) + ' (' + sensitivity + ') - ' + data.elasticities.length + ' products\n';
+    });
+  
+  output += '\n\nTOP PRICE INCREASE OPPORTUNITIES (Inelastic Products):\n';
+  priceIncreaseOpps.slice(0, 8).forEach((p, i) => {
+    output += '\n' + (i + 1) + '. ' + p.name + ' (' + p.category + ')\n';
+    output += '   Elasticity: ' + p.elasticity.toFixed(2) + ' (' + p.elasticityCategory + ') | Current Margin: ' + p.currentMargin.toFixed(1) + '%\n';
+    output += '   Sensitivity: ' + p.volumeSensitivity + '\n';
+    output += '   SCENARIO ANALYSIS:\n';
+    output += '   | Price Change | Volume Impact | Revenue Impact | Margin |\n';
+    output += '   |--------------|---------------|----------------|--------|\n';
+    p.priceChangeScenarios.filter(s => s.change.startsWith('+')).forEach(s => {
+      output += '   | ' + s.change + ' | ' + s.expectedVolumeImpact + ' | ' + s.expectedRevenueImpact + ' | ' + s.marginImpact + ' |\n';
+    });
+    output += '   Recommendation: ' + p.recommendation + '\n';
+  });
+  
+  output += '\n\nMOST PRICE-SENSITIVE PRODUCTS (High Elasticity):\n';
+  elasticityAnalysis.filter(p => p.elasticityCategory === 'Highly Elastic' || p.elasticityCategory === 'Elastic')
+    .slice(0, 8).forEach((p, i) => {
+      output += '\n' + (i + 1) + '. ' + p.name + ' (' + p.category + ')\n';
+      output += '   Elasticity: ' + p.elasticity.toFixed(2) + ' - ' + p.volumeSensitivity + '\n';
+      output += '   Current: $' + p.currentPrice.toFixed(2) + ' | Margin: ' + p.currentMargin.toFixed(1) + '%\n';
+      output += '   Recommendation: ' + p.recommendation + '\n';
+    });
+  
+  return output;
+})()}`;
         break;
       }
       
