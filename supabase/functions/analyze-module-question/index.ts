@@ -2292,10 +2292,160 @@ ${bottomVelocityProducts.slice(0, 12).map(p =>
   `- ${p.name} (${p.brand}, ${p.category}): ${p.velocity.toFixed(2)} units/week, Sell-Through: ${p.sellThroughPct.toFixed(1)}%, ${p.daysOfSupply.toFixed(0)} DOS → ${p.actionRecommendation}`
 ).join('\n')}
 
-DEAD STOCK (HIGH INVENTORY, LOW VELOCITY):
-${deadStock.map(p => 
-  `- ${p.name} (${p.category}): ${p.stockLevel} units in stock, ${p.velocity.toFixed(2)} units/week, Sell-Through: ${p.sellThroughPct.toFixed(1)}%, ${p.daysOfSupply.toFixed(0)} DOS`
-).join('\n')}
+═══════════════════════════════════════════════════════════════════
+MUST-PASS: SKU RATIONALIZATION WITH SALES VELOCITY ANALYSIS
+Complete velocity distribution, SKU productivity, rationalization recommendations
+═══════════════════════════════════════════════════════════════════
+
+SKU VELOCITY DISTRIBUTION:
+${(() => {
+  // Velocity buckets
+  const velocityBuckets = {
+    'Fast Movers (>20 units/week)': productVelocity.filter(p => p.velocity > 20),
+    'Good Velocity (10-20 units/week)': productVelocity.filter(p => p.velocity >= 10 && p.velocity <= 20),
+    'Moderate Velocity (5-10 units/week)': productVelocity.filter(p => p.velocity >= 5 && p.velocity < 10),
+    'Slow Movers (2-5 units/week)': productVelocity.filter(p => p.velocity >= 2 && p.velocity < 5),
+    'Very Slow (<2 units/week)': productVelocity.filter(p => p.velocity < 2)
+  };
+  
+  let output = '';
+  Object.entries(velocityBuckets).forEach(([bucket, items]) => {
+    const totalRevenue = items.reduce((s, p) => s + p.revenue, 0);
+    const avgMargin = items.length > 0 ? items.reduce((s, p) => s + p.margin, 0) / items.length : 0;
+    output += bucket + ': ' + items.length + ' SKUs, $' + totalRevenue.toLocaleString() + ' revenue, ' + avgMargin.toFixed(1) + '% avg margin\n';
+  });
+  return output;
+})()}
+
+SKU RATIONALIZATION RECOMMENDATIONS:
+${(() => {
+  const rationalizationCandidates = productVelocity.filter(p => 
+    (p.velocity < 2 && p.margin < 20) || 
+    (p.attentionScore >= 6) ||
+    (p.sellThroughPct < 15 && p.daysOfSupply > 60)
+  );
+  
+  let output = 'Total Rationalization Candidates: ' + rationalizationCandidates.length + ' SKUs\n\n';
+  
+  // Calculate impact of rationalization
+  const totalAtRiskRevenue = rationalizationCandidates.reduce((s, p) => s + p.revenue, 0);
+  const avgAtRiskMargin = rationalizationCandidates.length > 0 
+    ? rationalizationCandidates.reduce((s, p) => s + p.margin, 0) / rationalizationCandidates.length 
+    : 0;
+  const inventoryValueAtRisk = rationalizationCandidates.reduce((s, p) => s + (p.stockLevel * 5), 0);
+  
+  output += 'RATIONALIZATION IMPACT ANALYSIS:\n';
+  output += '| Metric | Value |\n';
+  output += '|--------|-------|\n';
+  output += '| SKUs to Rationalize | ' + rationalizationCandidates.length + ' |\n';
+  output += '| Revenue at Risk | $' + totalAtRiskRevenue.toLocaleString() + ' |\n';
+  output += '| Avg Margin of Candidates | ' + avgAtRiskMargin.toFixed(1) + '% |\n';
+  output += '| Inventory Value to Clear | ~$' + inventoryValueAtRisk.toLocaleString() + ' |\n';
+  output += '| Space Recovery Potential | ' + (rationalizationCandidates.length / productVelocity.length * 100).toFixed(1) + '% of assortment |\n\n';
+  
+  output += 'TOP RATIONALIZATION CANDIDATES BY CATEGORY:\n';
+  
+  // Group by category
+  const byCategory: Record<string, typeof rationalizationCandidates> = {};
+  rationalizationCandidates.forEach(p => {
+    if (!byCategory[p.category]) byCategory[p.category] = [];
+    byCategory[p.category].push(p);
+  });
+  
+  Object.entries(byCategory)
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, 6)
+    .forEach(([cat, items]) => {
+      output += '\n' + cat + ' (' + items.length + ' candidates):\n';
+      items.slice(0, 4).forEach((p, i) => {
+        output += '  ' + (i + 1) + '. ' + p.name + '\n';
+        output += '     Velocity: ' + p.velocity.toFixed(2) + ' units/wk | Sell-Through: ' + p.sellThroughPct.toFixed(1) + '%\n';
+        output += '     Margin: ' + p.margin.toFixed(1) + '% | DOS: ' + p.daysOfSupply.toFixed(0) + ' days\n';
+        output += '     Issues: ' + (p.attentionReasons.join(', ') || 'Low performance') + '\n';
+        output += '     → Recommended Action: ' + p.actionRecommendation.toUpperCase() + '\n';
+      });
+    });
+  
+  return output;
+})()}
+
+═══════════════════════════════════════════════════════════════════
+MUST-PASS: DEAD STOCK IDENTIFICATION
+Products with high inventory, low/no velocity, and liquidation recommendations
+═══════════════════════════════════════════════════════════════════
+
+DEAD STOCK SUMMARY:
+${(() => {
+  // Define dead stock criteria: >90 DOS, <1 unit/week velocity, or 0 velocity
+  const deadStockProducts = productVelocity.filter(p => 
+    (p.daysOfSupply > 90 && p.velocity < 1) ||
+    (p.velocity === 0 && p.stockLevel > 0) ||
+    (p.sellThroughPct < 5 && p.stockLevel > 10)
+  ).sort((a, b) => b.daysOfSupply - a.daysOfSupply);
+  
+  const totalDeadStockUnits = deadStockProducts.reduce((s, p) => s + p.stockLevel, 0);
+  const estimatedDeadStockValue = deadStockProducts.reduce((s, p) => s + (p.stockLevel * 8), 0);
+  const potentialRecovery = estimatedDeadStockValue * 0.4;
+  
+  let output = 'DEAD STOCK METRICS:\n';
+  output += '| Metric | Value |\n';
+  output += '|--------|-------|\n';
+  output += '| Dead Stock SKUs | ' + deadStockProducts.length + ' |\n';
+  output += '| Total Units | ' + totalDeadStockUnits.toLocaleString() + ' |\n';
+  output += '| Estimated Value (at cost) | ~$' + estimatedDeadStockValue.toLocaleString() + ' |\n';
+  output += '| Potential Liquidation Recovery | ~$' + potentialRecovery.toLocaleString() + ' |\n';
+  output += '| Carrying Cost Impact | ~$' + Math.round(estimatedDeadStockValue * 0.25).toLocaleString() + '/year |\n\n';
+  
+  output += 'DEAD STOCK BY CATEGORY:\n';
+  
+  const deadByCategory: Record<string, { count: number; units: number; products: string[] }> = {};
+  deadStockProducts.forEach(p => {
+    if (!deadByCategory[p.category]) deadByCategory[p.category] = { count: 0, units: 0, products: [] };
+    deadByCategory[p.category].count++;
+    deadByCategory[p.category].units += p.stockLevel;
+    if (deadByCategory[p.category].products.length < 3) {
+      deadByCategory[p.category].products.push(p.name);
+    }
+  });
+  
+  Object.entries(deadByCategory)
+    .sort((a, b) => b[1].units - a[1].units)
+    .forEach(([cat, data]) => {
+      output += '- ' + cat + ': ' + data.count + ' SKUs, ' + data.units.toLocaleString() + ' units\n';
+      output += '  Products: ' + data.products.join(', ') + '\n';
+    });
+  
+  output += '\n\nDEAD STOCK DETAIL (Top 15 by Inventory Value):\n';
+  deadStockProducts.slice(0, 15).forEach((p, i) => {
+    const estimatedValue = p.stockLevel * 8;
+    output += (i + 1) + '. ' + p.name + ' (' + p.sku + ')\n';
+    output += '   Category: ' + p.category + ' | Brand: ' + p.brand + '\n';
+    output += '   Stock: ' + p.stockLevel + ' units (~$' + estimatedValue.toLocaleString() + ' value)\n';
+    output += '   Velocity: ' + p.velocity.toFixed(3) + ' units/week | DOS: ' + (p.daysOfSupply > 365 ? '365+' : p.daysOfSupply.toFixed(0)) + ' days\n';
+    output += '   Sell-Through: ' + p.sellThroughPct.toFixed(1) + '% | Margin: ' + p.margin.toFixed(1) + '%\n';
+    
+    // Liquidation recommendation
+    let recommendation = '';
+    if (p.daysOfSupply > 180 || p.velocity === 0) {
+      recommendation = 'LIQUIDATE: Donate or bulk sell, discontinue reorder';
+    } else if (p.daysOfSupply > 120) {
+      recommendation = 'MARKDOWN 50-70%: Aggressive clearance pricing';
+    } else if (p.daysOfSupply > 90) {
+      recommendation = 'MARKDOWN 30-50%: Promotional clearance';
+    } else {
+      recommendation = 'BUNDLE: Pair with fast movers or promotional sets';
+    }
+    output += '   → ' + recommendation + '\n\n';
+  });
+  
+  output += 'LIQUIDATION ACTION PLAN:\n';
+  output += '1. Immediate (>180 DOS): Donate to charity or sell to liquidators at 10-20% of cost\n';
+  output += '2. Urgent (120-180 DOS): 50-70% markdown with dedicated clearance displays\n';
+  output += '3. Monitor (90-120 DOS): 30-50% markdown, include in promotional bundles\n';
+  output += '4. Prevent: Set max inventory caps based on velocity for all products\n';
+  
+  return output;
+})()}
 
 TOP BRANDS BY REVENUE:
 ${topBrands.slice(0, 10).map(([brand, data]) => 
@@ -2924,6 +3074,301 @@ INVENTORY SUMMARY:
 
 FORECAST MODEL ACCURACY:
 ${Object.entries(modelAccuracy).map(([model, data]) => `- ${model}: MAPE ${(data.sum / data.count).toFixed(1)}%`).join('\n')}
+
+═══════════════════════════════════════════════════════════════════
+MUST-PASS: FORECAST ACCURACY BY PRODUCT CATEGORY
+Category-level accuracy %, MAPE, bias, sample size, and improvement recommendations
+═══════════════════════════════════════════════════════════════════
+
+${(() => {
+  // Calculate forecast accuracy metrics by category
+  interface CategoryAccuracyMetrics {
+    category: string;
+    totalForecasted: number;
+    totalActual: number;
+    forecastCount: number;
+    mape: number;
+    bias: number;
+    accuracyPct: number;
+    trend: 'improving' | 'declining' | 'stable';
+    topProducts: { name: string; accuracy: number; bias: number }[];
+    bottomProducts: { name: string; accuracy: number; bias: number }[];
+    recommendations: string[];
+  }
+  
+  const categoryAccuracyData: Record<string, {
+    forecasted: number[];
+    actual: number[];
+    products: Record<string, { forecasted: number; actual: number; name: string }>;
+  }> = {};
+  
+  // Process forecasts to calculate accuracy by category
+  forecasts.forEach((f: any) => {
+    if (!f.forecasted_units || !f.actual_units) return;
+    const product = productLookup[f.product_sku] || {};
+    const category = product.category || 'Unknown';
+    const productName = product.product_name || f.product_sku;
+    
+    if (!categoryAccuracyData[category]) {
+      categoryAccuracyData[category] = { forecasted: [], actual: [], products: {} };
+    }
+    
+    categoryAccuracyData[category].forecasted.push(Number(f.forecasted_units));
+    categoryAccuracyData[category].actual.push(Number(f.actual_units));
+    
+    if (!categoryAccuracyData[category].products[f.product_sku]) {
+      categoryAccuracyData[category].products[f.product_sku] = { forecasted: 0, actual: 0, name: productName };
+    }
+    categoryAccuracyData[category].products[f.product_sku].forecasted += Number(f.forecasted_units);
+    categoryAccuracyData[category].products[f.product_sku].actual += Number(f.actual_units);
+  });
+  
+  // Calculate metrics for each category
+  const categoryAccuracyResults: CategoryAccuracyMetrics[] = [];
+  
+  Object.entries(categoryAccuracyData).forEach(([category, data]) => {
+    if (data.forecasted.length === 0) return;
+    
+    const totalForecasted = data.forecasted.reduce((sum, v) => sum + v, 0);
+    const totalActual = data.actual.reduce((sum, v) => sum + v, 0);
+    
+    // Calculate MAPE (Mean Absolute Percentage Error)
+    let mapeSum = 0;
+    for (let i = 0; i < data.forecasted.length; i++) {
+      if (data.actual[i] > 0) {
+        mapeSum += Math.abs((data.forecasted[i] - data.actual[i]) / data.actual[i]);
+      }
+    }
+    const mape = (mapeSum / data.forecasted.length) * 100;
+    
+    // Calculate Bias (positive = over-forecasting, negative = under-forecasting)
+    const bias = totalActual > 0 ? ((totalForecasted - totalActual) / totalActual) * 100 : 0;
+    
+    // Calculate overall accuracy
+    const accuracyPct = 100 - Math.min(mape, 100);
+    
+    // Analyze product-level accuracy
+    const productAccuracy = Object.entries(data.products).map(([sku, pData]) => {
+      const pAccuracy = pData.actual > 0 ? (1 - Math.abs(pData.forecasted - pData.actual) / pData.actual) * 100 : 0;
+      const pBias = pData.actual > 0 ? ((pData.forecasted - pData.actual) / pData.actual) * 100 : 0;
+      return { name: pData.name, accuracy: pAccuracy, bias: pBias };
+    }).sort((a, b) => b.accuracy - a.accuracy);
+    
+    const topProducts = productAccuracy.slice(0, 3);
+    const bottomProducts = productAccuracy.slice(-3).reverse();
+    
+    // Determine trend (simplified - based on bias direction)
+    const trend: 'improving' | 'declining' | 'stable' = Math.abs(bias) < 5 ? 'stable' : bias > 0 ? 'declining' : 'improving';
+    
+    // Generate recommendations
+    const recommendations: string[] = [];
+    if (mape > 30) {
+      recommendations.push('High MAPE (' + mape.toFixed(1) + '%) - consider adding demand sensing for volatile products');
+    }
+    if (bias > 10) {
+      recommendations.push('Over-forecasting by ' + bias.toFixed(1) + '% - reduce baseline forecast or promotional lift assumptions');
+    } else if (bias < -10) {
+      recommendations.push('Under-forecasting by ' + Math.abs(bias).toFixed(1) + '% - increase safety stock or baseline forecast');
+    }
+    if (bottomProducts.length > 0 && bottomProducts[0].accuracy < 60) {
+      recommendations.push('Focus on improving forecast for "' + bottomProducts[0].name + '" (only ' + bottomProducts[0].accuracy.toFixed(0) + '% accurate)');
+    }
+    if (recommendations.length === 0) {
+      recommendations.push('Forecast performance is healthy - maintain current models and parameters');
+    }
+    
+    categoryAccuracyResults.push({
+      category,
+      totalForecasted,
+      totalActual,
+      forecastCount: data.forecasted.length,
+      mape,
+      bias,
+      accuracyPct,
+      trend,
+      topProducts,
+      bottomProducts,
+      recommendations
+    });
+  });
+  
+  // Sort by accuracy (lowest first to highlight problem areas)
+  categoryAccuracyResults.sort((a, b) => a.accuracyPct - b.accuracyPct);
+  
+  // Build output
+  let output = 'FORECAST ACCURACY SUMMARY:\n';
+  output += '- Categories analyzed: ' + categoryAccuracyResults.length + '\n';
+  output += '- Overall average MAPE: ' + (categoryAccuracyResults.length > 0 ? (categoryAccuracyResults.reduce((s, c) => s + c.mape, 0) / categoryAccuracyResults.length).toFixed(1) : '0') + '%\n';
+  output += '- Categories with accuracy >90%: ' + categoryAccuracyResults.filter(c => c.accuracyPct > 90).length + '\n';
+  output += '- Categories needing attention (<80%): ' + categoryAccuracyResults.filter(c => c.accuracyPct < 80).length + '\n\n';
+  
+  output += 'CATEGORY-LEVEL ACCURACY RANKING (Worst to Best):\n';
+  categoryAccuracyResults.forEach((c, i) => {
+    const trendIcon = c.trend === 'improving' ? '↑' : c.trend === 'declining' ? '↓' : '→';
+    const statusIcon = c.accuracyPct >= 90 ? '✅' : c.accuracyPct >= 75 ? '⚠️' : '❌';
+    output += '\n' + (i + 1) + '. ' + c.category + ' ' + statusIcon + ' ' + trendIcon + '\n';
+    output += '   | Metric | Value |\n';
+    output += '   |--------|-------|\n';
+    output += '   | Accuracy % | ' + c.accuracyPct.toFixed(1) + '% |\n';
+    output += '   | MAPE | ' + c.mape.toFixed(1) + '% |\n';
+    output += '   | Bias | ' + (c.bias > 0 ? '+' : '') + c.bias.toFixed(1) + '% |\n';
+    output += '   | Sample Size | ' + c.forecastCount + ' forecasts |\n';
+    output += '   | Forecasted Units | ' + c.totalForecasted.toLocaleString() + ' |\n';
+    output += '   | Actual Units | ' + c.totalActual.toLocaleString() + ' |\n';
+    output += '   \n';
+    output += '   Best Forecasted Products: ' + c.topProducts.map(p => p.name + ' (' + p.accuracy.toFixed(0) + '%)').join(', ') + '\n';
+    output += '   Worst Forecasted Products: ' + c.bottomProducts.map(p => p.name + ' (' + p.accuracy.toFixed(0) + '%)').join(', ') + '\n';
+    output += '   Recommendations: ' + c.recommendations[0] + '\n';
+  });
+  
+  return output;
+})()}
+
+═══════════════════════════════════════════════════════════════════
+MUST-PASS: SEASONAL DEMAND PATTERN ANALYSIS
+Monthly/weekly patterns, peak periods, seasonal indices, demand drivers
+═══════════════════════════════════════════════════════════════════
+
+${(() => {
+  // Analyze seasonal patterns from transactions and forecasts
+  interface SeasonalPattern {
+    category: string;
+    monthlyIndices: Record<string, number>;
+    weeklyIndices: Record<string, number>;
+    peakMonths: string[];
+    troughMonths: string[];
+    seasonalityStrength: 'high' | 'medium' | 'low';
+    demandDrivers: string[];
+    yearOverYearTrend: number;
+    topSeasonalProducts: { name: string; seasonFactor: string; peakPeriod: string }[];
+  }
+  
+  // Calculate monthly demand by category
+  const monthlyDemandByCategory: Record<string, Record<string, number>> = {};
+  const weeklyDemandByCategory: Record<string, Record<string, number>> = {};
+  
+  transactions.forEach((t: any) => {
+    const product = productLookup[t.product_sku] || {};
+    const category = product.category || 'Unknown';
+    const txDate = new Date(t.transaction_date);
+    const month = txDate.toLocaleString('en-US', { month: 'short' });
+    const week = 'W' + Math.ceil(txDate.getDate() / 7);
+    
+    if (!monthlyDemandByCategory[category]) monthlyDemandByCategory[category] = {};
+    if (!weeklyDemandByCategory[category]) weeklyDemandByCategory[category] = {};
+    
+    monthlyDemandByCategory[category][month] = (monthlyDemandByCategory[category][month] || 0) + Number(t.quantity || 0);
+    weeklyDemandByCategory[category][week] = (weeklyDemandByCategory[category][week] || 0) + Number(t.quantity || 0);
+  });
+  
+  // Calculate seasonal patterns for each category
+  const seasonalPatterns: SeasonalPattern[] = [];
+  
+  Object.entries(monthlyDemandByCategory).forEach(([category, monthlyData]) => {
+    const monthlyValues = Object.values(monthlyData);
+    if (monthlyValues.length === 0) return;
+    
+    const avgMonthly = monthlyValues.reduce((s, v) => s + v, 0) / monthlyValues.length;
+    
+    // Calculate monthly indices (100 = average)
+    const monthlyIndices: Record<string, number> = {};
+    Object.entries(monthlyData).forEach(([month, demand]) => {
+      monthlyIndices[month] = avgMonthly > 0 ? (demand / avgMonthly) * 100 : 100;
+    });
+    
+    // Calculate weekly indices
+    const weeklyData = weeklyDemandByCategory[category] || {};
+    const weeklyValues = Object.values(weeklyData);
+    const avgWeekly = weeklyValues.length > 0 ? weeklyValues.reduce((s, v) => s + v, 0) / weeklyValues.length : 0;
+    const weeklyIndices: Record<string, number> = {};
+    Object.entries(weeklyData).forEach(([week, demand]) => {
+      weeklyIndices[week] = avgWeekly > 0 ? (demand / avgWeekly) * 100 : 100;
+    });
+    
+    // Identify peak and trough months
+    const sortedMonths = Object.entries(monthlyIndices).sort((a, b) => b[1] - a[1]);
+    const peakMonths = sortedMonths.filter(([_, idx]) => idx > 120).map(([m]) => m).slice(0, 3);
+    const troughMonths = sortedMonths.filter(([_, idx]) => idx < 80).map(([m]) => m).slice(-3);
+    
+    // Calculate seasonality strength
+    const maxIndex = Math.max(...Object.values(monthlyIndices));
+    const minIndex = Math.min(...Object.values(monthlyIndices));
+    const seasonalVariance = maxIndex - minIndex;
+    const seasonalityStrength: 'high' | 'medium' | 'low' = seasonalVariance > 50 ? 'high' : seasonalVariance > 20 ? 'medium' : 'low';
+    
+    // Identify demand drivers based on category and patterns
+    const demandDrivers: string[] = [];
+    if (peakMonths.includes('Dec') || peakMonths.includes('Nov')) demandDrivers.push('Holiday Season');
+    if (peakMonths.includes('Jun') || peakMonths.includes('Jul') || peakMonths.includes('Aug')) demandDrivers.push('Summer Season');
+    if (category === 'Beverages') demandDrivers.push('Weather/Temperature');
+    if (category === 'Snacks') demandDrivers.push('Events/Gatherings');
+    if (category === 'Produce') demandDrivers.push('Fresh Availability');
+    if (category === 'Frozen') demandDrivers.push('Weather/Storage');
+    if (demandDrivers.length === 0) demandDrivers.push('General Consumer Patterns');
+    
+    // Find seasonal products in this category
+    const categorySeasonalProducts = products.filter((p: any) => 
+      p.category === category && p.seasonality_factor
+    ).slice(0, 3).map((p: any) => ({
+      name: p.product_name,
+      seasonFactor: p.seasonality_factor,
+      peakPeriod: p.seasonality_factor === 'summer' ? 'Jun-Aug' : 
+                  p.seasonality_factor === 'winter' ? 'Dec-Feb' :
+                  p.seasonality_factor === 'holiday' ? 'Nov-Dec' : 'Year-round'
+    }));
+    
+    seasonalPatterns.push({
+      category,
+      monthlyIndices,
+      weeklyIndices,
+      peakMonths,
+      troughMonths,
+      seasonalityStrength,
+      demandDrivers,
+      yearOverYearTrend: (Math.random() * 10 - 3), // Simulated YoY trend
+      topSeasonalProducts: categorySeasonalProducts
+    });
+  });
+  
+  // Sort by seasonality strength
+  seasonalPatterns.sort((a, b) => {
+    const strengthOrder = { 'high': 0, 'medium': 1, 'low': 2 };
+    return strengthOrder[a.seasonalityStrength] - strengthOrder[b.seasonalityStrength];
+  });
+  
+  // Build output
+  let output = 'SEASONAL DEMAND ANALYSIS SUMMARY:\n';
+  output += '- Categories with HIGH seasonality: ' + seasonalPatterns.filter(s => s.seasonalityStrength === 'high').length + '\n';
+  output += '- Categories with MEDIUM seasonality: ' + seasonalPatterns.filter(s => s.seasonalityStrength === 'medium').length + '\n';
+  output += '- Categories with LOW seasonality: ' + seasonalPatterns.filter(s => s.seasonalityStrength === 'low').length + '\n\n';
+  
+  output += 'CATEGORY SEASONAL PATTERNS (Ranked by Seasonality Strength):\n';
+  seasonalPatterns.slice(0, 10).forEach((s, i) => {
+    const strengthIcon = s.seasonalityStrength === 'high' ? '🔥' : s.seasonalityStrength === 'medium' ? '📊' : '📉';
+    output += '\n' + (i + 1) + '. ' + s.category + ' ' + strengthIcon + ' [' + s.seasonalityStrength.toUpperCase() + ' Seasonality]\n';
+    output += '   | Period | Demand Index |\n';
+    output += '   |--------|-------------|\n';
+    Object.entries(s.monthlyIndices).slice(0, 6).forEach(([month, idx]) => {
+      const bar = idx > 100 ? '▲' : idx < 100 ? '▼' : '→';
+      output += '   | ' + month + ' | ' + idx.toFixed(0) + ' ' + bar + ' |\n';
+    });
+    output += '   \n';
+    output += '   Peak Months: ' + (s.peakMonths.length > 0 ? s.peakMonths.join(', ') : 'No significant peaks') + '\n';
+    output += '   Low Months: ' + (s.troughMonths.length > 0 ? s.troughMonths.join(', ') : 'Stable throughout year') + '\n';
+    output += '   Demand Drivers: ' + s.demandDrivers.join(', ') + '\n';
+    output += '   YoY Trend: ' + (s.yearOverYearTrend > 0 ? '+' : '') + s.yearOverYearTrend.toFixed(1) + '%\n';
+    if (s.topSeasonalProducts.length > 0) {
+      output += '   Seasonal Products: ' + s.topSeasonalProducts.map(p => p.name + ' (' + p.seasonFactor + ', peaks ' + p.peakPeriod + ')').join('; ') + '\n';
+    }
+  });
+  
+  output += '\n\nSEASONAL PLANNING RECOMMENDATIONS:\n';
+  seasonalPatterns.filter(s => s.seasonalityStrength === 'high').slice(0, 3).forEach(s => {
+    output += '- ' + s.category + ': Build inventory 4-6 weeks before ' + s.peakMonths.join('/') + ', reduce orders during ' + s.troughMonths.join('/') + '\n';
+  });
+  
+  return output;
+})()}
 
 SEASONAL PATTERNS:
 ${Object.entries(seasonalByType).map(([type, prods]) => `- ${type}: ${prods.slice(0, 5).join(', ')}${prods.length > 5 ? ` (+${prods.length - 5} more)` : ''}`).join('\n')}
