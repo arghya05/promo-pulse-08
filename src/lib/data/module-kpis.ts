@@ -324,6 +324,8 @@ export const kpisWithAvailableData: string[] = [
   'category_penetration',
   // Basic calculations
   'units_per_transaction',
+  // Inventory KPIs (calculated from transactions + inventory)
+  'sell_through_rate',
 ];
 
 export const getKPIsByModule = (moduleId: string): ModuleKPI[] => {
