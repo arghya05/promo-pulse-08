@@ -198,6 +198,18 @@ function isSimulationQuestion(question: string): boolean {
   return simulationTriggers.some(trigger => question.toLowerCase().includes(trigger));
 }
 
+// Detect if question is about cannibalization analysis
+function isCannibalizationQuestion(question: string): boolean {
+  const cannibalizationTriggers = [
+    'cannibalization', 'cannibalize', 'cannibalizing', 'cannibalized',
+    'cannibalization value', 'cannibalization rate', 
+    'impacted sku', 'impacted products', 'impacted categories',
+    'net incremental', 'halo effect', 'halo and cannibalization',
+    'sales decline', 'substitute products'
+  ];
+  return cannibalizationTriggers.some(trigger => question.toLowerCase().includes(trigger));
+}
+
 // Detect hierarchy-level analysis type (Category → Brand → SKU)
 interface HierarchyAnalysisType {
   level: 'product' | 'brand' | 'category' | 'none';
@@ -1303,8 +1315,9 @@ serve(async (req) => {
       ? [...new Set([...detectedKPIs, ...(selectedKPIs || [])])]
       : selectedKPIs;
     
-    // Detect simulation and cross-module questions
+    // Detect simulation, cannibalization, and cross-module questions
     const isSimulation = isSimulationQuestion(question);
+    const isCannibalization = isCannibalizationQuestion(question);
     const detectedModules = detectCrossModuleQuestion(question);
     const isCrossModule = detectedModules.length > 1 || moduleId === 'cross-module' || (crossModules && crossModules.length > 0);
     
@@ -5622,6 +5635,50 @@ SIMULATION ANALYSIS INSTRUCTIONS:
 - Be specific about assumptions made.
 ` : '';
 
+    // Build cannibalization-specific instructions
+    const cannibalizationInstructions = isCannibalization ? `
+═══════════════════════════════════════════════════════════════════════════════
+CRITICAL: CANNIBALIZATION ANALYSIS REQUIRED - USE EXACT DATA FORMAT
+═══════════════════════════════════════════════════════════════════════════════
+
+This is a CANNIBALIZATION analysis question. You MUST provide:
+
+1. CANNIBALIZATION VALUE PER PROMOTION (MANDATORY):
+   - For EACH promotion, show: Promotion Name → Cannibalization Value (negative $)
+   - Format: "Summer Snacks Promo: -$45,230 cannibalization value (12.3% rate)"
+   - Use the EXACT values from "CANNIBALIZATION METRICS" section in the data context
+
+2. CANNIBALIZATION RATE (%) PER PROMOTION:
+   - Formula: (Cannibalization Value / Gross Sales Lift) × 100
+   - Show as percentage for each promotion
+
+3. IMPACTED SKUs (CANNIBALIZED PRODUCTS):
+   - List specific product names that lost sales due to each promotion
+   - Format: "Cannibalized: Kettle Chips -$2,340, Tortilla Chips -$1,890 (substitutes)"
+   - Mark which are substitutes vs same-category
+
+4. NET INCREMENTAL SALES:
+   - Formula: Gross Sales Lift - Cannibalization Value + Halo Effect
+   - Show for each promotion with comparison
+
+5. HALO EFFECT (POSITIVE SPILLOVER):
+   - Identify complementary categories that benefited
+   - Quantify halo value in $
+
+MANDATORY ANSWER FORMAT FOR CANNIBALIZATION QUESTIONS:
+whatHappened bullets should look like:
+- "Summer Snacks Promo: -$45,230 cannibalization (12.3% rate), impacting 8 SKUs in Snacks category"
+- "Black Friday Frozen: -$62,100 cannibalization (18.5% rate) - Frozen Vegetables lost $15K"
+- "Net incremental impact: $125K after accounting for $45K cannibalization and $18K halo effect"
+
+DO NOT show generic "incremental margin" or "ROI" without cannibalization-specific metrics.
+DO NOT confuse loss-making promotions with cannibalization - they are DIFFERENT analyses:
+- Loss-making = Promotion didn't generate enough lift to cover spend (ROI < 1)
+- Cannibalization = Promotion caused OTHER products to lose sales
+
+chartData MUST include: Promotion Name, Gross Lift, Cannibalization Value, Halo Effect, Net Incremental
+` : '';
+
     // Build cross-module instructions
     const crossModuleInstructions = isCrossModule ? `
 CROSS-MODULE ANALYSIS INSTRUCTIONS:
@@ -5730,6 +5787,7 @@ ${productSpecificContext}
 ${dataContext}
 
 ${simulationInstructions}
+${cannibalizationInstructions}
 ${crossModuleInstructions}
 ${hierarchyInstructions}
 
