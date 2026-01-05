@@ -50,6 +50,8 @@ import SearchSuggestions from './SearchSuggestions';
 import MultiLevelDrillDown from './MultiLevelDrillDown';
 import KPISelector from './KPISelector';
 import ProductDrillDown from './ProductDrillDown';
+import InsightPanels from './InsightPanels';
+import MustPassSuggestions from './MustPassSuggestions';
 
 interface ModuleClassicViewProps {
   module: Module;
@@ -368,6 +370,16 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
             </Button>
           </div>
         )}
+
+        {/* Must-Pass Questions */}
+        <MustPassSuggestions
+          moduleId={module.id}
+          onSelectQuestion={(q) => {
+            setSearchQuery(q);
+            handleAnalyze(q, selectedKPIs, selectedTimePeriod);
+          }}
+          isLoading={isLoading}
+        />
 
         {/* Popular Questions */}
         <Card>
@@ -689,6 +701,9 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                     </div>
                   </div>
                 )}
+
+                {/* Insight Panels - Tabbed view for KPIs, Ranked Results, Drivers, Actions, Method */}
+                <InsightPanels result={result} />
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
