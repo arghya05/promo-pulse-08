@@ -12059,7 +12059,7 @@ const QUESTION_CATEGORIES: CategoryDefinition[] = [
       
       response.whatHappened = [
         `Market position: ${ourShare}% share vs top competitor "${competitorData[0].name}" at ${competitorData[0].marketShare}% — ${(competitorData[0].marketShare - ourShare).toFixed(1)}pp gap`,
-        `Price positioning: ${competitorData.filter(c => c.priceGap < 0).length} competitors priced below us (avg ${competitorData.filter(c => c.priceGap < 0).reduce((s, c) => s + c.priceGap, 0) / Math.max(1, competitorData.filter(c => c.priceGap < 0).length).toFixed(1)}%), ${competitorData.filter(c => c.priceGap > 0).length} above`,
+        `Price positioning: ${competitorData.filter(c => c.priceGap < 0).length} competitors priced below us (avg ${(competitorData.filter(c => c.priceGap < 0).reduce((s, c) => s + c.priceGap, 0) / Math.max(1, competitorData.filter(c => c.priceGap < 0).length)).toFixed(1)}%), ${competitorData.filter(c => c.priceGap > 0).length} above`,
         `Competitive intensity: 5 major players control ${(totalCompShare + ourShare).toFixed(1)}% of market — concentrated landscape`
       ];
       
@@ -12486,7 +12486,7 @@ const QUESTION_CATEGORIES: CategoryDefinition[] = [
       
       response.why = [
         isPriceChange 
-          ? `Elasticity of -1.2 means ${changePct}% price change drives ${(elasticity * changePct * -1).toFixed(1)}% volume shift — net ${revenueChange > 0 ? 'positive' : 'negative'}`
+          ? `Elasticity of -1.2 means ${changePct}% price change drives ${(-1.2 * changePct * -1).toFixed(1)}% volume shift — net ${revenueChange > 0 ? 'positive' : 'negative'}`
           : `${scenario} expected to drive ${(revenueChange / baseRevenue * 100).toFixed(1)}% revenue change based on historical response curves`,
         `Margin ${marginChange > 0 ? 'improvement' : 'erosion'} of ${Math.abs(marginChange).toFixed(1)}pp reflects ${isPriceChange ? 'price leverage' : isPromoChange ? 'promotional dilution' : 'mix optimization'}`
       ];
