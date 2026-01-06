@@ -48,21 +48,52 @@ export default function SearchSuggestions({
   const [portalPosition, setPortalPosition] = useState<{ top: number; left: number; width: number } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Update portal position based on input element
+  // Update portal position based on input element - robust multi-strategy approach
   useEffect(() => {
     if (!isVisible) {
       setPortalPosition(null);
       return;
     }
 
-    // Find the input element - use provided element, or fall back to finding it
+    // Multi-strategy element finder - most reliable first
     const findInputElement = (): HTMLElement | null => {
-      if (inputElement) return inputElement;
+      // Strategy 1: Use provided inputElement if valid and in DOM
+      if (inputElement && inputElement.isConnected) {
+        return inputElement;
+      }
       
-      // Try to find focused input or textarea
+      // Strategy 2: Get currently focused element (most reliable for active input)
       const activeEl = document.activeElement;
       if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
         return activeEl as HTMLElement;
+      }
+      
+      // Strategy 3: Find any visible textarea or input in the chat/classic view containers
+      const containers = document.querySelectorAll('[class*="border-t"], [class*="CardContent"]');
+      for (const container of containers) {
+        const textarea = container.querySelector('textarea:not([disabled])') as HTMLElement;
+        if (textarea && textarea.offsetParent !== null) {
+          return textarea;
+        }
+        const input = container.querySelector('input[type="text"]:not([disabled]), input:not([type]):not([disabled])') as HTMLElement;
+        if (input && input.offsetParent !== null) {
+          return input;
+        }
+      }
+      
+      // Strategy 4: Find any visible textarea or input on the page
+      const allTextareas = document.querySelectorAll('textarea:not([disabled])');
+      for (const el of allTextareas) {
+        if ((el as HTMLElement).offsetParent !== null) {
+          return el as HTMLElement;
+        }
+      }
+      
+      const allInputs = document.querySelectorAll('input[type="text"]:not([disabled]), input:not([type]):not([disabled])');
+      for (const el of allInputs) {
+        if ((el as HTMLElement).offsetParent !== null) {
+          return el as HTMLElement;
+        }
       }
       
       return null;
@@ -71,11 +102,16 @@ export default function SearchSuggestions({
     const updatePosition = () => {
       const el = findInputElement();
       if (!el) {
-        setPortalPosition(null);
+        // Don't clear position immediately - might just be a timing issue
         return;
       }
       
       const rect = el.getBoundingClientRect();
+      
+      // Validate rect is sensible
+      if (rect.width === 0 || rect.height === 0) {
+        return;
+      }
       
       if (position === 'top') {
         setPortalPosition({
@@ -92,8 +128,12 @@ export default function SearchSuggestions({
       }
     };
     
-    // Initial update with slight delay to ensure element is mounted
-    const initialTimeout = setTimeout(updatePosition, 10);
+    // Run immediately
+    updatePosition();
+    
+    // Also run after a short delay to catch late-mounting elements
+    const initialTimeout = setTimeout(updatePosition, 50);
+    const secondTimeout = setTimeout(updatePosition, 150);
     
     // Update on resize and scroll
     window.addEventListener('resize', updatePosition);
@@ -104,6 +144,7 @@ export default function SearchSuggestions({
     
     return () => {
       clearTimeout(initialTimeout);
+      clearTimeout(secondTimeout);
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition, true);
       clearInterval(intervalId);
