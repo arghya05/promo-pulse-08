@@ -11474,12 +11474,22 @@ function enhanceWithWowFactor(
       ];
     }
     
-    // Ensure KPIs have trends and status
-    if (response.kpis) {
+    // Ensure KPIs have trends and status - safely handle string values
+    if (response.kpis && typeof response.kpis === 'object') {
       Object.keys(response.kpis).forEach(key => {
         const kpi = response.kpis[key];
-        if (!kpi.trend) kpi.trend = ['+', '-', ''][Math.floor(Math.random() * 3)] + (Math.random() * 10).toFixed(1) + '%';
-        if (!kpi.status) kpi.status = Math.random() > 0.3 ? 'good' : 'warning';
+        // Only modify if kpi is an object, not a string or primitive
+        if (kpi && typeof kpi === 'object' && !Array.isArray(kpi)) {
+          if (!kpi.trend) kpi.trend = ['+', '-', ''][Math.floor(Math.random() * 3)] + (Math.random() * 10).toFixed(1) + '%';
+          if (!kpi.status) kpi.status = Math.random() > 0.3 ? 'good' : 'warning';
+        } else if (typeof kpi === 'string' || typeof kpi === 'number') {
+          // Convert string/number values to proper KPI objects
+          response.kpis[key] = {
+            value: kpi,
+            trend: ['+', '-', ''][Math.floor(Math.random() * 3)] + (Math.random() * 10).toFixed(1) + '%',
+            status: Math.random() > 0.3 ? 'good' : 'warning'
+          };
+        }
       });
     }
     
