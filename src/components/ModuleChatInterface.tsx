@@ -106,6 +106,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
   const [showSuggestions, setShowSuggestions] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const textareaContainerRef = useRef<HTMLDivElement>(null);
   const inputContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const Icon = module.icon;
@@ -855,7 +856,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
           {/* Input Area */}
           <div className="p-4 border-t relative z-50 overflow-visible">
             <div className="relative flex items-end gap-2 overflow-visible" ref={inputContainerRef}>
-              <div className="flex-1 relative overflow-visible">
+              <div className="flex-1 relative overflow-visible" ref={textareaContainerRef}>
                 <textarea
                   value={input}
                   onChange={(e) => {
@@ -867,14 +868,10 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
                   }}
                   onFocus={() => setShowSuggestions(input.length >= 2)}
                   onBlur={(e) => {
-                    // Only hide suggestions if not clicking on suggestion dropdown
-                    // The dropdown uses onMouseDown with preventDefault to keep focus
+                    // Delay hiding to allow click on suggestions
                     setTimeout(() => {
-                      // Check if document.activeElement is still the textarea
-                      if (document.activeElement !== e.target) {
-                        setShowSuggestions(false);
-                      }
-                    }, 300);
+                      setShowSuggestions(false);
+                    }, 200);
                   }}
                   placeholder={conversationContext.lastCategory 
                     ? `Continue asking about ${conversationContext.lastCategory}...` 
@@ -904,6 +901,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
                   persona={persona}
                   moduleId={module.id}
                   position="top"
+                  parentRef={textareaContainerRef}
                 />
               </div>
               <Button onClick={() => { setShowSuggestions(false); handleSend(input); }} disabled={isLoading || !input.trim()} className="h-11">

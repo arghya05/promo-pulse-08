@@ -12,6 +12,7 @@ interface SearchSuggestionsProps {
   moduleId?: string;
   position?: 'bottom' | 'top';
   inputRef?: React.RefObject<HTMLElement>;
+  parentRef?: React.RefObject<HTMLElement>;
 }
 
 // Persona-specific category suggestions
@@ -32,6 +33,17 @@ const moduleSmartSuffixes: Record<string, string[]> = {
   'promotion': ['by ROI', 'by month', 'by quarter', 'by category', 'trends', 'forecast']
 };
 
+// Module display names for UI
+const moduleDisplayNames: Record<string, string> = {
+  'executive': 'Executive',
+  'pricing': 'Pricing',
+  'supply-chain': 'Supply Chain',
+  'demand': 'Demand Forecasting',
+  'assortment': 'Assortment',
+  'space': 'Space Planning',
+  'promotion': 'Promotion'
+};
+
 export default function SearchSuggestions({ 
   query, 
   onSelect, 
@@ -39,11 +51,12 @@ export default function SearchSuggestions({
   persona, 
   moduleId = 'promotion', 
   position = 'bottom',
-  inputRef 
+  inputRef,
+  parentRef
 }: SearchSuggestionsProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const [portalPosition, setPortalPosition] = useState<{ top: number; left: number; width: number } | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Ensure we're mounted before using portal
   useEffect(() => {
@@ -59,50 +72,48 @@ export default function SearchSuggestions({
     }
     
     const updatePosition = () => {
-      // Find the input container - search up from containerRef
-      let container = containerRef.current?.parentElement;
+      // Try to find the input element - prefer inputRef, then parentRef, then search the DOM
+      let targetElement: HTMLElement | null = null;
       
-      // Find the actual textarea/input element
-      if (container) {
-        const textArea = container.querySelector('textarea, input');
-        if (textArea) {
-          const rect = textArea.getBoundingClientRect();
-          const scrollTop = window.scrollY || document.documentElement.scrollTop;
-          const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
-          
-          if (position === 'top') {
-            setPortalPosition({
-              top: rect.top + scrollTop,
-              left: rect.left + scrollLeft,
-              width: rect.width
-            });
-          } else {
-            setPortalPosition({
-              top: rect.bottom + scrollTop,
-              left: rect.left + scrollLeft,
-              width: rect.width
-            });
-          }
-          return;
+      if (inputRef?.current) {
+        targetElement = inputRef.current;
+      } else if (parentRef?.current) {
+        // Search for textarea or input within parentRef
+        targetElement = parentRef.current.querySelector('textarea, input') as HTMLElement;
+      }
+      
+      // Fallback: find the focused textarea/input
+      if (!targetElement) {
+        const activeElement = document.activeElement;
+        if (activeElement && (activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT')) {
+          targetElement = activeElement as HTMLElement;
         }
       }
       
-      // Fallback to container
-      if (container) {
-        const rect = container.getBoundingClientRect();
-        const scrollTop = window.scrollY || document.documentElement.scrollTop;
-        const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+      if (!targetElement) {
+        // Last resort: find any visible textarea with matching value
+        const textareas = document.querySelectorAll('textarea');
+        for (const ta of textareas) {
+          if (ta.value && ta.value.toLowerCase().includes(query.toLowerCase().substring(0, 3))) {
+            targetElement = ta;
+            break;
+          }
+        }
+      }
+      
+      if (targetElement) {
+        const rect = targetElement.getBoundingClientRect();
         
         if (position === 'top') {
           setPortalPosition({
-            top: rect.top + scrollTop,
-            left: rect.left + scrollLeft,
+            top: rect.top,
+            left: rect.left,
             width: rect.width
           });
         } else {
           setPortalPosition({
-            top: rect.bottom + scrollTop,
-            left: rect.left + scrollLeft,
+            top: rect.bottom,
+            left: rect.left,
             width: rect.width
           });
         }
@@ -116,16 +127,15 @@ export default function SearchSuggestions({
     window.addEventListener('resize', updatePosition);
     window.addEventListener('scroll', updatePosition, true);
     
-    // Also update on any animation/transition
-    const intervalId = setInterval(updatePosition, 100);
-    setTimeout(() => clearInterval(intervalId), 500);
+    // Also update frequently for reliable positioning
+    const intervalId = setInterval(updatePosition, 50);
     
     return () => {
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition, true);
       clearInterval(intervalId);
     };
-  }, [isVisible, position, isMounted]);
+  }, [isVisible, position, isMounted, query, inputRef, parentRef]);
 
   // Get suggestions based on module and query
   const suggestions = useMemo(() => {
@@ -140,9 +150,8 @@ export default function SearchSuggestions({
     // Get module-specific templates - this is critical for module-specific suggestions
     const questionTemplates = getSuggestionsByModule(moduleId);
     
-    if (!questionTemplates || Object.keys(questionTemplates).length === 0) {
-      console.warn(`No suggestion templates found for module: ${moduleId}`);
-    }
+    // Debug logging
+    console.log(`[SearchSuggestions] Module: ${moduleId}, Query: "${query}", Templates available:`, Object.keys(questionTemplates));
     
     // Search ALL templates and match against text content
     Object.entries(questionTemplates).forEach(([key, templates]) => {
@@ -201,6 +210,8 @@ export default function SearchSuggestions({
       });
     }
 
+    console.log(`[SearchSuggestions] Found ${matches.length} suggestions for "${query}" in module ${moduleId}`);
+
     // Limit and dedupe
     const seen = new Set<string>();
     return matches
@@ -219,27 +230,29 @@ export default function SearchSuggestions({
   }, [onSelect]);
 
   // Don't render if not visible or no suggestions
-  if (!isVisible || suggestions.length === 0 || !isMounted) {
-    return <div ref={containerRef} className="hidden" aria-hidden="true" />;
+  if (!isVisible || suggestions.length === 0 || !isMounted || !portalPosition) {
+    return null;
   }
 
   const dropdownContent = (
     <div 
+      ref={dropdownRef}
       className="bg-popover border border-border rounded-lg shadow-xl overflow-hidden"
-      style={portalPosition ? {
+      style={{
         position: 'fixed',
-        top: position === 'top' ? (portalPosition.top - 8) : portalPosition.top,
+        top: position === 'top' ? portalPosition.top - 8 : portalPosition.top + 4,
         left: portalPosition.left,
-        width: portalPosition.width,
-        transform: position === 'top' ? 'translateY(-100%)' : 'translateY(4px)',
+        width: Math.max(portalPosition.width, 400),
+        transform: position === 'top' ? 'translateY(-100%)' : 'translateY(0)',
         zIndex: 99999,
-      } : undefined}
+        maxWidth: '90vw',
+      }}
       onMouseDown={(e) => e.preventDefault()} // Prevent blur on container click
     >
       <div className="p-2 border-b border-border/50 bg-secondary/30">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Sparkles className="h-3 w-3 text-primary" />
-          <span>AI-powered suggestions for {moduleId}</span>
+          <span>AI suggestions for <strong className="text-foreground">{moduleDisplayNames[moduleId] || moduleId}</strong></span>
         </div>
       </div>
       <ul className="py-1 max-h-[300px] overflow-y-auto">
@@ -261,11 +274,11 @@ export default function SearchSuggestions({
                 "h-4 w-4 flex-shrink-0",
                 suggestion.highlight ? "text-primary" : "text-muted-foreground"
               )} />
-              <span className="text-sm text-foreground">
+              <span className="text-sm text-foreground flex-1">
                 {highlightMatch(suggestion.text, query)}
               </span>
               {suggestion.highlight && (
-                <span className="ml-auto text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">
                   Popular
                 </span>
               )}
@@ -282,12 +295,7 @@ export default function SearchSuggestions({
   );
 
   // Use portal to escape any overflow:hidden containers
-  return (
-    <>
-      <div ref={containerRef} className="absolute inset-0 pointer-events-none" aria-hidden="true" />
-      {portalPosition && createPortal(dropdownContent, document.body)}
-    </>
-  );
+  return createPortal(dropdownContent, document.body);
 }
 
 // Helper to escape special regex characters
