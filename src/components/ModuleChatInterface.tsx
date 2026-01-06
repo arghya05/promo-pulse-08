@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Module } from '@/lib/data/modules';
 import { ModuleQuestion } from '@/lib/data/module-questions';
 import { ModuleKPI } from '@/lib/data/module-kpis';
@@ -104,7 +104,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
   const [selectedTimePeriod, setSelectedTimePeriod] = useState<string>('last_quarter');
   const [isExpanded, setIsExpanded] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [textareaElement, setTextareaElement] = useState<HTMLTextAreaElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputContainerRef = useRef<HTMLDivElement>(null);
@@ -858,7 +858,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
             <div className="relative flex items-end gap-2 overflow-visible" ref={inputContainerRef}>
               <div className="flex-1 relative overflow-visible">
                 <textarea
-                  ref={(el) => setTextareaElement(el)}
+                  ref={textareaRef}
                   value={input}
                   onChange={(e) => {
                     setInput(e.target.value);
@@ -902,7 +902,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
                   persona={persona}
                   moduleId={module.id}
                   position="top"
-                  inputElement={textareaElement}
+                  inputElement={textareaRef.current}
                 />
               </div>
               <Button onClick={() => { setShowSuggestions(false); handleSend(input); }} disabled={isLoading || !input.trim()} className="h-11">
