@@ -11,15 +11,18 @@ interface SearchSuggestionsProps {
   persona: string;
   moduleId?: string;
   position?: 'bottom' | 'top';
-  inputRef?: React.RefObject<HTMLElement>;
-  parentRef?: React.RefObject<HTMLElement>;
+  inputElement?: HTMLTextAreaElement | HTMLInputElement | null;
 }
 
-// Persona-specific category suggestions
-const personaCategorySuggestions: Record<string, string[]> = {
-  executive: ["across all categories", "for consumables vs non-consumables", "by division"],
-  consumables: ["for Dairy", "for Beverages", "for Snacks", "for Bakery", "for Pantry", "for Frozen", "for Produce"],
-  non_consumables: ["for Personal Care", "for Home Care", "for Soap products", "for Cleaning products"],
+// Module display names for UI
+const moduleDisplayNames: Record<string, string> = {
+  'executive': 'Executive',
+  'pricing': 'Pricing',
+  'supply-chain': 'Supply Chain',
+  'demand': 'Demand Forecasting',
+  'assortment': 'Assortment',
+  'space': 'Space Planning',
+  'promotion': 'Promotion'
 };
 
 // Module-specific smart suffixes for dynamic suggestions
@@ -33,90 +36,42 @@ const moduleSmartSuffixes: Record<string, string[]> = {
   'promotion': ['by ROI', 'by month', 'by quarter', 'by category', 'trends', 'forecast']
 };
 
-// Module display names for UI
-const moduleDisplayNames: Record<string, string> = {
-  'executive': 'Executive',
-  'pricing': 'Pricing',
-  'supply-chain': 'Supply Chain',
-  'demand': 'Demand Forecasting',
-  'assortment': 'Assortment',
-  'space': 'Space Planning',
-  'promotion': 'Promotion'
-};
-
 export default function SearchSuggestions({ 
   query, 
   onSelect, 
   isVisible, 
   persona, 
   moduleId = 'promotion', 
-  position = 'bottom',
-  inputRef,
-  parentRef
+  position = 'top',
+  inputElement
 }: SearchSuggestionsProps) {
   const [portalPosition, setPortalPosition] = useState<{ top: number; left: number; width: number } | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Ensure we're mounted before using portal
+  // Update portal position based on input element
   useEffect(() => {
-    setIsMounted(true);
-    return () => setIsMounted(false);
-  }, []);
-  
-  // Update portal position based on parent input element
-  useEffect(() => {
-    if (!isVisible || !isMounted) {
+    if (!isVisible || !inputElement) {
       setPortalPosition(null);
       return;
     }
     
     const updatePosition = () => {
-      // Try to find the input element - prefer inputRef, then parentRef, then search the DOM
-      let targetElement: HTMLElement | null = null;
+      if (!inputElement) return;
       
-      if (inputRef?.current) {
-        targetElement = inputRef.current;
-      } else if (parentRef?.current) {
-        // Search for textarea or input within parentRef
-        targetElement = parentRef.current.querySelector('textarea, input') as HTMLElement;
-      }
+      const rect = inputElement.getBoundingClientRect();
       
-      // Fallback: find the focused textarea/input
-      if (!targetElement) {
-        const activeElement = document.activeElement;
-        if (activeElement && (activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT')) {
-          targetElement = activeElement as HTMLElement;
-        }
-      }
-      
-      if (!targetElement) {
-        // Last resort: find any visible textarea with matching value
-        const textareas = document.querySelectorAll('textarea');
-        for (const ta of textareas) {
-          if (ta.value && ta.value.toLowerCase().includes(query.toLowerCase().substring(0, 3))) {
-            targetElement = ta;
-            break;
-          }
-        }
-      }
-      
-      if (targetElement) {
-        const rect = targetElement.getBoundingClientRect();
-        
-        if (position === 'top') {
-          setPortalPosition({
-            top: rect.top,
-            left: rect.left,
-            width: rect.width
-          });
-        } else {
-          setPortalPosition({
-            top: rect.bottom,
-            left: rect.left,
-            width: rect.width
-          });
-        }
+      if (position === 'top') {
+        setPortalPosition({
+          top: rect.top,
+          left: rect.left,
+          width: rect.width
+        });
+      } else {
+        setPortalPosition({
+          top: rect.bottom,
+          left: rect.left,
+          width: rect.width
+        });
       }
     };
     
@@ -127,15 +82,15 @@ export default function SearchSuggestions({
     window.addEventListener('resize', updatePosition);
     window.addEventListener('scroll', updatePosition, true);
     
-    // Also update frequently for reliable positioning
-    const intervalId = setInterval(updatePosition, 50);
+    // Keep updating position for reliable alignment
+    const intervalId = setInterval(updatePosition, 100);
     
     return () => {
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition, true);
       clearInterval(intervalId);
     };
-  }, [isVisible, position, isMounted, query, inputRef, parentRef]);
+  }, [isVisible, position, inputElement]);
 
   // Get suggestions based on module and query
   const suggestions = useMemo(() => {
@@ -147,11 +102,8 @@ export default function SearchSuggestions({
     
     let matches: Array<{ text: string; icon: any; highlight: boolean }> = [];
     
-    // Get module-specific templates - this is critical for module-specific suggestions
+    // Get module-specific templates
     const questionTemplates = getSuggestionsByModule(moduleId);
-    
-    // Debug logging
-    console.log(`[SearchSuggestions] Module: ${moduleId}, Query: "${query}", Templates available:`, Object.keys(questionTemplates));
     
     // Search ALL templates and match against text content
     Object.entries(questionTemplates).forEach(([key, templates]) => {
@@ -169,7 +121,6 @@ export default function SearchSuggestions({
         const wordsMatchText = words.some(word => word.length > 1 && lowerText.includes(word));
         
         if (keyMatches || textMatchesQuery || wordsMatchText) {
-          // Avoid duplicates
           if (!matches.find(m => m.text === text)) {
             matches.push({ 
               text, 
@@ -181,7 +132,7 @@ export default function SearchSuggestions({
       });
     });
 
-    // Sort by relevance: exact matches first, then partial matches
+    // Sort by relevance
     matches.sort((a, b) => {
       const aExact = a.text.toLowerCase().includes(lowerQuery);
       const bExact = b.text.toLowerCase().includes(lowerQuery);
@@ -190,27 +141,13 @@ export default function SearchSuggestions({
       return a.highlight === b.highlight ? 0 : a.highlight ? -1 : 1;
     });
 
-    // Add persona-specific variations for top matches
-    const categoryVariations = personaCategorySuggestions[persona as keyof typeof personaCategorySuggestions] || [];
-    if (matches.length > 0 && matches.length < 6) {
-      const baseQuestion = matches[0].text;
-      categoryVariations.slice(0, 2).forEach(cat => {
-        const variation = `${baseQuestion} ${cat}`;
-        if (!matches.find(m => m.text === variation)) {
-          matches.push({ text: variation, icon: Package, highlight: false });
-        }
-      });
-    }
-
-    // If no template matches, generate module-specific smart suggestions based on query
+    // If no template matches, generate module-specific smart suggestions
     if (matches.length === 0) {
       const suffixes = moduleSmartSuffixes[moduleId] || moduleSmartSuffixes['promotion'];
       suffixes.slice(0, 4).forEach(suffix => {
         matches.push({ text: `${query} ${suffix}`, icon: Sparkles, highlight: false });
       });
     }
-
-    console.log(`[SearchSuggestions] Found ${matches.length} suggestions for "${query}" in module ${moduleId}`);
 
     // Limit and dedupe
     const seen = new Set<string>();
@@ -222,15 +159,15 @@ export default function SearchSuggestions({
         return true;
       })
       .slice(0, 8);
-  }, [query, persona, moduleId]);
+  }, [query, moduleId]);
 
-  // Handle selection with mousedown to fire before blur
+  // Handle selection
   const handleSelect = useCallback((suggestion: string) => {
     onSelect(suggestion);
   }, [onSelect]);
 
   // Don't render if not visible or no suggestions
-  if (!isVisible || suggestions.length === 0 || !isMounted || !portalPosition) {
+  if (!isVisible || suggestions.length === 0 || !portalPosition) {
     return null;
   }
 
@@ -247,7 +184,7 @@ export default function SearchSuggestions({
         zIndex: 99999,
         maxWidth: '90vw',
       }}
-      onMouseDown={(e) => e.preventDefault()} // Prevent blur on container click
+      onMouseDown={(e) => e.preventDefault()}
     >
       <div className="p-2 border-b border-border/50 bg-secondary/30">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -265,7 +202,7 @@ export default function SearchSuggestions({
                 suggestion.highlight && "bg-primary/5"
               )}
               onMouseDown={(e) => {
-                e.preventDefault(); // Prevent blur
+                e.preventDefault();
                 e.stopPropagation();
                 handleSelect(suggestion.text);
               }}
@@ -294,7 +231,6 @@ export default function SearchSuggestions({
     </div>
   );
 
-  // Use portal to escape any overflow:hidden containers
   return createPortal(dropdownContent, document.body);
 }
 
