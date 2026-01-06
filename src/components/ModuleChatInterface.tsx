@@ -866,7 +866,16 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
                     e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
                   }}
                   onFocus={() => setShowSuggestions(input.length >= 2)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  onBlur={(e) => {
+                    // Only hide suggestions if not clicking on suggestion dropdown
+                    // The dropdown uses onMouseDown with preventDefault to keep focus
+                    setTimeout(() => {
+                      // Check if document.activeElement is still the textarea
+                      if (document.activeElement !== e.target) {
+                        setShowSuggestions(false);
+                      }
+                    }, 300);
+                  }}
                   placeholder={conversationContext.lastCategory 
                     ? `Continue asking about ${conversationContext.lastCategory}...` 
                     : chatContent.placeholder}
