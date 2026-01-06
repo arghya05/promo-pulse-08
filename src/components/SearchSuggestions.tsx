@@ -50,15 +50,32 @@ export default function SearchSuggestions({
 
   // Update portal position based on input element
   useEffect(() => {
-    if (!isVisible || !inputElement) {
+    if (!isVisible) {
       setPortalPosition(null);
       return;
     }
+
+    // Find the input element - use provided element, or fall back to finding it
+    const findInputElement = (): HTMLElement | null => {
+      if (inputElement) return inputElement;
+      
+      // Try to find focused input or textarea
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+        return activeEl as HTMLElement;
+      }
+      
+      return null;
+    };
     
     const updatePosition = () => {
-      if (!inputElement) return;
+      const el = findInputElement();
+      if (!el) {
+        setPortalPosition(null);
+        return;
+      }
       
-      const rect = inputElement.getBoundingClientRect();
+      const rect = el.getBoundingClientRect();
       
       if (position === 'top') {
         setPortalPosition({
@@ -75,8 +92,8 @@ export default function SearchSuggestions({
       }
     };
     
-    // Initial update
-    updatePosition();
+    // Initial update with slight delay to ensure element is mounted
+    const initialTimeout = setTimeout(updatePosition, 10);
     
     // Update on resize and scroll
     window.addEventListener('resize', updatePosition);
@@ -86,6 +103,7 @@ export default function SearchSuggestions({
     const intervalId = setInterval(updatePosition, 100);
     
     return () => {
+      clearTimeout(initialTimeout);
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition, true);
       clearInterval(intervalId);
