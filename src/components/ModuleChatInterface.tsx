@@ -104,9 +104,9 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
   const [selectedTimePeriod, setSelectedTimePeriod] = useState<string>('last_quarter');
   const [isExpanded, setIsExpanded] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [textareaElement, setTextareaElement] = useState<HTMLTextAreaElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const textareaContainerRef = useRef<HTMLDivElement>(null);
   const inputContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const Icon = module.icon;
@@ -856,8 +856,9 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
           {/* Input Area */}
           <div className="p-4 border-t relative z-50 overflow-visible">
             <div className="relative flex items-end gap-2 overflow-visible" ref={inputContainerRef}>
-              <div className="flex-1 relative overflow-visible" ref={textareaContainerRef}>
+              <div className="flex-1 relative overflow-visible">
                 <textarea
+                  ref={(el) => setTextareaElement(el)}
                   value={input}
                   onChange={(e) => {
                     setInput(e.target.value);
@@ -867,11 +868,11 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
                     e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
                   }}
                   onFocus={() => setShowSuggestions(input.length >= 2)}
-                  onBlur={(e) => {
+                  onBlur={() => {
                     // Delay hiding to allow click on suggestions
                     setTimeout(() => {
                       setShowSuggestions(false);
-                    }, 200);
+                    }, 250);
                   }}
                   placeholder={conversationContext.lastCategory 
                     ? `Continue asking about ${conversationContext.lastCategory}...` 
@@ -901,7 +902,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
                   persona={persona}
                   moduleId={module.id}
                   position="top"
-                  parentRef={textareaContainerRef}
+                  inputElement={textareaElement}
                 />
               </div>
               <Button onClick={() => { setShowSuggestions(false); handleSend(input); }} disabled={isLoading || !input.trim()} className="h-11">
