@@ -46,19 +46,25 @@ export default function SearchSuggestions({
   inputElement
 }: SearchSuggestionsProps) {
   const [portalPosition, setPortalPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [useInlineMode, setUseInlineMode] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Update portal position based on input element - robust multi-strategy approach
   useEffect(() => {
     if (!isVisible) {
       setPortalPosition(null);
+      setUseInlineMode(false);
       return;
     }
 
-    // Multi-strategy element finder - most reliable first
+    let attemptCount = 0;
+    const maxAttempts = 10;
+
+    // Multi-strategy element finder with logging
     const findInputElement = (): HTMLElement | null => {
       // Strategy 1: Use provided inputElement if valid and in DOM
-      if (inputElement && inputElement.isConnected) {
+      if (inputElement && document.body.contains(inputElement)) {
         return inputElement;
       }
       
@@ -68,31 +74,36 @@ export default function SearchSuggestions({
         return activeEl as HTMLElement;
       }
       
-      // Strategy 3: Find any visible textarea or input in the chat/classic view containers
-      const containers = document.querySelectorAll('[class*="border-t"], [class*="CardContent"]');
-      for (const container of containers) {
+      // Strategy 3: Find textarea in the input area with border-t class (Chat Assistant input)
+      const chatInputArea = document.querySelector('.border-t textarea:not([disabled])') as HTMLElement;
+      if (chatInputArea && chatInputArea.offsetParent !== null) {
+        return chatInputArea;
+      }
+      
+      // Strategy 4: Find textarea in relative overflow-visible container
+      const relativeContainers = document.querySelectorAll('.relative.overflow-visible');
+      for (const container of relativeContainers) {
         const textarea = container.querySelector('textarea:not([disabled])') as HTMLElement;
         if (textarea && textarea.offsetParent !== null) {
           return textarea;
         }
-        const input = container.querySelector('input[type="text"]:not([disabled]), input:not([type]):not([disabled])') as HTMLElement;
-        if (input && input.offsetParent !== null) {
-          return input;
-        }
       }
       
-      // Strategy 4: Find any visible textarea or input on the page
+      // Strategy 5: Find any visible textarea on the page
       const allTextareas = document.querySelectorAll('textarea:not([disabled])');
       for (const el of allTextareas) {
-        if ((el as HTMLElement).offsetParent !== null) {
-          return el as HTMLElement;
+        const htmlEl = el as HTMLElement;
+        if (htmlEl.offsetParent !== null && htmlEl.offsetWidth > 0) {
+          return htmlEl;
         }
       }
       
+      // Strategy 6: Find any visible text input on the page
       const allInputs = document.querySelectorAll('input[type="text"]:not([disabled]), input:not([type]):not([disabled])');
       for (const el of allInputs) {
-        if ((el as HTMLElement).offsetParent !== null) {
-          return el as HTMLElement;
+        const htmlEl = el as HTMLElement;
+        if (htmlEl.offsetParent !== null && htmlEl.offsetWidth > 0) {
+          return htmlEl;
         }
       }
       
@@ -100,9 +111,14 @@ export default function SearchSuggestions({
     };
     
     const updatePosition = () => {
+      attemptCount++;
       const el = findInputElement();
+      
       if (!el) {
-        // Don't clear position immediately - might just be a timing issue
+        // After several failed attempts, switch to inline mode as fallback
+        if (attemptCount >= maxAttempts && isVisible) {
+          setUseInlineMode(true);
+        }
         return;
       }
       
@@ -112,6 +128,8 @@ export default function SearchSuggestions({
       if (rect.width === 0 || rect.height === 0) {
         return;
       }
+      
+      setUseInlineMode(false);
       
       if (position === 'top') {
         setPortalPosition({
@@ -131,9 +149,15 @@ export default function SearchSuggestions({
     // Run immediately
     updatePosition();
     
-    // Also run after a short delay to catch late-mounting elements
-    const initialTimeout = setTimeout(updatePosition, 50);
-    const secondTimeout = setTimeout(updatePosition, 150);
+    // Multiple delayed attempts to catch late-mounting elements
+    const timeouts = [
+      setTimeout(updatePosition, 0),
+      setTimeout(updatePosition, 16),
+      setTimeout(updatePosition, 50),
+      setTimeout(updatePosition, 100),
+      setTimeout(updatePosition, 200),
+      setTimeout(updatePosition, 300),
+    ];
     
     // Update on resize and scroll
     window.addEventListener('resize', updatePosition);
@@ -143,8 +167,7 @@ export default function SearchSuggestions({
     const intervalId = setInterval(updatePosition, 100);
     
     return () => {
-      clearTimeout(initialTimeout);
-      clearTimeout(secondTimeout);
+      timeouts.forEach(clearTimeout);
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition, true);
       clearInterval(intervalId);
@@ -174,17 +197,18 @@ export default function SearchSuggestions({
         const text = template.text.replace("{n}", "5");
         const lowerText = text.toLowerCase();
         
-        // Match if: key matches, OR any query word is found in the text, OR text contains the full query
-        const keyMatches = key.startsWith(firstWord) || lowerQuery.includes(key);
+        // Match if: key starts with query, OR query starts with key, OR text contains query words
+        const keyMatchesQuery = key.startsWith(firstWord);
+        const queryStartsWithKey = firstWord.startsWith(key);
         const textMatchesQuery = lowerText.includes(lowerQuery);
         const wordsMatchText = words.some(word => word.length > 1 && lowerText.includes(word));
         
-        if (keyMatches || textMatchesQuery || wordsMatchText) {
+        if (keyMatchesQuery || queryStartsWithKey || textMatchesQuery || wordsMatchText) {
           if (!matches.find(m => m.text === text)) {
             matches.push({ 
               text, 
               icon: template.icon || Sparkles, 
-              highlight: keyMatches || textMatchesQuery 
+              highlight: keyMatchesQuery || textMatchesQuery 
             });
           }
         }
@@ -226,15 +250,16 @@ export default function SearchSuggestions({
   }, [onSelect]);
 
   // Don't render if not visible or no suggestions
-  if (!isVisible || suggestions.length === 0 || !portalPosition) {
+  if (!isVisible || suggestions.length === 0) {
     return null;
   }
 
+  // Build dropdown content
   const dropdownContent = (
     <div 
       ref={dropdownRef}
       className="bg-popover border border-border rounded-lg shadow-xl overflow-hidden"
-      style={{
+      style={portalPosition ? {
         position: 'fixed',
         top: position === 'top' ? portalPosition.top - 8 : portalPosition.top + 4,
         left: portalPosition.left,
@@ -242,7 +267,7 @@ export default function SearchSuggestions({
         transform: position === 'top' ? 'translateY(-100%)' : 'translateY(0)',
         zIndex: 99999,
         maxWidth: '90vw',
-      }}
+      } : undefined}
       onMouseDown={(e) => e.preventDefault()}
     >
       <div className="p-2 border-b border-border/50 bg-secondary/30">
@@ -290,7 +315,65 @@ export default function SearchSuggestions({
     </div>
   );
 
-  return createPortal(dropdownContent, document.body);
+  // Use portal if we have position, otherwise render inline with absolute positioning
+  if (portalPosition) {
+    return createPortal(dropdownContent, document.body);
+  }
+  
+  // Fallback: render inline with absolute positioning (relative to parent container)
+  if (useInlineMode) {
+    return (
+      <div 
+        ref={containerRef}
+        className="absolute left-0 right-0 bg-popover border border-border rounded-lg shadow-xl overflow-hidden"
+        style={{
+          bottom: position === 'top' ? '100%' : undefined,
+          top: position === 'bottom' ? '100%' : undefined,
+          marginBottom: position === 'top' ? '8px' : undefined,
+          marginTop: position === 'bottom' ? '4px' : undefined,
+          zIndex: 99999,
+          minWidth: '400px',
+        }}
+        onMouseDown={(e) => e.preventDefault()}
+      >
+        <div className="p-2 border-b border-border/50 bg-secondary/30">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Sparkles className="h-3 w-3 text-primary" />
+            <span>AI suggestions for <strong className="text-foreground">{moduleDisplayNames[moduleId] || moduleId}</strong></span>
+          </div>
+        </div>
+        <ul className="py-1 max-h-[300px] overflow-y-auto">
+          {suggestions.map((suggestion, idx) => (
+            <li key={`inline-${moduleId}-${idx}`}>
+              <button
+                type="button"
+                className={cn(
+                  "w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-accent transition-colors cursor-pointer",
+                  suggestion.highlight && "bg-primary/5"
+                )}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSelect(suggestion.text);
+                }}
+              >
+                <suggestion.icon className={cn(
+                  "h-4 w-4 flex-shrink-0",
+                  suggestion.highlight ? "text-primary" : "text-muted-foreground"
+                )} />
+                <span className="text-sm text-foreground flex-1">
+                  {highlightMatch(suggestion.text, query)}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  // Still waiting for position - render nothing briefly
+  return null;
 }
 
 // Helper to escape special regex characters
