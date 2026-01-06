@@ -48,14 +48,32 @@ const extractKeyMetric = (data: any): ExecutiveBrief['keyMetric'] => {
   if (data?.kpis) {
     const kpiEntries = Object.entries(data.kpis);
     if (kpiEntries.length > 0) {
-      const [key, value] = kpiEntries[0];
-      const numValue = typeof value === 'number' ? value : parseFloat(String(value).replace(/[^0-9.-]/g, ''));
-      const trend = numValue >= 0 ? 'up' : 'down';
+      const [key, rawValue] = kpiEntries[0];
+      
+      // Handle KPI that could be an object {value, trend, status} or a primitive
+      let actualValue: any;
+      let kpiTrend: 'up' | 'down' | 'neutral' = 'neutral';
+      
+      if (rawValue && typeof rawValue === 'object' && 'value' in rawValue) {
+        // It's an object with a value property
+        actualValue = (rawValue as any).value;
+        const objTrend = (rawValue as any).trend;
+        if (objTrend === 'up' || objTrend === 'positive') kpiTrend = 'up';
+        else if (objTrend === 'down' || objTrend === 'negative') kpiTrend = 'down';
+      } else {
+        actualValue = rawValue;
+      }
+      
+      const numValue = typeof actualValue === 'number' ? actualValue : parseFloat(String(actualValue).replace(/[^0-9.-]/g, ''));
+      if (kpiTrend === 'neutral') {
+        kpiTrend = numValue >= 0 ? 'up' : 'down';
+      }
+      
       return {
         label: formatKpiLabel(key),
-        value: formatKpiValue(key, value),
-        trend: trend as 'up' | 'down',
-        change: numValue >= 0 ? `+${Math.abs(numValue).toFixed(1)}%` : `${numValue.toFixed(1)}%`
+        value: formatKpiValue(key, actualValue),
+        trend: kpiTrend,
+        change: isNaN(numValue) ? undefined : (numValue >= 0 ? `+${Math.abs(numValue).toFixed(1)}%` : `${numValue.toFixed(1)}%`)
       };
     }
   }
@@ -94,9 +112,22 @@ const formatKpiLabel = (key: string): string => {
 
 // Format KPI value
 const formatKpiValue = (key: string, value: any): string => {
-  const numValue = typeof value === 'number' ? value : parseFloat(String(value).replace(/[^0-9.-]/g, ''));
+  // Handle object values - extract the actual value
+  let actualValue = value;
+  if (value && typeof value === 'object') {
+    if ('value' in value) actualValue = value.value;
+    else return 'N/A'; // Unknown object format
+  }
   
-  if (isNaN(numValue)) return String(value);
+  // Handle string values that are already formatted
+  if (typeof actualValue === 'string') {
+    // Already a formatted string like "$1.2M" or "80 orders"
+    return actualValue;
+  }
+  
+  const numValue = typeof actualValue === 'number' ? actualValue : parseFloat(String(actualValue).replace(/[^0-9.-]/g, ''));
+  
+  if (isNaN(numValue)) return String(actualValue);
   
   const lowerKey = key.toLowerCase();
   
