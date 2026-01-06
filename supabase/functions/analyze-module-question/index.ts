@@ -11430,6 +11430,13 @@ function enforceQuestionTypeAlignment(
   }
   
   // ═══════════════════════════════════════════════════════════════════════════
+  // UNIVERSAL CLASSIFICATION ENFORCEMENT: Ensure response matches question category
+  // Classifies question into 1 of 15 categories and enforces mandatory content
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  response = validateAndEnforceClassification(response, question, moduleId, data);
+  
+  // ═══════════════════════════════════════════════════════════════════════════
   // WOW FACTOR ENHANCEMENT: Ensure depth, breadth, and executive-level insights
   // This is the FINAL layer to guarantee every answer has impact
   // ═══════════════════════════════════════════════════════════════════════════
