@@ -12730,15 +12730,37 @@ function validateAndEnforceClassification(
   const hasCausalLanguage = /driven by|due to|because|caused by|resulting/i.test(allText);
   const hasActionLanguage = /→|should|increase|decrease|focus|prioritize/i.test(allText);
   
-  const qualityScore = [hasSpecificNumbers, hasEntityNames, hasCausalLanguage, hasActionLanguage]
-    .filter(Boolean).length / 4;
+  // CATEGORY-SPECIFIC VALIDATION: Check if response actually contains category-relevant content
+  let hasCategoryRelevantContent = true;
   
-  console.log(`[${moduleId}] Quality score: ${(qualityScore * 100).toFixed(0)}% (Numbers: ${hasSpecificNumbers}, Entities: ${hasEntityNames}, Causal: ${hasCausalLanguage}, Action: ${hasActionLanguage})`);
+  if (category === 'COMPETITIVE_MARKET') {
+    // Competitive questions MUST mention competitor names, market share, or price gaps
+    const hasCompetitorContent = /competitor|walmart|kroger|target|costco|aldi|market\s*share|price\s*gap|competitive/i.test(allText);
+    hasCategoryRelevantContent = hasCompetitorContent;
+    console.log(`[${moduleId}] COMPETITIVE_MARKET check: hasCompetitorContent=${hasCompetitorContent}`);
+  } else if (category === 'RANKING_TOP_BOTTOM') {
+    // Ranking questions must have ranked items
+    const hasRankedContent = /#\d|top\s*\d|bottom\s*\d|rank|1st|2nd|3rd/i.test(allText);
+    hasCategoryRelevantContent = hasRankedContent;
+  } else if (category === 'FORECAST_PREDICTION') {
+    // Forecast questions must mention time periods and predictions
+    const hasForecastContent = /week|month|quarter|forecast|predict|expect|outlook/i.test(allText);
+    hasCategoryRelevantContent = hasForecastContent;
+  } else if (category === 'WHY_CAUSAL_ANALYSIS') {
+    // Why questions must have causal analysis
+    const hasCausalContent = /driver|cause|factor|correl|impact|because/i.test(allText);
+    hasCategoryRelevantContent = hasCausalContent;
+  }
   
-  // If quality is below threshold, generate mandatory content
+  const qualityScore = [hasSpecificNumbers, hasEntityNames, hasCausalLanguage, hasActionLanguage, hasCategoryRelevantContent]
+    .filter(Boolean).length / 5;
+  
+  console.log(`[${moduleId}] Quality score: ${(qualityScore * 100).toFixed(0)}% (Numbers: ${hasSpecificNumbers}, Entities: ${hasEntityNames}, Causal: ${hasCausalLanguage}, Action: ${hasActionLanguage}, CategoryRelevant: ${hasCategoryRelevantContent})`);
+  
+  // If quality is below threshold OR missing category-relevant content, generate mandatory content
   const QUALITY_THRESHOLD = 0.5;
-  if (qualityScore < QUALITY_THRESHOLD) {
-    console.log(`[${moduleId}] ⚠️ Below threshold (${(qualityScore * 100).toFixed(0)}% < ${QUALITY_THRESHOLD * 100}%) — ENFORCING MANDATORY CONTENT for ${category}`);
+  if (qualityScore < QUALITY_THRESHOLD || !hasCategoryRelevantContent) {
+    console.log(`[${moduleId}] ⚠️ Below threshold (${(qualityScore * 100).toFixed(0)}% < ${QUALITY_THRESHOLD * 100}%) OR missing category content — ENFORCING MANDATORY CONTENT for ${category}`);
     response = categoryDef.generateMandatoryContent(question, moduleId, data, response);
     console.log(`[${moduleId}] ✓ Mandatory content generated for ${category}`);
   } else {
