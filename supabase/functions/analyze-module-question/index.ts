@@ -7127,6 +7127,15 @@ CONVERSATION AWARENESS (light context):
     // Pass category filter when analyzing a specific category
     const categoryFilter = (hierarchyAnalysis.level === 'category' && hierarchyAnalysis.entityName) ? hierarchyAnalysis.entityName : undefined;
     const calculatedKPIs = calculateActualKPIs(moduleId, transactions, products, stores, selectedKPIs || [], categoryFilter, inventoryLevels, customers);
+    
+    // CRITICAL: Add competitor data to calculatedKPIs for competitor question handling
+    if (competitorData && competitorData.length > 0) {
+      calculatedKPIs.competitorData = competitorData;
+    }
+    if (competitorPrices && competitorPrices.length > 0) {
+      calculatedKPIs.competitorPrices = competitorPrices;
+    }
+    
     console.log(`[${moduleId}] Calculated KPIs:`, JSON.stringify(calculatedKPIs));
 
     // Verify and clean response to prevent hallucination, injecting calculated KPIs
