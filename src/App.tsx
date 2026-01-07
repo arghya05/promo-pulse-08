@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import ValidationDashboard from "./pages/ValidationDashboard";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/demand" element={<ProtectedRoute><Index moduleId="demand" /></ProtectedRoute>} />
             <Route path="/supply-chain" element={<ProtectedRoute><Index moduleId="supply-chain" /></ProtectedRoute>} />
             <Route path="/space" element={<ProtectedRoute><Index moduleId="space" /></ProtectedRoute>} />
+            <Route path="/validation" element={<ProtectedRoute><ValidationDashboard /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

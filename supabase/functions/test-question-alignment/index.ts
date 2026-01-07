@@ -720,6 +720,210 @@ const testCases: TestCase[] = [
       { type: 'noEmpty', field: 'why' },
     ]
   },
+
+  // ========== OUT-OF-SHELF / STOCKOUT TESTS ==========
+  {
+    id: 'oos-rate-basic',
+    question: "What's our out-of-shelf rate?",
+    moduleId: 'demand',
+    persona: 'executive',
+    expectedPattern: 'out_of_shelf',
+    validations: [
+      { type: 'noEmpty', field: 'chartData' },
+      { type: 'noEmpty', field: 'whatHappened' },
+      { type: 'textContains', field: 'whatHappened', expectedValue: '%' },
+    ]
+  },
+  {
+    id: 'oos-by-category',
+    question: 'Show out-of-shelf rate by category',
+    moduleId: 'demand',
+    persona: 'executive',
+    expectedPattern: 'out_of_shelf',
+    validations: [
+      { type: 'chartDataCount', minCount: 2 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+  {
+    id: 'stockout-risk',
+    question: 'Which products are at stockout risk?',
+    moduleId: 'demand',
+    persona: 'executive',
+    expectedPattern: 'out_of_shelf',
+    validations: [
+      { type: 'chartDataCount', minCount: 1 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+  {
+    id: 'oos-abbreviation',
+    question: "What's the OOS rate?",
+    moduleId: 'supply-chain',
+    persona: 'executive',
+    expectedPattern: 'out_of_shelf',
+    validations: [
+      { type: 'noEmpty', field: 'whatHappened' },
+      { type: 'textContains', field: 'whatHappened', expectedValue: '%' },
+    ]
+  },
+  {
+    id: 'shelf-availability',
+    question: 'What is our shelf availability rate?',
+    moduleId: 'space',
+    persona: 'executive',
+    expectedPattern: 'out_of_shelf',
+    validations: [
+      { type: 'noEmpty', field: 'whatHappened' },
+    ]
+  },
+  {
+    id: 'fill-rate',
+    question: 'What is our fill rate?',
+    moduleId: 'supply-chain',
+    persona: 'executive',
+    expectedPattern: 'out_of_shelf',
+    validations: [
+      { type: 'noEmpty', field: 'whatHappened' },
+    ]
+  },
+  {
+    id: 'in-stock-rate',
+    question: 'What is the in-stock rate by store?',
+    moduleId: 'demand',
+    persona: 'executive',
+    expectedPattern: 'out_of_shelf',
+    validations: [
+      { type: 'chartDataCount', minCount: 1 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+  {
+    id: 'low-stock-items',
+    question: 'Show me low stock items',
+    moduleId: 'supply-chain',
+    persona: 'executive',
+    expectedPattern: 'out_of_shelf',
+    validations: [
+      { type: 'chartDataCount', minCount: 1 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+  {
+    id: 'replenishment-needs',
+    question: 'Which products need replenishment?',
+    moduleId: 'demand',
+    persona: 'executive',
+    expectedPattern: 'out_of_shelf',
+    validations: [
+      { type: 'chartDataCount', minCount: 1 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+
+  // ========== MUST-PASS QUESTIONS ==========
+  {
+    id: 'must-pass-assort-bottom-performers',
+    question: 'Identify bottom-performing SKUs for all categories in last 4 weeks',
+    moduleId: 'assortment',
+    persona: 'executive',
+    expectedPattern: 'ranking',
+    validations: [
+      { type: 'chartDataCount', minCount: 3 },
+      { type: 'noEmpty', field: 'chartData' },
+      { type: 'noEmpty', field: 'whatToDo' },
+    ]
+  },
+  {
+    id: 'must-pass-demand-forecast',
+    question: 'Generate demand forecast for next 4 weeks for all categories',
+    moduleId: 'demand',
+    persona: 'executive',
+    expectedPattern: 'forecast',
+    validations: [
+      { type: 'chartDataCount', minCount: 1 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+  {
+    id: 'must-pass-pricing-margin-decline',
+    question: 'Which categories had declining margins vs last quarter and why?',
+    moduleId: 'pricing',
+    persona: 'executive',
+    expectedPattern: 'why',
+    validations: [
+      { type: 'chartDataCount', minCount: 1 },
+      { type: 'noEmpty', field: 'why' },
+      { type: 'noEmpty', field: 'causalDrivers' },
+    ]
+  },
+  {
+    id: 'must-pass-promo-low-roi',
+    question: 'Analyze past promotions and identify low ROI / zero-margin promos for last quarter',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'ranking',
+    validations: [
+      { type: 'chartDataCount', minCount: 1 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+  {
+    id: 'must-pass-space-sales-sqft',
+    question: 'Which categories have highest sales per square foot?',
+    moduleId: 'space',
+    persona: 'executive',
+    expectedPattern: 'ranking',
+    validations: [
+      { type: 'chartDataCount', minCount: 3 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+  {
+    id: 'must-pass-supply-on-time',
+    question: 'Which suppliers have the best on-time delivery %, and what is the sales impact?',
+    moduleId: 'supply-chain',
+    persona: 'executive',
+    expectedPattern: 'ranking',
+    validations: [
+      { type: 'chartDataCount', minCount: 1 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+
+  // ========== EDGE CASES ==========
+  {
+    id: 'edge-empty-question',
+    question: 'Hello',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'greeting',
+    validations: [
+      { type: 'noEmpty', field: 'whatHappened' },
+    ]
+  },
+  {
+    id: 'edge-complex-multi-entity',
+    question: 'Compare Dairy vs Beverages vs Snacks by revenue and margin',
+    moduleId: 'promotion',
+    persona: 'executive',
+    expectedPattern: 'comparison',
+    validations: [
+      { type: 'chartDataCount', minCount: 3 },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
+  {
+    id: 'edge-specific-product',
+    question: 'What is the performance of Organic Whole Milk?',
+    moduleId: 'assortment',
+    persona: 'executive',
+    expectedPattern: 'specific',
+    validations: [
+      { type: 'noEmpty', field: 'whatHappened' },
+      { type: 'noEmpty', field: 'chartData' },
+    ]
+  },
 ];
 
 function validateResponse(testCase: TestCase, response: any): string[] {
