@@ -11985,6 +11985,135 @@ interface CategoryDefinition {
   generateMandatoryContent: (q: string, moduleId: string, data: AlignmentData, response: any) => any;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// CRITICAL: REAL DATA EXTRACTION HELPER
+// This function extracts ACTUAL data from calculatedKPIs to prevent hallucination
+// ALL category handlers MUST use this instead of Math.random()
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function getRealDataFromKPIs(data: AlignmentData): {
+  totalRevenue: number;
+  totalMargin: number;
+  avgMarginPct: number;
+  productCount: number;
+  topProducts: Array<{name: string; revenue: number; margin: number; marginPct: number}>;
+  bottomProducts: Array<{name: string; revenue: number; margin: number; marginPct: number}>;
+  categoryBreakdown: Array<{name: string; revenue: number; margin: number; marginPct: number; contribution: number}>;
+  storeBreakdown: Array<{name: string; revenue: number; margin: number; marginPct: number}>;
+  top10Contribution: number;
+} {
+  const kpis = data.calculatedKPIs || {};
+  
+  // Get actual revenue from multiple possible sources
+  const totalRevenue = Number(kpis.revenue_raw || kpis.totalRevenue || kpis.net_sales || 0) ||
+    (data.transactions || []).reduce((sum: number, t: any) => sum + Number(t.net_sales || t.total_amount || 0), 0);
+  
+  const totalMargin = Number(kpis.margin_raw || kpis.totalMargin || kpis.gross_margin || 0) ||
+    (data.transactions || []).reduce((sum: number, t: any) => sum + Number(t.margin || 0), 0);
+  
+  const avgMarginPct = totalRevenue > 0 ? (totalMargin / totalRevenue) * 100 : 32;
+  
+  // Get actual product count
+  const productCount = (data.products || []).length;
+  
+  // Get actual top products from calculatedKPIs or calculate from transactions
+  let topProducts = (kpis.topProducts || []).map((p: any) => ({
+    name: p.name || p.product_name || 'Unknown',
+    revenue: Number(p.revenue || 0),
+    margin: Number(p.margin || 0),
+    marginPct: Number(p.marginPct || p.margin_pct || 30)
+  }));
+  
+  let bottomProducts = (kpis.bottomProducts || []).map((p: any) => ({
+    name: p.name || p.product_name || 'Unknown',
+    revenue: Number(p.revenue || 0),
+    margin: Number(p.margin || 0),
+    marginPct: Number(p.marginPct || p.margin_pct || 20)
+  }));
+  
+  // If no pre-calculated products, calculate from transactions
+  if (topProducts.length === 0 && data.transactions?.length > 0) {
+    const productRevenue: Record<string, {revenue: number; margin: number; name: string}> = {};
+    data.transactions.forEach((t: any) => {
+      const sku = t.product_sku;
+      const name = t.product_name || data.products?.find((p: any) => p.product_sku === sku)?.product_name || sku;
+      if (!productRevenue[sku]) {
+        productRevenue[sku] = {revenue: 0, margin: 0, name};
+      }
+      productRevenue[sku].revenue += Number(t.net_sales || t.total_amount || 0);
+      productRevenue[sku].margin += Number(t.margin || 0);
+    });
+    
+    const sortedProducts = Object.values(productRevenue).sort((a, b) => b.revenue - a.revenue);
+    topProducts = sortedProducts.slice(0, 10).map(p => ({
+      ...p,
+      marginPct: p.revenue > 0 ? (p.margin / p.revenue) * 100 : 30
+    }));
+    bottomProducts = sortedProducts.slice(-10).reverse().map(p => ({
+      ...p,
+      marginPct: p.revenue > 0 ? (p.margin / p.revenue) * 100 : 20
+    }));
+  }
+  
+  // Get category breakdown
+  let categoryBreakdown = (kpis.categoryBreakdown || []).map((c: any) => ({
+    name: c.name || c.category || 'Unknown',
+    revenue: Number(c.revenue || 0),
+    margin: Number(c.margin || 0),
+    marginPct: Number(c.marginPct || c.margin_pct || 30),
+    contribution: 0
+  }));
+  
+  // If no pre-calculated categories, calculate from transactions
+  if (categoryBreakdown.length === 0 && data.transactions?.length > 0) {
+    const catRevenue: Record<string, {revenue: number; margin: number}> = {};
+    data.transactions.forEach((t: any) => {
+      const product = data.products?.find((p: any) => p.product_sku === t.product_sku);
+      const cat = product?.category || 'Other';
+      if (!catRevenue[cat]) {
+        catRevenue[cat] = {revenue: 0, margin: 0};
+      }
+      catRevenue[cat].revenue += Number(t.net_sales || t.total_amount || 0);
+      catRevenue[cat].margin += Number(t.margin || 0);
+    });
+    
+    const totalCatRev = Object.values(catRevenue).reduce((s, c) => s + c.revenue, 0);
+    categoryBreakdown = Object.entries(catRevenue)
+      .sort((a, b) => b[1].revenue - a[1].revenue)
+      .map(([name, cdata]) => ({
+        name,
+        revenue: cdata.revenue,
+        margin: cdata.margin,
+        marginPct: cdata.revenue > 0 ? (cdata.margin / cdata.revenue) * 100 : 30,
+        contribution: totalCatRev > 0 ? (cdata.revenue / totalCatRev) * 100 : 0
+      }));
+  }
+  
+  // Get store breakdown
+  const storeBreakdown = (kpis.storePerformance || kpis.storeBreakdown || []).map((s: any) => ({
+    name: s.name || s.store_name || 'Unknown',
+    revenue: Number(s.revenue || s.total_sales || 0),
+    margin: Number(s.margin || 0),
+    marginPct: Number(s.marginPct || s.margin_pct || 30)
+  }));
+  
+  // Calculate top 10 contribution
+  const top10Rev = topProducts.slice(0, 10).reduce((s: number, p: any) => s + p.revenue, 0);
+  const top10Contribution = totalRevenue > 0 ? (top10Rev / totalRevenue) * 100 : 25;
+  
+  return {
+    totalRevenue,
+    totalMargin,
+    avgMarginPct,
+    productCount,
+    topProducts,
+    bottomProducts,
+    categoryBreakdown,
+    storeBreakdown,
+    top10Contribution
+  };
+}
+
 const QUESTION_CATEGORIES: CategoryDefinition[] = [
   // 1. RANKING_TOP_BOTTOM - Top/Bottom N, best/worst performers
   {
@@ -12000,6 +12129,9 @@ const QUESTION_CATEGORIES: CategoryDefinition[] = [
     generateMandatoryContent: (q, moduleId, data, response) => {
       const formatCurrency = (v: number) => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(1)}K` : `$${v.toFixed(0)}`;
       
+      // CRITICAL: Use REAL data from calculatedKPIs
+      const realData = getRealDataFromKPIs(data);
+      
       // Determine entity type (product, category, store, supplier, brand)
       const isProduct = /product|sku|item|seller/i.test(q);
       const isStore = /store|location/i.test(q);
@@ -12013,43 +12145,70 @@ const QUESTION_CATEGORIES: CategoryDefinition[] = [
       let entities: any[] = [];
       let entityType = 'products';
       
-      if (isStore && data.stores?.length) {
-        entities = data.stores.map((s: any) => ({
-          name: s.store_name,
-          value: 15000 + Math.random() * 35000,
-          margin: 28 + Math.random() * 12
+      if (isStore && realData.storeBreakdown.length > 0) {
+        // Use REAL store data
+        entities = realData.storeBreakdown.map((s: any) => ({
+          name: s.name,
+          value: s.revenue,
+          margin: s.marginPct
         }));
         entityType = 'stores';
       } else if (isSupplier && data.suppliers?.length) {
         entities = data.suppliers.map((s: any) => ({
           name: s.supplier_name,
-          value: s.reliability_score || (85 + Math.random() * 15),
-          margin: 30 + Math.random() * 10
+          value: s.reliability_score || 90,
+          margin: 30
         }));
         entityType = 'suppliers';
-      } else if (isCategory) {
-        const cats = [...new Set(data.products?.map((p: any) => p.category).filter(Boolean))];
-        entities = cats.map((c: string) => ({
-          name: c,
-          value: 20000 + Math.random() * 40000,
-          margin: 25 + Math.random() * 15
+      } else if (isCategory && realData.categoryBreakdown.length > 0) {
+        // Use REAL category data
+        entities = realData.categoryBreakdown.map((c: any) => ({
+          name: c.name,
+          value: c.revenue,
+          margin: c.marginPct
         }));
         entityType = 'categories';
       } else if (isBrand) {
-        const brands = [...new Set(data.products?.map((p: any) => p.brand).filter(Boolean))];
-        entities = brands.slice(0, 10).map((b: string) => ({
-          name: b,
-          value: 8000 + Math.random() * 20000,
-          margin: 26 + Math.random() * 14
+        // Calculate brand data from transactions
+        const brandRevenue: Record<string, {revenue: number; margin: number}> = {};
+        (data.transactions || []).forEach((t: any) => {
+          const product = data.products?.find((p: any) => p.product_sku === t.product_sku);
+          const brand = product?.brand || 'Unknown';
+          if (!brandRevenue[brand]) brandRevenue[brand] = {revenue: 0, margin: 0};
+          brandRevenue[brand].revenue += Number(t.net_sales || t.total_amount || 0);
+          brandRevenue[brand].margin += Number(t.margin || 0);
+        });
+        entities = Object.entries(brandRevenue).map(([name, d]) => ({
+          name,
+          value: d.revenue,
+          margin: d.revenue > 0 ? (d.margin / d.revenue) * 100 : 30
         }));
         entityType = 'brands';
       } else {
-        // Products
-        entities = (data.products || []).slice(0, 20).map((p: any) => ({
-          name: p.product_name || p.product_sku,
-          value: Number(p.base_price || 10) * (50 + Math.random() * 200),
-          margin: Number(p.margin_percent || 30) + (Math.random() * 10 - 5)
-        }));
+        // Use REAL product data - prefer top/bottom products from calculatedKPIs
+        const sourceProducts = isBottom ? realData.bottomProducts : realData.topProducts;
+        if (sourceProducts.length > 0) {
+          entities = sourceProducts.map((p: any) => ({
+            name: p.name,
+            value: p.revenue,
+            margin: p.marginPct
+          }));
+        } else {
+          // Fallback: calculate from transactions
+          const productRevenue: Record<string, {revenue: number; margin: number; name: string}> = {};
+          (data.transactions || []).forEach((t: any) => {
+            const sku = t.product_sku;
+            const name = t.product_name || data.products?.find((p: any) => p.product_sku === sku)?.product_name || sku;
+            if (!productRevenue[sku]) productRevenue[sku] = {revenue: 0, margin: 0, name};
+            productRevenue[sku].revenue += Number(t.net_sales || t.total_amount || 0);
+            productRevenue[sku].margin += Number(t.margin || 0);
+          });
+          entities = Object.values(productRevenue).map(p => ({
+            name: p.name,
+            value: p.revenue,
+            margin: p.revenue > 0 ? (p.margin / p.revenue) * 100 : 30
+          }));
+        }
         entityType = 'products';
       }
       
@@ -12057,34 +12216,34 @@ const QUESTION_CATEGORIES: CategoryDefinition[] = [
       entities.sort((a, b) => isBottom ? a.value - b.value : b.value - a.value);
       const rankedEntities = entities.slice(0, count);
       
-      // Build mandatory response
-      const totalValue = entities.reduce((s, e) => s + e.value, 0);
+      // Build mandatory response using REAL values
+      const totalValue = entities.reduce((s: number, e: any) => s + (e.value || 0), 0);
       const topContrib = totalValue > 0 ? ((rankedEntities[0]?.value || 0) / totalValue * 100) : 20;
       
       response.whatHappened = [
-        `#1 ${isBottom ? 'lowest' : 'top'} ${entityType.slice(0, -1)}: "${rankedEntities[0]?.name}" at ${formatCurrency(rankedEntities[0]?.value || 0)} (${rankedEntities[0]?.margin?.toFixed(1) || 32}% margin)`,
+        `#1 ${isBottom ? 'lowest' : 'top'} ${entityType.slice(0, -1)}: "${rankedEntities[0]?.name}" at ${formatCurrency(rankedEntities[0]?.value || 0)} (${(rankedEntities[0]?.margin || 32).toFixed(1)}% margin)`,
         `Top ${count} ${entityType} contribute ${topContrib.toFixed(0)}% of total — ${isBottom ? 'require attention' : 'strong concentration'}`,
         rankedEntities.length > 2 ? `#2 "${rankedEntities[1]?.name}" (${formatCurrency(rankedEntities[1]?.value || 0)}), #3 "${rankedEntities[2]?.name}" (${formatCurrency(rankedEntities[2]?.value || 0)})` : `Rankings based on ${entityType === 'suppliers' ? 'reliability score' : 'revenue'} performance`
       ];
       
       response.why = [
-        `"${rankedEntities[0]?.name}" ${isBottom ? 'underperforms due to' : 'leads due to'} ${rankedEntities[0]?.margin > 30 ? 'premium positioning' : 'volume strategy'} at ${rankedEntities[0]?.margin?.toFixed(1)}% margin`,
+        `"${rankedEntities[0]?.name}" ${isBottom ? 'underperforms due to' : 'leads due to'} ${(rankedEntities[0]?.margin || 30) > 30 ? 'premium positioning' : 'volume strategy'} at ${(rankedEntities[0]?.margin || 30).toFixed(1)}% margin`,
         `Performance spread: ${formatCurrency(rankedEntities[0]?.value || 0)} (#1) vs ${formatCurrency(rankedEntities[rankedEntities.length-1]?.value || 0)} (#${count}) — ${((rankedEntities[0]?.value / (rankedEntities[rankedEntities.length-1]?.value || 1)) || 2).toFixed(1)}x gap`
       ];
       
       response.whatToDo = [
         isBottom 
-          ? `Review "${rankedEntities[0]?.name}" for ${rankedEntities[0]?.margin < 20 ? 'pricing optimization' : 'volume improvement'} — current gap to target: ${(30 - (rankedEntities[0]?.margin || 20)).toFixed(0)}pp margin`
+          ? `Review "${rankedEntities[0]?.name}" for ${(rankedEntities[0]?.margin || 20) < 20 ? 'pricing optimization' : 'volume improvement'} — current gap to target: ${(30 - (rankedEntities[0]?.margin || 20)).toFixed(0)}pp margin`
           : `Expand "${rankedEntities[0]?.name}" allocation — ${topContrib.toFixed(0)}% revenue contribution supports +15% inventory investment`,
-        `Focus on top ${Math.ceil(count/2)} ${entityType} for 80/20 impact — ${formatCurrency(rankedEntities.slice(0, Math.ceil(count/2)).reduce((s, e) => s + e.value, 0))} opportunity`
+        `Focus on top ${Math.ceil(count/2)} ${entityType} for 80/20 impact — ${formatCurrency(rankedEntities.slice(0, Math.ceil(count/2)).reduce((s: number, e: any) => s + (e.value || 0), 0))} opportunity`
       ];
       
-      response.chartData = rankedEntities.map((e, i) => ({
+      response.chartData = rankedEntities.map((e: any, i: number) => ({
         name: e.name,
-        value: Math.round(e.value),
+        value: Math.round(e.value || 0),
         rank: i + 1,
-        margin: `${e.margin?.toFixed(1)}%`,
-        status: e.margin > 30 ? 'good' : e.margin > 20 ? 'warning' : 'critical'
+        margin: `${(e.margin || 30).toFixed(1)}%`,
+        status: (e.margin || 30) > 30 ? 'good' : (e.margin || 30) > 20 ? 'warning' : 'critical'
       }));
       
       return response;
@@ -12960,6 +13119,7 @@ const QUESTION_CATEGORIES: CategoryDefinition[] = [
   },
   
   // 15. GENERAL_INSIGHT - Catch-all for any other merchandising question
+  // CRITICAL: Uses getRealDataFromKPIs() to prevent hallucination
   {
     category: 'GENERAL_INSIGHT',
     patterns: [/.*/], // Matches everything as fallback
@@ -12968,33 +13128,51 @@ const QUESTION_CATEGORIES: CategoryDefinition[] = [
     generateMandatoryContent: (q, moduleId, data, response) => {
       const formatCurrency = (v: number) => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(1)}K` : `$${v.toFixed(0)}`;
       
-      const products = data.products || [];
-      const topProduct = products[0]?.product_name || 'Top performer';
-      const category = products[0]?.category || 'Beverages';
-      const revenue = 125000 + Math.random() * 75000;
-      const margin = 28 + Math.random() * 10;
+      // CRITICAL: Use REAL data instead of Math.random()
+      const realData = getRealDataFromKPIs(data);
+      
+      const topProduct = realData.topProducts[0]?.name || data.products?.[0]?.product_name || 'Top performer';
+      const topProductRevenue = realData.topProducts[0]?.revenue || 0;
+      const topProductMargin = realData.topProducts[0]?.marginPct || realData.avgMarginPct;
+      const category = data.products?.[0]?.category || 'Beverages';
+      
+      // Use ACTUAL values
+      const actualProductCount = realData.productCount;
+      const actualTop10Contribution = realData.top10Contribution;
+      const actualMarginPct = realData.avgMarginPct;
       
       response.whatHappened = [
-        `Key insight for ${moduleId}: "${topProduct}" in ${category} driving ${formatCurrency(revenue)} at ${margin.toFixed(1)}% margin`,
-        `Portfolio health: ${products.length} products tracked, top 10 contribute ${(65 + Math.random() * 15).toFixed(0)}% of revenue`,
-        `Current period vs prior: +${(2 + Math.random() * 8).toFixed(1)}% revenue, ${margin > 32 ? '+' : ''}${(margin - 32).toFixed(1)}pp margin`
+        `Key insight for ${moduleId}: "${topProduct}" in ${category} driving ${formatCurrency(topProductRevenue)} at ${topProductMargin.toFixed(1)}% margin`,
+        `Portfolio health: ${actualProductCount} products tracked, top 10 contribute ${actualTop10Contribution.toFixed(0)}% of revenue`,
+        `Total revenue: ${formatCurrency(realData.totalRevenue)} at ${actualMarginPct.toFixed(1)}% avg margin`
       ];
       
       response.why = [
-        `"${topProduct}" success driven by ${margin > 32 ? 'premium positioning' : 'volume strategy'} and strong promotional response`,
-        `Category "${category}" momentum reflects seasonal demand patterns and competitive positioning`
+        `"${topProduct}" ${topProductMargin > 32 ? 'premium positioning' : 'volume strategy'} delivers ${topProductMargin.toFixed(1)}% margin`,
+        `Category "${category}" performance reflects current demand patterns and competitive positioning`
       ];
       
+      const opportunityValue = topProductRevenue * 0.15;
       response.whatToDo = [
-        `Expand "${topProduct}" distribution — ${formatCurrency(revenue * 0.15)} incremental opportunity identified`,
-        `Review bottom quartile performers for rationalization — ${formatCurrency(revenue * 0.05)} margin recovery potential`
+        `Expand "${topProduct}" distribution — ${formatCurrency(opportunityValue)} incremental opportunity identified`,
+        `Review bottom quartile performers for rationalization — margin improvement potential`
       ];
       
-      response.chartData = products.slice(0, 6).map((p: any, i: number) => ({
-        name: p.product_name || p.product_sku || `Product ${i + 1}`,
-        value: Math.round(revenue * (0.4 - i * 0.05)),
-        margin: `${(margin - i * 1.5).toFixed(1)}%`
+      // Use ACTUAL product data for charts
+      response.chartData = realData.topProducts.slice(0, 6).map((p: any, i: number) => ({
+        name: p.name,
+        value: Math.round(p.revenue),
+        margin: `${p.marginPct.toFixed(1)}%`
       }));
+      
+      // If no real product data, fallback to category breakdown
+      if (response.chartData.length === 0 && realData.categoryBreakdown.length > 0) {
+        response.chartData = realData.categoryBreakdown.slice(0, 6).map((c: any) => ({
+          name: c.name,
+          value: Math.round(c.revenue),
+          margin: `${c.marginPct.toFixed(1)}%`
+        }));
+      }
       
       return response;
     }
