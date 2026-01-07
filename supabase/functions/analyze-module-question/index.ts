@@ -6476,6 +6476,151 @@ EMPLOYEE DATA:
 PRICE BANDS:
 ${priceBands.slice(0, 5).map((pb: any) => `- ${pb.price_band} (${pb.price_department}): $${pb.price_point_low}-$${pb.price_point_high}`).join('\n')}` : '';
     
+    // COMPETITOR DATA ENRICHMENT (available to ALL modules)
+    const competitorEnrichment = (() => {
+      if (competitorPrices.length === 0 && competitorData.length === 0) return '';
+      
+      // Build product lookup for competitor price enrichment
+      const productLookupComp: Record<string, any> = {};
+      products.forEach((p: any) => { productLookupComp[p.product_sku] = p; });
+      
+      // Competitor-by-competitor analysis
+      const competitorAnalysis: Record<string, { 
+        count: number; 
+        avgGap: number; 
+        marketShare: number;
+        promoIntensity: string;
+        categories: Set<string>;
+        priceGaps: { product: string; gap: number; ourPrice: number; theirPrice: number }[];
+      }> = {};
+      
+      // Process competitor_prices data
+      competitorPrices.forEach((cp: any) => {
+        const compName = cp.competitor_name;
+        if (!competitorAnalysis[compName]) {
+          competitorAnalysis[compName] = { 
+            count: 0, avgGap: 0, marketShare: 0, promoIntensity: 'medium', 
+            categories: new Set(), priceGaps: [] 
+          };
+        }
+        competitorAnalysis[compName].count++;
+        competitorAnalysis[compName].avgGap += Number(cp.price_gap_percent || 0);
+        const product = productLookupComp[cp.product_sku] || {};
+        if (product.category) competitorAnalysis[compName].categories.add(product.category);
+        competitorAnalysis[compName].priceGaps.push({
+          product: product.product_name || cp.product_sku,
+          gap: Number(cp.price_gap_percent || 0),
+          ourPrice: Number(cp.our_price || 0),
+          theirPrice: Number(cp.competitor_price || 0)
+        });
+      });
+      
+      // Process competitor_data for market share and promo intensity
+      competitorData.forEach((cd: any) => {
+        const compName = cd.competitor_name;
+        if (!competitorAnalysis[compName]) {
+          competitorAnalysis[compName] = { 
+            count: 0, avgGap: 0, marketShare: 0, promoIntensity: 'medium', 
+            categories: new Set(), priceGaps: [] 
+          };
+        }
+        competitorAnalysis[compName].marketShare = Math.max(
+          competitorAnalysis[compName].marketShare, 
+          Number(cd.market_share_percent || 0)
+        );
+        competitorAnalysis[compName].promoIntensity = cd.promotion_intensity || 'medium';
+        if (cd.product_category) competitorAnalysis[compName].categories.add(cd.product_category);
+      });
+      
+      // Finalize averages
+      Object.keys(competitorAnalysis).forEach(comp => {
+        if (competitorAnalysis[comp].count > 0) {
+          competitorAnalysis[comp].avgGap = competitorAnalysis[comp].avgGap / competitorAnalysis[comp].count;
+        }
+        // Sort price gaps by magnitude
+        competitorAnalysis[comp].priceGaps.sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap));
+      });
+      
+      // Find items where we're over-priced vs competitors
+      const overPricedItems = competitorPrices
+        .filter((cp: any) => Number(cp.price_gap_percent) > 3)
+        .map((cp: any) => {
+          const product = productLookupComp[cp.product_sku] || {};
+          return {
+            product: product.product_name || cp.product_sku,
+            category: product.category || 'Unknown',
+            competitor: cp.competitor_name,
+            gap: Number(cp.price_gap_percent),
+            ourPrice: Number(cp.our_price),
+            theirPrice: Number(cp.competitor_price)
+          };
+        })
+        .sort((a, b) => b.gap - a.gap)
+        .slice(0, 10);
+      
+      // Find items where we're under-priced (margin opportunity)
+      const underPricedItems = competitorPrices
+        .filter((cp: any) => Number(cp.price_gap_percent) < -3)
+        .map((cp: any) => {
+          const product = productLookupComp[cp.product_sku] || {};
+          return {
+            product: product.product_name || cp.product_sku,
+            category: product.category || 'Unknown',
+            competitor: cp.competitor_name,
+            gap: Number(cp.price_gap_percent),
+            ourPrice: Number(cp.our_price),
+            theirPrice: Number(cp.competitor_price)
+          };
+        })
+        .sort((a, b) => a.gap - b.gap)
+        .slice(0, 10);
+      
+      const avgOverallGap = competitorPrices.length > 0 
+        ? competitorPrices.reduce((sum: number, cp: any) => sum + Number(cp.price_gap_percent || 0), 0) / competitorPrices.length 
+        : 0;
+      
+      return `
+═══════════════════════════════════════════════════════════════════════════════
+COMPETITOR INTELLIGENCE (WALMART, KROGER, TARGET, COSTCO, AND OTHERS)
+═══════════════════════════════════════════════════════════════════════════════
+
+COMPETITORS TRACKED: ${Object.keys(competitorAnalysis).join(', ')}
+TOTAL PRICE COMPARISONS: ${competitorPrices.length}
+AVERAGE PRICE GAP VS COMPETITION: ${avgOverallGap.toFixed(1)}% ${avgOverallGap > 0 ? '(we are HIGHER priced)' : avgOverallGap < 0 ? '(we are LOWER priced)' : '(at parity)'}
+
+COMPETITOR-BY-COMPETITOR ANALYSIS:
+${Object.entries(competitorAnalysis).map(([comp, data]) => {
+  const topGaps = data.priceGaps.slice(0, 3).map(g => `${g.product} (${g.gap > 0 ? '+' : ''}${g.gap.toFixed(1)}%)`).join(', ');
+  return `- ${comp}:
+   • Price Comparisons: ${data.count} products
+   • Avg Price Gap: ${data.avgGap > 0 ? '+' : ''}${data.avgGap.toFixed(1)}% ${data.avgGap > 0 ? '(we are higher)' : '(we are lower)'}
+   • Market Share: ${data.marketShare.toFixed(1)}%
+   • Promo Intensity: ${data.promoIntensity}
+   • Categories: ${Array.from(data.categories).slice(0, 4).join(', ')}
+   • Biggest Gaps: ${topGaps || 'N/A'}`;
+}).join('\n')}
+
+OVER-PRICED vs COMPETITORS (COMPETITIVE RISK - WE ARE HIGHER):
+${overPricedItems.length > 0 ? overPricedItems.map(item => 
+  `- ${item.product} (${item.category}): +${item.gap.toFixed(1)}% vs ${item.competitor} (Our $${item.ourPrice.toFixed(2)} vs Their $${item.theirPrice.toFixed(2)})`
+).join('\n') : '- No significant over-pricing detected'}
+
+UNDER-PRICED vs COMPETITORS (MARGIN OPPORTUNITY - WE ARE LOWER):
+${underPricedItems.length > 0 ? underPricedItems.map(item => 
+  `- ${item.product} (${item.category}): ${item.gap.toFixed(1)}% vs ${item.competitor} (Our $${item.ourPrice.toFixed(2)} vs Their $${item.theirPrice.toFixed(2)})`
+).join('\n') : '- No significant under-pricing detected'}
+
+COMPETITOR MARKET ACTIVITY:
+${competitorData.slice(0, 8).map((cd: any) => 
+  `- ${cd.competitor_name} (${cd.product_category}): ${cd.market_share_percent}% market share, ${cd.promotion_intensity} promo intensity${cd.notes ? ` - ${cd.notes}` : ''}`
+).join('\n')}
+
+CRITICAL: When answering competitor questions, USE THE SPECIFIC DATA ABOVE.
+Reference actual competitor names (Walmart, Kroger, Target, Costco), specific price gaps,
+market share percentages, and promo intensity levels. NEVER say "data not available" when
+competitor data exists above.`;
+    })();
+    
     // Append all enrichments to dataContext
     dataContext += `
 
@@ -6489,6 +6634,7 @@ ${vendorsEnrichment}
 ${holidaysEnrichment}
 ${employeesEnrichment}
 ${priceBandsEnrichment}
+${competitorEnrichment}
 `;
 
     // Select appropriate system prompt
