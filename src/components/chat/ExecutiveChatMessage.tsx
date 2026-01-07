@@ -55,7 +55,7 @@ export const ExecutiveChatMessage: React.FC<ExecutiveChatMessageProps> = ({
   }, [message, isUser]);
 
   return (
-    <div className={cn("flex", isUser ? "justify-end" : "justify-start", className)} style={{ width: '100%' }}>
+    <div className={cn("flex w-full", isUser ? "justify-end" : "justify-start", className)}>
       {/* Avatar for assistant */}
       {!isUser && (
         <div className={cn(
@@ -69,15 +69,13 @@ export const ExecutiveChatMessage: React.FC<ExecutiveChatMessageProps> = ({
       )}
 
       {/* Message Content */}
-      <div className={cn(
-        isUser ? "max-w-[75%]" : "max-w-[90%] min-w-0"
-      )}>
+      <div className={isUser ? "max-w-[75%]" : "max-w-[90%] min-w-0"}>
         {isUser ? (
-          // User message bubble - explicit inline-block to prevent shrinking
-          <div className="bg-blue-500 text-white rounded-2xl px-3 py-2" style={{ display: 'inline-block' }}>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+          // User message bubble
+          <div className="bg-blue-500 text-white rounded-2xl px-3 py-2">
+            <span className="text-sm leading-relaxed whitespace-pre-wrap break-words">
               {message.content}
-            </p>
+            </span>
           </div>
         ) : message.isLoading ? (
           // Loading state

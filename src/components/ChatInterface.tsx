@@ -1427,81 +1427,80 @@ export default function ChatInterface({
         </div>
       )}
 
-      {/* Messages Area - Clean Chat Shell */}
-      <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden">
-        <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>
-          <div className="space-y-4 px-6 py-4" style={{ minWidth: '100%', width: '100%' }}>
-            {messages.map((message) => {
-              // Convert legacy message format to ChatMessageData for ExecutiveChatMessage
-              const chatMessage: ChatMessageData = {
-                id: message.id,
-                role: message.type === 'user' ? 'user' : 'assistant',
-                content: message.content,
-                timestamp: message.timestamp,
-                isLoading: false,
-                isError: message.isError,
-                rawData: message.analyticsResult,
-                clarificationOptions: message.clarificationOptions?.map((opt, idx) => ({
-                  label: opt,
-                  description: '',
-                  refinedQuestion: message.actionButtons?.[idx]?.question || opt
-                }))
-              };
+      {/* Messages Area - Clean Chat Shell - Using simple div instead of ScrollArea to fix flex layout */}
+      <div className="flex-1 min-h-0 overflow-y-auto" ref={scrollRef}>
+        <div className="space-y-4 px-6 py-4">
+          {messages.map((message) => {
+            // Convert legacy message format to ChatMessageData for ExecutiveChatMessage
+            const chatMessage: ChatMessageData = {
+              id: message.id,
+              role: message.type === 'user' ? 'user' : 'assistant',
+              content: message.content,
+              timestamp: message.timestamp,
+              isLoading: false,
+              isError: message.isError,
+              rawData: message.analyticsResult,
+              clarificationOptions: message.clarificationOptions?.map((opt, idx) => ({
+                label: opt,
+                description: '',
+                refinedQuestion: message.actionButtons?.[idx]?.question || opt
+              }))
+            };
 
-              // For greeting/guide messages, show simple format
-              if (message.type === 'guide' || message.id === 'greeting') {
-                return (
-                  <div key={message.id} className="flex w-full justify-start">
-                    <div className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 mr-3 bg-secondary text-secondary-foreground">
-                      <Bot className="h-4 w-4" />
-                    </div>
-                    <div className="max-w-[85%] bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-3">
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
-                      {message.guideTip && (
-                        <div className="flex items-start gap-2 mt-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg">
-                          <Zap className="h-3.5 w-3.5 text-primary flex-shrink-0 mt-0.5" />
-                          <p className="text-xs text-muted-foreground">{message.guideTip}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              }
-
+            // For greeting/guide messages, show simple format
+            if (message.type === 'guide' || message.id === 'greeting') {
               return (
-                <div key={message.id} className="space-y-2">
-                  <ExecutiveChatMessage
-                    message={chatMessage}
-                    onNextQuestion={(q) => handleSuggestionClick(q)}
-                    onClarificationSelect={(q) => handleSuggestionClick(q)}
-                    onDrillDown={(item) => handleSuggestionClick(`Tell me more about ${item.name}`)}
-                    isLoading={isLoading}
-                  />
-                  
-                  {/* Follow-up suggestions for assistant messages with analytics */}
-                  {message.type === 'assistant' && message.analyticsResult && message.suggestions && message.suggestions.length > 0 && (
-                    <div className="ml-11 space-y-2">
-                      <Separator className="my-2" />
-                      <div className="flex flex-col gap-2">
-                        {message.suggestions.slice(0, 3).map((suggestion, idx) => (
-                          <Button
-                            key={idx}
-                            variant="outline"
-                            size="sm"
-                            className="text-xs h-auto min-h-[28px] px-3 py-1.5 hover:bg-primary/10 hover:border-primary text-left whitespace-normal leading-snug justify-start"
-                            onClick={() => handleSuggestionClick(suggestion)}
-                            disabled={isLoading}
-                          >
-                            <ArrowRight className="h-3 w-3 mr-1 flex-shrink-0" />
-                            <span>{suggestion}</span>
-                          </Button>
-                        ))}
+                <div key={message.id} className="flex w-full justify-start">
+                  <div className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 mr-3 bg-secondary text-secondary-foreground">
+                    <Bot className="h-4 w-4" />
+                  </div>
+                  <div className="max-w-[85%] bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-3">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+                    {message.guideTip && (
+                      <div className="flex items-start gap-2 mt-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg">
+                        <Zap className="h-3.5 w-3.5 text-primary flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-muted-foreground">{message.guideTip}</p>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               );
-            })}
+            }
+
+            return (
+              <div key={message.id} className="space-y-2">
+                <ExecutiveChatMessage
+                  message={chatMessage}
+                  onNextQuestion={(q) => handleSuggestionClick(q)}
+                  onClarificationSelect={(q) => handleSuggestionClick(q)}
+                  onDrillDown={(item) => handleSuggestionClick(`Tell me more about ${item.name}`)}
+                  isLoading={isLoading}
+                />
+                
+                {/* Follow-up suggestions for assistant messages with analytics */}
+                {message.type === 'assistant' && message.analyticsResult && message.suggestions && message.suggestions.length > 0 && (
+                  <div className="ml-11 space-y-2">
+                    <Separator className="my-2" />
+                    <div className="flex flex-col gap-2">
+                      {message.suggestions.slice(0, 3).map((suggestion, idx) => (
+                        <Button
+                          key={idx}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-auto min-h-[28px] px-3 py-1.5 hover:bg-primary/10 hover:border-primary text-left whitespace-normal leading-snug justify-start"
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          disabled={isLoading}
+                        >
+                          <ArrowRight className="h-3 w-3 mr-1 flex-shrink-0" />
+                          <span>{suggestion}</span>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
           {/* Loading indicator with progress - Feature #4 */}
           {isLoading && (
@@ -1529,8 +1528,7 @@ export default function ChatInterface({
               </div>
             </div>
           )}
-          </div>
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Quick Actions Bar */}
