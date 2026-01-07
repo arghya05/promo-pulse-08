@@ -861,8 +861,12 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
                   ref={textareaRef}
                   value={input}
                   onChange={(e) => {
-                    setInput(e.target.value);
-                    setShowSuggestions(e.target.value.length >= 2);
+                    const newValue = e.target.value;
+                    console.log('[ModuleChatInterface] Input changed:', newValue, 'length:', newValue.length);
+                    setInput(newValue);
+                    const shouldShow = newValue.length >= 2;
+                    console.log('[ModuleChatInterface] Setting showSuggestions:', shouldShow);
+                    setShowSuggestions(shouldShow);
                     // Auto-expand height
                     e.target.style.height = 'auto';
                     e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
@@ -894,6 +898,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
                 <SearchSuggestions
                   query={input}
                   onSelect={(suggestion) => {
+                    console.log('[ModuleChatInterface] Suggestion selected:', suggestion);
                     setInput(suggestion);
                     setShowSuggestions(false);
                     handleSend(suggestion);
