@@ -24,10 +24,18 @@ EXECUTIVE METRICS TO REFERENCE:
 - Profitability: Gross margin %, operating margin, margin vs budget variance
 - Pricing: Competitive index, price perception, margin erosion by category
 - Promotions: Total promotional ROI, spend as % of revenue, lift by mechanic
-- Inventory: Total investment, days of supply, stockout rate, turnover
+- Inventory: Total investment, days of supply, stockout rate, out-of-shelf rate, turnover
 - Supply Chain: On-time delivery %, supplier reliability, logistics cost % of revenue
 - Store: Sales/sqft, conversion rate, basket size, foot traffic trends
 - Customer: LTV by segment, market share trend
+
+OUT-OF-SHELF / STOCKOUT RATE ANALYSIS:
+When asked about out-of-shelf rate, stockout rate, OOS, or availability:
+- Calculate from inventory_levels table: items at High/Critical stockout_risk / total items × 100
+- Provide breakdown by category showing which categories have highest OOS rates
+- Include specific products at risk with stock levels vs reorder points
+- Show shelf availability rate (100% - OOS rate)
+- Provide actionable recommendations to reduce stockouts
 
 DRILL-DOWN HIERARCHY:
 Enterprise → Region → Store → Category → Brand → SKU
@@ -7973,8 +7981,9 @@ function validateQuestionAnswerAlignment(
     isCompetitorQuestion: /competitor|competitive|competition|market share|market position|walmart|kroger|target|costco|amazon|aldi|safeway|publix|whole foods|trader joe|pricing (position|gap)|price gap|pricing intelligence|compare.*price|price.*compar/i.test(q),
     // NEW: Detect sell-through rate questions
     isSellThroughQuestion: /sell.?through|sellthrough|inventory.?turn|stock.?turn|sell\s*thru/i.test(q),
-    // NEW: Detect out-of-shelf / stockout rate questions
-    isOutOfShelfQuestion: /out.?of.?shelf|out.?of.?stock|stockout|stock.?out|oos\s*rate|oos%|shelf.?availab|on.?shelf|in.?stock.?rate|availability.?rate/i.test(q),
+    // NEW: Detect out-of-shelf / stockout rate questions - COMPREHENSIVE PATTERN
+    // Covers: out-of-shelf, out of stock, stockout, OOS, shelf availability, in-stock rate, availability rate, etc.
+    isOutOfShelfQuestion: /out.?of.?shelf|out.?of.?stock|stockout|stock.?out|oos\b|oos\s*rate|oos\s*%|shelf.?availab|on.?shelf.?rate|in.?stock.?rate|availability.?rate|stock.?availab|item.?availab|product.?availab|missing.?stock|empty.?shelf|shelf.?gap|fill.?rate|service.?level|stockout.?risk|at.?risk.?inventory|low.?stock|critical.?stock|replenish/i.test(q),
     // NEW: Detect optimal price / price optimization questions
     isOptimalPriceQuestion: /optimal.?price|price.?optim|best.?price|recommend.*price|price.?recommend|price.?point|pricing.?strateg|price.?sensitiv|elasticit|what.?price|should.?price/i.test(q),
     // NEW: Detect loss-making promotions / negative ROI / unprofitable promotions
