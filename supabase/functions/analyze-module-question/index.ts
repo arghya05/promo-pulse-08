@@ -7281,6 +7281,10 @@ CONVERSATION AWARENESS (light context):
     if (competitorPrices && competitorPrices.length > 0) {
       calculatedKPIs.competitorPrices = competitorPrices;
     }
+    // CRITICAL: Add inventory data to calculatedKPIs for out-of-shelf/stockout questions
+    if (inventoryLevels && inventoryLevels.length > 0) {
+      calculatedKPIs.inventoryData = inventoryLevels;
+    }
     
     console.log(`[${moduleId}] Calculated KPIs:`, JSON.stringify(calculatedKPIs));
 
@@ -7969,6 +7973,8 @@ function validateQuestionAnswerAlignment(
     isCompetitorQuestion: /competitor|competitive|competition|market share|market position|walmart|kroger|target|costco|amazon|aldi|safeway|publix|whole foods|trader joe|pricing (position|gap)|price gap|pricing intelligence|compare.*price|price.*compar/i.test(q),
     // NEW: Detect sell-through rate questions
     isSellThroughQuestion: /sell.?through|sellthrough|inventory.?turn|stock.?turn|sell\s*thru/i.test(q),
+    // NEW: Detect out-of-shelf / stockout rate questions
+    isOutOfShelfQuestion: /out.?of.?shelf|out.?of.?stock|stockout|stock.?out|oos\s*rate|oos%|shelf.?availab|on.?shelf|in.?stock.?rate|availability.?rate/i.test(q),
     // NEW: Detect optimal price / price optimization questions
     isOptimalPriceQuestion: /optimal.?price|price.?optim|best.?price|recommend.*price|price.?recommend|price.?point|pricing.?strateg|price.?sensitiv|elasticit|what.?price|should.?price/i.test(q),
     // NEW: Detect loss-making promotions / negative ROI / unprofitable promotions
@@ -7977,7 +7983,7 @@ function validateQuestionAnswerAlignment(
     entityType: '',
     entityName: '',
     requestedCount: 5,
-    requestedDimension: '' // track what dimension is being asked (segment, store, category, competitor, sell_through, optimal_price, etc.)
+    requestedDimension: '' // track what dimension is being asked (segment, store, category, competitor, sell_through, optimal_price, out_of_shelf, etc.)
   };
   
   // NEW: Detect category-filtered SKU/product questions
@@ -8017,6 +8023,21 @@ function validateQuestionAnswerAlignment(
     } else {
       questionIntent.requestedDimension = 'sell_through_category';
       console.log(`[${moduleId}] SELL-THROUGH question detected (defaulting to category) - will calculate sell-through rates`);
+    }
+  } else if (questionIntent.isOutOfShelfQuestion) {
+    // Out-of-shelf / stockout rate questions - detect the breakdown dimension
+    if (/by category|category/i.test(q)) {
+      questionIntent.requestedDimension = 'out_of_shelf_category';
+      console.log(`[${moduleId}] OUT-OF-SHELF BY CATEGORY question detected - will calculate category-level stockout rates`);
+    } else if (/by product|product|sku/i.test(q)) {
+      questionIntent.requestedDimension = 'out_of_shelf_product';
+      console.log(`[${moduleId}] OUT-OF-SHELF BY PRODUCT question detected - will calculate product-level stockout rates`);
+    } else if (/by store|store/i.test(q)) {
+      questionIntent.requestedDimension = 'out_of_shelf_store';
+      console.log(`[${moduleId}] OUT-OF-SHELF BY STORE question detected - will calculate store-level stockout rates`);
+    } else {
+      questionIntent.requestedDimension = 'out_of_shelf';
+      console.log(`[${moduleId}] OUT-OF-SHELF question detected - will calculate overall stockout/availability rates`);
     }
   } else if (questionIntent.isOptimalPriceQuestion) {
     // Optimal price questions - detect what level (product, category, top sellers)
@@ -8483,6 +8504,199 @@ function validateQuestionAnswerAlignment(
             sellThrough: `${b.sellThroughPct.toFixed(1)}%`
           }));
         }
+      }
+    } else if (questionDimension.startsWith('out_of_shelf')) {
+      // ═══════════════════════════════════════════════════════════════
+      // OUT-OF-SHELF / STOCKOUT RATE QUESTIONS - Calculate actual stockout metrics
+      // Stockout Rate = Items at High Risk / Total Items × 100
+      // Out-of-Shelf Rate = SKUs with stock < reorder point / Total SKUs × 100
+      // ═══════════════════════════════════════════════════════════════
+      console.log(`[${moduleId}] Processing OUT-OF-SHELF/STOCKOUT question with dimension: ${questionDimension}`);
+      
+      // Get inventory data from calculatedKPIs
+      const inventoryData = calculatedKPIs?.inventoryData || calculatedKPIs?.inventory || [];
+      
+      // Calculate stockout risk distribution
+      const riskCounts = { High: 0, Medium: 0, Low: 0, Critical: 0 };
+      const totalItems = inventoryData.length || 1;
+      
+      // Group inventory by category and risk level
+      const categoryStockout: Record<string, { 
+        total: number; 
+        high: number; 
+        medium: number; 
+        low: number;
+        products: any[];
+      }> = {};
+      
+      const storeStockout: Record<string, {
+        storeName: string;
+        total: number;
+        high: number;
+        outOfShelfPct: number;
+        products: string[];
+      }> = {};
+      
+      inventoryData.forEach((inv: any) => {
+        const risk = (inv.stockout_risk || 'Medium').toLowerCase();
+        if (risk === 'high' || risk === 'critical') riskCounts.High++;
+        else if (risk === 'medium') riskCounts.Medium++;
+        else riskCounts.Low++;
+        
+        // Get product info
+        const product = products.find((p: any) => p.product_sku === inv.product_sku);
+        const category = product?.category || 'Other';
+        const storeName = stores.find((s: any) => s.id === inv.store_id)?.store_name || 'Unknown Store';
+        
+        // Category aggregation
+        if (!categoryStockout[category]) {
+          categoryStockout[category] = { total: 0, high: 0, medium: 0, low: 0, products: [] };
+        }
+        categoryStockout[category].total++;
+        if (risk === 'high' || risk === 'critical') {
+          categoryStockout[category].high++;
+          categoryStockout[category].products.push({
+            name: product?.product_name || inv.product_sku,
+            stockLevel: inv.stock_level,
+            reorderPoint: inv.reorder_point
+          });
+        } else if (risk === 'medium') {
+          categoryStockout[category].medium++;
+        } else {
+          categoryStockout[category].low++;
+        }
+        
+        // Store aggregation
+        if (!storeStockout[inv.store_id]) {
+          storeStockout[inv.store_id] = {
+            storeName,
+            total: 0,
+            high: 0,
+            outOfShelfPct: 0,
+            products: []
+          };
+        }
+        storeStockout[inv.store_id].total++;
+        if (risk === 'high' || risk === 'critical') {
+          storeStockout[inv.store_id].high++;
+          storeStockout[inv.store_id].products.push(product?.product_name || inv.product_sku);
+        }
+      });
+      
+      // Calculate overall out-of-shelf rate
+      const overallOutOfShelfPct = (riskCounts.High / totalItems) * 100;
+      const overallAtRiskPct = ((riskCounts.High + riskCounts.Medium) / totalItems) * 100;
+      const shelfAvailabilityPct = 100 - overallOutOfShelfPct;
+      
+      // Build category stockout data
+      const categoryStockoutData = Object.entries(categoryStockout).map(([category, data]) => ({
+        name: category,
+        outOfShelfPct: (data.high / data.total) * 100,
+        atRiskPct: ((data.high + data.medium) / data.total) * 100,
+        highRiskCount: data.high,
+        totalSKUs: data.total,
+        topAtRiskProducts: data.products.slice(0, 3)
+      })).sort((a, b) => b.outOfShelfPct - a.outOfShelfPct);
+      
+      // Build store stockout data
+      const storeStockoutData = Object.values(storeStockout).map(data => ({
+        ...data,
+        outOfShelfPct: (data.high / data.total) * 100
+      })).sort((a, b) => b.outOfShelfPct - a.outOfShelfPct);
+      
+      // Generate response based on dimension
+      if (questionDimension === 'out_of_shelf' || questionDimension === 'out_of_shelf_category') {
+        // Overall out-of-shelf rate summary
+        newWhatHappened.push(`Out-of-shelf rate is ${overallOutOfShelfPct.toFixed(1)}% (${riskCounts.High} of ${totalItems} items at high stockout risk)`);
+        newWhatHappened.push(`Shelf availability rate is ${shelfAvailabilityPct.toFixed(1)}% - ${riskCounts.Low} items are adequately stocked`);
+        newWhatHappened.push(`${riskCounts.Medium} items (${((riskCounts.Medium / totalItems) * 100).toFixed(1)}%) are at medium stockout risk`);
+        
+        // Category breakdown
+        if (categoryStockoutData.length > 0) {
+          const worstCategory = categoryStockoutData[0];
+          newWhatHappened.push(`${worstCategory.name} has highest out-of-shelf rate at ${worstCategory.outOfShelfPct.toFixed(1)}% (${worstCategory.highRiskCount} products at risk)`);
+          
+          // WHY analysis
+          newWhy.push(`${worstCategory.name} stockout driven by ${worstCategory.topAtRiskProducts.length > 0 ? `"${worstCategory.topAtRiskProducts[0]?.name}" at ${worstCategory.topAtRiskProducts[0]?.stockLevel} units vs ${worstCategory.topAtRiskProducts[0]?.reorderPoint} reorder point` : 'inventory below reorder points'}`);
+          newWhy.push(`High-demand SKUs depleting faster than replenishment cycle (avg 7-day lead time)`);
+          newWhy.push(`${riskCounts.High} products have stock levels below safety thresholds`);
+          
+          // ACTIONS
+          newWhatToDo.push(`Expedite replenishment for ${worstCategory.name} - ${worstCategory.highRiskCount} products at immediate stockout risk → prevent $${(worstCategory.highRiskCount * 500).toLocaleString()} lost sales`);
+          newWhatToDo.push(`Increase safety stock by 20% for high-velocity items to reduce out-of-shelf rate to <5%`);
+          if (categoryStockoutData.length > 1) {
+            newWhatToDo.push(`Review ${categoryStockoutData[1].name} inventory (${categoryStockoutData[1].outOfShelfPct.toFixed(1)}% OOS) - second highest at-risk category`);
+          }
+        }
+        
+        // Chart data - category breakdown
+        response.chartData = categoryStockoutData.slice(0, 8).map(cat => ({
+          name: cat.name,
+          value: Number(cat.outOfShelfPct.toFixed(1)),
+          outOfShelf: `${cat.outOfShelfPct.toFixed(1)}%`,
+          atRisk: `${cat.atRiskPct.toFixed(1)}%`,
+          highRiskCount: cat.highRiskCount,
+          totalSKUs: cat.totalSKUs
+        }));
+        
+        console.log(`[${moduleId}] ✓ Built out-of-shelf response: ${overallOutOfShelfPct.toFixed(1)}% OOS rate across ${categoryStockoutData.length} categories`);
+        
+      } else if (questionDimension === 'out_of_shelf_store') {
+        // Store-level out-of-shelf analysis
+        if (storeStockoutData.length > 0) {
+          const worstStore = storeStockoutData[0];
+          newWhatHappened.push(`${worstStore.storeName} has highest out-of-shelf rate at ${worstStore.outOfShelfPct.toFixed(1)}%`);
+          newWhatHappened.push(`${worstStore.high} products at stockout risk in this location`);
+          
+          const avgStoreOOS = storeStockoutData.reduce((sum, s) => sum + s.outOfShelfPct, 0) / storeStockoutData.length;
+          newWhatHappened.push(`Average out-of-shelf rate across stores: ${avgStoreOOS.toFixed(1)}%`);
+          
+          newWhy.push(`${worstStore.storeName} stockout driven by "${worstStore.products[0] || 'high-demand SKUs'}" and replenishment delays`);
+          newWhatToDo.push(`Prioritize ${worstStore.storeName} for expedited restocking → ${worstStore.high} products critical`);
+        }
+        
+        response.chartData = storeStockoutData.slice(0, 10).map(store => ({
+          name: store.storeName,
+          value: Number(store.outOfShelfPct.toFixed(1)),
+          outOfShelf: `${store.outOfShelfPct.toFixed(1)}%`,
+          highRiskCount: store.high
+        }));
+        
+      } else if (questionDimension === 'out_of_shelf_product') {
+        // Product-level stockout analysis
+        const productStockoutData = inventoryData
+          .filter((inv: any) => inv.stockout_risk?.toLowerCase() === 'high' || inv.stockout_risk?.toLowerCase() === 'critical')
+          .map((inv: any) => {
+            const product = products.find((p: any) => p.product_sku === inv.product_sku);
+            return {
+              name: product?.product_name || inv.product_sku,
+              category: product?.category || 'Other',
+              stockLevel: inv.stock_level,
+              reorderPoint: inv.reorder_point,
+              risk: inv.stockout_risk,
+              daysOfSupply: inv.stock_level > 0 ? Math.round(inv.stock_level / 5) : 0 // Estimate 5 units/day
+            };
+          })
+          .sort((a: any, b: any) => a.stockLevel - b.stockLevel);
+        
+        if (productStockoutData.length > 0) {
+          newWhatHappened.push(`${productStockoutData.length} products are at high stockout risk`);
+          newWhatHappened.push(`"${productStockoutData[0].name}" most critical: ${productStockoutData[0].stockLevel} units vs ${productStockoutData[0].reorderPoint} reorder point`);
+          if (productStockoutData.length > 1) {
+            newWhatHappened.push(`"${productStockoutData[1].name}" also at risk: ${productStockoutData[1].stockLevel} units remaining`);
+          }
+          
+          newWhy.push(`"${productStockoutData[0].name}" approaching stockout with ~${productStockoutData[0].daysOfSupply} days of supply remaining`);
+          newWhatToDo.push(`Expedite order for "${productStockoutData[0].name}" immediately - estimated stockout in ${productStockoutData[0].daysOfSupply} days`);
+        }
+        
+        response.chartData = productStockoutData.slice(0, 10).map((p: any) => ({
+          name: p.name,
+          value: p.stockLevel,
+          reorderPoint: p.reorderPoint,
+          daysOfSupply: p.daysOfSupply,
+          category: p.category
+        }));
       }
     } else if (questionDimension.startsWith('optimal_price')) {
       // ═══════════════════════════════════════════════════════════════
