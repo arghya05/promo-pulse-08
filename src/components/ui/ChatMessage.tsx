@@ -28,22 +28,13 @@ export function ChatMessage({
   const isUser = role === "user";
 
   const renderContent = () => {
-    // User messages use simple text wrapping - no scrollable container
-    if (isUser) {
-      return typeof content === "string" ? (
-        <span className="text-sm leading-relaxed whitespace-pre-wrap break-words">{content}</span>
-      ) : (
-        content
-      );
-    }
-    
-    // Assistant messages use scrollable container for long responses
     const textContent = typeof content === "string" ? (
       <span className="text-sm leading-relaxed">{content}</span>
     ) : (
       content
     );
 
+    // All messages use horizontal scroll to prevent clipping
     return (
       <UniversalScrollableText>
         {textContent}
