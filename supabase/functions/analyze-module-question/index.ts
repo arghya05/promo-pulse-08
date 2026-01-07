@@ -8220,11 +8220,19 @@ function validateQuestionAnswerAlignment(
   console.log(`[${moduleId}] GENERIC ANSWER CHECK: ${genericBulletCount}/${allBullets.length} bullets are generic (score: ${(genericScore * 100).toFixed(0)}%)`);
   
   // If more than 50% of bullets are generic, force complete replacement
+  // ALSO force replacement for specific question types that need data-driven responses
   const GENERIC_THRESHOLD = 0.5;
-  const forceDataReplacement = genericScore > GENERIC_THRESHOLD;
+  const forceDataReplacement = genericScore > GENERIC_THRESHOLD || 
+    questionIntent.isOutOfShelfQuestion || 
+    questionIntent.isSellThroughQuestion ||
+    questionIntent.isCompetitorQuestion;
   
   if (forceDataReplacement) {
-    console.log(`[${moduleId}] ⚠️ GENERIC RESPONSE DETECTED (${(genericScore * 100).toFixed(0)}% > ${GENERIC_THRESHOLD * 100}%) - FORCING DATA-DRIVEN REPLACEMENT`);
+    const forceReason = questionIntent.isOutOfShelfQuestion ? 'OUT-OF-SHELF QUESTION' :
+      questionIntent.isSellThroughQuestion ? 'SELL-THROUGH QUESTION' :
+      questionIntent.isCompetitorQuestion ? 'COMPETITOR QUESTION' : 
+      `GENERIC RESPONSE (${(genericScore * 100).toFixed(0)}%)`;
+    console.log(`[${moduleId}] ⚠️ ${forceReason} - FORCING DATA-DRIVEN REPLACEMENT`);
     
     // Build data-driven replacements using actual calculated data
     const topProducts = calculatedKPIs?.topProducts || [];
