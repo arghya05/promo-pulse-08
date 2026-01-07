@@ -9983,8 +9983,9 @@ function validateAndFixRealisticNumbers(
         if (product) {
           item.value = Math.round(getRealisticRevenue(product.product_sku, item.name));
         } else {
-          // Category or unknown - use reasonable fallback
-          item.value = Math.round(5000 + Math.random() * 20000);
+          // Category or unknown - use avg from calculatedKPIs
+          const avgRev = calculatedKPIs?.revenue_raw ? calculatedKPIs.revenue_raw / 10 : 12500;
+          item.value = Math.round(avgRev);
         }
       }
       
@@ -9993,7 +9994,7 @@ function validateAndFixRealisticNumbers(
         const product = products.find((p: any) => p.product_name === item.name);
         item.revenue = product 
           ? getRealisticRevenue(product.product_sku, item.name)
-          : 2000 + Math.random() * 10000;
+          : (calculatedKPIs?.revenue_raw ? calculatedKPIs.revenue_raw / 15 : 6000);
       }
       
       // Fix zero units
@@ -10001,7 +10002,7 @@ function validateAndFixRealisticNumbers(
         const product = products.find((p: any) => p.product_name === item.name);
         item.units = product 
           ? getRealisticUnits(product.product_sku, item.name)
-          : Math.round(30 + Math.random() * 120);
+          : (calculatedKPIs?.units_sold_raw ? Math.round(calculatedKPIs.units_sold_raw / 20) : 75);
       }
       
       return item;
@@ -10015,7 +10016,9 @@ function validateAndFixRealisticNumbers(
       if (calculatedKPIs?.revenue) {
         response.kpis.revenue = calculatedKPIs.revenue;
       } else {
-        const fallbackRev = 25000 + Math.random() * 100000;
+        const fallbackRev = transactions.length > 0 
+          ? transactions.reduce((s: number, t: any) => s + Number(t.total_amount || 0), 0) * 1.2
+          : 62500;
         response.kpis.revenue = fallbackRev >= 1000000 
           ? `$${(fallbackRev / 1000000).toFixed(2)}M`
           : `$${(fallbackRev / 1000).toFixed(1)}K`;
@@ -10027,7 +10030,10 @@ function validateAndFixRealisticNumbers(
       if (calculatedKPIs?.units_sold) {
         response.kpis.units_sold = calculatedKPIs.units_sold;
       } else {
-        response.kpis.units_sold = `${Math.round(500 + Math.random() * 2000).toLocaleString()}`;
+        const fallbackUnits = transactions.length > 0 
+          ? transactions.reduce((s: number, t: any) => s + Number(t.quantity || 1), 0)
+          : 1250;
+        response.kpis.units_sold = `${fallbackUnits.toLocaleString()}`;
       }
     }
   }
@@ -10088,8 +10094,9 @@ function ensureCompleteResponse(
   response.causalDrivers = response.causalDrivers.map((driver: any) => {
     if (driver.impact === 'Significant' || driver.impact === 'Moderate' || !driver.impact) {
       const margin = calculatedKPIs?.gross_margin || '32.5%';
-      const units = calculatedKPIs?.units_sold || '1,200';
-      driver.impact = `+${(Math.random() * 5 + 2).toFixed(1)}% impact, contributing to ${margin} margin`;
+      const marginRaw = parseFloat(String(calculatedKPIs?.gross_margin_raw || margin).replace('%', ''));
+      const impactVal = Math.max(2, Math.min(7, marginRaw * 0.15));
+      driver.impact = `+${impactVal.toFixed(1)}% impact, contributing to ${margin} margin`;
     }
     if (!driver.actionable) {
       driver.actionable = 'Review and optimize based on this driver';
@@ -10276,11 +10283,12 @@ function ensureCompleteResponse(
     
     // Fallback if no transactions
     if (entityChartData.length === 0) {
-      console.log(`[ChartData] No store transactions, generating estimates`);
-      entityChartData = stores.slice(0, requestedCount).map((s: any) => {
+      console.log(`[ChartData] No store transactions, generating estimates from sqft`);
+      entityChartData = stores.slice(0, requestedCount).map((s: any, idx: number) => {
         const sqft = Number(s.store_size_sqft || 10000);
-        const estimatedRevenue = sqft * 0.05 * (0.8 + Math.random() * 0.4);
-        const marginPct = 28 + Math.random() * 8;
+        // Use deterministic revenue: sqft * standard $0.05/sqft adjusted by rank
+        const estimatedRevenue = sqft * 0.05 * (1 - idx * 0.05);
+        const marginPct = 28 + (4 - idx * 0.5); // Deterministic margin based on rank
         const profit = estimatedRevenue * (marginPct / 100);
         return {
           name: s.store_name || s.store_code,
@@ -10579,8 +10587,9 @@ function generateRealisticMetrics(
   const entityCount = Math.min(6, Math.max(3, products.length || 6));
   
   for (let i = 0; i < entityCount; i++) {
-    const baseRevenue = 15000 + Math.random() * 35000;
-    const marginPct = 22 + Math.random() * 18;
+    // Use deterministic values based on index (no random)
+    const baseRevenue = 35000 - (i * 5000); // Descending revenue by rank
+    const marginPct = 35 - (i * 2); // Descending margin by rank
     const profit = baseRevenue * (marginPct / 100);
     
     let name = '';
@@ -10602,24 +10611,24 @@ function generateRealisticMetrics(
       name = `${intent.entity.charAt(0).toUpperCase() + intent.entity.slice(1)} ${i + 1}`;
     }
     
-    // Metric-specific values
+    // Metric-specific values - all deterministic based on rank
     const metrics: Record<string, any> = {
       name,
       revenue: Math.round(baseRevenue * timeMult),
       margin: marginPct,
       profit: Math.round(profit * timeMult),
-      roi: (1.2 + Math.random() * 1.3).toFixed(2),
-      units: Math.round(200 + Math.random() * 800),
-      sellThrough: (45 + Math.random() * 50).toFixed(1),
-      elasticity: (-0.5 - Math.random() * 2.5).toFixed(2),
-      cannibalization: (8 + Math.random() * 22).toFixed(1),
-      lift: (12 + Math.random() * 28).toFixed(1),
-      marketShare: (5 + Math.random() * 20).toFixed(1),
-      basketSize: (45 + Math.random() * 60).toFixed(2),
-      conversion: (2.5 + Math.random() * 3.5).toFixed(1),
-      discount: (8 + Math.random() * 22).toFixed(1),
-      onTimeDelivery: (88 + Math.random() * 11).toFixed(1),
-      stockLevel: Math.round(50 + Math.random() * 200)
+      roi: (2.2 - i * 0.15).toFixed(2),
+      units: Math.round(800 - i * 100),
+      sellThrough: (85 - i * 5).toFixed(1),
+      elasticity: (-1.0 - i * 0.3).toFixed(2),
+      cannibalization: (10 + i * 3).toFixed(1),
+      lift: (35 - i * 4).toFixed(1),
+      marketShare: (20 - i * 2).toFixed(1),
+      basketSize: (95 - i * 8).toFixed(2),
+      conversion: (5.5 - i * 0.4).toFixed(1),
+      discount: (10 + i * 2).toFixed(1),
+      onTimeDelivery: (98 - i * 1.5).toFixed(1),
+      stockLevel: Math.round(200 - i * 25)
     };
     
     entityData.push(metrics);
@@ -10712,7 +10721,8 @@ function generateUniversalMerchandisingFallback(
       break;
       
     case 'forecast':
-      const growth = 0.03 + Math.random() * 0.07;
+      // Deterministic growth based on top entity margin performance
+      const growth = metrics.topEntity.margin > 30 ? 0.08 : metrics.topEntity.margin > 25 ? 0.05 : 0.03;
       response.whatHappened = [
         `Forecast: +${(growth * 100).toFixed(1)}% ${intent.metric} growth expected over next 4 ${intent.timeframe}s (86% confidence)`,
         `Projected ${intent.metric}: ${formatCurrency(metrics.totalRevenue * (1 + growth))} vs current ${formatCurrency(metrics.totalRevenue)}`,
@@ -10748,7 +10758,8 @@ function generateUniversalMerchandisingFallback(
       break;
       
     case 'trend':
-      const trendPct = -5 + Math.random() * 15;
+      // Deterministic trend based on margin spread
+      const trendPct = metrics.topEntity.margin > metrics.avgMargin + 5 ? 8.5 : metrics.topEntity.margin > metrics.avgMargin ? 3.2 : -2.5;
       response.whatHappened = [
         `${intent.metric} trend: ${trendPct > 0 ? '+' : ''}${trendPct.toFixed(1)}% vs prior ${intent.timeframe}`,
         `"${metrics.topEntity.name}" driving ${trendPct > 0 ? 'growth' : 'stability'} at ${formatCurrency(metrics.topEntity.revenue)} (+${((metrics.topEntity.revenue / metrics.totalRevenue) * 100).toFixed(0)}% contribution)`,
@@ -10988,20 +10999,20 @@ function enforceQuestionTypeAlignment(
         
         if (/store/i.test(q)) {
           entityType = 'store';
-          entityData = (data.calculatedKPIs?.storePerformance || data.stores.slice(0, count)).map((s: any) => ({
+          entityData = (data.calculatedKPIs?.storePerformance || data.stores.slice(0, count)).map((s: any, idx: number) => ({
             name: s.name || s.store_name,
-            revenue: s.revenue || Math.floor(Math.random() * 50000 + 20000),
-            margin: s.margin || 28 + Math.random() * 8
+            revenue: s.revenue || (50000 - idx * 5000), // Deterministic fallback
+            margin: s.margin || (32 - idx * 0.5)
           }));
         } else if (/categor/i.test(q)) {
           entityType = 'category';
           entityData = data.calculatedKPIs?.categoryBreakdown || [];
         } else if (/supplier/i.test(q)) {
           entityType = 'supplier';
-          entityData = (data.calculatedKPIs?.supplierPerformance || data.suppliers.slice(0, count)).map((s: any) => ({
+          entityData = (data.calculatedKPIs?.supplierPerformance || data.suppliers.slice(0, count)).map((s: any, idx: number) => ({
             name: s.name || s.supplier_name,
-            revenue: s.revenue || Math.floor(Math.random() * 30000 + 10000),
-            reliability: s.reliability || (95 + Math.random() * 4).toFixed(1) + '%'
+            revenue: s.revenue || (30000 - idx * 4000), // Deterministic fallback
+            reliability: s.reliability || `${97 - idx * 0.5}%`
           }));
         } else {
           // Default to products
@@ -11010,7 +11021,7 @@ function enforceQuestionTypeAlignment(
           if (entityData.length === 0) {
             entityData = data.products.slice(0, count).map((p: any) => ({
               name: p.product_name,
-              revenue: Number(p.base_price || 10) * (50 + Math.floor(Math.random() * 100)),
+              revenue: Number(p.base_price || 10) * 75, // Fixed 75 units
               margin: ((Number(p.base_price || 10) - Number(p.cost || 6.5)) / Number(p.base_price || 10) * 100)
             }));
           }
@@ -11072,7 +11083,7 @@ function enforceQuestionTypeAlignment(
         if (entityData.length === 0) {
           entityData = data.products.slice(-count).map((p: any) => ({
             name: p.product_name,
-            revenue: Number(p.base_price || 5) * (10 + Math.floor(Math.random() * 30)),
+            revenue: Number(p.base_price || 5) * 20, // Fixed 20 units for bottom performers
             margin: Math.max(5, ((Number(p.base_price || 5) - Number(p.cost || 4)) / Number(p.base_price || 5) * 100))
           }));
         }
@@ -11168,7 +11179,9 @@ function enforceQuestionTypeAlignment(
       requiredInAnswer: (q, data) => ['forecast', 'predict', 'week', 'month', '%', 'confidence'],
       generateDataDrivenAnswer: (q, data, response) => {
         const currentRev = data.calculatedKPIs?.revenue_raw || 125000;
-        const growth = 0.05 + Math.random() * 0.08;
+        // Deterministic growth based on margin performance
+        const marginRaw = parseFloat(String(data.calculatedKPIs?.gross_margin_raw || '30').replace('%', ''));
+        const growth = marginRaw > 35 ? 0.10 : marginRaw > 30 ? 0.07 : 0.05;
         
         if (!response.predictions || !response.predictions.forecast || response.predictions.forecast.length === 0) {
           response.predictions = {
@@ -11260,11 +11273,11 @@ function enforceQuestionTypeAlignment(
       type: 'supplier_performance',
       requiredInAnswer: (q, data) => ['supplier', 'on-time', '%', 'delivery'],
       generateDataDrivenAnswer: (q, data, response) => {
-        const supplierPerf = data.calculatedKPIs?.supplierPerformance || data.suppliers.slice(0, 5).map((s: any) => ({
+        const supplierPerf = data.calculatedKPIs?.supplierPerformance || data.suppliers.slice(0, 5).map((s: any, idx: number) => ({
           name: s.supplier_name,
-          reliability: 90 + Math.random() * 9,
+          reliability: s.reliability_score || (97 - idx * 1.5), // Deterministic
           leadTime: s.lead_time_days || 7,
-          onTime: 85 + Math.random() * 14
+          onTime: s.reliability_score ? s.reliability_score * 1.02 : (96 - idx * 2) // Deterministic
         }));
         
         const topSupplier = supplierPerf[0];
@@ -11307,11 +11320,11 @@ function enforceQuestionTypeAlignment(
         const promos = data.promotions.slice(0, 5);
         const avgROI = data.calculatedKPIs?.roi || 1.85;
         
-        const promoPerf = promos.map((p: any) => ({
+        const promoPerf = promos.map((p: any, idx: number) => ({
           name: p.promotion_name,
-          roi: 0.8 + Math.random() * 1.5,
+          roi: Number(p.discount_percent) > 20 ? 0.9 : Number(p.discount_percent) > 10 ? 1.5 : 2.1 - idx * 0.2, // Deterministic
           spend: Number(p.total_spend || 5000),
-          lift: 15 + Math.random() * 25
+          lift: Number(p.discount_percent) || (35 - idx * 5) // Deterministic
         })).sort((a: any, b: any) => b.roi - a.roi);
         
         response.whatHappened = [
@@ -11358,10 +11371,12 @@ function enforceQuestionTypeAlignment(
           const sku = p.product_sku || p.sku || `SKU-${idx + 1}`;
           const name = p.name || p.product_name || `Product ${idx + 1}`;
           const category = p.category || 'General';
-          const grossLift = 8000 + Math.random() * 15000;
-          const cannibRate = 12 + Math.random() * 18; // 12-30% cannibalization rate
+          const revenue = p.revenue || p.value || (Number(p.base_price || 10) * 100);
+          // Deterministic cannibalization based on rank and revenue
+          const grossLift = revenue * 0.8; // 80% of revenue as gross lift
+          const cannibRate = 15 + idx * 3; // 15-30% deterministic based on rank
           const cannibValue = grossLift * (cannibRate / 100);
-          const haloEffect = grossLift * (0.02 + Math.random() * 0.05); // 2-7% halo
+          const haloEffect = grossLift * 0.04; // Fixed 4% halo
           const netIncremental = grossLift - cannibValue + haloEffect;
           
           return {
@@ -11373,7 +11388,7 @@ function enforceQuestionTypeAlignment(
             cannibalizationRate: cannibRate,
             haloEffect: Math.round(haloEffect),
             netIncrementalSales: Math.round(netIncremental),
-            impactedSKUs: Math.floor(2 + Math.random() * 4)
+            impactedSKUs: 3 + idx // Deterministic
           };
         }).sort((a: any, b: any) => b.cannibalizationValue - a.cannibalizationValue);
         
@@ -11448,7 +11463,7 @@ function enforceQuestionTypeAlignment(
         
         const marginData = Object.entries(categoryMargins).map(([cat, data]) => {
           const margin = ((data.revenue - data.cost) / data.revenue * 100);
-          const priorMargin = margin + (Math.random() * 6 - 2); // Prior was different
+          const priorMargin = margin + (data.count > 3 ? -3 : data.count > 2 ? -1 : 2); // Deterministic based on SKU count
           return {
             category: cat,
             currentMargin: margin,
@@ -11471,12 +11486,12 @@ function enforceQuestionTypeAlignment(
         
         response.why = [
           `${worstCategory.category} margin erosion driven by ${Math.abs(worstCategory.change) > 3 ? 'aggressive discounting' : 'cost increases'} — impacting $${(worstCategory.revenue/1000).toFixed(1)}K revenue`,
-          `Mix shift toward lower-margin SKUs contributing -${(Math.random() * 1.5 + 0.5).toFixed(1)}pp to overall margin`
+          `Mix shift toward lower-margin SKUs contributing -1.2pp to overall margin`
         ];
         
         response.whatToDo = [
           `Review ${worstCategory.category} discount depth — cap at ${(worstCategory.currentMargin * 0.7).toFixed(0)}% to protect margin floor`,
-          `Renegotiate supplier costs for high-volume SKUs → target +${(Math.random() * 2 + 1).toFixed(1)}pp margin recovery`
+          `Renegotiate supplier costs for high-volume SKUs → target +1.5pp margin recovery`
         ];
         
         response.chartData = marginData.slice(0, 6).map((m: any) => ({
@@ -11503,11 +11518,12 @@ function enforceQuestionTypeAlignment(
         const planograms = data.planograms || [];
         const products = data.products.slice(0, 15);
         
-        // Build space performance by category
-        const categorySpace = products.reduce((acc: any, p: any) => {
+        // Build space performance by category using deterministic values
+        const categorySpace = products.reduce((acc: any, p: any, idx: number) => {
           const cat = p.category || 'General';
-          if (!acc[cat]) acc[cat] = { sqft: 50 + Math.random() * 100, revenue: 0, products: 0 };
-          acc[cat].revenue += Number(p.base_price || 10) * (30 + Math.random() * 70);
+          if (!acc[cat]) acc[cat] = { sqft: 80, revenue: 0, products: 0, catIdx: Object.keys(acc).length };
+          acc[cat].sqft = 60 + acc[cat].catIdx * 15; // Deterministic sqft based on category index
+          acc[cat].revenue += Number(p.base_price || 10) * 50; // Fixed 50 units
           acc[cat].products++;
           return acc;
         }, {});
@@ -11518,7 +11534,7 @@ function enforceQuestionTypeAlignment(
           revenue: Math.round(data.revenue),
           salesPerSqft: data.revenue / data.sqft,
           products: data.products,
-          utilization: 60 + Math.random() * 35
+          utilization: 75 + data.catIdx * 3 // Deterministic utilization
         })).sort((a, b) => b.salesPerSqft - a.salesPerSqft);
         
         const topCategory = spaceData[0];
@@ -11564,18 +11580,20 @@ function enforceQuestionTypeAlignment(
       generateDataDrivenAnswer: (q, data, response) => {
         const products = data.products.slice(0, 20);
         
-        const skuAnalysis = products.map((p: any) => {
-          const sellThrough = 40 + Math.random() * 55; // 40-95%
-          const velocity = ['High', 'Medium', 'Low'][Math.floor(Math.random() * 3)];
+        const skuAnalysis = products.map((p: any, idx: number) => {
+          // Deterministic sell-through based on margin and index
+          const margin = ((Number(p.base_price || 10) - Number(p.cost || 6.5)) / Number(p.base_price || 10) * 100);
+          const sellThrough = margin > 35 ? (85 - idx * 3) : margin > 25 ? (65 - idx * 3) : (45 - idx * 3);
+          const velocity = sellThrough > 70 ? 'High' : sellThrough > 50 ? 'Medium' : 'Low';
           const recommendation = sellThrough > 75 ? 'Grow' : sellThrough > 50 ? 'Maintain' : sellThrough > 30 ? 'Reduce' : 'Exit';
           return {
             name: p.product_name || p.product_sku,
             sku: p.product_sku,
             category: p.category || 'General',
-            sellThrough,
+            sellThrough: Math.max(15, sellThrough),
             velocity,
             recommendation,
-            margin: ((Number(p.base_price || 10) - Number(p.cost || 6.5)) / Number(p.base_price || 10) * 100)
+            margin
           };
         }).sort((a, b) => a.sellThrough - b.sellThrough);
         
@@ -11622,16 +11640,20 @@ function enforceQuestionTypeAlignment(
       generateDataDrivenAnswer: (q, data, response) => {
         const products = data.products.slice(0, 8);
         
-        const forecastData = products.map((p: any) => {
-          const forecastedUnits = 200 + Math.floor(Math.random() * 800);
-          const actualUnits = forecastedUnits * (0.85 + Math.random() * 0.3); // 85-115% of forecast
+        const forecastData = products.map((p: any, idx: number) => {
+          // Deterministic forecast based on price and index
+          const basePrice = Number(p.base_price || 10);
+          const forecastedUnits = Math.round(basePrice * 30 + 100 - idx * 20);
+          // Deterministic accuracy based on product index
+          const accuracyBase = 92 - idx * 3;
+          const actualUnits = Math.round(forecastedUnits * (accuracyBase / 100 + 0.05));
           const accuracy = 100 - Math.abs((actualUnits - forecastedUnits) / forecastedUnits * 100);
           const bias = ((actualUnits - forecastedUnits) / forecastedUnits * 100);
           return {
             name: p.product_name || p.product_sku,
             category: p.category || 'General',
-            forecastedUnits: Math.round(forecastedUnits),
-            actualUnits: Math.round(actualUnits),
+            forecastedUnits,
+            actualUnits,
             accuracy,
             bias,
             mape: Math.abs(bias)
@@ -11682,12 +11704,16 @@ function enforceQuestionTypeAlignment(
       generateDataDrivenAnswer: (q, data, response) => {
         const products = data.products.slice(0, 8);
         
-        const elasticityData = products.map((p: any) => {
+        const elasticityData = products.map((p: any, idx: number) => {
           const basePrice = Number(p.base_price || 10);
-          const elasticity = -(0.5 + Math.random() * 2.5); // -0.5 to -3.0
-          const optimalPrice = basePrice * (1 + (0.05 + Math.random() * 0.15) * (elasticity > -1.5 ? 1 : -1));
+          // Use actual price_elasticity if available, otherwise deterministic
+          const elasticity = Number(p.price_elasticity) || -(1.2 + idx * 0.2);
+          const absElasticity = Math.abs(elasticity);
+          // Optimal price based on elasticity
+          const priceAdjust = absElasticity > 1.5 ? -0.05 : absElasticity < 1 ? 0.08 : 0.02;
+          const optimalPrice = basePrice * (1 + priceAdjust);
           const priceGap = ((optimalPrice - basePrice) / basePrice * 100);
-          const revenueImpact = Math.abs(priceGap) * (1500 + Math.random() * 3000);
+          const revenueImpact = Math.abs(priceGap) * basePrice * 50; // Deterministic impact
           
           return {
             name: p.product_name || p.product_sku,
@@ -11697,7 +11723,7 @@ function enforceQuestionTypeAlignment(
             optimalPrice,
             priceGap,
             potentialRevenue: revenueImpact,
-            action: elasticity > -1.0 ? 'Increase Price' : elasticity > -2.0 ? 'Hold' : 'Decrease Price'
+            action: absElasticity < 1.0 ? 'Increase Price' : absElasticity < 2.0 ? 'Hold' : 'Decrease Price'
           };
         }).sort((a, b) => Math.abs(b.priceGap) - Math.abs(a.priceGap));
         
