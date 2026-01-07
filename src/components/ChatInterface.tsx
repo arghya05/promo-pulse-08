@@ -1428,9 +1428,9 @@ export default function ChatInterface({
       )}
 
       {/* Messages Area - Clean Chat Shell */}
-      <div className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-hidden">
+      <div className="flex flex-col flex-1 min-h-0 w-full max-w-full">
         <ScrollArea className="flex-1 min-h-0 w-full max-w-full" ref={scrollRef}>
-          <div className="space-y-4 px-6 py-4 w-full">
+          <div className="space-y-4 px-6 py-4 w-full max-w-full">
             {messages.map((message) => {
               // Convert legacy message format to ChatMessageData for ExecutiveChatMessage
               const chatMessage: ChatMessageData = {
