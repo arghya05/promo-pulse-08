@@ -70,12 +70,12 @@ export const ExecutiveChatMessage: React.FC<ExecutiveChatMessageProps> = ({
 
       {/* Message Content */}
       <div className={cn(
-        "max-w-[90%] min-w-0",
-        isUser && "max-w-[75%]"
+        "max-w-[90%]",
+        isUser ? "max-w-[75%]" : "min-w-0"
       )}>
         {isUser ? (
-          // User message bubble - min-w-[48px] ensures short text isn't clipped
-          <div className="bg-blue-500 text-white rounded-2xl px-4 py-2 min-w-[48px]">
+          // User message bubble - inline-block ensures bubble sizes to content
+          <div className="bg-blue-500 text-white rounded-2xl px-4 py-2 inline-block">
             <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
               {message.content}
             </p>
