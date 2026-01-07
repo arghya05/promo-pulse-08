@@ -176,9 +176,13 @@ export default function SearchSuggestions({
 
   // Get suggestions based on module and query
   const suggestions = useMemo(() => {
-    if (!query || query.length < 2) return [];
+    if (!query || query.length < 2) {
+      console.log('[SearchSuggestions] Query too short:', query?.length || 0);
+      return [];
+    }
 
     const lowerQuery = query.toLowerCase().trim();
+    console.log('[SearchSuggestions] Processing query:', query, 'for module:', moduleId);
     const words = lowerQuery.split(" ").filter(w => w.length > 0);
     const firstWord = words[0] || '';
     
@@ -250,9 +254,12 @@ export default function SearchSuggestions({
   }, [onSelect]);
 
   // Don't render if not visible or no suggestions
+  console.log('[SearchSuggestions] Render check:', { isVisible, suggestionsCount: suggestions.length, query });
   if (!isVisible || suggestions.length === 0) {
+    console.log('[SearchSuggestions] Not rendering - isVisible:', isVisible, 'suggestions:', suggestions.length);
     return null;
   }
+  console.log('[SearchSuggestions] RENDERING suggestions:', suggestions.map(s => s.text));
 
   // ALWAYS use inline mode as the reliable default - portal positioning is unreliable
   const shouldUseInline = !portalPosition || useInlineMode;
