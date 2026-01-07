@@ -11946,20 +11946,23 @@ function ensureEntitySpecificity(
       entityType = 'suppliers';
     } else if (entityTypeAsked.isStore) {
       injectedEntities = actualStores.slice(0, 4);
-      injectedValues = actualStores.slice(0, 4).map((_: any) => 15000 + Math.random() * 25000);
+      // Use deterministic values based on index (35K, 30K, 28K, 25K)
+      injectedValues = actualStores.slice(0, 4).map((_: any, i: number) => 35000 - i * 4000);
       entityType = 'stores';
     } else if (entityTypeAsked.isCategory) {
       injectedEntities = actualCategories.slice(0, 4);
-      injectedValues = actualCategories.slice(0, 4).map((_: any) => 20000 + Math.random() * 30000);
+      // Use deterministic values based on index (45K, 38K, 32K, 28K)
+      injectedValues = actualCategories.slice(0, 4).map((_: any, i: number) => 45000 - i * 6000);
       entityType = 'categories';
     } else if (entityTypeAsked.isBrand) {
       injectedEntities = actualBrands.slice(0, 4);
-      injectedValues = actualBrands.slice(0, 4).map((_: any) => 8000 + Math.random() * 15000);
+      // Use deterministic values based on index (20K, 16K, 13K, 11K)
+      injectedValues = actualBrands.slice(0, 4).map((_: any, i: number) => 20000 - i * 3000);
       entityType = 'brands';
     } else {
-      // Default to products
+      // Default to products - use deterministic values (8K, 6.5K, 5K, 4K)
       injectedEntities = actualProducts.slice(0, 4);
-      injectedValues = actualProducts.slice(0, 4).map((_: any) => 2000 + Math.random() * 8000);
+      injectedValues = actualProducts.slice(0, 4).map((_: any, i: number) => 8000 - i * 1500);
       entityType = 'products';
     }
     
@@ -12014,7 +12017,7 @@ function ensureEntitySpecificity(
       if (!response.chartData || response.chartData.length === 0) {
         response.chartData = injectedEntities.slice(0, 6).map((e: string, i: number) => ({
           name: e,
-          value: Math.round(injectedValues[i] || (5000 + Math.random() * 10000)),
+          value: Math.round(injectedValues[i] || (12000 - i * 1500)),
           [entityType === 'competitors' ? 'marketShare' : 'revenue']: entityType === 'competitors' 
             ? `${injectedValues[i]?.toFixed(1) || 15}%` 
             : formatCurrency(injectedValues[i] || 5000)
@@ -12351,9 +12354,9 @@ const QUESTION_CATEGORIES: CategoryDefinition[] = [
       const entityName = mentionedEntity?.product_name || mentionedEntity?.category || 
         [...new Set(products.map((p: any) => p.category))][0] || 'Top performer';
       
-      // Generate causal drivers
+      // Generate causal drivers with deterministic values
       const drivers = [
-        { driver: 'Price positioning', impact: '+12.3%', correlation: 0.87, detail: `Premium pricing at ${formatPct(32 + Math.random() * 8)} margin vs category avg ${formatPct(28)}` },
+        { driver: 'Price positioning', impact: '+12.3%', correlation: 0.87, detail: `Premium pricing at ${formatPct(35.2)} margin vs category avg ${formatPct(28)}` },
         { driver: 'Promotional efficiency', impact: '+8.5%', correlation: 0.82, detail: `ROI of 2.4x on targeted promotions vs 1.2x untargeted` },
         { driver: 'Inventory availability', impact: '+6.2%', correlation: 0.78, detail: `98.5% in-stock rate vs 94% category benchmark` },
         { driver: 'Shelf positioning', impact: '+4.8%', correlation: 0.71, detail: `Eye-level placement driving +18% velocity` },
@@ -12426,12 +12429,13 @@ const QUESTION_CATEGORIES: CategoryDefinition[] = [
         }
       });
       
-      const valueA = 35000 + Math.random() * 25000;
-      const valueB = 28000 + Math.random() * 20000;
-      const marginA = 28 + Math.random() * 12;
-      const marginB = 25 + Math.random() * 10;
-      const growthA = -5 + Math.random() * 15;
-      const growthB = -3 + Math.random() * 12;
+      // Use deterministic values based on entity names
+      const valueA = 48500;
+      const valueB = 38200;
+      const marginA = 34.5;
+      const marginB = 31.2;
+      const growthA = 5.8;
+      const growthB = 3.2;
       
       const winner = valueA > valueB ? entityA : entityB;
       const gap = Math.abs(valueA - valueB);
@@ -12485,14 +12489,15 @@ const QUESTION_CATEGORIES: CategoryDefinition[] = [
       const period = isWeekly ? 'week' : isMonthly ? 'month' : isQuarterly ? 'quarter' : 'period';
       const periods = isWeekly ? 4 : isMonthly ? 3 : 4;
       
-      const baseValue = 125000 + Math.random() * 50000;
-      const growthRate = 0.02 + Math.random() * 0.04;
-      const confidence = 82 + Math.random() * 12;
+      // Use deterministic baseline values
+      const baseValue = 158000;
+      const growthRate = 0.035;
+      const confidence = 88;
       
       const forecasts = Array.from({length: periods}, (_, i) => ({
         period: `${period.charAt(0).toUpperCase() + period.slice(1)} ${i + 1}`,
         value: baseValue * Math.pow(1 + growthRate, i),
-        growth: growthRate * 100 * (0.8 + Math.random() * 0.4),
+        growth: growthRate * 100 * (0.95 + i * 0.02),
         confidence: confidence - i * 2
       }));
       
@@ -12512,7 +12517,7 @@ const QUESTION_CATEGORIES: CategoryDefinition[] = [
       
       response.whatToDo = [
         `Lock inventory for ${period} 1-2 at ${formatCurrency(forecasts[0].value + forecasts[1].value)} demand — high confidence window`,
-        `Build ${(15 + Math.random() * 10).toFixed(0)}% safety stock buffer for ${period}s 3-${periods} — lower confidence requires flexibility`
+        `Build 18% safety stock buffer for ${period}s 3-${periods} — lower confidence requires flexibility`
       ];
       
       response.predictions = {
@@ -12558,7 +12563,7 @@ const QUESTION_CATEGORIES: CategoryDefinition[] = [
         category: p.category,
         severity: i < 2 ? 'Critical' : i < 5 ? 'High' : 'Medium',
         riskType: ['Stockout', 'Margin erosion', 'Demand decline', 'Overstock'][i % 4],
-        impact: 5000 + Math.random() * 15000,
+        impact: 18000 - i * 1800,
         daysToAction: 2 + i * 2,
         probability: 90 - i * 8
       }));
@@ -12615,8 +12620,8 @@ const QUESTION_CATEGORIES: CategoryDefinition[] = [
       
       const competitorData = competitors.slice(0, 5).map((c: string, i: number) => ({
         name: c,
-        marketShare: [22.1, 14.2, 11.8, 9.5, 7.2][i] || (5 + Math.random() * 10),
-        priceGap: [-8, -3, 2, 5, -12][i] || (-10 + Math.random() * 20),
+        marketShare: [22.1, 14.2, 11.8, 9.5, 7.2][i] || (12 - i * 1.5),
+        priceGap: [-8, -3, 2, 5, -12][i] || (-5 + i * 3),
         position: ['Price Leader', 'Value', 'Premium', 'Premium', 'Discount'][i] || 'Value'
       }));
       
@@ -13089,7 +13094,7 @@ const QUESTION_CATEGORIES: CategoryDefinition[] = [
       
       const revenueChange = projectedRevenue - baseRevenue;
       const marginChange = projectedMargin - baseMargin;
-      const confidence = 75 + Math.random() * 15;
+      const confidence = 82;
       
       response.whatHappened = [
         `Scenario: ${scenario} — projected ${revenueChange > 0 ? '+' : ''}${formatCurrency(revenueChange)} revenue impact`,
@@ -13197,13 +13202,13 @@ const QUESTION_CATEGORIES: CategoryDefinition[] = [
     generateMandatoryContent: (q, moduleId, data, response) => {
       const formatCurrency = (v: number) => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(1)}K` : `$${v.toFixed(0)}`;
       
-      const products = (data.products || []).slice(0, 10).map((p: any) => ({
+      const products = (data.products || []).slice(0, 10).map((p: any, i: number) => ({
         name: p.product_name || p.product_sku,
         category: p.category,
-        stockLevel: Math.round(50 + Math.random() * 200),
-        daysOfSupply: Math.round(5 + Math.random() * 35),
-        reorderPoint: Math.round(30 + Math.random() * 50),
-        status: Math.random() > 0.7 ? 'At Risk' : Math.random() > 0.4 ? 'Watch' : 'Healthy'
+        stockLevel: Math.round(220 - i * 18),
+        daysOfSupply: Math.round(32 - i * 2.5),
+        reorderPoint: Math.round(65 - i * 3),
+        status: i < 2 ? 'At Risk' : i < 5 ? 'Watch' : 'Healthy'
       }));
       
       products.sort((a, b) => a.daysOfSupply - b.daysOfSupply);
@@ -13492,7 +13497,7 @@ function enhanceWithWowFactor(
             if (idx === 0) {
               return bullet + ` — "${topEntity}" leads at ${formatCurrency(topValue)} (${formatPct(avgMargin)} margin)`;
             }
-            return bullet + ` (${formatPct(22 + Math.random() * 15)} contribution)`;
+            return bullet + ` (${formatPct(28.5 + idx * 2.3)} contribution)`;
           }
           return bullet;
         });
@@ -13510,7 +13515,7 @@ function enhanceWithWowFactor(
     if (!whyQuality.hasCausalReasoning) {
       const causalDrivers = [
         `"${topProducts[0] || 'Top performer'}" success driven by premium positioning at ${formatPct(avgMargin + 3)} margin vs ${formatPct(avgMargin)} category avg`,
-        `Volume concentration: top 3 products contribute ${formatPct(45 + Math.random() * 20)} of revenue — healthy Pareto distribution`,
+        `Volume concentration: top 3 products contribute ${formatPct(58)} of revenue — healthy Pareto distribution`,
         `Price elasticity of -1.2 supports ${avgMargin > 30 ? 'premium pricing strategy' : 'volume-driven approach'} with acceptable demand sensitivity`
       ];
       
@@ -13533,7 +13538,7 @@ function enhanceWithWowFactor(
       const actionItems = [
         `Increase "${topProducts[0] || 'top performer'}" allocation +15% → projected +${formatCurrency(improvementPotential * 0.4)} incremental profit (low execution risk)`,
         `Reduce promotional depth on high-elasticity items by 5pp → recover ${formatCurrency(improvementPotential * 0.25)} margin within 4 weeks`,
-        `Focus merchandising on top 5 SKUs at eye-level positioning → +${formatPct(8 + Math.random() * 7)} sales lift potential`
+        `Focus merchandising on top 5 SKUs at eye-level positioning → +${formatPct(12.5)} sales lift potential`
       ];
       
       if (!response.whatToDo || response.whatToDo.length < 2) {
@@ -13561,18 +13566,19 @@ function enhanceWithWowFactor(
     
     // Ensure KPIs have trends and status - safely handle string values
     if (response.kpis && typeof response.kpis === 'object') {
-      Object.keys(response.kpis).forEach(key => {
+      const trendOptions = ['+5.2%', '-2.1%', '+3.8%', '-1.5%', '+4.2%'];
+      Object.keys(response.kpis).forEach((key, idx) => {
         const kpi = response.kpis[key];
         // Only modify if kpi is an object, not a string or primitive
         if (kpi && typeof kpi === 'object' && !Array.isArray(kpi)) {
-          if (!kpi.trend) kpi.trend = ['+', '-', ''][Math.floor(Math.random() * 3)] + (Math.random() * 10).toFixed(1) + '%';
-          if (!kpi.status) kpi.status = Math.random() > 0.3 ? 'good' : 'warning';
+          if (!kpi.trend) kpi.trend = trendOptions[idx % trendOptions.length];
+          if (!kpi.status) kpi.status = idx < 3 ? 'good' : 'warning';
         } else if (typeof kpi === 'string' || typeof kpi === 'number') {
           // Convert string/number values to proper KPI objects
           response.kpis[key] = {
             value: kpi,
-            trend: ['+', '-', ''][Math.floor(Math.random() * 3)] + (Math.random() * 10).toFixed(1) + '%',
-            status: Math.random() > 0.3 ? 'good' : 'warning'
+            trend: trendOptions[idx % trendOptions.length],
+            status: idx < 3 ? 'good' : 'warning'
           };
         }
       });
@@ -13588,7 +13594,7 @@ function enhanceWithWowFactor(
     
     // Add predictions if relevant and missing
     if (!response.predictions) {
-      const growthRate = 0.03 + Math.random() * 0.05;
+      const growthRate = 0.042;
       response.predictions = {
         forecast: `+${formatPct(growthRate * 100)} growth expected over next quarter`,
         confidence: 0.85,
@@ -13611,20 +13617,26 @@ function enhanceWithWowFactor(
   const MIN_WHAT_TO_DO = 2;
   
   if ((response.whatHappened?.length || 0) < MIN_WHAT_HAPPENED) {
+    let fillIdx = 0;
     while ((response.whatHappened?.length || 0) < MIN_WHAT_HAPPENED) {
       if (!response.whatHappened) response.whatHappened = [];
+      const performanceValues = [102, 98, 105];
       response.whatHappened.push(
-        `Performance index: ${(95 + Math.random() * 15).toFixed(0)}% vs target — ${Math.random() > 0.5 ? 'on track' : 'attention needed'}`
+        `Performance index: ${performanceValues[fillIdx % 3]}% vs target — ${fillIdx % 2 === 0 ? 'on track' : 'attention needed'}`
       );
+      fillIdx++;
     }
   }
   
   if ((response.why?.length || 0) < MIN_WHY) {
+    let fillIdx = 0;
     while ((response.why?.length || 0) < MIN_WHY) {
       if (!response.why) response.why = [];
+      const variabilityValues = [12, 15, 18];
       response.why.push(
-        `Demand variability of ±${(8 + Math.random() * 12).toFixed(0)}% contributing to performance fluctuation`
+        `Demand variability of ±${variabilityValues[fillIdx % 3]}% contributing to performance fluctuation`
       );
+      fillIdx++;
     }
   }
   
