@@ -254,6 +254,9 @@ export default function SearchSuggestions({
     return null;
   }
 
+  // ALWAYS use inline mode as the reliable default - portal positioning is unreliable
+  const shouldUseInline = !portalPosition || useInlineMode;
+
   // Build dropdown content
   const dropdownContent = (
     <div 
@@ -315,65 +318,70 @@ export default function SearchSuggestions({
     </div>
   );
 
-  // Use portal if we have position, otherwise render inline with absolute positioning
-  if (portalPosition) {
+  // Use portal if we have valid position, otherwise ALWAYS render inline
+  if (portalPosition && !shouldUseInline) {
     return createPortal(dropdownContent, document.body);
   }
   
-  // Fallback: render inline with absolute positioning (relative to parent container)
-  if (useInlineMode) {
-    return (
-      <div 
-        ref={containerRef}
-        className="absolute left-0 right-0 bg-popover border border-border rounded-lg shadow-xl overflow-hidden"
-        style={{
-          bottom: position === 'top' ? '100%' : undefined,
-          top: position === 'bottom' ? '100%' : undefined,
-          marginBottom: position === 'top' ? '8px' : undefined,
-          marginTop: position === 'bottom' ? '4px' : undefined,
-          zIndex: 99999,
-          minWidth: '400px',
-        }}
-        onMouseDown={(e) => e.preventDefault()}
-      >
-        <div className="p-2 border-b border-border/50 bg-secondary/30">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Sparkles className="h-3 w-3 text-primary" />
-            <span>AI suggestions for <strong className="text-foreground">{moduleDisplayNames[moduleId] || moduleId}</strong></span>
-          </div>
+  // ALWAYS render inline as fallback - never return null when isVisible=true and suggestions exist
+  return (
+    <div 
+      ref={containerRef}
+      className="absolute left-0 right-0 bg-popover border border-border rounded-lg shadow-xl overflow-hidden"
+      style={{
+        bottom: position === 'top' ? '100%' : undefined,
+        top: position === 'bottom' ? '100%' : undefined,
+        marginBottom: position === 'top' ? '8px' : undefined,
+        marginTop: position === 'bottom' ? '4px' : undefined,
+        zIndex: 99999,
+        minWidth: '400px',
+      }}
+      onMouseDown={(e) => e.preventDefault()}
+    >
+      <div className="p-2 border-b border-border/50 bg-secondary/30">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Sparkles className="h-3 w-3 text-primary" />
+          <span>AI suggestions for <strong className="text-foreground">{moduleDisplayNames[moduleId] || moduleId}</strong></span>
         </div>
-        <ul className="py-1 max-h-[300px] overflow-y-auto">
-          {suggestions.map((suggestion, idx) => (
-            <li key={`inline-${moduleId}-${idx}`}>
-              <button
-                type="button"
-                className={cn(
-                  "w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-accent transition-colors cursor-pointer",
-                  suggestion.highlight && "bg-primary/5"
-                )}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleSelect(suggestion.text);
-                }}
-              >
-                <suggestion.icon className={cn(
-                  "h-4 w-4 flex-shrink-0",
-                  suggestion.highlight ? "text-primary" : "text-muted-foreground"
-                )} />
-                <span className="text-sm text-foreground flex-1">
-                  {highlightMatch(suggestion.text, query)}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
       </div>
-    );
-  }
-
-  // Still waiting for position - render nothing briefly
-  return null;
+      <ul className="py-1 max-h-[300px] overflow-y-auto">
+        {suggestions.map((suggestion, idx) => (
+          <li key={`inline-${moduleId}-${idx}`}>
+            <button
+              type="button"
+              className={cn(
+                "w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-accent transition-colors cursor-pointer",
+                suggestion.highlight && "bg-primary/5"
+              )}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSelect(suggestion.text);
+              }}
+            >
+              <suggestion.icon className={cn(
+                "h-4 w-4 flex-shrink-0",
+                suggestion.highlight ? "text-primary" : "text-muted-foreground"
+              )} />
+              <span className="text-sm text-foreground flex-1">
+                {highlightMatch(suggestion.text, query)}
+              </span>
+              {suggestion.highlight && (
+                <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                  Popular
+                </span>
+              )}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div className="px-4 py-2 border-t border-border/50 bg-secondary/20">
+        <p className="text-[10px] text-muted-foreground">
+          Press Enter to search • Click to select
+        </p>
+      </div>
+    </div>
+  );
 }
 
 // Helper to escape special regex characters
