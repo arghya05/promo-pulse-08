@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
 import VoiceRecorder from "./VoiceRecorder";
+import SearchSuggestions from "./SearchSuggestions";
 import KPISelector from "./KPISelector";
 import DrillBreadcrumbs from "./DrillBreadcrumbs";
 import ConversationContextPanel from "./ConversationContextPanel";
@@ -461,6 +462,7 @@ export default function ChatInterface({
   const [selectedKPIs, setSelectedKPIs] = useState<string[]>([]);
   const [showKPISelector, setShowKPISelector] = useState(false);
   const [showHelpMenu, setShowHelpMenu] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [messageCount, setMessageCount] = useState(0);
   const [lastPersona, setLastPersona] = useState(persona);
   const [lastModuleId, setLastModuleId] = useState(moduleId);
@@ -472,7 +474,6 @@ export default function ChatInterface({
   const [crossModuleLink, setCrossModuleLink] = useState<ReturnType<typeof detectTargetModule>>(null);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, CollapsedSections>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
-  
   // Global session for cross-module persistence
   const { 
     addInsight, 
@@ -1572,7 +1573,7 @@ export default function ChatInterface({
       )}
 
       {/* Input Area */}
-      <div className="px-6 py-4 border-t border-border bg-background/80 backdrop-blur-sm">
+      <div className="px-6 py-4 border-t border-border bg-background/80 backdrop-blur-sm relative z-50 overflow-visible">
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -1584,15 +1585,48 @@ export default function ChatInterface({
             KPIs
           </Button>
           
-          <div className="relative flex-1">
+          <div className="relative flex-1 overflow-visible">
             <Input
               ref={inputRef}
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setShowSuggestions(e.target.value.length >= 2);
+              }}
+              onFocus={() => setShowSuggestions(query.length >= 2)}
+              onBlur={() => {
+                // Delay hiding to allow click on suggestions
+                setTimeout(() => setShowSuggestions(false), 250);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setShowSuggestions(false);
+                  handleSend();
+                }
+                if (e.key === "Escape") {
+                  setShowSuggestions(false);
+                }
+              }}
               placeholder={content.placeholder}
               className="pr-20 h-11 bg-secondary/30 border-0 focus-visible:ring-1 focus-visible:ring-primary/50"
               disabled={isLoading}
+            />
+            <SearchSuggestions
+              query={query}
+              onSelect={(suggestion) => {
+                setQuery(suggestion);
+                setShowSuggestions(false);
+                // Auto-send when selecting a suggestion
+                setTimeout(() => {
+                  setQuery(suggestion);
+                  handleSend();
+                }, 50);
+              }}
+              isVisible={showSuggestions && query.length >= 2}
+              persona={persona}
+              moduleId={moduleId}
+              position="top"
+              inputElement={inputRef.current}
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
               <VoiceRecorder 
@@ -1603,7 +1637,7 @@ export default function ChatInterface({
           </div>
           
           <Button 
-            onClick={handleSend}
+            onClick={() => { setShowSuggestions(false); handleSend(); }}
             className="h-11 px-4"
             disabled={isLoading || !query.trim()}
           >
