@@ -69,13 +69,16 @@ export const ExecutiveChatMessage: React.FC<ExecutiveChatMessageProps> = ({
       )}
 
       {/* Message Content */}
-      <div className={isUser ? "max-w-[75%]" : "max-w-[90%] min-w-0"}>
+      <div className={cn(
+        "max-w-[90%] min-w-0",
+        isUser && "max-w-[75%]"
+      )}>
         {isUser ? (
           // User message bubble
           <div className="bg-blue-500 text-white rounded-2xl px-3 py-2">
-            <span className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
               {message.content}
-            </span>
+            </p>
           </div>
         ) : message.isLoading ? (
           // Loading state
