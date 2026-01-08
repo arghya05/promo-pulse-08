@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
-import VoiceRecorder from "./VoiceRecorder";
+
 
 import KPISelector from "./KPISelector";
 import DrillBreadcrumbs from "./DrillBreadcrumbs";
@@ -1629,12 +1629,6 @@ export default function ChatInterface({
               position="top"
               inputElement={inputRef.current}
             />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-              <VoiceRecorder 
-                onTranscript={handleVoiceTranscript}
-                disabled={isLoading}
-              />
-            </div>
           </div>
           
           <Button 
@@ -1647,7 +1641,7 @@ export default function ChatInterface({
         </div>
         
         <p className="text-[10px] text-muted-foreground mt-2 text-center">
-          💬 I remember context • 🎤 Use voice • 📊 Select KPIs • 🔄 Refine any answer • 🆘 Click "Need help?" anytime
+          💬 I remember context • 📊 Select KPIs • 🔄 Refine any answer • 🆘 Click "Need help?" anytime
         </p>
       </div>
     </div>

@@ -16,7 +16,7 @@ import type { AnalyticsResult } from "@/lib/analytics";
 import { useToast } from "@/components/ui/use-toast";
 import DrillDownPanel from "@/components/DrillDownPanel";
 import PredictiveInsights from "@/components/PredictiveInsights";
-import VoiceRecorder from "@/components/VoiceRecorder";
+
 import DataManagement from "@/components/DataManagement";
 import { RecommendationsEngine } from "@/components/RecommendationsEngine";
 import IntelligentDrillDown from "@/components/IntelligentDrillDown";
@@ -1065,15 +1065,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                       </div>
                       
                       <div className="flex items-center gap-2 pr-1">
-                        <VoiceRecorder 
-                          onTranscript={(text) => {
-                            setQuery(text);
-                            setShowSuggestions(false);
-                            handleAsk(text);
-                          }}
-                          disabled={isLoading}
-                        />
-                        <Button 
+                        <Button
                           onClick={() => {
                             setShowSuggestions(false);
                             handleAsk();
