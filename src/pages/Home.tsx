@@ -6,7 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { modules } from '@/lib/data/modules';
 import { downloadModuleQuestions } from '@/lib/data/module-questions-export';
 import { kpiLibrary, getKPIsByCategory } from '@/lib/data/kpi-library';
-import { ArrowRight, Brain, Sparkles, Download, LayoutGrid, BarChart3, DollarSign, Percent, Hash, Activity } from 'lucide-react';
+import { ArrowRight, Brain, Sparkles, Download, LayoutGrid, BarChart3, DollarSign, Percent, Hash, Activity, Zap } from 'lucide-react';
+import { AgentsHub } from '@/components/agents/AgentsHub';
 
 const formatIcon = (format: string) => {
   switch (format) {
@@ -54,9 +55,9 @@ const Home = () => {
           </p>
         </div>
 
-        {/* Tabs for Modules and KPIs */}
+        {/* Tabs for Modules, KPIs, and Agents */}
         <Tabs defaultValue="modules" className="w-full">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
+          <TabsList className="grid w-full max-w-xl mx-auto grid-cols-3 mb-8">
             <TabsTrigger value="modules" className="gap-2">
               <LayoutGrid className="h-4 w-4" />
               Modules
@@ -64,6 +65,10 @@ const Home = () => {
             <TabsTrigger value="kpis" className="gap-2">
               <BarChart3 className="h-4 w-4" />
               KPI Library
+            </TabsTrigger>
+            <TabsTrigger value="agents" className="gap-2">
+              <Zap className="h-4 w-4" />
+              Agents
             </TabsTrigger>
           </TabsList>
 
@@ -148,6 +153,11 @@ const Home = () => {
                 </div>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Agents Tab Content */}
+          <TabsContent value="agents">
+            <AgentsHub />
           </TabsContent>
         </Tabs>
       </section>
