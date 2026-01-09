@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { AgentMode, Run } from './types';
 import { RadarView } from './RadarView';
-import { PlaybooksView } from './PlaybooksView';
 import { RunsView } from './RunsView';
 import { ROITrackerView } from './ROITrackerView';
 import { Card } from '@/components/ui/card';
@@ -24,7 +23,6 @@ import {
 } from '@/components/ui/popover';
 import { 
   Radar, 
-  BookOpen, 
   Play, 
   TrendingUp,
   Bell,
@@ -190,14 +188,10 @@ export function AgentsHub() {
 
       {/* Sub-tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-lg grid-cols-4 mb-4">
+        <TabsList className="grid w-full max-w-md grid-cols-3 mb-4">
           <TabsTrigger value="radar" className="gap-1.5 text-xs">
             <Radar className="h-3.5 w-3.5" />
             Radar
-          </TabsTrigger>
-          <TabsTrigger value="playbooks" className="gap-1.5 text-xs">
-            <BookOpen className="h-3.5 w-3.5" />
-            Playbooks
           </TabsTrigger>
           <TabsTrigger value="runs" className="gap-1.5 text-xs">
             <Play className="h-3.5 w-3.5" />
@@ -216,10 +210,6 @@ export function AgentsHub() {
 
         <TabsContent value="radar" className="mt-0">
           <RadarView mode={mode} onCreateRun={handleCreateRun} />
-        </TabsContent>
-
-        <TabsContent value="playbooks" className="mt-0">
-          <PlaybooksView />
         </TabsContent>
 
         <TabsContent value="runs" className="mt-0">
