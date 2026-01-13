@@ -5,6 +5,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Check,
   Loader2,
   Clock,
@@ -17,6 +23,7 @@ import {
   Zap,
   RotateCcw,
   ArrowRight,
+  Eye,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AGENT_DEFINITIONS, AgentId } from './cross-module-data';
@@ -38,7 +45,24 @@ const statusConfig: Record<AgentState['status'], { icon: typeof Check; color: st
   failed: { icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-500/10', label: 'Failed' },
 };
 
+// Agent output preview summaries
+const agentOutputPreviews: Record<AgentId, string> = {
+  discovery: 'Ranked 3 cross-merch plays',
+  signals: 'Collected 4 signals from 3 sources',
+  entity: 'SKU/DC/Vendor mappings validated',
+  anomaly: 'Found demand spike +34% in West',
+  guardrails: '4/5 guardrails passed',
+  rootcause: 'Top cause: Supplier delay (92%)',
+  planner: '5 coordinated actions generated',
+  risk: 'Risk: 22% — safe for autopilot',
+  executor: '5 tool calls executed, 1 retry',
+  roi: 'Expected ₹14.8L, Realized ₹13.9L',
+};
+
 export function LiveAgentPanel({ agents, timeline, onViewArtifact, isRunning }: LiveAgentPanelProps) {
+  const completedCount = Object.values(agents).filter(a => a.status === 'completed').length;
+  const totalAgents = Object.keys(agents).length;
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="py-3 px-4 shrink-0">
@@ -46,6 +70,9 @@ export function LiveAgentPanel({ agents, timeline, onViewArtifact, isRunning }: 
           <div className="flex items-center gap-2">
             <Bot className="h-4 w-4 text-primary" />
             Agents
+            <Badge variant="secondary" className="text-[9px]">
+              {completedCount}/{totalAgents}
+            </Badge>
           </div>
           {isRunning && (
             <Badge variant="outline" className="text-[9px] bg-primary/10 text-primary animate-pulse">
@@ -57,71 +84,86 @@ export function LiveAgentPanel({ agents, timeline, onViewArtifact, isRunning }: 
       </CardHeader>
 
       <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">
-        {/* Agent List */}
-        <div className="px-4 pb-3 shrink-0">
-          <div className="space-y-1">
+        {/* Agent List with Output Previews */}
+        <ScrollArea className="flex-1">
+          <div className="px-4 pb-3 space-y-1">
             {AGENT_DEFINITIONS.map((def) => {
               const state = agents[def.id];
               const config = statusConfig[state.status];
               const Icon = config.icon;
+              const outputPreview = state.artifact?.summary || agentOutputPreviews[def.id];
 
               return (
-                <div
-                  key={def.id}
-                  className={cn(
-                    "flex items-center gap-2 p-2 rounded-md text-xs transition-all",
-                    config.bg
-                  )}
-                >
-                  <div className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center bg-background/50">
-                    <Icon className={cn(
-                      "h-3 w-3",
-                      config.color,
-                      state.status === 'running' && "animate-spin"
-                    )} />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="text-[8px] px-1 py-0">
-                        {def.shortName}
-                      </Badge>
-                      <span className="font-medium truncate">{def.name}</span>
-                    </div>
-                    
-                    {state.status === 'running' && (
-                      <div className="mt-1">
-                        <Progress value={state.progress} className="h-1" />
-                      </div>
-                    )}
-                    
-                    {state.artifact && (
-                      <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-                        {state.artifact.summary}
-                      </p>
-                    )}
-                  </div>
+                <TooltipProvider key={def.id}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-md text-xs transition-all cursor-default",
+                          config.bg
+                        )}
+                      >
+                        <div className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center bg-background/50">
+                          <Icon className={cn(
+                            "h-3 w-3",
+                            config.color,
+                            state.status === 'running' && "animate-spin"
+                          )} />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="secondary" className="text-[8px] px-1 py-0">
+                              {def.shortName}
+                            </Badge>
+                            <span className="font-medium truncate text-[11px]">{def.name}</span>
+                          </div>
+                          
+                          {/* Always show output preview or working status */}
+                          {state.status === 'running' ? (
+                            <div className="mt-1">
+                              <Progress value={state.progress} className="h-1" />
+                              <p className="text-[9px] text-muted-foreground mt-0.5">
+                                Working... {state.progress}%
+                              </p>
+                            </div>
+                          ) : state.status === 'completed' || state.artifact ? (
+                            <p className="text-[10px] text-muted-foreground truncate mt-0.5 flex items-center gap-1">
+                              <ArrowRight className="h-2 w-2 shrink-0" />
+                              {outputPreview}
+                            </p>
+                          ) : state.status === 'queued' ? (
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Queued</p>
+                          ) : null}
+                        </div>
 
-                  {state.artifact && onViewArtifact && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-5 px-1.5 text-[9px] shrink-0"
-                      onClick={() => onViewArtifact(state.artifact!)}
-                    >
-                      <FileText className="h-2.5 w-2.5" />
-                    </Button>
-                  )}
-                </div>
+                        {state.artifact && onViewArtifact && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 px-1.5 text-[9px] shrink-0"
+                            onClick={() => onViewArtifact(state.artifact!)}
+                          >
+                            <Eye className="h-2.5 w-2.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="max-w-[200px]">
+                      <p className="text-xs font-medium">{def.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{def.description}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               );
             })}
           </div>
-        </div>
+        </ScrollArea>
 
         <Separator />
 
         {/* Run Timeline */}
-        <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
           <div className="px-4 py-2 shrink-0 flex items-center justify-between">
             <h4 className="text-xs font-semibold text-muted-foreground">Run Timeline</h4>
             <Badge variant="secondary" className="text-[9px]">{timeline.length} events</Badge>
@@ -131,11 +173,11 @@ export function LiveAgentPanel({ agents, timeline, onViewArtifact, isRunning }: 
             <div className="space-y-2 pb-4">
               {timeline.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-4">
-                  Click "Run Now" to start the agent pipeline
+                  Click "Run Now" to start
                 </p>
               ) : (
-                timeline.map((event, idx) => (
-                  <TimelineEventRow key={event.id} event={event} isLast={idx === timeline.length - 1} />
+                timeline.slice(0, 20).map((event, idx) => (
+                  <TimelineEventRow key={event.id} event={event} isLast={idx === Math.min(timeline.length, 20) - 1} />
                 ))
               )}
             </div>

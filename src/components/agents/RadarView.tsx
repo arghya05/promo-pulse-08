@@ -1,20 +1,16 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Play, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
-import { crossModuleProblems, CrossModuleProblem, alternativePlans, ModuleType } from './cross-module-data';
-import { useAgentOrchestrator } from './AgentOrchestrator';
+import { crossModuleProblems, CrossModuleProblem, alternativePlans, ModuleType, AGENT_DEFINITIONS } from './cross-module-data';
+import { useAgentOrchestrator, AgentState } from './AgentOrchestrator';
 import { LiveAgentPanel } from './LiveAgentPanel';
-import { ApprovalGateCard, CompletedGate } from './ApprovalGateCard';
-import { CrossModulePlanBoard, PlanSelector } from './CrossModulePlanBoard';
-import { AgentPipelineRibbon, AgentStage, StageStatus } from './AgentPipelineRibbon';
-import { EvidenceStrip } from './EvidenceStrip';
+import { ROIFirstDecisionCard, CaseStatus, NextRequiredAction } from './ROIFirstDecisionCard';
 
 interface RadarViewProps {
   mode: 'advisory' | 'autopilot';
@@ -36,47 +32,109 @@ export function RadarView({ mode, onCreateRun }: RadarViewProps) {
   const { toast } = useToast();
   const [selectedProblemId, setSelectedProblemId] = useState<string>(crossModuleProblems[0].id);
   const [isInboxCollapsed, setIsInboxCollapsed] = useState(false);
+  const [fastPathEnabled, setFastPathEnabled] = useState(true);
   const [selectedPlanId, setSelectedPlanId] = useState<string>('plan-b');
-  const [selectedActions, setSelectedActions] = useState<Set<string>>(new Set(['a1', 'a2', 'a3', 'a4', 'a5']));
 
   const selectedProblem = crossModuleProblems.find(p => p.id === selectedProblemId) || null;
   const { state, startDiscoveryPhase, approveGate } = useAgentOrchestrator(selectedProblem, mode);
 
-  const handleRunNow = useCallback(() => {
+  // Derive case status and next action from orchestrator state
+  const { caseStatus, nextAction, runProgress, currentAgentName } = useMemo(() => {
+    let status: CaseStatus = 'idle';
+    let action: NextRequiredAction = 'start';
+    let progress = 0;
+    let agentName = '';
+
+    // Calculate progress from running agents
+    const runningAgent = Object.entries(state.agents).find(([_, a]) => a.status === 'running');
+    if (runningAgent) {
+      const [id, agentState] = runningAgent;
+      const def = AGENT_DEFINITIONS.find(d => d.id === id);
+      agentName = def?.name || '';
+      progress = agentState.progress;
+    }
+
+    // Determine overall status
+    if (state.isRunning) {
+      status = 'running';
+      // Determine what's next based on current gate
+      if (state.currentGate === 'data_assumptions') {
+        action = 'approve_assumptions';
+      } else if (state.currentGate === 'root_cause') {
+        action = 'approve_root_cause';
+      } else if (state.currentGate === 'cross_module_plan') {
+        action = 'approve_plan';
+      } else if (state.currentGate === 'execution') {
+        action = 'approve_execution';
+      } else if (state.currentGate === 'measurement') {
+        action = 'approve_measurement';
+      }
+    } else if (state.currentGate) {
+      status = 'waiting_approval';
+      switch (state.currentGate) {
+        case 'data_assumptions':
+          action = 'approve_assumptions';
+          break;
+        case 'root_cause':
+          action = 'approve_root_cause';
+          break;
+        case 'cross_module_plan':
+          action = 'approve_plan';
+          break;
+        case 'execution':
+          action = 'approve_execution';
+          break;
+        case 'measurement':
+          action = 'approve_measurement';
+          break;
+      }
+    } else if (state.gateDecisions.measurement) {
+      status = 'completed';
+      action = 'none';
+    } else if (state.timeline.length > 0) {
+      // In between phases
+      status = 'running';
+    }
+
+    // Check for failed agents
+    const failedAgent = Object.values(state.agents).find(a => a.status === 'failed');
+    if (failedAgent) {
+      status = 'failed';
+    }
+
+    return { caseStatus: status, nextAction: action, runProgress: progress, currentAgentName: agentName };
+  }, [state]);
+
+  const handleStart = useCallback(() => {
     toast({ title: 'Starting agent pipeline...', description: 'Discovery agents queued' });
     startDiscoveryPhase();
   }, [startDiscoveryPhase, toast]);
 
-  const handleGateDecision = useCallback((decision: 'approved' | 'revised' | 'escalated' | 'skipped') => {
+  const handleApprove = useCallback(() => {
     if (state.currentGate) {
-      approveGate(state.currentGate, decision);
-      if (decision === 'approved') {
-        toast({ title: 'Approved', description: 'Proceeding to next phase...' });
-      }
+      approveGate(state.currentGate, 'approved');
+      toast({ 
+        title: 'Approved', 
+        description: 'Proceeding to next phase automatically...',
+      });
     }
   }, [state.currentGate, approveGate, toast]);
 
-  const getCurrentStage = (): AgentStage => {
-    if (state.gateDecisions.measurement) return 'measure';
-    if (state.gateDecisions.execution || state.currentGate === 'measurement') return 'measure';
-    if (state.gateDecisions.cross_module_plan || state.currentGate === 'execution') return 'execute';
-    if (state.gateDecisions.root_cause || state.currentGate === 'cross_module_plan') return 'plan';
-    if (state.gateDecisions.data_assumptions || state.currentGate === 'root_cause') return 'diagnosis';
-    return 'discovery';
-  };
+  const handleEdit = useCallback(() => {
+    toast({ title: 'Edit mode', description: 'Opening constraints editor...' });
+  }, [toast]);
 
-  const getStageStatuses = (): Record<AgentStage, StageStatus> => {
-    const currentStage = getCurrentStage();
-    const stageOrder: AgentStage[] = ['discovery', 'diagnosis', 'plan', 'execute', 'measure'];
-    const currentIdx = stageOrder.indexOf(currentStage);
-    
-    return stageOrder.reduce((acc, stage, idx) => {
-      if (idx < currentIdx) acc[stage] = 'completed';
-      else if (idx === currentIdx) acc[stage] = state.isRunning ? 'active' : 'active';
-      else acc[stage] = 'locked';
-      return acc;
-    }, {} as Record<AgentStage, StageStatus>);
-  };
+  const handleRequestDeeper = useCallback(() => {
+    if (state.currentGate) {
+      approveGate(state.currentGate, 'revised');
+      toast({ title: 'Requesting deeper analysis', description: 'Agents will dig deeper...' });
+    }
+  }, [state.currentGate, approveGate, toast]);
+
+  const selectedPlan = useMemo(() => {
+    const plans = alternativePlans[selectedProblemId] || [];
+    return plans.find(p => p.id === selectedPlanId) || selectedProblem?.crossModulePlan || null;
+  }, [selectedProblemId, selectedPlanId, selectedProblem]);
 
   return (
     <div className="flex gap-4 h-[calc(100vh-280px)] min-h-[500px]">
@@ -131,90 +189,42 @@ export function RadarView({ mode, onCreateRun }: RadarViewProps) {
         </Card>
       </div>
 
-      {/* CENTER: Case Workspace */}
+      {/* CENTER: ROI-First Decision Card */}
       <Card className="flex-1 overflow-hidden flex flex-col">
         {selectedProblem ? (
           <>
-            <CardHeader className="py-3 px-4 space-y-3 shrink-0">
+            <CardHeader className="py-3 px-4 shrink-0 border-b">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <h3 className="text-base font-semibold">{selectedProblem.title}</h3>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <Badge className="bg-primary/10 text-primary">₹{selectedProblem.impact}L/day</Badge>
-                    <Badge variant="outline" className={cn("text-[10px]", selectedProblem.urgency === 'critical' && "text-red-600")}>
-                      {selectedProblem.timeToImpact} to impact
-                    </Badge>
-                    <Badge variant="outline" className="text-[10px]">{selectedProblem.confidence}% confidence</Badge>
+                    {selectedProblem.modules.map(m => (
+                      <Badge key={m} variant="secondary" className={cn("text-[9px]", moduleColors[m])}>
+                        {m}
+                      </Badge>
+                    ))}
                   </div>
                 </div>
-                <Button onClick={handleRunNow} disabled={state.isRunning || state.timeline.length > 0} className="gap-2">
-                  <Play className="h-4 w-4" />
-                  Run Now
-                </Button>
               </div>
-              <EvidenceStrip
-                sources={selectedProblem.signals.map(s => ({ id: s.id, name: s.source, freshness: 'Live' }))}
-                assumptions={[{ id: 'a1', text: 'No inbound <24h', details: 'Checked supplier portal' }]}
-              />
-              <AgentPipelineRibbon
-                currentStage={getCurrentStage()}
-                stageStatuses={getStageStatuses()}
-                isProcessing={state.isRunning}
-              />
             </CardHeader>
 
-            <CardContent className="flex-1 overflow-hidden p-4 pt-0">
+            <CardContent className="flex-1 overflow-hidden p-4">
               <ScrollArea className="h-full pr-3">
-                <div className="space-y-4">
-                  {/* Completed Gates */}
-                  {state.gateDecisions.data_assumptions && (
-                    <CompletedGate gate="data_assumptions" decision={state.gateDecisions.data_assumptions} />
-                  )}
-                  {state.gateDecisions.root_cause && (
-                    <CompletedGate gate="root_cause" decision={state.gateDecisions.root_cause} />
-                  )}
-
-                  {/* Current Gate */}
-                  {state.currentGate && !state.isRunning && (
-                    <ApprovalGateCard
-                      gate={state.currentGate}
-                      onDecision={handleGateDecision}
-                      mode={mode}
-                      autoApproveEligible={selectedProblem.confidence >= 80 && (selectedProblem.crossModulePlan?.riskScore || 0) <= 0.3}
-                    />
-                  )}
-
-                  {/* Cross-Module Plan (when in plan stage) */}
-                  {getCurrentStage() === 'plan' && selectedProblem.crossModulePlan && state.gateDecisions.root_cause && (
-                    <div className="space-y-4">
-                      <PlanSelector
-                        plans={alternativePlans[selectedProblem.id] || []}
-                        selectedPlanId={selectedPlanId}
-                        onSelectPlan={setSelectedPlanId}
-                      />
-                      <Separator />
-                      <CrossModulePlanBoard
-                        plan={selectedProblem.crossModulePlan}
-                        selectedActions={selectedActions}
-                        onToggleAction={(id) => setSelectedActions(prev => {
-                          const next = new Set(prev);
-                          if (next.has(id)) next.delete(id); else next.add(id);
-                          return next;
-                        })}
-                        onViewEvidence={() => {}}
-                        showToolCalls
-                      />
-                    </div>
-                  )}
-
-                  {/* Empty state */}
-                  {state.timeline.length === 0 && (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <p className="text-sm">Click "Run Now" to start the agent pipeline</p>
-                      <p className="text-xs mt-1">Agents will analyze this cross-module opportunity</p>
-                    </div>
-                  )}
-                </div>
+                <ROIFirstDecisionCard
+                  problem={selectedProblem}
+                  status={caseStatus}
+                  nextAction={nextAction}
+                  isRunning={state.isRunning}
+                  runProgress={runProgress}
+                  currentAgentName={currentAgentName}
+                  onStart={handleStart}
+                  onApprove={handleApprove}
+                  onEdit={handleEdit}
+                  onRequestDeeper={handleRequestDeeper}
+                  fastPathEnabled={fastPathEnabled}
+                  onToggleFastPath={setFastPathEnabled}
+                  selectedPlan={selectedPlan}
+                />
               </ScrollArea>
             </CardContent>
           </>

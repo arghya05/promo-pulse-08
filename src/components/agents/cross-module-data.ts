@@ -290,7 +290,7 @@ export const crossModuleProblems: CrossModuleProblem[] = [
   {
     id: 'cm-002',
     title: 'Promo burn: 2 campaigns negative ROI',
-    summary: 'Two active campaigns showing -₹9.2L incremental loss. High cannibalization and baseline erosion detected. Requires Promo, Pricing, and Assortment coordination.',
+    summary: 'Spend is high but incremental conversion is low; discount cannibalizing full-price sales. Requires Promo, Pricing, and Assortment coordination.',
     modules: ['promo', 'pricing', 'assortment'],
     impact: 9.2,
     urgency: 'high',
@@ -314,12 +314,55 @@ export const crossModuleProblems: CrossModuleProblem[] = [
     signals: [
       { id: 's1', type: 'anomaly', source: 'Promo Analytics', value: 'ROI -0.82x', delta: '-182% vs target', timestamp: new Date(), confidence: 78 },
       { id: 's2', type: 'trend', source: 'Basket Analysis', value: '23% cannibalization', delta: '+15% vs prev promos', timestamp: new Date(), confidence: 71 },
+      { id: 's3', type: 'correlation', source: 'Price Elasticity', value: 'Discount depth 28%', delta: 'Optimal: 15%', timestamp: new Date(), confidence: 84 },
     ],
     rootCauses: [
-      { id: 'rc1', hypothesis: 'Discount depth exceeds price elasticity optimum', probability: 84, evidence: [], affectedModules: ['promo', 'pricing'] },
-      { id: 'rc2', hypothesis: 'Target segment overlap with existing loyalty benefits', probability: 68, evidence: [], affectedModules: ['promo', 'assortment'] },
+      { id: 'rc1', hypothesis: 'Discount depth exceeds price elasticity optimum — giving away margin without incremental volume', probability: 84, evidence: [
+        { id: 'e1', type: 'data', title: 'Discount at 28% vs 15% optimal', source: 'Price Elasticity Model' },
+        { id: 'e2', type: 'chart', title: 'Incremental vs cannibalized sales', source: 'Promo Analytics' },
+      ], affectedModules: ['promo', 'pricing'] },
+      { id: 'rc2', hypothesis: 'Target segment overlap with existing loyalty benefits', probability: 68, evidence: [
+        { id: 'e3', type: 'table', title: 'Loyalty tier overlap', source: 'CRM' },
+      ], affectedModules: ['promo', 'assortment'] },
     ],
-    crossModulePlan: null,
+    crossModulePlan: {
+      id: 'plan-promo-a',
+      name: 'Profit Recovery Plan',
+      description: 'Pause low-margin SKUs, reallocate budget to top performers, add margin floor guardrail',
+      expectedROI: 7.8,
+      riskScore: 0.24,
+      effortHours: 3,
+      actions: [
+        {
+          id: 'pa1', module: 'promo', what: 'Pause campaign on low-margin SKUs (bottom 40%)',
+          why: 'Stop burning margin on items with negative incremental ROI', evidenceId: 'e1',
+          dependsOn: [], approvalRequired: true, approvalReason: 'Customer-facing change',
+          expectedImpact: 3.2, timeToImpact: '2h', risk: 'medium',
+          toolCall: { system: 'Campaign Manager', method: 'pauseSkuGroup', payload: { campaignId: 'PROMO-001', skuFilter: 'bottom_40_margin', reason: 'negative_roi_recovery' }, expectedResponse: { paused: 42, savedSpend: 1.8 } }
+        },
+        {
+          id: 'pa2', module: 'promo', what: 'Reallocate ₹2.1L budget to top 20% SKUs with positive ROI',
+          why: 'Focus spend on proven performers', evidenceId: 'e2',
+          dependsOn: ['pa1'], approvalRequired: false, expectedImpact: 2.4,
+          timeToImpact: '4h', risk: 'low',
+          toolCall: { system: 'Campaign Manager', method: 'reallocateBudget', payload: { fromSkus: 'bottom_40', toSkus: 'top_20', amount: 210000 }, expectedResponse: { reallocated: true, newBudget: 210000 } }
+        },
+        {
+          id: 'pa3', module: 'pricing', what: 'Add guardrail: margin floor 18%, max discount 12%',
+          why: 'Prevent future over-discounting on affected categories', evidenceId: 'e1',
+          dependsOn: [], approvalRequired: false, expectedImpact: 1.2,
+          timeToImpact: 'immediate', risk: 'low',
+          toolCall: { system: 'Pricing Rules', method: 'addGuardrail', payload: { categories: ['Electronics'], minMargin: 0.18, maxDiscount: 0.12, duration: '30d' }, expectedResponse: { ruleId: 'GR-2024-001', active: true } }
+        },
+        {
+          id: 'pa4', module: 'assortment', what: 'Limit promo eligibility to non-cannibalized SKUs',
+          why: 'Reduce internal competition between promo and loyalty offers', evidenceId: 'e3',
+          dependsOn: ['pa1'], approvalRequired: false, expectedImpact: 1.0,
+          timeToImpact: '1d', risk: 'low',
+          toolCall: { system: 'Assortment Engine', method: 'updateEligibility', payload: { excludeSkus: 'loyalty_overlap', campaignId: 'PROMO-001' }, expectedResponse: { excluded: 28, remaining: 156 } }
+        },
+      ],
+    },
     createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000),
   },
   {
