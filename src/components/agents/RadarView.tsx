@@ -8,9 +8,10 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 import { crossModuleProblems, CrossModuleProblem, alternativePlans, ModuleType, AGENT_DEFINITIONS } from './cross-module-data';
-import { useAgentOrchestrator, AgentState } from './AgentOrchestrator';
+import { useAgentOrchestrator, AgentState, AgentArtifact } from './AgentOrchestrator';
 import { LiveAgentPanel } from './LiveAgentPanel';
 import { ROIFirstDecisionCard, CaseStatus, NextRequiredAction } from './ROIFirstDecisionCard';
+import { ArtifactViewerDialog } from './ArtifactViewerDialog';
 
 interface RadarViewProps {
   mode: 'advisory' | 'autopilot';
@@ -34,6 +35,7 @@ export function RadarView({ mode, onCreateRun }: RadarViewProps) {
   const [isInboxCollapsed, setIsInboxCollapsed] = useState(false);
   const [fastPathEnabled, setFastPathEnabled] = useState(true);
   const [selectedPlanId, setSelectedPlanId] = useState<string>('plan-b');
+  const [viewingArtifact, setViewingArtifact] = useState<AgentArtifact | null>(null);
 
   const selectedProblem = crossModuleProblems.find(p => p.id === selectedProblemId) || null;
   const { state, startDiscoveryPhase, approveGate } = useAgentOrchestrator(selectedProblem, mode);
@@ -241,8 +243,16 @@ export function RadarView({ mode, onCreateRun }: RadarViewProps) {
           agents={state.agents}
           timeline={state.timeline}
           isRunning={state.isRunning}
+          onViewArtifact={(artifact) => setViewingArtifact(artifact)}
         />
       </div>
+
+      {/* Artifact Viewer Dialog */}
+      <ArtifactViewerDialog
+        artifact={viewingArtifact}
+        open={!!viewingArtifact}
+        onOpenChange={(open) => !open && setViewingArtifact(null)}
+      />
     </div>
   );
 }
