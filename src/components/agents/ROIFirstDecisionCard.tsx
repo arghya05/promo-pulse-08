@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,6 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import {
-  ArrowRight,
   CheckCircle2,
   Clock,
   AlertTriangle,
@@ -21,19 +21,18 @@ import {
   RotateCcw,
   Eye,
   Sparkles,
-  ChevronRight,
   Package,
   Megaphone,
   DollarSign,
   Grid3X3,
+  Search,
+  Pencil,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CrossModuleProblem, CrossModulePlan, ModuleType, alternativePlans } from './cross-module-data';
+import { PlanSelector, calculateROIScore } from './PlanSelector';
 
-// ROI Score calculation: (Expected_Impact × Confidence) / (Time_to_Impact_Days + 1) × (1 - Risk_Score)
-export function calculateROIScore(impact: number, confidence: number, timeToImpactDays: number, riskScore: number): number {
-  return (impact * (confidence / 100)) / (timeToImpactDays + 1) * (1 - riskScore);
-}
+export { calculateROIScore };
 
 function parseTimeToImpact(timeStr: string): number {
   const match = timeStr.match(/(\d+)/);
@@ -56,7 +55,8 @@ interface ROIFirstDecisionCardProps {
   onStart: () => void;
   onApprove: () => void;
   onEdit?: () => void;
-  onRequestDeeper?: () => void;
+  onDigDeeper?: () => void;
+  onSelectPlan?: (planId: string) => void;
   fastPathEnabled?: boolean;
   onToggleFastPath?: (enabled: boolean) => void;
   selectedPlan?: CrossModulePlan | null;
@@ -83,21 +83,31 @@ export function ROIFirstDecisionCard({
   onStart,
   onApprove,
   onEdit,
-  onRequestDeeper,
+  onDigDeeper,
+  onSelectPlan,
   fastPathEnabled = true,
   onToggleFastPath,
   selectedPlan,
 }: ROIFirstDecisionCardProps) {
-  const plan = selectedPlan || problem.crossModulePlan;
   const timeToImpactDays = parseTimeToImpact(problem.timeToImpact);
+  
+  // Get all available plans
+  const allPlans = useMemo(() => {
+    const alts = alternativePlans[problem.id] || [];
+    const base = problem.crossModulePlan;
+    if (base && !alts.find(p => p.id === base.id)) {
+      return [base, ...alts];
+    }
+    return alts.length > 0 ? alts : (base ? [base] : []);
+  }, [problem]);
+
+  const plan = selectedPlan || allPlans[0];
   const roiScore = plan 
     ? calculateROIScore(plan.expectedROI, problem.confidence, timeToImpactDays, plan.riskScore)
     : calculateROIScore(problem.impact, problem.confidence, timeToImpactDays, 0.3);
 
-  const alternatives = alternativePlans[problem.id] || [];
-  const bestPlan = alternatives.length > 0 
-    ? alternatives.reduce((best, p) => calculateROIScore(p.expectedROI, problem.confidence, timeToImpactDays, p.riskScore) > calculateROIScore(best.expectedROI, problem.confidence, timeToImpactDays, best.riskScore) ? p : best)
-    : plan;
+  // Low confidence warning
+  const showLowConfidenceWarning = problem.confidence < 70;
 
   const getStatusConfig = () => {
     switch (status) {
@@ -140,7 +150,7 @@ export function ROIFirstDecisionCard({
   const StatusIcon = statusConfig.icon;
   const CTAIcon = ctaConfig.icon;
 
-  // Get diagnosis based on problem
+  // Get diagnosis
   const getDiagnosis = () => {
     if (problem.rootCauses.length > 0) {
       return problem.rootCauses[0].hypothesis;
@@ -148,7 +158,7 @@ export function ROIFirstDecisionCard({
     return problem.summary.split('.')[0];
   };
 
-  // Get what will execute
+  // Get execution preview
   const getExecutionPreview = () => {
     if (!plan) return [];
     return plan.actions.slice(0, 4).map(a => ({
@@ -186,6 +196,23 @@ export function ROIFirstDecisionCard({
           </button>
         )}
       </div>
+
+      {/* Low Confidence Warning */}
+      {showLowConfidenceWarning && (
+        <Card className="border-amber-500/30 bg-amber-50">
+          <CardContent className="p-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-amber-700">Low Confidence ({problem.confidence}%)</p>
+                <p className="text-xs text-amber-600 mt-0.5">
+                  Data confidence is below 70%. Please review signals before proceeding.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Running Progress */}
       {isRunning && (
@@ -227,7 +254,12 @@ export function ROIFirstDecisionCard({
           <p className="text-[10px] text-muted-foreground">Impact/day</p>
         </Card>
         <Card className="p-3 text-center">
-          <p className="text-lg font-bold">{problem.confidence}%</p>
+          <p className={cn(
+            "text-lg font-bold",
+            problem.confidence >= 70 ? "text-foreground" : "text-amber-600"
+          )}>
+            {problem.confidence}%
+          </p>
           <p className="text-[10px] text-muted-foreground">Confidence</p>
         </Card>
         <Card className="p-3 text-center">
@@ -246,49 +278,20 @@ export function ROIFirstDecisionCard({
         </Card>
       </div>
 
-      {/* 3. Recommended Next Action (Highest ROI) */}
-      {plan && (
-        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
-          <CardContent className="p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Badge className="bg-primary text-primary-foreground text-[10px] gap-1">
-                  <Sparkles className="h-3 w-3" />
-                  Highest ROI
-                </Badge>
-                <span className="text-xs font-semibold">{plan.name}</span>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">ROI Score</p>
-                <p className="text-lg font-bold text-primary">{roiScore.toFixed(1)}</p>
-              </div>
-            </div>
-            
-            <p className="text-sm text-muted-foreground">{plan.description}</p>
-
-            {/* 4. Why this is best */}
-            <div className="space-y-1.5 pt-2 border-t">
-              <p className="text-xs font-medium text-muted-foreground">Why this is best:</p>
-              <ul className="space-y-1">
-                <li className="flex items-start gap-2 text-xs">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600 mt-0.5 shrink-0" />
-                  <span>Expected ROI: <strong>₹{plan.expectedROI}L</strong> in {plan.effortHours}h effort</span>
-                </li>
-                <li className="flex items-start gap-2 text-xs">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600 mt-0.5 shrink-0" />
-                  <span>Risk score {(plan.riskScore * 100).toFixed(0)}% — {plan.riskScore <= 0.3 ? 'safe for autopilot' : 'requires approval'}</span>
-                </li>
-                <li className="flex items-start gap-2 text-xs">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600 mt-0.5 shrink-0" />
-                  <span>Coordinates {plan.actions.length} actions across {new Set(plan.actions.map(a => a.module)).size} modules</span>
-                </li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
+      {/* 3. Plan Selector - Multiple selectable plans */}
+      {allPlans.length > 0 && (
+        <PlanSelector
+          plans={allPlans}
+          selectedPlanId={plan?.id || ''}
+          onSelectPlan={(planId) => onSelectPlan?.(planId)}
+          onEditPlan={onEdit ? () => onEdit() : undefined}
+          confidence={problem.confidence}
+          timeToImpactDays={timeToImpactDays}
+          showComparison={!fastPathEnabled}
+        />
       )}
 
-      {/* 5. Approval Gate (only if needed) */}
+      {/* 4. Approval Gate (only if needed) */}
       {status === 'waiting_approval' && (
         <Card className="border-amber-500/30 bg-amber-500/5">
           <CardContent className="p-4 space-y-3">
@@ -297,19 +300,19 @@ export function ROIFirstDecisionCard({
               <span className="text-sm font-semibold text-amber-700">
                 {nextAction === 'approve_assumptions' && 'Confirm data assumptions are correct'}
                 {nextAction === 'approve_root_cause' && 'Accept root cause analysis'}
-                {nextAction === 'approve_plan' && 'Approve coordinated action plan'}
+                {nextAction === 'approve_plan' && 'Approve selected action plan'}
                 {nextAction === 'approve_execution' && 'Final approval to execute'}
                 {nextAction === 'approve_measurement' && 'Confirm measurement results'}
               </span>
             </div>
             
-            {/* Quick assumptions for data gate */}
+            {/* Assumptions for data gate */}
             {nextAction === 'approve_assumptions' && (
               <div className="flex flex-wrap gap-1.5">
-                <Badge variant="outline" className="text-[9px]">18 SKUs mapped</Badge>
+                <Badge variant="outline" className="text-[9px]">{problem.signals.length} signals collected</Badge>
                 <Badge variant="outline" className="text-[9px]">4 DCs validated</Badge>
-                <Badge variant="outline" className="text-[9px]">94% data quality</Badge>
-                <Badge variant="outline" className="text-[9px]">3 suppliers linked</Badge>
+                <Badge variant="outline" className="text-[9px]">{problem.confidence}% data quality</Badge>
+                <Badge variant="outline" className="text-[9px]">{problem.rootCauses.length} hypotheses</Badge>
               </div>
             )}
 
@@ -319,16 +322,18 @@ export function ROIFirstDecisionCard({
                 <CheckCircle2 className="h-3 w-3 text-green-600" />
                 4/5 guardrails passed
               </span>
-              <span className="flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3 text-amber-600" />
-                1 warning (stock cover)
-              </span>
+              {plan && plan.riskScore > 0.3 && (
+                <span className="flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3 text-amber-600" />
+                  1 warning (risk threshold)
+                </span>
+              )}
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Primary CTA */}
+      {/* Primary CTA + Secondary Actions */}
       <div className="flex gap-2">
         <Button 
           onClick={nextAction === 'start' ? onStart : onApprove}
@@ -341,13 +346,15 @@ export function ROIFirstDecisionCard({
         </Button>
         
         {status === 'waiting_approval' && onEdit && (
-          <Button variant="outline" onClick={onEdit} disabled={isRunning}>
+          <Button variant="outline" onClick={onEdit} disabled={isRunning} className="gap-1.5">
+            <Pencil className="h-4 w-4" />
             Edit
           </Button>
         )}
         
-        {status === 'waiting_approval' && onRequestDeeper && (
-          <Button variant="outline" onClick={onRequestDeeper} disabled={isRunning}>
+        {status === 'waiting_approval' && onDigDeeper && (
+          <Button variant="outline" onClick={onDigDeeper} disabled={isRunning} className="gap-1.5">
+            <Search className="h-4 w-4" />
             Dig Deeper
           </Button>
         )}
@@ -360,14 +367,14 @@ export function ROIFirstDecisionCard({
         )}
       </div>
 
-      {/* 6. What will execute */}
+      {/* 5. What will execute */}
       {plan && plan.actions.length > 0 && (
         <Accordion type="single" collapsible className="border rounded-lg">
           <AccordionItem value="execution" className="border-0">
             <AccordionTrigger className="px-4 py-2 text-xs hover:no-underline">
               <span className="flex items-center gap-2">
                 <Zap className="h-3.5 w-3.5 text-primary" />
-                What will execute ({plan.actions.length} actions)
+                Execution Preview ({plan.actions.length} actions)
               </span>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-3">
@@ -385,44 +392,6 @@ export function ROIFirstDecisionCard({
                 {plan.actions.length > 4 && (
                   <p className="text-[10px] text-muted-foreground">+{plan.actions.length - 4} more actions</p>
                 )}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      )}
-
-      {/* 7. Alternatives (collapsed) */}
-      {alternatives.length > 1 && (
-        <Accordion type="single" collapsible className="border rounded-lg">
-          <AccordionItem value="alternatives" className="border-0">
-            <AccordionTrigger className="px-4 py-2 text-xs hover:no-underline">
-              <span className="flex items-center gap-2">
-                <ChevronRight className="h-3.5 w-3.5" />
-                Alternative plans ({alternatives.length - 1} more)
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-3">
-              <div className="space-y-2">
-                {alternatives.filter(p => p.id !== (plan?.id || bestPlan?.id)).map((alt) => {
-                  const altScore = calculateROIScore(alt.expectedROI, problem.confidence, timeToImpactDays, alt.riskScore);
-                  return (
-                    <div key={alt.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                      <div>
-                        <p className="text-xs font-medium">{alt.name}</p>
-                        <p className="text-[10px] text-muted-foreground">{alt.description}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs font-semibold">₹{alt.expectedROI}L</p>
-                        <Badge variant="outline" className={cn(
-                          "text-[9px]",
-                          alt.riskScore <= 0.25 ? "text-green-600" : alt.riskScore <= 0.5 ? "text-amber-600" : "text-red-600"
-                        )}>
-                          {(alt.riskScore * 100).toFixed(0)}% risk
-                        </Badge>
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
             </AccordionContent>
           </AccordionItem>
