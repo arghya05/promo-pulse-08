@@ -3,16 +3,15 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Shield, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 import { crossModuleProblems, CrossModuleProblem, alternativePlans, ModuleType, AGENT_DEFINITIONS, CrossModulePlan } from './cross-module-data';
 import { useAgentOrchestrator, AgentArtifact } from './AgentOrchestrator';
 import { LiveAgentPanel } from './LiveAgentPanel';
-import { ROIFirstDecisionCard, CaseStatus, NextRequiredAction } from './ROIFirstDecisionCard';
 import { ArtifactViewerDialog } from './ArtifactViewerDialog';
-import { EditPlanModal } from './EditPlanModal';
+import { CaseWorkspace, CasePhase } from './CaseWorkspace';
 import { DigDeeperPanel } from './DigDeeperPanel';
 
 interface RadarViewProps {
@@ -43,39 +42,28 @@ export function RadarView({ mode, onCreateRun }: RadarViewProps) {
   const { toast } = useToast();
   const [selectedProblemId, setSelectedProblemId] = useState<string>(crossModuleProblems[0].id);
   const [isInboxCollapsed, setIsInboxCollapsed] = useState(false);
-  const [fastPathEnabled, setFastPathEnabled] = useState(true);
-  const [selectedPlanId, setSelectedPlanId] = useState<string>('plan-a');
   const [viewingArtifact, setViewingArtifact] = useState<AgentArtifact | null>(null);
-  
-  // Edit & Dig Deeper modals
-  const [editModalOpen, setEditModalOpen] = useState(false);
   const [digDeeperOpen, setDigDeeperOpen] = useState(false);
-  const [customPlans, setCustomPlans] = useState<Record<string, CrossModulePlan>>({});
+  const [isExecuted, setIsExecuted] = useState(false);
 
   const selectedProblem = crossModuleProblems.find(p => p.id === selectedProblemId) || null;
   const { state, startDiscoveryPhase, approveGate } = useAgentOrchestrator(selectedProblem, mode);
 
-  // Get selected plan with custom overrides
-  const selectedPlan = useMemo(() => {
-    // Check for custom edited plan first
-    if (customPlans[selectedPlanId]) {
-      return customPlans[selectedPlanId];
-    }
-    // Then check alternatives
-    const plans = alternativePlans[selectedProblemId] || [];
-    const found = plans.find(p => p.id === selectedPlanId);
-    if (found) return found;
-    // Fallback to problem's default plan
-    return selectedProblem?.crossModulePlan || null;
-  }, [selectedProblemId, selectedPlanId, selectedProblem, customPlans]);
+  // Derive phase from orchestrator state
+  const phase: CasePhase = useMemo(() => {
+    if (state.gateDecisions.measurement) return 'measure';
+    if (state.gateDecisions.execution) return 'measure';
+    if (state.gateDecisions.cross_module_plan) return 'execute';
+    if (state.gateDecisions.root_cause) return 'options';
+    if (state.gateDecisions.data_assumptions) return 'diagnose';
+    if (state.timeline.length > 0) return 'diagnose';
+    return 'detect';
+  }, [state]);
 
-  // Derive case status and next action from orchestrator state
-  const { caseStatus, nextAction, runProgress, currentAgentName } = useMemo(() => {
-    let status: CaseStatus = 'idle';
-    let action: NextRequiredAction = 'start';
+  // Derive running state
+  const { runProgress, currentAgentName } = useMemo(() => {
     let progress = 0;
     let agentName = '';
-
     const runningAgent = Object.entries(state.agents).find(([_, a]) => a.status === 'running');
     if (runningAgent) {
       const [id, agentState] = runningAgent;
@@ -83,96 +71,36 @@ export function RadarView({ mode, onCreateRun }: RadarViewProps) {
       agentName = def?.name || '';
       progress = agentState.progress;
     }
-
-    if (state.isRunning) {
-      status = 'running';
-      if (state.currentGate === 'data_assumptions') {
-        action = 'approve_assumptions';
-      } else if (state.currentGate === 'root_cause') {
-        action = 'approve_root_cause';
-      } else if (state.currentGate === 'cross_module_plan') {
-        action = 'approve_plan';
-      } else if (state.currentGate === 'execution') {
-        action = 'approve_execution';
-      } else if (state.currentGate === 'measurement') {
-        action = 'approve_measurement';
-      }
-    } else if (state.currentGate) {
-      status = 'waiting_approval';
-      switch (state.currentGate) {
-        case 'data_assumptions':
-          action = 'approve_assumptions';
-          break;
-        case 'root_cause':
-          action = 'approve_root_cause';
-          break;
-        case 'cross_module_plan':
-          action = 'approve_plan';
-          break;
-        case 'execution':
-          action = 'approve_execution';
-          break;
-        case 'measurement':
-          action = 'approve_measurement';
-          break;
-      }
-    } else if (state.gateDecisions.measurement) {
-      status = 'completed';
-      action = 'none';
-    } else if (state.timeline.length > 0) {
-      status = 'running';
-    }
-
-    const failedAgent = Object.values(state.agents).find(a => a.status === 'failed');
-    if (failedAgent) {
-      status = 'failed';
-    }
-
-    return { caseStatus: status, nextAction: action, runProgress: progress, currentAgentName: agentName };
+    return { runProgress: progress, currentAgentName: agentName };
   }, [state]);
 
   const handleStart = useCallback(() => {
-    toast({ title: 'Starting agent pipeline...', description: 'Discovery agents queued' });
+    toast({ title: 'Running analysis...', description: 'Agents collecting signals' });
     startDiscoveryPhase();
   }, [startDiscoveryPhase, toast]);
 
   const handleApprove = useCallback(() => {
     if (state.currentGate) {
       approveGate(state.currentGate, 'approved');
-      toast({ 
-        title: 'Approved', 
-        description: 'Proceeding to next phase automatically...',
-      });
+      if (state.currentGate === 'execution') {
+        setIsExecuted(true);
+      }
+      toast({ title: 'Approved', description: 'Proceeding...' });
+    } else {
+      // Auto-approve next gate
+      const gates = ['data_assumptions', 'root_cause', 'cross_module_plan', 'execution'] as const;
+      const nextGate = gates.find(g => !state.gateDecisions[g]);
+      if (nextGate) {
+        approveGate(nextGate, 'approved');
+        if (nextGate === 'execution') setIsExecuted(true);
+      }
     }
-  }, [state.currentGate, approveGate, toast]);
-
-  const handleEdit = useCallback(() => {
-    setEditModalOpen(true);
-  }, []);
-
-  const handleDigDeeper = useCallback(() => {
-    setDigDeeperOpen(true);
-  }, []);
-
-  const handleSelectPlan = useCallback((planId: string) => {
-    setSelectedPlanId(planId);
-  }, []);
-
-  const handleSaveEditedPlan = useCallback((updatedPlan: CrossModulePlan) => {
-    setCustomPlans(prev => ({
-      ...prev,
-      [updatedPlan.id]: updatedPlan,
-    }));
-    toast({
-      title: 'Plan updated',
-      description: `ROI recalculated to ₹${updatedPlan.expectedROI.toFixed(1)}L`,
-    });
-  }, [toast]);
+  }, [state, approveGate, toast]);
 
   return (
     <div className="flex gap-4 h-[calc(100vh-280px)] min-h-[500px]">
       {/* LEFT: Priority Inbox */}
-      <div className={cn("shrink-0 transition-all duration-300", isInboxCollapsed ? "w-12" : "w-80")}>
+      <div className={cn("shrink-0 transition-all duration-300", isInboxCollapsed ? "w-12" : "w-72")}>
         <Card className="h-full flex flex-col">
           <CardHeader className="py-2 px-3 flex flex-row items-center justify-between shrink-0">
             {!isInboxCollapsed && <h3 className="text-sm font-semibold">Priority Inbox</h3>}
@@ -189,9 +117,7 @@ export function RadarView({ mode, onCreateRun }: RadarViewProps) {
                       key={problem.id}
                       onClick={() => {
                         setSelectedProblemId(problem.id);
-                        // Reset plan selection for new problem
-                        const plans = alternativePlans[problem.id] || [];
-                        setSelectedPlanId(plans[0]?.id || problem.crossModulePlan?.id || 'plan-a');
+                        setIsExecuted(false);
                       }}
                       className={cn(
                         "w-full p-3 rounded-lg border text-left transition-all",
@@ -201,33 +127,17 @@ export function RadarView({ mode, onCreateRun }: RadarViewProps) {
                       )}
                     >
                       <p className="text-sm font-medium leading-tight line-clamp-2">{problem.title}</p>
-                      
-                      {/* Why it surfaced now */}
                       <p className="text-[10px] text-muted-foreground mt-1 line-clamp-1">
                         {problem.signals[0]?.value || 'Multiple signals detected'}
                       </p>
-                      
                       <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                         <Badge className="text-[9px] bg-primary/10 text-primary">₹{problem.impact}L</Badge>
                         <Badge variant="outline" className={cn("text-[9px]", problem.urgency === 'critical' && "text-red-600 border-red-300")}>
                           {problem.urgency}
                         </Badge>
-                        <Badge variant="outline" className={cn(
-                          "text-[9px]",
-                          problem.confidence >= 70 ? "" : "text-amber-600 border-amber-300"
-                        )}>
+                        <Badge variant="outline" className={cn("text-[9px]", problem.confidence >= 70 ? "" : "text-amber-600")}>
                           {problem.confidence}%
                         </Badge>
-                      </div>
-                      <div className="flex gap-1 mt-2 flex-wrap">
-                        {problem.modules.slice(0, 3).map(m => (
-                          <Badge key={m} variant="secondary" className={cn("text-[8px] px-1", moduleColors[m])}>
-                            {m.slice(0, 4)}
-                          </Badge>
-                        ))}
-                        {problem.modules.length > 3 && (
-                          <Badge variant="secondary" className="text-[8px]">+{problem.modules.length - 3}</Badge>
-                        )}
                       </div>
                     </button>
                   ))}
@@ -238,46 +148,18 @@ export function RadarView({ mode, onCreateRun }: RadarViewProps) {
         </Card>
       </div>
 
-      {/* CENTER: ROI-First Decision Card */}
-      <Card className="flex-1 overflow-hidden flex flex-col">
+      {/* CENTER: Case Workspace with 5 tabs */}
+      <Card className="flex-1 overflow-hidden">
         {selectedProblem ? (
-          <>
-            <CardHeader className="py-3 px-4 shrink-0 border-b">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1">
-                  <h3 className="text-base font-semibold">{selectedProblem.title}</h3>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    {selectedProblem.modules.map(m => (
-                      <Badge key={m} variant="secondary" className={cn("text-[9px]", moduleColors[m])}>
-                        {m}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-
-            <CardContent className="flex-1 overflow-hidden p-4">
-              <ScrollArea className="h-full pr-3">
-                <ROIFirstDecisionCard
-                  problem={selectedProblem}
-                  status={caseStatus}
-                  nextAction={nextAction}
-                  isRunning={state.isRunning}
-                  runProgress={runProgress}
-                  currentAgentName={currentAgentName}
-                  onStart={handleStart}
-                  onApprove={handleApprove}
-                  onEdit={handleEdit}
-                  onDigDeeper={handleDigDeeper}
-                  onSelectPlan={handleSelectPlan}
-                  fastPathEnabled={fastPathEnabled}
-                  onToggleFastPath={setFastPathEnabled}
-                  selectedPlan={selectedPlan}
-                />
-              </ScrollArea>
-            </CardContent>
-          </>
+          <CaseWorkspace
+            problem={selectedProblem}
+            phase={phase}
+            isRunning={state.isRunning}
+            isExecuted={isExecuted}
+            onStart={handleStart}
+            onApprove={handleApprove}
+            onShowEvidence={() => setDigDeeperOpen(true)}
+          />
         ) : (
           <div className="h-full flex items-center justify-center text-muted-foreground">
             Select an issue to begin
@@ -286,13 +168,26 @@ export function RadarView({ mode, onCreateRun }: RadarViewProps) {
       </Card>
 
       {/* RIGHT: Agent Console */}
-      <div className="w-80 shrink-0 hidden lg:block">
-        <LiveAgentPanel
-          agents={state.agents}
-          timeline={state.timeline}
-          isRunning={state.isRunning}
-          onViewArtifact={(artifact) => setViewingArtifact(artifact)}
-        />
+      <div className="w-72 shrink-0 hidden lg:block">
+        <Card className="h-full flex flex-col">
+          <CardHeader className="py-2 px-3 shrink-0 flex flex-row items-center justify-between">
+            <h3 className="text-sm font-semibold">Agent Console</h3>
+            {mode === 'autopilot' && (
+              <Badge variant="outline" className="text-[9px] text-green-600">
+                <Shield className="h-2.5 w-2.5 mr-0.5" />
+                Autopilot: 5 policies
+              </Badge>
+            )}
+          </CardHeader>
+          <div className="flex-1 overflow-hidden">
+            <LiveAgentPanel
+              agents={state.agents}
+              timeline={state.timeline}
+              isRunning={state.isRunning}
+              onViewArtifact={(artifact) => setViewingArtifact(artifact)}
+            />
+          </div>
+        </Card>
       </div>
 
       {/* Modals */}
@@ -300,15 +195,6 @@ export function RadarView({ mode, onCreateRun }: RadarViewProps) {
         artifact={viewingArtifact}
         open={!!viewingArtifact}
         onOpenChange={(open) => !open && setViewingArtifact(null)}
-      />
-
-      <EditPlanModal
-        open={editModalOpen}
-        onOpenChange={setEditModalOpen}
-        plan={selectedPlan}
-        confidence={selectedProblem?.confidence || 80}
-        timeToImpactDays={selectedProblem ? parseTimeToImpact(selectedProblem.timeToImpact) : 2}
-        onSave={handleSaveEditedPlan}
       />
 
       <DigDeeperPanel
