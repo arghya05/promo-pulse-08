@@ -30,37 +30,35 @@ const moduleColors: Record<ModuleType, string> = {
   supply: 'bg-teal-500/10 text-teal-600',
 };
 
-function parseTimeToImpact(timeStr: string): number {
-  const match = timeStr.match(/(\d+)/);
-  if (!match) return 1;
-  const num = parseInt(match[1]);
-  if (timeStr.includes('h')) return num / 24;
-  return num;
-}
-
 export function RadarView({ mode, onCreateRun }: RadarViewProps) {
   const { toast } = useToast();
   const [selectedProblemId, setSelectedProblemId] = useState<string>(crossModuleProblems[0].id);
   const [isInboxCollapsed, setIsInboxCollapsed] = useState(false);
   const [viewingArtifact, setViewingArtifact] = useState<AgentArtifact | null>(null);
   const [digDeeperOpen, setDigDeeperOpen] = useState(false);
-  const [isExecuted, setIsExecuted] = useState(false);
 
   const selectedProblem = crossModuleProblems.find(p => p.id === selectedProblemId) || null;
   const { state, startDiscoveryPhase, approveGate } = useAgentOrchestrator(selectedProblem, mode);
 
-  // Derive phase from orchestrator state
+  // Derive phase from orchestrator state - now properly tracks execution and measurement
   const phase: CasePhase = useMemo(() => {
-    if (state.gateDecisions.measurement) return 'measure';
-    if (state.gateDecisions.execution) return 'measure';
-    if (state.gateDecisions.cross_module_plan) return 'execute';
-    if (state.gateDecisions.root_cause) return 'options';
-    if (state.gateDecisions.data_assumptions) return 'diagnose';
+    // Check if ROI agent completed = measure phase
+    if (state.agents.roi?.status === 'completed') return 'measure';
+    // Check if executor agent completed or running = execute phase
+    if (state.agents.executor?.status === 'completed' || state.agents.executor?.status === 'running') return 'execute';
+    // Check if we're waiting for execution approval or plan is approved
+    if (state.gateDecisions.cross_module_plan === 'approved' || state.currentGate === 'execution') return 'execute';
+    // Check if planner completed = options phase
+    if (state.agents.planner?.status === 'completed' || state.gateDecisions.root_cause === 'approved') return 'options';
+    // Check if diagnosis agents completed = diagnose phase  
+    if (state.gateDecisions.data_assumptions === 'approved' || state.agents.rootcause?.status === 'completed') return 'diagnose';
+    // Check if any agent has started = diagnose phase
+    if (state.timeline.length > 0 && !state.isRunning) return 'diagnose';
     if (state.timeline.length > 0) return 'diagnose';
     return 'detect';
   }, [state]);
 
-  // Derive running state
+  // Derive running progress
   const { runProgress, currentAgentName } = useMemo(() => {
     let progress = 0;
     let agentName = '';
@@ -82,17 +80,14 @@ export function RadarView({ mode, onCreateRun }: RadarViewProps) {
   const handleApprove = useCallback(() => {
     if (state.currentGate) {
       approveGate(state.currentGate, 'approved');
-      if (state.currentGate === 'execution') {
-        setIsExecuted(true);
-      }
-      toast({ title: 'Approved', description: 'Proceeding...' });
+      toast({ title: 'Approved', description: 'Proceeding to next phase...' });
     } else {
-      // Auto-approve next gate
-      const gates = ['data_assumptions', 'root_cause', 'cross_module_plan', 'execution'] as const;
+      // Auto-approve next gate based on current phase
+      const gates = ['data_assumptions', 'root_cause', 'cross_module_plan', 'execution', 'measurement'] as const;
       const nextGate = gates.find(g => !state.gateDecisions[g]);
       if (nextGate) {
         approveGate(nextGate, 'approved');
-        if (nextGate === 'execution') setIsExecuted(true);
+        toast({ title: 'Approved', description: 'Proceeding to next phase...' });
       }
     }
   }, [state, approveGate, toast]);
@@ -115,10 +110,7 @@ export function RadarView({ mode, onCreateRun }: RadarViewProps) {
                   {crossModuleProblems.map((problem) => (
                     <button
                       key={problem.id}
-                      onClick={() => {
-                        setSelectedProblemId(problem.id);
-                        setIsExecuted(false);
-                      }}
+                      onClick={() => setSelectedProblemId(problem.id)}
                       className={cn(
                         "w-full p-3 rounded-lg border text-left transition-all",
                         selectedProblemId === problem.id
@@ -155,7 +147,8 @@ export function RadarView({ mode, onCreateRun }: RadarViewProps) {
             problem={selectedProblem}
             phase={phase}
             isRunning={state.isRunning}
-            isExecuted={isExecuted}
+            runProgress={runProgress}
+            currentAgentName={currentAgentName}
             onStart={handleStart}
             onApprove={handleApprove}
             onShowEvidence={() => setDigDeeperOpen(true)}

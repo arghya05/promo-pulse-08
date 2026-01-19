@@ -12,6 +12,8 @@ import {
   RefreshCw,
   BarChart3,
   Calendar,
+  Play,
+  ArrowRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CrossModulePlan, CrossModuleProblem } from '../cross-module-data';
@@ -59,25 +61,92 @@ const mockMeasurementData = {
 export function MeasureTab({ problem, plan, isExecuted = false, onRerun }: MeasureTabProps) {
   const data = mockMeasurementData;
 
+  // Show pre-execution state
   if (!isExecuted) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-center space-y-3">
-        <BarChart3 className="h-12 w-12 text-muted-foreground/30" />
-        <div>
-          <p className="text-sm text-muted-foreground">Measurement data will appear after execution</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Execute the plan to track forecast vs actual outcomes
-          </p>
-        </div>
+      <div className="space-y-4">
+        {/* Pre-execution notice */}
+        <Card className="border-l-4 border-l-amber-400 bg-amber-50/50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <Clock className="h-5 w-5 text-amber-600 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-amber-800">Awaiting Execution</h4>
+                <p className="text-sm text-amber-700 mt-1">
+                  Measurement data will appear after you approve and execute a plan.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* What will be measured */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" />
+              What Will Be Measured
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-xs text-muted-foreground">Baseline Capture</p>
+                <p className="text-sm font-medium mt-0.5">Current stockout risk & daily loss</p>
+              </div>
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-xs text-muted-foreground">Forecast vs Actual</p>
+                <p className="text-sm font-medium mt-0.5">Expected ROI: ₹{plan?.expectedROI || 0}L</p>
+              </div>
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-xs text-muted-foreground">Leading Indicators</p>
+                <p className="text-sm font-medium mt-0.5">Fill rate, OOS count, lost sales</p>
+              </div>
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-xs text-muted-foreground">Attribution</p>
+                <p className="text-sm font-medium mt-0.5">Confidence in causal impact</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* How to proceed */}
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <ArrowRight className="h-5 w-5 text-primary" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">Next Step</p>
+                <p className="text-xs text-muted-foreground">
+                  Go to <span className="font-medium">Options</span> tab, select a plan, and click <span className="font-medium">Approve & Execute</span>
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
+  // Post-execution measurement view
   const roiVariance = data.forecast.realizedROI - data.forecast.expectedROI;
   const roiVariancePercent = (roiVariance / data.forecast.expectedROI) * 100;
 
   return (
     <div className="space-y-4">
+      {/* Success banner */}
+      <Card className="border-l-4 border-l-green-500 bg-green-50/50">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <div>
+              <h4 className="font-medium text-green-800">Execution Complete</h4>
+              <p className="text-sm text-green-700">All actions executed successfully. Tracking outcomes.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Forecast vs Actual Card */}
       <Card className={cn(
         "border-l-4",
