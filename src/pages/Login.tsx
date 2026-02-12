@@ -54,7 +54,7 @@ const Login = () => {
           
           <div className="space-y-1">
             <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              Maya Copilot
+              Maya Conversational Intelligence
             </CardTitle>
             <CardDescription className="text-muted-foreground">
               AI-Powered Merchandising Intelligence
