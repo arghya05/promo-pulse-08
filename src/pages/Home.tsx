@@ -203,7 +203,7 @@ const Home = () => {
       {/* Footer */}
       <footer className="border-t bg-card/30 mt-12">
         <div className="container mx-auto px-6 py-6 text-center text-sm text-muted-foreground">
-          Merchandising AI Platform • Powered by Conversational Intelligence
+          Merchandising AI Platform • Powered by AI Conversational Intelligence
         </div>
       </footer>
     </div>
