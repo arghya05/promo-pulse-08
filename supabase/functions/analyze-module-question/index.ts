@@ -8213,9 +8213,10 @@ function validateQuestionAnswerAlignment(
       const hasCompetitorKeyword = /competitor|competitive|competition|pricing (position|gap)|price gap|pricing intelligence|compare.*price|price.*compar/i.test(q);
       const hasMarketShare = /market share|market position/i.test(q);
       const hasDimensionalCut = /by\s+(region|category|store|brand|geography|location|segment|product)/i.test(q);
-      // If it's "market share by region/category", it's a dimensional analysis, NOT a competitor question
-      if (hasMarketShare && hasDimensionalCut && !hasCompetitorName && !hasCompetitorKeyword) return false;
-      return hasCompetitorName || hasCompetitorKeyword || hasMarketShare;
+      // "market share" alone is NOT a competitor question - it's a dimensional/category analysis
+      // Only treat as competitor if there's an actual competitor name or explicit competitor keyword
+      if (hasMarketShare && !hasCompetitorName && !hasCompetitorKeyword) return false;
+      return hasCompetitorName || hasCompetitorKeyword;
     })(),
     // NEW: Detect sell-through rate questions
     isSellThroughQuestion: /sell.?through|sellthrough|inventory.?turn|stock.?turn|sell\s*thru/i.test(q),
