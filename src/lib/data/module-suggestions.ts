@@ -1,5 +1,5 @@
 // Module-specific search suggestions and templates
-import { TrendingUp, Calendar, BarChart3, Target, Clock, MapPin, Users, Package, Truck, DollarSign, ShoppingCart, Layers, Box, Warehouse, Route, Percent, Scale, Grid3X3, Sparkles, Crown } from "lucide-react";
+import { TrendingUp, TrendingDown, Calendar, BarChart3, Target, Clock, MapPin, Users, Package, Truck, DollarSign, ShoppingCart, Layers, Box, Warehouse, Route, Percent, Scale, Grid3X3, Sparkles, Crown } from "lucide-react";
 
 export interface SuggestionTemplate {
   text: string;
@@ -33,6 +33,8 @@ export const executiveSuggestions: Record<string, SuggestionTemplate[]> = {
     { text: "How does supplier performance affect availability?", icon: Truck, variation: "supply" },
   ],
   "which": [
+    { text: "Which products are best performing vs last year?", icon: TrendingUp, variation: "best-yoy" },
+    { text: "Which products are worst performing vs last year?", icon: TrendingDown, variation: "worst-yoy" },
     { text: "Which categories are underperforming?", icon: Target, variation: "underperform" },
     { text: "Which stores need intervention?", icon: MapPin, variation: "stores" },
     { text: "Which suppliers pose risk?", icon: Truck, variation: "risk" },

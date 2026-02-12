@@ -330,6 +330,11 @@ const executiveQuestions: ModuleQuestion[] = [
   { id: 39, text: "What is the brand performance summary across all categories?", tags: ['brand', 'summary'], metricKey: 'brand_performance', chartType: 'bar', followUps: ['Which brands are gaining/losing share?', 'What is driving brand shifts?'] },
   { id: 40, text: "What is the executive summary of merchandising health metrics?", tags: ['summary', 'health'], metricKey: 'health_score', chartType: 'bar', followUps: ['What are the top priorities?', 'What resources are needed?'] },
   
+  // YoY Product Performance Questions
+  { id: 51, text: "Which products are best performing compared to last year?", tags: ['yoy', 'best-performing', 'products'], metricKey: 'yoy_growth', chartType: 'bar', followUps: ['What is driving their growth?', 'Which categories are they in?'] },
+  { id: 52, text: "Which products are not performing this year vs previous year?", tags: ['yoy', 'worst-performing', 'products'], metricKey: 'yoy_decline', chartType: 'bar', followUps: ['What are the root causes?', 'What actions should we take?'] },
+  { id: 53, text: "What is the YoY performance comparison by product?", tags: ['yoy', 'product', 'comparison'], metricKey: 'product_yoy', chartType: 'bar', followUps: ['Which categories are improving?', 'Which products need intervention?'] },
+  
   // Simulation & Scenario Questions
   { id: 41, text: "What if we increase promotional spend by 10% in underperforming regions?", tags: ['simulation', 'promotion'], metricKey: 'scenario_impact', chartType: 'bar', followUps: ['What is the expected ROI?', 'What categories should we focus on?'] },
   { id: 42, text: "What if we rationalize bottom 10% of SKUs across all categories?", tags: ['simulation', 'rationalization'], metricKey: 'sku_reduction_impact', chartType: 'bar', followUps: ['What is the margin improvement?', 'What is the customer impact?'] },
@@ -346,7 +351,7 @@ const executiveQuestions: ModuleQuestion[] = [
 ];
 
 const modulePopularIds: Record<string, number[]> = {
-  executive: [1, 6, 11, 16, 21, 26, 31, 40],
+  executive: [1, 6, 51, 52, 16, 21, 31, 40],
   pricing: [1, 2, 4, 5, 7, 10, 12, 14],
   assortment: [1, 2, 4, 7, 10, 12, 14, 16],
   demand: [1, 2, 5, 6, 8, 10, 12, 14],
