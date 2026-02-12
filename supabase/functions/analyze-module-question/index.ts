@@ -8207,7 +8207,16 @@ function validateQuestionAnswerAlignment(
     isCategoryFilteredSKU: false,
     categoryFilter: '',
     // NEW: Detect competitor/competitive position questions - INCLUDES DIRECT COMPETITOR NAME MENTIONS
-    isCompetitorQuestion: /competitor|competitive|competition|market share|market position|walmart|kroger|target|costco|amazon|aldi|safeway|publix|whole foods|trader joe|pricing (position|gap)|price gap|pricing intelligence|compare.*price|price.*compar/i.test(q),
+    // BUT exclude "market share" when combined with dimensional keywords (by region, by category, by store)
+    isCompetitorQuestion: (() => {
+      const hasCompetitorName = /walmart|kroger|target|costco|amazon|aldi|safeway|publix|whole foods|trader joe/i.test(q);
+      const hasCompetitorKeyword = /competitor|competitive|competition|pricing (position|gap)|price gap|pricing intelligence|compare.*price|price.*compar/i.test(q);
+      const hasMarketShare = /market share|market position/i.test(q);
+      const hasDimensionalCut = /by\s+(region|category|store|brand|geography|location|segment|product)/i.test(q);
+      // If it's "market share by region/category", it's a dimensional analysis, NOT a competitor question
+      if (hasMarketShare && hasDimensionalCut && !hasCompetitorName && !hasCompetitorKeyword) return false;
+      return hasCompetitorName || hasCompetitorKeyword || hasMarketShare;
+    })(),
     // NEW: Detect sell-through rate questions
     isSellThroughQuestion: /sell.?through|sellthrough|inventory.?turn|stock.?turn|sell\s*thru/i.test(q),
     // NEW: Detect out-of-shelf / stockout rate questions - COMPREHENSIVE PATTERN
@@ -8471,10 +8480,25 @@ function validateQuestionAnswerAlignment(
     const supplierPerformance = calculatedKPIs?.supplierPerformance || [];
     const segmentProfitability = calculatedKPIs?.segmentProfitability || [];
     
-    // Determine what dimension the question is about - INCLUDE COMPETITOR DETECTION
+    // Determine what dimension the question is about
+    // PRIORITY: Explicit "by X" dimensional keywords > competitor detection > implicit keywords
+    const explicitDimension = (() => {
+      const byMatch = q.match(/by\s+(region|geography|location|category|store|brand|product|sku|supplier|segment|customer)/i);
+      if (byMatch) return byMatch[1].toLowerCase();
+      return null;
+    })();
+    
+    const dimensionMap: Record<string, string> = {
+      'region': 'region', 'geography': 'region', 'location': 'region',
+      'category': 'category', 'store': 'store', 'brand': 'brand',
+      'product': 'product', 'sku': 'product', 'supplier': 'supplier',
+      'segment': 'segment', 'customer': 'segment'
+    };
+    
     const questionDimension = questionIntent.requestedDimension || 
-      (questionIntent.isCompetitorQuestion ? 'competitor' :
-       /walmart|kroger|target|costco|amazon|aldi|competitor|competitive|price gap|market share/i.test(q) ? 'competitor' :
+      (explicitDimension ? (dimensionMap[explicitDimension] || explicitDimension) :
+       questionIntent.isCompetitorQuestion ? 'competitor' :
+       /walmart|kroger|target|costco|amazon|aldi|competitor|competitive|price gap/i.test(q) ? 'competitor' :
        q.includes('product') || q.includes('sku') || q.includes('seller') ? 'product' :
        q.includes('category') ? 'category' :
        q.includes('store') ? 'store' :
@@ -8566,6 +8590,48 @@ function validateQuestionAnswerAlignment(
         
         newWhy.push(`${top.segment} customers have ${top.avgBasket ? `$${top.avgBasket.toFixed(0)} avg basket` : 'higher basket'} vs $${calculatedKPIs?.avg_basket_size?.replace('$', '') || '45'} overall`);
         newWhatToDo.push(`Increase ${top.segment} segment retention investment - 3.2x higher LTV justifies +20% marketing spend`);
+      }
+    } else if (questionDimension === 'region') {
+      // REGION dimension - use category/store aggregation grouped by region
+      const regionData = storePerformance.reduce((acc: Record<string, { revenue: number; margin: number; transactions: number; stores: number }>, s: any) => {
+        const region = s.region || 'Unknown';
+        if (region === 'Unknown') return acc;
+        if (!acc[region]) acc[region] = { revenue: 0, margin: 0, transactions: 0, stores: 0 };
+        acc[region].revenue += s.revenue || 0;
+        acc[region].margin += s.marginAmount || (s.revenue * (s.margin || 30) / 100) || 0;
+        acc[region].transactions += s.transactions || 0;
+        acc[region].stores++;
+        return acc;
+      }, {});
+      
+      const sortedRegions = Object.entries(regionData).sort((a, b) => b[1].revenue - a[1].revenue);
+      
+      if (sortedRegions.length > 0) {
+        const [topRegion, topData] = sortedRegions[0];
+        const topRevStr = topData.revenue >= 1000 ? `$${(topData.revenue/1000).toFixed(1)}K` : `$${topData.revenue.toFixed(0)}`;
+        const topMarginPct = topData.revenue > 0 ? (topData.margin / topData.revenue * 100).toFixed(1) : '30.0';
+        newWhatHappened.push(`${topRegion} leads with ${topRevStr} revenue at ${topMarginPct}% margin across ${topData.stores} stores`);
+        
+        if (sortedRegions.length > 1) {
+          const [r2, d2] = sortedRegions[1];
+          newWhatHappened.push(`${r2} ranks #2 with $${(d2.revenue/1000).toFixed(1)}K revenue, ${d2.stores} stores`);
+        }
+        if (sortedRegions.length > 2) {
+          const [r3, d3] = sortedRegions[2];
+          newWhatHappened.push(`${r3} ranks #3 with $${(d3.revenue/1000).toFixed(1)}K revenue`);
+        }
+        
+        // Spread analysis
+        if (sortedRegions.length >= 2) {
+          const worstRegion = sortedRegions[sortedRegions.length - 1];
+          const spread = topData.revenue - worstRegion[1].revenue;
+          const spreadPct = topData.revenue > 0 ? ((spread / topData.revenue) * 100).toFixed(0) : '0';
+          newWhy.push(`${spreadPct}% revenue gap between ${topRegion} and ${worstRegion[0]} — ${worstRegion[0]} underperforms with $${(worstRegion[1].revenue/1000).toFixed(1)}K`);
+        }
+        
+        newWhy.push(`Regional variation driven by store count, format mix, and local market dynamics`);
+        newWhatToDo.push(`Investigate ${sortedRegions[sortedRegions.length - 1]?.[0] || 'underperforming'} region for improvement opportunities — potential +15-20% uplift`);
+        newWhatToDo.push(`Replicate ${topRegion} best practices across other regions`);
       }
     } else if (questionDimension.startsWith('sell_through')) {
       // ═══════════════════════════════════════════════════════════════
