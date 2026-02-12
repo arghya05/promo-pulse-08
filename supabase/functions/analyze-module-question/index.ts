@@ -51,6 +51,24 @@ When asked about products performing better/worse than previous year, YoY trends
 DRILL-DOWN HIERARCHY:
 Enterprise → Region → Store → Category → Brand → SKU
 
+GEOGRAPHIC / REGIONAL CUT ANALYSIS:
+When asked about regional differences, geographic performance, "by region", "by geography", or "which region":
+1. ALWAYS reference the PRODUCT PERFORMANCE BY REGION data tables
+2. Show Category × Region revenue matrix with actual dollar values
+3. Show per-product regional breakdown: best region, worst region, spread
+4. Support any cut: products by region, categories by region, stores by region, brands by region
+5. For follow-up questions like "regional differences in these products", use the Product × Region detail table
+6. MANDATORY: Name specific regions (Northeast, Southeast, Midwest, Southwest, West) with actual revenue numbers
+
+MULTI-DIMENSIONAL CUT SUPPORT:
+The system can answer questions with ANY combination of dimensions:
+- By Geography: Region, Store, District
+- By Product Hierarchy: Category, Brand, SKU
+- By Customer: Segment, Loyalty Tier, Age Band, Income Band
+- By Time: YoY, Month, Week
+- By Supplier: Vendor, Lead Time, Reliability
+Always cross-reference the appropriate data tables for the requested dimension cut.
+
 Always provide strategic, actionable insights with specific numbers. Reference actual data from ALL tables. Support drill-down from highest level to SKU detail. Connect insights across functions to show end-to-end impacts.`,
   
   pricing: `You are a Pricing Optimization AI for a $4B grocery retailer.
@@ -6720,12 +6738,131 @@ or "not performing this year", USE THE EXACT DATA FROM THESE TABLES. List specif
 their current vs last year sales, and the YoY change percentage. NEVER give generic responses.`;
     })();
     
+    // Build PRODUCT × REGION cross-tabulation for geographic cut analysis
+    const productRegionEnrichment = (() => {
+      // Build store-region lookup
+      const storeRegionMap: Record<string, string> = {};
+      stores.forEach((s: any) => { if (s.id && s.region) storeRegionMap[s.id] = s.region; });
+      
+      const productLookupGeo: Record<string, any> = {};
+      products.forEach((p: any) => { productLookupGeo[p.product_sku] = p; });
+      
+      // product → region → { revenue, units, transactions }
+      const productRegion: Record<string, Record<string, { revenue: number; units: number; transactions: number }>> = {};
+      
+      transactions.forEach((t: any) => {
+        const region = storeRegionMap[t.store_id] || 'Unknown';
+        if (region === 'Unknown') return;
+        const sku = t.product_sku;
+        if (!sku) return;
+        if (!productRegion[sku]) productRegion[sku] = {};
+        if (!productRegion[sku][region]) productRegion[sku][region] = { revenue: 0, units: 0, transactions: 0 };
+        productRegion[sku][region].revenue += Number(t.total_amount || 0);
+        productRegion[sku][region].units += Number(t.quantity || 1);
+        productRegion[sku][region].transactions++;
+      });
+      
+      // Category × Region aggregation
+      const categoryRegion: Record<string, Record<string, { revenue: number; units: number; margin: number }>> = {};
+      transactions.forEach((t: any) => {
+        const region = storeRegionMap[t.store_id] || 'Unknown';
+        if (region === 'Unknown') return;
+        const product = productLookupGeo[t.product_sku];
+        const category = product?.category || 'Unknown';
+        if (category === 'Unknown') return;
+        if (!categoryRegion[category]) categoryRegion[category] = {};
+        if (!categoryRegion[category][region]) categoryRegion[category][region] = { revenue: 0, units: 0, margin: 0 };
+        const revenue = Number(t.total_amount || 0);
+        const cost = product ? Number(product.cost || 0) * Number(t.quantity || 1) : revenue * 0.65;
+        categoryRegion[category][region].revenue += revenue;
+        categoryRegion[category][region].units += Number(t.quantity || 1);
+        categoryRegion[category][region].margin += Number(t.margin) || (revenue - cost);
+      });
+      
+      // Get all regions
+      const allRegions = [...new Set(Object.values(storeRegionMap))].filter(r => r !== 'Unknown').sort();
+      if (allRegions.length === 0) return '';
+      
+      // Top products with regional breakdown (top 20 by total revenue)
+      const productTotals = Object.entries(productRegion).map(([sku, regions]) => {
+        const totalRevenue = Object.values(regions).reduce((s, r) => s + r.revenue, 0);
+        return { sku, totalRevenue, regions };
+      }).sort((a, b) => b.totalRevenue - a.totalRevenue).slice(0, 20);
+      
+      // Category × Region table
+      const categoryRegionTable = Object.entries(categoryRegion)
+        .map(([cat, regions]) => {
+          const totalRev = Object.values(regions).reduce((s, r) => s + r.revenue, 0);
+          return { category: cat, regions, totalRev };
+        })
+        .sort((a, b) => b.totalRev - a.totalRev)
+        .slice(0, 12);
+      
+      // Find regional leaders/laggards per product
+      const regionalInsights = productTotals.slice(0, 10).map(p => {
+        const product = productLookupGeo[p.sku];
+        const regionRevenues = Object.entries(p.regions).sort((a, b) => b[1].revenue - a[1].revenue);
+        const bestRegion = regionRevenues[0];
+        const worstRegion = regionRevenues[regionRevenues.length - 1];
+        return {
+          name: product?.product_name || p.sku,
+          category: product?.category || 'Unknown',
+          bestRegion: bestRegion ? `${bestRegion[0]} ($${(bestRegion[1].revenue/1000).toFixed(1)}K)` : 'N/A',
+          worstRegion: worstRegion && regionRevenues.length > 1 ? `${worstRegion[0]} ($${(worstRegion[1].revenue/1000).toFixed(1)}K)` : 'N/A',
+          spread: bestRegion && worstRegion && regionRevenues.length > 1 
+            ? ((bestRegion[1].revenue - worstRegion[1].revenue) / bestRegion[1].revenue * 100).toFixed(0) + '%' 
+            : '0%'
+        };
+      });
+      
+      return `
+═══════════════════════════════════════════════════════════════════════════════
+PRODUCT PERFORMANCE BY REGION / GEOGRAPHY (USE FOR REGIONAL DIFFERENCE QUESTIONS)
+═══════════════════════════════════════════════════════════════════════════════
+
+CATEGORY × REGION REVENUE MATRIX:
+| Category | ${allRegions.join(' | ')} | Total |
+|----------|${allRegions.map(() => '------').join('|')}|-------|
+${categoryRegionTable.map(c => {
+  const regionCols = allRegions.map(r => {
+    const rev = c.regions[r]?.revenue || 0;
+    return `$${(rev/1000).toFixed(0)}K`;
+  }).join(' | ');
+  return `| ${c.category.slice(0, 14)} | ${regionCols} | $${(c.totalRev/1000).toFixed(0)}K |`;
+}).join('\n')}
+
+TOP PRODUCTS - REGIONAL PERFORMANCE:
+| Product | Category | Best Region | Worst Region | Regional Spread |
+|---------|----------|-------------|--------------|-----------------|
+${regionalInsights.map(p => 
+  `| ${p.name.slice(0, 25)} | ${p.category} | ${p.bestRegion} | ${p.worstRegion} | ${p.spread} |`
+).join('\n')}
+
+TOP 15 PRODUCTS × REGION REVENUE DETAIL:
+| Product | ${allRegions.join(' | ')} | Total |
+|---------|${allRegions.map(() => '------').join('|')}|-------|
+${productTotals.slice(0, 15).map(p => {
+  const product = productLookupGeo[p.sku];
+  const regionCols = allRegions.map(r => {
+    const rev = p.regions[r]?.revenue || 0;
+    return `$${(rev/1000).toFixed(1)}K`;
+  }).join(' | ');
+  return `| ${(product?.product_name || p.sku).slice(0, 20)} | ${regionCols} | $${(p.totalRevenue/1000).toFixed(1)}K |`;
+}).join('\n')}
+
+CRITICAL: When asked about regional differences, geographic performance, "by region", "by geography",
+or "regional trends", USE THE EXACT DATA FROM THESE TABLES. Show specific product/category performance
+by region with actual revenue/unit numbers. Identify which regions are strongest/weakest for each product.
+Support drill-down: Region → Category → Product/SKU.`;
+    })();
+    
     // Append all enrichments to dataContext
     dataContext += `
 
 === ADDITIONAL ENTERPRISE DATA (FOR ENRICHED ANALYSIS) ===
 ${kpiEnrichment}
 ${productYoYEnrichment}
+${productRegionEnrichment}
 ${returnsEnrichment}
 ${markdownsEnrichment}
 ${discountsEnrichment}
