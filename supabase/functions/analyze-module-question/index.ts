@@ -7551,7 +7551,7 @@ CONVERSATION AWARENESS (light context):
     parsedResponse = enforceQuestionTypeAlignment(parsedResponse, question, moduleId, {
       products, stores, suppliers, promotions, transactions, 
       competitorData, competitorPrices, calculatedKPIs,
-      inventoryLevels, planograms, customers
+      inventoryLevels, planograms, customers, kpiMeasures
     });
 
     console.log(`[${moduleId}] Analysis complete`);
@@ -11119,6 +11119,7 @@ interface AlignmentData {
   inventoryLevels?: any[];
   planograms?: any[];
   customers?: any[];
+  kpiMeasures?: any[];
 }
 
 interface QuestionTypeRule {
@@ -11140,6 +11141,121 @@ function enforceQuestionTypeAlignment(
   
   // Define question type rules with validation and data-driven replacements
   const questionTypeRules: QuestionTypeRule[] = [
+    // ═══════════════════════════════════════════════════════════════════════════
+    // YEAR-OVER-YEAR (YoY) COMPARISON QUESTIONS
+    // Matches: "previous year", "this year compare", "yoy", "year over year", 
+    //          "sold well this year", "compare to last year", typos like "comapre"
+    // ═══════════════════════════════════════════════════════════════════════════
+    {
+      pattern: /previous\s*year|last\s*year|year\s*over\s*year|\byoy\b|this\s*year.*(?:compar|vs|versus|against)|(?:compar|vs|versus|against).*(?:previous|last|prior)\s*year|(?:sold|perform|grow|declin).*(?:this|current)\s*year|not\s*perform.*(?:this|current)\s*year|(?:comapre|compre|compair).*year|year.*(?:comapre|compre|compair)/i,
+      type: 'yoy_comparison',
+      requiredInAnswer: (q, data) => ['year', '%', 'vs', 'change'],
+      generateDataDrivenAnswer: (q, data, response) => {
+        // Build product lookup
+        const productLookup: Record<string, any> = {};
+        data.products.forEach((p: any) => { productLookup[p.product_sku] = p; });
+        
+        // Get YoY data from kpiMeasures
+        const kpiMeasures = data.kpiMeasures || [];
+        const productKpis = kpiMeasures.filter((k: any) => k.product_sku && k.net_sales_ly > 0);
+        
+        const fmtC = (val: number) => val >= 1000 ? '$' + (val/1000).toFixed(1) + 'K' : '$' + val.toFixed(0);
+        
+        if (productKpis.length === 0) {
+          const topProducts = data.calculatedKPIs?.topProducts || [];
+          response.whatHappened = [
+            'YoY comparison across ' + topProducts.length + ' products — total revenue: ' + (data.calculatedKPIs?.revenue || 'N/A'),
+            'Top performer: "' + (topProducts[0]?.name || 'N/A') + '" at ' + fmtC((topProducts[0]?.revenue || 0)) + ' revenue',
+            'YoY growth data limited — ask about specific categories or products for detailed comparison'
+          ];
+          response.chartData = topProducts.slice(0, 6).map((p: any) => ({
+            name: p.name, value: Math.round(p.revenue || p.value || 0)
+          }));
+          return response;
+        }
+        
+        const productYoYData = productKpis.map((k: any) => {
+          const product = productLookup[k.product_sku] || {};
+          const currentSales = Number(k.net_sales || 0);
+          const lySales = Number(k.net_sales_ly || 0);
+          const yoyGrowthPct = Number(k.yoy_net_sales_growth_pct || ((currentSales - lySales) / lySales * 100));
+          return {
+            sku: k.product_sku,
+            name: product.product_name || k.product_sku,
+            category: k.category || product.category || 'Unknown',
+            currentSales, lySales, yoyGrowthPct,
+            currentUnits: Number(k.units_sold || 0),
+            lyUnits: Number(k.units_sold_ly || 0),
+            marginPct: Number(k.gross_margin_pct || product.margin_percent || 0),
+          };
+        });
+        
+        const wantsSoldWell = /sold well|best|top|improv|grow|strong/i.test(q);
+        const wantsDecliners = /worst|declin|poor|weak|not perform|underperform|bad/i.test(q);
+        
+        const sorted = [...productYoYData].sort((a, b) => b.yoyGrowthPct - a.yoyGrowthPct);
+        const improving = sorted.filter(p => p.yoyGrowthPct > 0);
+        const declining = sorted.filter(p => p.yoyGrowthPct < 0).sort((a, b) => a.yoyGrowthPct - b.yoyGrowthPct);
+        
+        const totalCurrentSales = productYoYData.reduce((s, p) => s + p.currentSales, 0);
+        const totalLySales = productYoYData.reduce((s, p) => s + p.lySales, 0);
+        const overallYoYPct = totalLySales > 0 ? ((totalCurrentSales - totalLySales) / totalLySales * 100) : 0;
+        const yoySign = overallYoYPct >= 0 ? '+' : '';
+        
+        if (wantsSoldWell || (!wantsDecliners)) {
+          const topImprovers = improving.slice(0, 5);
+          const t0 = topImprovers[0];
+          const t1 = topImprovers[1];
+          response.whatHappened = [
+            improving.length + ' products showing positive YoY growth out of ' + productYoYData.length + ' analyzed — overall ' + yoySign + overallYoYPct.toFixed(1) + '% YoY',
+            'Top YoY performer: "' + (t0?.name || 'N/A') + '" at +' + (t0?.yoyGrowthPct.toFixed(1)) + '% (' + fmtC(t0?.currentSales || 0) + ' vs ' + fmtC(t0?.lySales || 0) + ' LY)',
+            '#2: "' + (t1?.name || 'N/A') + '" at +' + (t1?.yoyGrowthPct.toFixed(1)) + '% — ' + (t1?.category || 'N/A') + ' category'
+          ];
+          response.chartData = topImprovers.map((p, idx) => ({
+            name: p.name, value: Math.round(p.currentSales),
+            currentYear: fmtC(p.currentSales), lastYear: fmtC(p.lySales),
+            yoyChange: (p.yoyGrowthPct >= 0 ? '+' : '') + p.yoyGrowthPct.toFixed(1) + '%',
+            category: p.category, rank: idx + 1
+          }));
+        } else {
+          const topDecliners = declining.slice(0, 5);
+          const d0 = topDecliners[0];
+          response.whatHappened = [
+            declining.length + ' products declining YoY out of ' + productYoYData.length + ' — overall ' + yoySign + overallYoYPct.toFixed(1) + '% YoY',
+            'Biggest decliner: "' + (d0?.name || 'N/A') + '" at ' + (d0?.yoyGrowthPct.toFixed(1)) + '% (' + fmtC(d0?.currentSales || 0) + ' vs ' + fmtC(d0?.lySales || 0) + ' LY)',
+            'Revenue at risk: ' + fmtC(declining.reduce((s, p) => s + Math.abs(p.currentSales - p.lySales), 0)) + ' across ' + declining.length + ' products'
+          ];
+          response.chartData = topDecliners.map((p, idx) => ({
+            name: p.name, value: Math.round(p.currentSales),
+            currentYear: fmtC(p.currentSales), lastYear: fmtC(p.lySales),
+            yoyChange: (p.yoyGrowthPct >= 0 ? '+' : '') + p.yoyGrowthPct.toFixed(1) + '%',
+            category: p.category, rank: idx + 1
+          }));
+        }
+        
+        const growCats = [...new Set(improving.slice(0, 3).map(p => p.category))].join(', ');
+        const declineCats = [...new Set(declining.slice(0, 3).map(p => p.category))].join(', ') || 'N/A';
+        
+        response.why = [
+          'YoY shifts driven by ' + (improving.length > declining.length ? 'strong demand recovery' : 'category demand changes') + ' — ' + improving.length + ' improving vs ' + declining.length + ' declining',
+          'Category mix: ' + growCats + ' driving growth; ' + declineCats + ' under pressure'
+        ];
+        
+        response.whatToDo = [
+          'Increase allocation for top YoY growers — "' + (improving[0]?.name || 'N/A') + '" merits +15-20% inventory boost',
+          'Review ' + declining.length + ' declining products for markdown/exit — ' + fmtC(declining.slice(0, 3).reduce((s, p) => s + Math.abs(p.currentSales - p.lySales), 0)) + ' recovery potential'
+        ];
+        
+        response.kpis = {
+          yoy_growth: { value: yoySign + overallYoYPct.toFixed(1) + '%', trend: overallYoYPct >= 0 ? 'positive' : 'negative', status: overallYoYPct >= 0 ? 'good' : 'warning' },
+          products_growing: { value: '' + improving.length, trend: 'positive', status: 'good' },
+          products_declining: { value: '' + declining.length, trend: 'negative', status: declining.length > improving.length ? 'warning' : 'neutral' },
+          total_revenue: { value: fmtC(totalCurrentSales), trend: overallYoYPct >= 0 ? 'positive' : 'negative', status: 'neutral' }
+        };
+        
+        return response;
+      }
+    },
     // ═══════════════════════════════════════════════════════════════════════════
     // COMPETITIVE/COMPETITOR QUESTIONS
     // ═══════════════════════════════════════════════════════════════════════════
