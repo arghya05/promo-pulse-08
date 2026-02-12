@@ -37,6 +37,17 @@ When asked about out-of-shelf rate, stockout rate, OOS, or availability:
 - Show shelf availability rate (100% - OOS rate)
 - Provide actionable recommendations to reduce stockouts
 
+YEAR-OVER-YEAR (YoY) PRODUCT COMPARISON:
+When asked about products performing better/worse than previous year, YoY trends, or "not performing this year":
+1. ALWAYS reference the PRODUCT-LEVEL YoY PERFORMANCE data
+2. List specific product names with current vs last year sales and % change
+3. Group by category to show which categories are driving growth/decline
+4. For declining products: show revenue loss amount and recommend actions
+5. For improving products: show revenue gain and drivers
+6. MANDATORY TABLE FORMAT:
+| Product | Category | This Year | Last Year | YoY Change | Action |
+|---------|----------|-----------|-----------|------------|--------|
+
 DRILL-DOWN HIERARCHY:
 Enterprise → Region → Store → Category → Brand → SKU
 
@@ -6649,11 +6660,72 @@ market share percentages, and promo intensity levels. NEVER say "data not availa
 competitor data exists above.`;
     })();
     
+    // Build PRODUCT-LEVEL YoY comparison context from kpi_measures
+    const productYoYEnrichment = (() => {
+      const productKpis = kpiMeasures.filter((k: any) => k.product_sku && k.net_sales_ly > 0);
+      if (productKpis.length === 0) return '';
+      
+      // Build product lookup
+      const productLookupYoY: Record<string, any> = {};
+      products.forEach((p: any) => { productLookupYoY[p.product_sku] = p; });
+      
+      const productYoYData = productKpis.map((k: any) => {
+        const product = productLookupYoY[k.product_sku] || {};
+        return {
+          sku: k.product_sku,
+          name: product.product_name || k.product_sku,
+          category: k.category || product.category || 'Unknown',
+          currentSales: Number(k.net_sales || 0),
+          lySales: Number(k.net_sales_ly || 0),
+          currentUnits: Number(k.units_sold || 0),
+          lyUnits: Number(k.units_sold_ly || 0),
+          yoyGrowthPct: Number(k.yoy_net_sales_growth_pct || 0),
+          marginPct: Number(k.gross_margin_pct || product.margin_percent || 0),
+        };
+      });
+      
+      // Sort for top improvers and worst decliners
+      const sorted = [...productYoYData].sort((a, b) => a.yoyGrowthPct - b.yoyGrowthPct);
+      const declining = sorted.filter(p => p.yoyGrowthPct < 0).slice(0, 15);
+      const improving = sorted.filter(p => p.yoyGrowthPct > 0).sort((a, b) => b.yoyGrowthPct - a.yoyGrowthPct).slice(0, 15);
+      
+      return `
+═══════════════════════════════════════════════════════════════════════════════
+PRODUCT-LEVEL YEAR-OVER-YEAR (YoY) PERFORMANCE COMPARISON
+═══════════════════════════════════════════════════════════════════════════════
+
+PRODUCTS DECLINING VS PREVIOUS YEAR (WORST PERFORMERS YoY):
+| Rank | Product Name | Category | Current Sales | Last Year Sales | YoY Change | Units Current | Units LY |
+|------|-------------|----------|---------------|-----------------|------------|---------------|----------|
+${declining.map((p, i) => 
+  `| ${i+1} | ${p.name.slice(0, 30)} | ${p.category} | $${(p.currentSales/1000).toFixed(1)}K | $${(p.lySales/1000).toFixed(1)}K | ${p.yoyGrowthPct >= 0 ? '+' : ''}${p.yoyGrowthPct.toFixed(1)}% | ${p.currentUnits} | ${p.lyUnits} |`
+).join('\n')}
+
+PRODUCTS IMPROVING VS PREVIOUS YEAR (BEST PERFORMERS YoY):
+| Rank | Product Name | Category | Current Sales | Last Year Sales | YoY Change | Units Current | Units LY |
+|------|-------------|----------|---------------|-----------------|------------|---------------|----------|
+${improving.map((p, i) => 
+  `| ${i+1} | ${p.name.slice(0, 30)} | ${p.category} | $${(p.currentSales/1000).toFixed(1)}K | $${(p.lySales/1000).toFixed(1)}K | ${p.yoyGrowthPct >= 0 ? '+' : ''}${p.yoyGrowthPct.toFixed(1)}% | ${p.currentUnits} | ${p.lyUnits} |`
+).join('\n')}
+
+YoY SUMMARY:
+- Products Declining: ${declining.length} products showing negative YoY growth
+- Products Improving: ${improving.length} products showing positive YoY growth
+- Biggest Decliner: ${declining[0]?.name || 'N/A'} at ${declining[0]?.yoyGrowthPct.toFixed(1) || 0}% YoY
+- Biggest Improver: ${improving[0]?.name || 'N/A'} at +${improving[0]?.yoyGrowthPct.toFixed(1) || 0}% YoY
+- Total Products Analyzed: ${productYoYData.length}
+
+CRITICAL: When asked about products performing better/worse than previous year, YoY comparison,
+or "not performing this year", USE THE EXACT DATA FROM THESE TABLES. List specific product names,
+their current vs last year sales, and the YoY change percentage. NEVER give generic responses.`;
+    })();
+    
     // Append all enrichments to dataContext
     dataContext += `
 
 === ADDITIONAL ENTERPRISE DATA (FOR ENRICHED ANALYSIS) ===
 ${kpiEnrichment}
+${productYoYEnrichment}
 ${returnsEnrichment}
 ${markdownsEnrichment}
 ${discountsEnrichment}
