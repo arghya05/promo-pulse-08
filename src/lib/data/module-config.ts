@@ -334,6 +334,15 @@ const executiveQuestions: ModuleQuestion[] = [
   { id: 51, text: "Which products are best performing compared to last year?", tags: ['yoy', 'best-performing', 'products'], metricKey: 'yoy_growth', chartType: 'bar', followUps: ['What is driving their growth?', 'Which categories are they in?'] },
   { id: 52, text: "Which products are not performing this year vs previous year?", tags: ['yoy', 'worst-performing', 'products'], metricKey: 'yoy_decline', chartType: 'bar', followUps: ['What are the root causes?', 'What actions should we take?'] },
   { id: 53, text: "What is the YoY performance comparison by product?", tags: ['yoy', 'product', 'comparison'], metricKey: 'product_yoy', chartType: 'bar', followUps: ['Which categories are improving?', 'Which products need intervention?'] },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // VERIFIED DEMO QUESTIONS - Executive Module (mp-exec-1 through mp-exec-5)
+  // ═══════════════════════════════════════════════════════════════════════════
+  { id: 54, text: "What is the overall revenue performance by category?", tags: ['demo', 'revenue', 'category'], metricKey: 'revenue', chartType: 'bar', followUps: ['Which categories are growing?', 'What is the margin performance?'] },
+  { id: 55, text: "Which categories have the highest gross margin?", tags: ['demo', 'margin', 'category'], metricKey: 'gross_margin_pct', chartType: 'bar', followUps: ['Which categories are improving margins?', 'What pricing actions are needed?'] },
+  { id: 56, text: "What is the out-of-shelf rate across categories?", tags: ['demo', 'inventory', 'stockout'], metricKey: 'stockout_rate', chartType: 'bar', followUps: ['Which products are at highest risk?', 'What replenishment actions needed?'] },
+  { id: 57, text: "Show store performance across regions", tags: ['demo', 'store', 'regional'], metricKey: 'store_performance', chartType: 'bar', followUps: ['Which stores need intervention?', 'What is the regional variance?'] },
+  { id: 58, text: "What are the top selling products?", tags: ['demo', 'products', 'revenue'], metricKey: 'sku_growth', chartType: 'bar', followUps: ['What drives their success?', 'How to replicate across categories?'] },
   
   // Simulation & Scenario Questions
   { id: 41, text: "What if we increase promotional spend by 10% in underperforming regions?", tags: ['simulation', 'promotion'], metricKey: 'scenario_impact', chartType: 'bar', followUps: ['What is the expected ROI?', 'What categories should we focus on?'] },
@@ -351,12 +360,13 @@ const executiveQuestions: ModuleQuestion[] = [
 ];
 
 const modulePopularIds: Record<string, number[]> = {
-  executive: [1, 6, 51, 52, 16, 21, 31, 40],
+  executive: [54, 55, 56, 57, 58, 1, 6, 51],
   pricing: [1, 2, 4, 5, 7, 10, 12, 14],
   assortment: [1, 2, 4, 7, 10, 12, 14, 16],
   demand: [1, 2, 5, 6, 8, 10, 12, 14],
   'supply-chain': [1, 2, 5, 8, 11, 12, 14, 16],
   space: [1, 2, 5, 7, 10, 15, 16, 20],
+  promotion: [1, 2, 3, 4, 5, 6, 7],
 };
 
 // Module-specific personas
