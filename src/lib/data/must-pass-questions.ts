@@ -275,6 +275,191 @@ export const mustPassQuestions: MustPassQuestion[] = [
       'Show on-time delivery → product availability → sales performance connection',
       'Quantify revenue protection or uplift'
     ]
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EXECUTIVE INSIGHTS — Popular Demo Questions
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    id: 'mp-exec-1',
+    module: 'executive',
+    category: 'Revenue Performance',
+    question: 'What is the overall revenue performance by category?',
+    expectedOutput: [
+      'Revenue breakdown by category with actual dollar values',
+      'Category contribution percentages',
+      'Margin performance per category',
+      'Top and bottom performing categories'
+    ],
+    requiredKPIs: ['revenue', 'gross_margin_pct', 'units_sold'],
+    priority: 'critical',
+    acceptanceCriteria: [
+      'Show actual revenue figures from database',
+      'Include margin % per category',
+      'Rank categories by revenue'
+    ]
+  },
+  {
+    id: 'mp-exec-2',
+    module: 'executive',
+    category: 'Margin Analysis',
+    question: 'Which categories have the highest gross margin?',
+    expectedOutput: [
+      'Categories ranked by gross margin %',
+      'Actual margin values and percentages',
+      'Comparison across categories'
+    ],
+    requiredKPIs: ['gross_margin_pct', 'gross_margin', 'revenue'],
+    priority: 'critical',
+    acceptanceCriteria: [
+      'Use real margin data from products table',
+      'Show both % and absolute margin values'
+    ]
+  },
+  {
+    id: 'mp-exec-3',
+    module: 'executive',
+    category: 'Inventory Risk',
+    question: 'What is the out-of-shelf rate across categories?',
+    expectedOutput: [
+      'OOS rate calculated from inventory_levels',
+      'Breakdown by category',
+      'Products at highest stockout risk',
+      'Actionable recommendations'
+    ],
+    requiredKPIs: ['stockout_rate', 'stock_level', 'sell_through_rate'],
+    priority: 'critical',
+    acceptanceCriteria: [
+      'Calculate from real inventory data',
+      'Show specific product names at risk'
+    ]
+  },
+  {
+    id: 'mp-exec-4',
+    module: 'executive',
+    category: 'Store Performance',
+    question: 'Show store performance across regions',
+    expectedOutput: [
+      'Store performance metrics by region',
+      'Sales, foot traffic, conversion by store',
+      'Regional comparison'
+    ],
+    requiredKPIs: ['revenue', 'transactions_count', 'avg_basket_size'],
+    priority: 'high',
+    acceptanceCriteria: [
+      'Use real store names and regions',
+      'Show actual performance metrics'
+    ]
+  },
+  {
+    id: 'mp-exec-5',
+    module: 'executive',
+    category: 'Top Sellers',
+    question: 'What are the top selling products?',
+    expectedOutput: [
+      'Products ranked by sales volume/revenue',
+      'Specific product names with metrics',
+      'Category and margin context'
+    ],
+    requiredKPIs: ['revenue', 'units_sold', 'gross_margin_pct'],
+    priority: 'critical',
+    acceptanceCriteria: [
+      'Show real product names from database',
+      'Include revenue and unit figures'
+    ]
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PROMOTION MODULE — Popular Demo Questions
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    id: 'mp-promo-3',
+    module: 'promotion',
+    category: 'Promo ROI Overview',
+    question: 'What is the ROI of our promotions last quarter?',
+    expectedOutput: [
+      'Overall promotional ROI calculation',
+      'Spend vs revenue generated',
+      'Top and bottom performing promotions by ROI',
+      'Recommendations to improve ROI'
+    ],
+    requiredKPIs: ['promo_roi', 'promo_spend', 'incremental_margin', 'lift_pct'],
+    priority: 'critical',
+    acceptanceCriteria: [
+      'Use real promotion data from promotions table',
+      'Show actual spend figures',
+      'Calculate ROI from real numbers'
+    ]
+  },
+  {
+    id: 'mp-promo-4',
+    module: 'promotion',
+    category: 'Low Performers',
+    question: 'Which promotions had the lowest ROI?',
+    expectedOutput: [
+      'Promotions ranked by ROI (lowest first)',
+      'Specific promotion names',
+      'Spend, discount depth, and margin impact',
+      'Recommendations to discontinue or adjust'
+    ],
+    requiredKPIs: ['promo_roi', 'promo_spend', 'discount_depth', 'incremental_margin'],
+    priority: 'high',
+    acceptanceCriteria: [
+      'Show real promotion names',
+      'Include actual spend and ROI figures'
+    ]
+  },
+  {
+    id: 'mp-promo-5',
+    module: 'promotion',
+    category: 'Mechanic Comparison',
+    question: 'Compare promotion mechanics — which works best for Snacks?',
+    expectedOutput: [
+      'Comparison of BOGO, % off, bundle by performance',
+      'Category-specific effectiveness',
+      'Recommendations for optimal mechanic'
+    ],
+    requiredKPIs: ['promo_roi', 'lift_pct', 'incremental_margin'],
+    priority: 'high',
+    acceptanceCriteria: [
+      'Compare actual promotion types from data',
+      'Show category-filtered results'
+    ]
+  },
+  {
+    id: 'mp-promo-6',
+    module: 'promotion',
+    category: 'Active Promos',
+    question: 'How many promotions are currently running?',
+    expectedOutput: [
+      'Count of active promotions',
+      'List of running promotions with dates',
+      'Breakdown by type/category'
+    ],
+    requiredKPIs: ['promo_count', 'promo_spend'],
+    priority: 'critical',
+    acceptanceCriteria: [
+      'Count from real promotions table where running_promo = true',
+      'Show actual promotion names'
+    ]
+  },
+  {
+    id: 'mp-promo-7',
+    module: 'promotion',
+    category: 'Spend Analysis',
+    question: 'What is the total promotional spend vs revenue?',
+    expectedOutput: [
+      'Total promotional spend from database',
+      'Total revenue figure',
+      'Spend as % of revenue',
+      'Comparison and efficiency metrics'
+    ],
+    requiredKPIs: ['promo_spend', 'revenue', 'promo_roi'],
+    priority: 'critical',
+    acceptanceCriteria: [
+      'Use actual spend totals from promotions table',
+      'Use actual revenue from transactions'
+    ]
   }
 ];
 
