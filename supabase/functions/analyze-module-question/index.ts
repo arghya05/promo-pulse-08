@@ -7554,6 +7554,12 @@ CONVERSATION AWARENESS (light context):
       inventoryLevels, planograms, customers, kpiMeasures
     });
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ABSOLUTE FINAL OVERRIDE: Force chartData and KPIs to use real DB data
+    // This runs AFTER all other processing to guarantee no hallucinated numbers
+    // ═══════════════════════════════════════════════════════════════════════════
+    parsedResponse = finalDatabaseOverride(parsedResponse, question, calculatedKPIs, products, transactions, promotions, stores);
+    
     console.log(`[${moduleId}] Analysis complete`);
 
     return new Response(JSON.stringify(parsedResponse), {
@@ -13804,7 +13810,11 @@ function enhanceWithWowFactor(
   moduleId: string,
   data: AlignmentData
 ): any {
-  console.log(`[${moduleId}] ═══ WOW FACTOR ENHANCEMENT ═══`);
+  // DISABLED: This function was injecting fabricated numbers that overrode 
+  // data-driven corrections from earlier pipeline stages. All quality checks
+  // are now handled by enforceQuestionTypeAlignment and ensureCompleteResponse.
+  console.log(`[${moduleId}] ═══ WOW FACTOR ENHANCEMENT — SKIPPED (using data-driven pipeline) ═══`);
+  return response;
   
   const formatCurrency = (val: number) => val >= 1000000 ? `$${(val/1000000).toFixed(1)}M` : val >= 1000 ? `$${(val/1000).toFixed(1)}K` : `$${val.toFixed(0)}`;
   const formatPct = (val: number) => `${val.toFixed(1)}%`;
