@@ -170,6 +170,8 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
           body: JSON.stringify({ 
             question: questionToAsk,
@@ -252,6 +254,8 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
           body: JSON.stringify({ 
             question: questionText,
