@@ -24,10 +24,17 @@ import KPISelector from "@/components/KPISelector";
 import ChatInterface from "@/components/ChatInterface";
 import SearchSuggestions from "@/components/SearchSuggestions";
 import CausalExplainability from "@/components/CausalExplainability";
+import { supabase } from "@/integrations/supabase/client";
 import { getModuleById, getModulePersonas, getModuleQuestions, getModulePopularIds, getModuleEdgeFunction, Module } from "@/lib/data/module-config";
-
 type Persona = 'executive' | 'consumables' | 'non_consumables';
 type TimePeriod = 'last_month' | 'last_quarter' | 'last_year' | 'ytd' | 'custom';
+
+type ModuleQuestionResponse = AnalyticsResult & {
+  needsClarification?: boolean;
+  clarificationPrompt?: string;
+  options?: Array<{ label: string; description: string; refinedQuestion: string }>;
+  originalQuestion?: string;
+};
 
 const timePeriodConfig = {
   last_month: { label: 'Last Month', icon: Calendar, description: 'Past 30 days' },
@@ -144,6 +151,27 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
     }
   }, [result]);
 
+  const invokeModuleQuestion = useCallback(async (payload: Record<string, unknown>): Promise<ModuleQuestionResponse> => {
+    const timeoutMs = 20000;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timed out. Please try again.')), timeoutMs);
+    });
+
+    const requestPromise = supabase.functions.invoke(edgeFunctionName, { body: payload });
+
+    const { data, error } = await Promise.race([requestPromise, timeoutPromise]) as Awaited<ReturnType<typeof supabase.functions.invoke>>;
+
+    if (error) {
+      throw new Error(error.message || 'Failed to analyze question');
+    }
+
+    if (!data) {
+      throw new Error('No response from analytics engine');
+    }
+
+    return data as ModuleQuestionResponse;
+  }, [edgeFunctionName]);
+
   const handleAsk = async (questionText?: string) => {
     const questionToAsk = questionText || query;
     if (!questionToAsk.trim()) return;
@@ -161,66 +189,34 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
     const startTime = Date.now();
     
     try {
-      // Log what we're sending for debugging
       console.log('Sending question with KPIs:', { question: questionToAsk, selectedKPIs });
-      
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${edgeFunctionName}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ 
-            question: questionToAsk,
-            persona: persona,
-            categories: personaConfig[persona].categories,
-            selectedKPIs: selectedKPIs.length > 0 ? selectedKPIs : null,
-            timePeriod: timePeriod !== 'custom' ? timePeriod : null,
-            moduleId: moduleId,
-            // Pass conversation history for contextual follow-ups (e.g., "why did it work?")
-            conversationHistory: conversationHistory.slice(-6),
-          }),
-        }
-      );
+
+      const analyticsResult = await invokeModuleQuestion({
+        question: questionToAsk,
+        persona,
+        categories: personaConfig[persona].categories,
+        selectedKPIs: selectedKPIs.length > 0 ? selectedKPIs : null,
+        timePeriod: timePeriod !== 'custom' ? timePeriod : null,
+        moduleId,
+        conversationHistory: conversationHistory.slice(-6),
+      });
 
       const elapsed = Date.now() - startTime;
       setResponseTime(elapsed);
+      setCacheHit(false);
 
-      // Check cache header
-      const cacheHeader = response.headers.get('X-Cache');
-      setCacheHit(cacheHeader === 'HIT');
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to analyze question');
-      }
-
-      const analyticsResult = await response.json();
-      
-      // Check if clarification is needed
       if (analyticsResult.needsClarification) {
         setClarification({
           needsClarification: true,
-          prompt: analyticsResult.clarificationPrompt,
-          options: analyticsResult.options,
-          originalQuestion: analyticsResult.originalQuestion
+          prompt: analyticsResult.clarificationPrompt || 'Please clarify your question.',
+          options: analyticsResult.options || [],
+          originalQuestion: analyticsResult.originalQuestion || questionToAsk
         });
         setIsLoading(false);
         return;
       }
-      
+
       setResult(analyticsResult);
-      
-      if (cacheHeader === 'HIT') {
-        toast({
-          title: "Instant Answer",
-          description: `Response from cache (${elapsed}ms)`,
-          duration: 2000,
-        });
-      }
     } catch (error) {
       console.error('Error analyzing question:', error);
       toast({
@@ -244,65 +240,41 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
     const startTime = Date.now();
     
     try {
-      // Log what we're sending for debugging
       console.log('Chat sending question with KPIs:', { question: questionText, kpis });
-      
-      // Pass SAME parameters as handleAsk with conversation history for contextual follow-ups
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${edgeFunctionName}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ 
-            question: questionText,
-            persona: persona,
-            categories: personaConfig[persona].categories,
-            selectedKPIs: kpis.length > 0 ? kpis : null,
-            timePeriod: timePeriod !== 'custom' ? timePeriod : null,
-            moduleId: moduleId,
-            // Pass conversation history for contextual follow-ups (e.g., "why did that campaign work?")
-            conversationHistory: conversationHistory.slice(-6),
-          }),
-        }
-      );
+
+      const analyticsResult = await invokeModuleQuestion({
+        question: questionText,
+        persona,
+        categories: personaConfig[persona].categories,
+        selectedKPIs: kpis.length > 0 ? kpis : null,
+        timePeriod: timePeriod !== 'custom' ? timePeriod : null,
+        moduleId,
+        conversationHistory: conversationHistory.slice(-6),
+      });
 
       const elapsed = Date.now() - startTime;
       setResponseTime(elapsed);
-      setCacheHit(response.headers.get('X-Cache') === 'HIT');
+      setCacheHit(false);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to analyze question');
-      }
-
-      const analyticsResult = await response.json();
-      
-      // Check if clarification is needed
       if (analyticsResult.needsClarification) {
         setClarification({
           needsClarification: true,
-          prompt: analyticsResult.clarificationPrompt,
-          options: analyticsResult.options,
-          originalQuestion: analyticsResult.originalQuestion
+          prompt: analyticsResult.clarificationPrompt || 'Please clarify your question.',
+          options: analyticsResult.options || [],
+          originalQuestion: analyticsResult.originalQuestion || questionText
         });
         setIsLoading(false);
         return null;
       }
-      
+
       setResult(analyticsResult);
-      
-      // Extract context from response and add to history
+
       const extractedContext = {
         promotionMentioned: analyticsResult.chartData?.[0]?.name || undefined,
         categoryMentioned: undefined as string | undefined,
         metricMentioned: undefined as string | undefined,
       };
-      
-      // Extract category from response
+
       const categories = ['Dairy', 'Beverages', 'Snacks', 'Produce', 'Frozen', 'Bakery', 'Pantry', 'Personal Care', 'Home Care'];
       const responseText = analyticsResult.whatHappened?.join(' ') || '';
       categories.forEach(cat => {
@@ -310,10 +282,9 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
           extractedContext.categoryMentioned = cat;
         }
       });
-      
-      // Add both messages to history
+
       setConversationHistory(prev => [
-        ...prev.slice(-8), // Keep last 8 messages
+        ...prev.slice(-8),
         {
           role: 'user' as const,
           content: questionText,
@@ -324,7 +295,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
           context: extractedContext,
         }
       ]);
-      
+
       return analyticsResult;
     } catch (error) {
       console.error('Error analyzing question:', error);
@@ -337,7 +308,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [persona, toast]);
+  }, [persona, personaConfig, timePeriod, moduleId, conversationHistory, invokeModuleQuestion, toast]);
 
   const handleQuestionClick = async (question: string, questionId?: string) => {
     // Visual feedback - highlight selected question
