@@ -477,6 +477,7 @@ export default function ChatInterface({
   const [collapsedSections, setCollapsedSections] = useState<Record<string, CollapsedSections>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const pendingQuestionRef = useRef<string | null>(null);
   // Global session for cross-module persistence
   const { 
     addInsight, 
@@ -828,45 +829,45 @@ export default function ChatInterface({
 
   // Update messages when result changes
   useEffect(() => {
-    if (currentResult && messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.type === 'user') {
-        const followUpSuggestions = generateFollowUps(currentResult);
-        const response = generateConversationalResponse(currentResult);
-        const tip = generateContextualTip(currentResult, messageCount);
-        const kpiExploration = generateKPIExploration(lastMessage.content);
-        
-        updateContext(lastMessage.content, currentResult);
-        
-        // Extract session insight from result
-        const keyFinding = currentResult.whatHappened?.[0] || 
-          `Key metrics: ${Object.entries(currentResult.kpis).slice(0, 2).map(([k, v]) => `${k}: ${v}`).join(', ')}`;
-        
-        setSessionInsights(prev => [...prev, {
-          id: `insight-${Date.now()}`,
-          question: lastMessage.content.length > 50 ? lastMessage.content.substring(0, 50) + '...' : lastMessage.content,
-          keyFinding: keyFinding.length > 80 ? keyFinding.substring(0, 80) + '...' : keyFinding,
-          timestamp: new Date()
-        }]);
-        
-        setMessages(prev => [...prev, {
-          id: Date.now().toString(),
-          type: 'assistant',
-          content: response,
-          timestamp: new Date(),
-          analyticsResult: currentResult,
-          suggestions: followUpSuggestions,
-          guideTip: tip,
-          actionButtons: generateActionButtons(currentResult),
-          feedback: null,
-          kpiExploration,
-          originalQuestion: lastMessage.content,
-        }]);
-        
-        setMessageCount(prev => prev + 1);
-      }
-    }
-  }, [currentResult]);
+    if (!currentResult || !pendingQuestionRef.current) return;
+
+    const askedQuestion = pendingQuestionRef.current;
+    pendingQuestionRef.current = null;
+
+    const followUpSuggestions = generateFollowUps(currentResult);
+    const response = generateConversationalResponse(currentResult);
+    const tip = generateContextualTip(currentResult, messageCount);
+    const kpiExploration = generateKPIExploration(askedQuestion);
+
+    updateContext(askedQuestion, currentResult);
+
+    // Extract session insight from result
+    const keyFinding = currentResult.whatHappened?.[0] || 
+      `Key metrics: ${Object.entries(currentResult.kpis).slice(0, 2).map(([k, v]) => `${k}: ${v}`).join(', ')}`;
+
+    setSessionInsights(prev => [...prev, {
+      id: `insight-${Date.now()}`,
+      question: askedQuestion.length > 50 ? askedQuestion.substring(0, 50) + '...' : askedQuestion,
+      keyFinding: keyFinding.length > 80 ? keyFinding.substring(0, 80) + '...' : keyFinding,
+      timestamp: new Date()
+    }]);
+
+    setMessages(prev => [...prev, {
+      id: Date.now().toString(),
+      type: 'assistant',
+      content: response,
+      timestamp: new Date(),
+      analyticsResult: currentResult,
+      suggestions: followUpSuggestions,
+      guideTip: tip,
+      actionButtons: generateActionButtons(currentResult),
+      feedback: null,
+      kpiExploration,
+      originalQuestion: askedQuestion,
+    }]);
+
+    setMessageCount(prev => prev + 1);
+  }, [currentResult, messageCount]);
 
   // SYNC FIX: Display ALL whatHappened items exactly like Classic View
   const generateConversationalResponse = (result: AnalyticsResult): string => {
@@ -1263,15 +1264,28 @@ export default function ChatInterface({
       timestamp: new Date(),
     };
 
+    pendingQuestionRef.current = resolvedQuestion;
     setMessages(prev => [...prev, userMessage]);
     setQuery("");
     setShowKPISelector(false);
     setShowHelpMenu(false);
 
     try {
-      await onAsk(resolvedQuestion, selectedKPIs);
+      const askResult = await onAsk(resolvedQuestion, selectedKPIs);
       setSelectedKPIs([]);
+
+      if (!askResult) {
+        pendingQuestionRef.current = null;
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: "I need a bit more context to answer. Please include a KPI and time period (e.g., 'Top promotions by ROI last quarter').",
+          timestamp: new Date(),
+          suggestions: contextualPrompts.errorSuggestions,
+        }]);
+      }
     } catch (error) {
+      pendingQuestionRef.current = null;
       // Error handling with suggestions
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -1296,11 +1310,23 @@ export default function ChatInterface({
       timestamp: new Date(),
     };
 
+    pendingQuestionRef.current = suggestion;
     setMessages(prev => [...prev, userMessage]);
     
     try {
-      await onAsk(suggestion, selectedKPIs);
+      const askResult = await onAsk(suggestion, selectedKPIs);
+      if (!askResult) {
+        pendingQuestionRef.current = null;
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: "I need a bit more context to answer. Please include a KPI and time period (e.g., 'Top promotions by ROI last quarter').",
+          timestamp: new Date(),
+          suggestions: contextualPrompts.errorSuggestions,
+        }]);
+      }
     } catch (error) {
+      pendingQuestionRef.current = null;
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
