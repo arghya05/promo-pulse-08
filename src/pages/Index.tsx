@@ -26,6 +26,7 @@ import SearchSuggestions from "@/components/SearchSuggestions";
 import CausalExplainability from "@/components/CausalExplainability";
 import { supabase } from "@/integrations/supabase/client";
 import { getModuleById, getModulePersonas, getModuleQuestions, getModulePopularIds, getModuleEdgeFunction, Module } from "@/lib/data/module-config";
+import { companyProfile } from "@/lib/data/company-profile";
 type Persona = 'executive' | 'consumables' | 'non_consumables';
 type TimePeriod = 'last_month' | 'last_quarter' | 'last_year' | 'ytd' | 'custom';
 
