@@ -119,12 +119,12 @@ export function AgentsHub() {
               <div className="space-y-2">
                 <h4 className="font-semibold text-sm">Notifications</h4>
                 <div className="space-y-2">
-                  <div className="flex items-start gap-2 p-2 rounded bg-amber-500/10 text-xs">
-                    <Shield className="h-3 w-3 text-amber-600 mt-0.5" />
+                  <div className="flex items-start gap-2 p-2 rounded bg-status-warning/10 text-xs">
+                    <Shield className="h-3 w-3 text-status-warning mt-0.5" />
                     <span>2 runs awaiting approval</span>
                   </div>
-                  <div className="flex items-start gap-2 p-2 rounded bg-red-500/10 text-xs">
-                    <Radar className="h-3 w-3 text-red-600 mt-0.5" />
+                  <div className="flex items-start gap-2 p-2 rounded bg-status-bad/10 text-xs">
+                    <Radar className="h-3 w-3 text-status-bad mt-0.5" />
                     <span>1 critical priority detected</span>
                   </div>
                 </div>

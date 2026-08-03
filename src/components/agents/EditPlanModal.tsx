@@ -170,7 +170,7 @@ export function EditPlanModal({
             {adjustedMetrics && (
               <Card className={cn(
                 "border-l-4",
-                adjustedMetrics.allPassed ? "border-l-green-500 bg-green-50/50" : "border-l-amber-500 bg-amber-50/50"
+                adjustedMetrics.allPassed ? "border-l-green-500 bg-status-good/10/50" : "border-l-amber-500 bg-status-warning/10/50"
               )}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -195,8 +195,8 @@ export function EditPlanModal({
                     <div>
                       <p className={cn(
                         "text-lg font-bold",
-                        adjustedMetrics.adjustedRisk <= 0.25 ? "text-green-600" :
-                        adjustedMetrics.adjustedRisk <= 0.5 ? "text-amber-600" : "text-red-600"
+                        adjustedMetrics.adjustedRisk <= 0.25 ? "text-status-good" :
+                        adjustedMetrics.adjustedRisk <= 0.5 ? "text-status-warning" : "text-status-bad"
                       )}>
                         {(adjustedMetrics.adjustedRisk * 100).toFixed(0)}%
                       </p>
@@ -213,7 +213,7 @@ export function EditPlanModal({
                     {Object.entries(adjustedMetrics.guardrails).map(([key, g]) => (
                       <span key={key} className={cn(
                         "flex items-center gap-1 text-[10px]",
-                        g.passed ? "text-green-600" : "text-amber-600"
+                        g.passed ? "text-status-good" : "text-status-warning"
                       )}>
                         {g.passed ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
                         {key === 'marginFloor' && `Margin ≥${g.threshold}%`}
@@ -317,14 +317,14 @@ export function EditPlanModal({
                             variant="outline" 
                             className={cn(
                               "text-[9px]",
-                              action.risk === 'low' ? "text-green-600" :
-                              action.risk === 'medium' ? "text-amber-600" : "text-red-600"
+                              action.risk === 'low' ? "text-status-good" :
+                              action.risk === 'medium' ? "text-status-warning" : "text-status-bad"
                             )}
                           >
                             {action.risk} risk
                           </Badge>
                           {action.approvalRequired && (
-                            <Badge variant="outline" className="text-[9px] text-amber-600">Needs approval</Badge>
+                            <Badge variant="outline" className="text-[9px] text-status-warning">Needs approval</Badge>
                           )}
                         </div>
                       </div>

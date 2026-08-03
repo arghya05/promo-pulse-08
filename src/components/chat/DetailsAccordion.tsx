@@ -48,21 +48,21 @@ export const DetailsAccordion: React.FC<DetailsAccordionProps> = ({
     <Accordion type="multiple" className={cn("mt-3", className)}>
       {/* Why This Happened */}
       {hasWhy && (
-        <AccordionItem value="why" className="border-amber-500/20">
-          <AccordionTrigger className="py-2 px-3 text-sm hover:no-underline bg-amber-500/5 rounded-t-lg data-[state=open]:rounded-b-none">
+        <AccordionItem value="why" className="border-status-warning/20">
+          <AccordionTrigger className="py-2 px-3 text-sm hover:no-underline bg-status-warning/5 rounded-t-lg data-[state=open]:rounded-b-none">
             <div className="flex items-center gap-2">
-              <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
+              <Lightbulb className="h-3.5 w-3.5 text-status-warning" />
               <span className="font-medium">Why This Happened</span>
               <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4">
                 {whyItems.length}
               </Badge>
             </div>
           </AccordionTrigger>
-          <AccordionContent className="px-3 pb-3 pt-2 bg-amber-500/5 rounded-b-lg">
+          <AccordionContent className="px-3 pb-3 pt-2 bg-status-warning/5 rounded-b-lg">
             <ul className="space-y-1.5">
               {whyItems.slice(0, 3).map((reason, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm">
-                  <span className="text-amber-500 mt-0.5">•</span>
+                  <span className="text-status-warning mt-0.5">•</span>
                   <span className="text-muted-foreground">{reason}</span>
                 </li>
               ))}
@@ -73,17 +73,17 @@ export const DetailsAccordion: React.FC<DetailsAccordionProps> = ({
 
       {/* Evidence */}
       {hasEvidence && (
-        <AccordionItem value="evidence" className="border-blue-500/20">
-          <AccordionTrigger className="py-2 px-3 text-sm hover:no-underline bg-blue-500/5 rounded-t-lg data-[state=open]:rounded-b-none">
+        <AccordionItem value="evidence" className="border-chart-2/20">
+          <AccordionTrigger className="py-2 px-3 text-sm hover:no-underline bg-chart-2/5 rounded-t-lg data-[state=open]:rounded-b-none">
             <div className="flex items-center gap-2">
-              <Database className="h-3.5 w-3.5 text-blue-500" />
+              <Database className="h-3.5 w-3.5 text-chart-2" />
               <span className="font-medium">Evidence</span>
               <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4">
                 {evidenceItems.length} items
               </Badge>
             </div>
           </AccordionTrigger>
-          <AccordionContent className="px-3 pb-3 pt-2 bg-blue-500/5 rounded-b-lg">
+          <AccordionContent className="px-3 pb-3 pt-2 bg-chart-2/5 rounded-b-lg">
             <div className="grid grid-cols-2 gap-2">
               {evidenceItems.slice(0, 6).map((item, idx) => (
                 <button 
@@ -112,17 +112,17 @@ export const DetailsAccordion: React.FC<DetailsAccordionProps> = ({
 
       {/* Drivers (merged causal + ML) */}
       {hasDrivers && (
-        <AccordionItem value="drivers" className="border-purple-500/20">
-          <AccordionTrigger className="py-2 px-3 text-sm hover:no-underline bg-purple-500/5 rounded-t-lg data-[state=open]:rounded-b-none">
+        <AccordionItem value="drivers" className="border-chart-5/20">
+          <AccordionTrigger className="py-2 px-3 text-sm hover:no-underline bg-chart-5/5 rounded-t-lg data-[state=open]:rounded-b-none">
             <div className="flex items-center gap-2">
-              <Brain className="h-3.5 w-3.5 text-purple-500" />
+              <Brain className="h-3.5 w-3.5 text-chart-5" />
               <span className="font-medium">Key Drivers</span>
               <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4">
                 {driverItems.length}
               </Badge>
             </div>
           </AccordionTrigger>
-          <AccordionContent className="px-3 pb-3 pt-2 bg-purple-500/5 rounded-b-lg">
+          <AccordionContent className="px-3 pb-3 pt-2 bg-chart-5/5 rounded-b-lg">
             <ul className="space-y-2">
               {driverItems.slice(0, 4).map((driver, idx) => (
                 <li key={idx} className="flex items-start justify-between gap-2">
@@ -135,9 +135,9 @@ export const DetailsAccordion: React.FC<DetailsAccordionProps> = ({
                       variant="outline" 
                       className={cn(
                         "text-[10px] flex-shrink-0",
-                        driver.correlation >= 0.7 ? "border-emerald-500 text-emerald-600" :
-                        driver.correlation >= 0.4 ? "border-amber-500 text-amber-600" :
-                        "border-gray-400 text-gray-600"
+                        driver.correlation >= 0.7 ? "border-status-good text-status-good" :
+                        driver.correlation >= 0.4 ? "border-status-warning text-status-warning" :
+                        "border-border text-muted-foreground"
                       )}
                     >
                       {(driver.correlation * 100).toFixed(0)}% corr
@@ -152,10 +152,10 @@ export const DetailsAccordion: React.FC<DetailsAccordionProps> = ({
 
       {/* Forecast/Risk */}
       {hasForecast && (
-        <AccordionItem value="forecast" className="border-emerald-500/20">
-          <AccordionTrigger className="py-2 px-3 text-sm hover:no-underline bg-emerald-500/5 rounded-t-lg data-[state=open]:rounded-b-none">
+        <AccordionItem value="forecast" className="border-status-good/20">
+          <AccordionTrigger className="py-2 px-3 text-sm hover:no-underline bg-status-good/5 rounded-t-lg data-[state=open]:rounded-b-none">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+              <TrendingUp className="h-3.5 w-3.5 text-status-good" />
               <span className="font-medium">Forecast & Risk</span>
               {riskTag && (
                 <Badge 
@@ -168,11 +168,11 @@ export const DetailsAccordion: React.FC<DetailsAccordionProps> = ({
               )}
             </div>
           </AccordionTrigger>
-          <AccordionContent className="px-3 pb-3 pt-2 bg-emerald-500/5 rounded-b-lg">
+          <AccordionContent className="px-3 pb-3 pt-2 bg-status-good/5 rounded-b-lg">
             <ul className="space-y-1.5">
               {forecastItems.slice(0, 2).map((prediction, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm">
-                  <TrendingUp className="h-3.5 w-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
+                  <TrendingUp className="h-3.5 w-3.5 text-status-good mt-0.5 flex-shrink-0" />
                   <span className="text-muted-foreground">{prediction}</span>
                 </li>
               ))}

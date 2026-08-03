@@ -171,18 +171,18 @@ const InsightPanels = ({ kpis, rankedResults, drivers, recommendedActions, metho
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'High': return 'bg-red-500/10 text-red-500 border-red-500/20';
-      case 'Medium': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-      case 'Low': return 'bg-green-500/10 text-green-500 border-green-500/20';
+      case 'High': return 'bg-status-bad/10 text-status-bad border-status-bad/20';
+      case 'Medium': return 'bg-status-warning/10 text-status-warning border-status-warning/20';
+      case 'Low': return 'bg-status-good/10 text-status-good border-status-good/20';
       default: return 'bg-muted text-muted-foreground';
     }
   };
 
   const getStatusColor = (status?: string) => {
     switch (status) {
-      case 'good': return 'text-green-500';
-      case 'warning': return 'text-yellow-500';
-      case 'bad': return 'text-red-500';
+      case 'good': return 'text-status-good';
+      case 'warning': return 'text-status-warning';
+      case 'bad': return 'text-status-bad';
       default: return 'text-foreground';
     }
   };
@@ -237,8 +237,8 @@ const InsightPanels = ({ kpis, rankedResults, drivers, recommendedActions, metho
                     <Badge 
                       variant="outline" 
                       className={`text-xs ${
-                        kpi.changeType === 'positive' ? 'text-green-500 border-green-500/30' :
-                        kpi.changeType === 'negative' ? 'text-red-500 border-red-500/30' :
+                        kpi.changeType === 'positive' ? 'text-status-good border-status-good/30' :
+                        kpi.changeType === 'negative' ? 'text-status-bad border-status-bad/30' :
                         'text-muted-foreground'
                       }`}
                     >
@@ -302,8 +302,8 @@ const InsightPanels = ({ kpis, rankedResults, drivers, recommendedActions, metho
                       )}
                     </TableCell>
                     <TableCell className="text-center">
-                      {item.trend === 'up' && <TrendingUp className="h-4 w-4 text-green-500 mx-auto" />}
-                      {item.trend === 'down' && <TrendingDown className="h-4 w-4 text-red-500 mx-auto" />}
+                      {item.trend === 'up' && <TrendingUp className="h-4 w-4 text-status-good mx-auto" />}
+                      {item.trend === 'down' && <TrendingDown className="h-4 w-4 text-status-bad mx-auto" />}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -319,11 +319,11 @@ const InsightPanels = ({ kpis, rankedResults, drivers, recommendedActions, metho
               <Card key={idx} className="p-4">
                 <div className="flex items-start gap-3">
                   <div className={`p-2 rounded-full ${
-                    driver.direction === 'positive' ? 'bg-green-500/10' : 'bg-red-500/10'
+                    driver.direction === 'positive' ? 'bg-status-good/10' : 'bg-status-bad/10'
                   }`}>
                     {driver.direction === 'positive' 
-                      ? <TrendingUp className="h-4 w-4 text-green-500" />
-                      : <TrendingDown className="h-4 w-4 text-red-500" />
+                      ? <TrendingUp className="h-4 w-4 text-status-good" />
+                      : <TrendingDown className="h-4 w-4 text-status-bad" />
                     }
                   </div>
                   <div className="flex-1">
@@ -352,12 +352,12 @@ const InsightPanels = ({ kpis, rankedResults, drivers, recommendedActions, metho
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3 flex-1">
                     <div className={`p-2 rounded-full ${
-                      action.priority === 'High' ? 'bg-red-500/10' : 
-                      action.priority === 'Medium' ? 'bg-yellow-500/10' : 'bg-green-500/10'
+                      action.priority === 'High' ? 'bg-status-bad/10' : 
+                      action.priority === 'Medium' ? 'bg-status-warning/10' : 'bg-status-good/10'
                     }`}>
                       {action.priority === 'High' 
-                        ? <AlertTriangle className="h-4 w-4 text-red-500" />
-                        : <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        ? <AlertTriangle className="h-4 w-4 text-status-bad" />
+                        : <CheckCircle2 className="h-4 w-4 text-status-good" />
                       }
                     </div>
                     <div className="flex-1">
@@ -425,13 +425,13 @@ const InsightPanels = ({ kpis, rankedResults, drivers, recommendedActions, metho
             {/* Assumptions */}
             <Card className="p-4">
               <h4 className="font-medium flex items-center gap-2 mb-3">
-                <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                <AlertTriangle className="h-4 w-4 text-status-warning" />
                 Assumptions
               </h4>
               <ul className="space-y-1">
                 {method.assumptions.map((assumption, idx) => (
                   <li key={idx} className="text-sm text-muted-foreground flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-status-warning" />
                     {assumption}
                   </li>
                 ))}

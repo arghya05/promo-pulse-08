@@ -651,7 +651,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <Lightbulb className="h-4 w-4 text-yellow-500" />
+                  <Lightbulb className="h-4 w-4 text-status-warning" />
                   <span className="font-medium text-sm">Quick Start</span>
                 </div>
                 {messages.length > 1 && (
@@ -804,7 +804,7 @@ const ModuleChatInterface = ({ module, questions, popularQuestions, kpis, person
                         <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient} h-fit flex-shrink-0 mr-2`}>
                           <Icon className={`h-4 w-4 ${module.color}`} />
                         </div>
-                        <div className="max-w-[85%] bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-3">
+                        <div className="max-w-[85%] bg-muted dark:bg-secondary rounded-2xl px-4 py-3">
                           <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
                         </div>
                       </div>

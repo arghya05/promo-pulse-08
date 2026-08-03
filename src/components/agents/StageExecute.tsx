@@ -53,13 +53,13 @@ export function StageExecute({
 
   if (isCompleted) {
     return (
-      <Card className="border-green-500/30 bg-green-500/5">
+      <Card className="border-status-good/30 bg-status-good/5">
         <CardContent className="p-3">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
-              <Check className="h-3.5 w-3.5 text-green-600" />
+            <div className="w-6 h-6 rounded-full bg-status-good/20 flex items-center justify-center">
+              <Check className="h-3.5 w-3.5 text-status-good" />
             </div>
-            <span className="text-xs font-medium text-green-700 dark:text-green-400">
+            <span className="text-xs font-medium text-status-good dark:text-status-good">
               Execution completed: 5 actions applied successfully
             </span>
           </div>
@@ -80,11 +80,11 @@ export function StageExecute({
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-              <Shield className="h-3 w-3 text-green-600" />
+              <Shield className="h-3 w-3 text-status-good" />
               Safe auto-actions
             </CardTitle>
             {autopilotEnabled && (
-              <Badge variant="outline" className="text-[9px] text-green-600 border-green-200">
+              <Badge variant="outline" className="text-[9px] text-status-good border-status-good/30">
                 Autopilot eligible
               </Badge>
             )}
@@ -94,7 +94,7 @@ export function StageExecute({
           {safeActions.map((action) => (
             <div
               key={action.id}
-              className="flex items-center gap-3 p-2.5 rounded-md bg-green-500/5 border border-green-500/20"
+              className="flex items-center gap-3 p-2.5 rounded-md bg-status-good/5 border border-status-good/20"
             >
               <Checkbox
                 checked={selectedSafe.includes(action.id)}
@@ -112,7 +112,7 @@ export function StageExecute({
                   {action.target} • {action.owner}
                 </p>
               </div>
-              <Badge variant="outline" className="text-[9px] text-green-600 border-green-200">
+              <Badge variant="outline" className="text-[9px] text-status-good border-status-good/30">
                 {action.impact}
               </Badge>
             </div>
@@ -124,7 +124,7 @@ export function StageExecute({
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-            <User className="h-3 w-3 text-amber-600" />
+            <User className="h-3 w-3 text-status-warning" />
             Needs approval
           </CardTitle>
         </CardHeader>
@@ -135,8 +135,8 @@ export function StageExecute({
               className={cn(
                 "flex items-center gap-3 p-2.5 rounded-md border",
                 action.risk === 'high' 
-                  ? "bg-red-500/5 border-red-500/20" 
-                  : "bg-amber-500/5 border-amber-500/20"
+                  ? "bg-status-bad/5 border-status-bad/20" 
+                  : "bg-status-warning/5 border-status-warning/20"
               )}
             >
               <Checkbox
@@ -160,7 +160,7 @@ export function StageExecute({
                   variant="outline" 
                   className={cn(
                     "text-[9px]",
-                    action.risk === 'high' ? "text-red-600 border-red-200" : "text-amber-600 border-amber-200"
+                    action.risk === 'high' ? "text-status-bad border-status-bad/30" : "text-status-warning border-status-warning/30"
                   )}
                 >
                   {action.risk === 'high' ? 'High' : 'Med'} risk
@@ -175,13 +175,13 @@ export function StageExecute({
       </Card>
 
       {/* Human Gate */}
-      <Card className="border-amber-500/30 bg-amber-500/5">
+      <Card className="border-status-warning/30 bg-status-warning/5">
         <CardContent className="p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center">
-              <Zap className="h-3 w-3 text-amber-600" />
+            <div className="w-5 h-5 rounded-full bg-status-warning/20 flex items-center justify-center">
+              <Zap className="h-3 w-3 text-status-warning" />
             </div>
-            <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+            <span className="text-sm font-semibold text-status-warning dark:text-status-warning">
               Approve these actions?
             </span>
           </div>

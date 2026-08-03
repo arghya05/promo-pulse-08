@@ -11,9 +11,9 @@ interface ActionRowProps {
 }
 
 const riskConfig: Record<RiskLevel, { label: string; className: string }> = {
-  low: { label: 'Low', className: 'bg-green-500/10 text-green-700 border-green-500/20' },
-  med: { label: 'Med', className: 'bg-amber-500/10 text-amber-700 border-amber-500/20' },
-  high: { label: 'High', className: 'bg-red-500/10 text-red-700 border-red-500/20' }
+  low: { label: 'Low', className: 'bg-status-good/10 text-status-good border-status-good/20' },
+  med: { label: 'Med', className: 'bg-status-warning/10 text-status-warning border-status-warning/20' },
+  high: { label: 'High', className: 'bg-status-bad/10 text-status-bad border-status-bad/20' }
 };
 
 export function ActionRow({ action, index, onToggle }: ActionRowProps) {
@@ -48,14 +48,14 @@ export function ActionRow({ action, index, onToggle }: ActionRowProps) {
         </div>
         
         <div className="flex items-center gap-2 mt-1.5">
-          <TrendingUp className="h-3 w-3 text-green-600" />
-          <span className="text-xs text-green-600 font-medium">
+          <TrendingUp className="h-3 w-3 text-status-good" />
+          <span className="text-xs text-status-good font-medium">
             +₹{action.upliftMin}L – ₹{action.upliftMax}L
           </span>
         </div>
 
         {action.guardrailViolations.length > 0 && (
-          <div className="flex items-center gap-1.5 mt-1.5 text-amber-600">
+          <div className="flex items-center gap-1.5 mt-1.5 text-status-warning">
             <AlertTriangle className="h-3 w-3" />
             <span className="text-[10px]">{action.guardrailViolations[0]}</span>
           </div>

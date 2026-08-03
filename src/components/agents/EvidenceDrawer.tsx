@@ -69,7 +69,7 @@ export function EvidenceDrawer({
                 </div>
                 <div className="flex gap-2">
                   <Badge variant="outline" className="text-[10px] gap-1">
-                    <TrendingUp className="h-2.5 w-2.5 text-red-500" />
+                    <TrendingUp className="h-2.5 w-2.5 text-status-bad" />
                     +8% above index
                   </Badge>
                   <Badge variant="outline" className="text-[10px]">7-day trend</Badge>
@@ -86,7 +86,7 @@ export function EvidenceDrawer({
                 </div>
                 <div className="flex gap-2">
                   <Badge variant="outline" className="text-[10px] gap-1">
-                    <TrendingDown className="h-2.5 w-2.5 text-amber-500" />
+                    <TrendingDown className="h-2.5 w-2.5 text-status-warning" />
                     2.3 days avg
                   </Badge>
                   <Badge variant="outline" className="text-[10px]">18 SKUs critical</Badge>
@@ -102,14 +102,14 @@ export function EvidenceDrawer({
                   <div className="flex items-center justify-between text-xs p-2 bg-muted/30 rounded">
                     <span>Amazon</span>
                     <Badge variant="outline" className="text-[10px] gap-1">
-                      <TrendingDown className="h-2.5 w-2.5 text-green-500" />
+                      <TrendingDown className="h-2.5 w-2.5 text-status-good" />
                       -5% price cut
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between text-xs p-2 bg-muted/30 rounded">
                     <span>Flipkart</span>
                     <Badge variant="outline" className="text-[10px] gap-1">
-                      <TrendingDown className="h-2.5 w-2.5 text-green-500" />
+                      <TrendingDown className="h-2.5 w-2.5 text-status-good" />
                       -3% price cut
                     </Badge>
                   </div>
@@ -163,19 +163,19 @@ export function EvidenceDrawer({
                 <div className="space-y-1.5 text-xs">
                   <div className="flex justify-between p-2 bg-muted/30 rounded">
                     <span>Inventory</span>
-                    <span className="text-green-600">2 min ago</span>
+                    <span className="text-status-good">2 min ago</span>
                   </div>
                   <div className="flex justify-between p-2 bg-muted/30 rounded">
                     <span>Competitor prices</span>
-                    <span className="text-green-600">15 min ago</span>
+                    <span className="text-status-good">15 min ago</span>
                   </div>
                   <div className="flex justify-between p-2 bg-muted/30 rounded">
                     <span>Demand forecast</span>
-                    <span className="text-amber-600">2 hours ago</span>
+                    <span className="text-status-warning">2 hours ago</span>
                   </div>
                   <div className="flex justify-between p-2 bg-muted/30 rounded">
                     <span>Supplier status</span>
-                    <span className="text-green-600">5 min ago</span>
+                    <span className="text-status-good">5 min ago</span>
                   </div>
                 </div>
               </div>

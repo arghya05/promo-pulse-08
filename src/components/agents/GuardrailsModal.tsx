@@ -68,21 +68,21 @@ export function GuardrailsModal({
 
         <div className="space-y-4 py-4">
           {localViolations.length > 0 ? (
-            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-2">
-              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+            <div className="p-3 rounded-lg bg-status-warning/10 border border-status-warning/30 space-y-2">
+              <div className="flex items-center gap-2 text-status-warning dark:text-status-warning">
                 <AlertTriangle className="h-4 w-4" />
                 <span className="text-xs font-semibold">{localViolations.length} violation(s)</span>
               </div>
               <div className="space-y-1">
                 {localViolations.map((v, i) => (
-                  <p key={i} className="text-xs text-amber-600 dark:text-amber-400">{v}</p>
+                  <p key={i} className="text-xs text-status-warning dark:text-status-warning">{v}</p>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-600" />
-              <span className="text-xs font-medium text-green-700 dark:text-green-400">
+            <div className="p-3 rounded-lg bg-status-good/10 border border-status-good/30 flex items-center gap-2">
+              <Check className="h-4 w-4 text-status-good" />
+              <span className="text-xs font-medium text-status-good dark:text-status-good">
                 All guardrails passed
               </span>
             </div>

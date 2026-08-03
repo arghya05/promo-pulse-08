@@ -192,7 +192,7 @@ const ConversationContextPanel = ({
             <CollapsibleTrigger asChild>
               <CardContent className="p-3 cursor-pointer hover:bg-muted/50 transition-colors">
                 <div className="flex items-center gap-2">
-                  <History className="h-4 w-4 text-amber-500" />
+                  <History className="h-4 w-4 text-status-warning" />
                   <span className="font-medium text-sm">Session Insights</span>
                   <Badge variant="secondary" className="text-[10px] ml-auto mr-2">
                     {sessionInsights.length} findings

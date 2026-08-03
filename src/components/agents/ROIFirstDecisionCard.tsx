@@ -114,13 +114,13 @@ export function ROIFirstDecisionCard({
       case 'running':
         return { label: 'Running', color: 'bg-primary/10 text-primary', icon: Loader2, animate: true };
       case 'waiting_approval':
-        return { label: 'Waiting for Approval', color: 'bg-amber-500/10 text-amber-600', icon: Clock, animate: false };
+        return { label: 'Waiting for Approval', color: 'bg-status-warning/10 text-status-warning', icon: Clock, animate: false };
       case 'executing':
-        return { label: 'Executing', color: 'bg-blue-500/10 text-blue-600', icon: Zap, animate: true };
+        return { label: 'Executing', color: 'bg-chart-2/10 text-chart-2', icon: Zap, animate: true };
       case 'completed':
-        return { label: 'Completed', color: 'bg-green-500/10 text-green-600', icon: CheckCircle2, animate: false };
+        return { label: 'Completed', color: 'bg-status-good/10 text-status-good', icon: CheckCircle2, animate: false };
       case 'failed':
-        return { label: 'Failed', color: 'bg-red-500/10 text-red-600', icon: AlertTriangle, animate: false };
+        return { label: 'Failed', color: 'bg-status-bad/10 text-status-bad', icon: AlertTriangle, animate: false };
       default:
         return { label: 'Ready', color: 'bg-muted text-muted-foreground', icon: Play, animate: false };
     }
@@ -199,13 +199,13 @@ export function ROIFirstDecisionCard({
 
       {/* Low Confidence Warning */}
       {showLowConfidenceWarning && (
-        <Card className="border-amber-500/30 bg-amber-50">
+        <Card className="border-status-warning/30 bg-status-warning/10">
           <CardContent className="p-3">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+              <AlertTriangle className="h-4 w-4 text-status-warning mt-0.5 shrink-0" />
               <div>
-                <p className="text-sm font-medium text-amber-700">Low Confidence ({problem.confidence}%)</p>
-                <p className="text-xs text-amber-600 mt-0.5">
+                <p className="text-sm font-medium text-status-warning">Low Confidence ({problem.confidence}%)</p>
+                <p className="text-xs text-status-warning mt-0.5">
                   Data confidence is below 70%. Please review signals before proceeding.
                 </p>
               </div>
@@ -256,7 +256,7 @@ export function ROIFirstDecisionCard({
         <Card className="p-3 text-center">
           <p className={cn(
             "text-lg font-bold",
-            problem.confidence >= 70 ? "text-foreground" : "text-amber-600"
+            problem.confidence >= 70 ? "text-foreground" : "text-status-warning"
           )}>
             {problem.confidence}%
           </p>
@@ -269,8 +269,8 @@ export function ROIFirstDecisionCard({
         <Card className="p-3 text-center">
           <p className={cn(
             "text-lg font-bold",
-            (plan?.riskScore || 0) <= 0.25 ? "text-green-600" :
-            (plan?.riskScore || 0) <= 0.5 ? "text-amber-600" : "text-red-600"
+            (plan?.riskScore || 0) <= 0.25 ? "text-status-good" :
+            (plan?.riskScore || 0) <= 0.5 ? "text-status-warning" : "text-status-bad"
           )}>
             {((plan?.riskScore || 0.3) * 100).toFixed(0)}%
           </p>
@@ -293,11 +293,11 @@ export function ROIFirstDecisionCard({
 
       {/* 4. Approval Gate (only if needed) */}
       {status === 'waiting_approval' && (
-        <Card className="border-amber-500/30 bg-amber-500/5">
+        <Card className="border-status-warning/30 bg-status-warning/5">
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-amber-600" />
-              <span className="text-sm font-semibold text-amber-700">
+              <Shield className="h-4 w-4 text-status-warning" />
+              <span className="text-sm font-semibold text-status-warning">
                 {nextAction === 'approve_assumptions' && 'Confirm data assumptions are correct'}
                 {nextAction === 'approve_root_cause' && 'Accept root cause analysis'}
                 {nextAction === 'approve_plan' && 'Approve selected action plan'}
@@ -319,12 +319,12 @@ export function ROIFirstDecisionCard({
             {/* Guardrails check */}
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3 text-green-600" />
+                <CheckCircle2 className="h-3 w-3 text-status-good" />
                 4/5 guardrails passed
               </span>
               {plan && plan.riskScore > 0.3 && (
                 <span className="flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3 text-amber-600" />
+                  <AlertTriangle className="h-3 w-3 text-status-warning" />
                   1 warning (risk threshold)
                 </span>
               )}

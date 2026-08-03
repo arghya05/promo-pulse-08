@@ -6,7 +6,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { modules } from '@/lib/data/modules';
 import { downloadModuleQuestions } from '@/lib/data/module-questions-export';
 import { kpiLibrary, getKPIsByCategory } from '@/lib/data/kpi-library';
-import { ArrowRight, Brain, Sparkles, Download, LayoutGrid, BarChart3, DollarSign, Percent, Hash, Activity, Zap } from 'lucide-react';
+import { companyProfile, headlineKpis } from '@/lib/data/company-profile';
+import {
+  ArrowRight,
+  ArrowUpRight,
+  ArrowDownRight,
+  Download,
+  LayoutGrid,
+  BarChart3,
+  DollarSign,
+  Percent,
+  Hash,
+  Activity,
+  Zap,
+} from 'lucide-react';
 import { AgentsHub } from '@/components/agents/AgentsHub';
 
 const formatIcon = (format: string) => {
@@ -18,88 +31,133 @@ const formatIcon = (format: string) => {
   }
 };
 
+const scaleStats = [
+  { label: 'Net sales', value: '$168.4B', detail: `${companyProfile.fiscalYear} trailing` },
+  { label: 'Stores', value: companyProfile.scale.stores.toLocaleString(), detail: `${companyProfile.scale.distributionCenters} DCs` },
+  { label: 'Active SKUs', value: '118.4K', detail: `${companyProfile.scale.privateLabelMixPct}% private label` },
+  { label: 'Weekly baskets', value: '74.2M', detail: `${companyProfile.scale.ecomMixPct}% digital mix` },
+];
+
 const Home = () => {
   const navigate = useNavigate();
   const kpisByCategory = getKPIsByCategory();
 
   return (
-    <div className="min-h-screen bg-background w-full max-w-full overflow-x-hidden">
-      {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50 w-full max-w-full overflow-x-hidden">
-        <div className="w-full max-w-screen-2xl mx-auto px-4 md:px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Brain className="h-6 w-6 text-primary" />
+    <div className="w-full max-w-full overflow-x-hidden">
+      {/* Command center header */}
+      <section className="relative border-b border-border/70 bg-gradient-surface">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-glow" />
+        <div className="pointer-events-none absolute inset-0 grid-noise opacity-30" />
+        <div className="relative mx-auto w-full max-w-screen-2xl px-4 py-8 md:px-8 md:py-10">
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div className="max-w-2xl animate-fade-up">
+              <Badge variant="outline" className="mb-3 gap-1.5 border-primary/40 bg-primary/10 text-xs font-normal text-accent-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse-dot" />
+                {companyProfile.fiscalYear} · {companyProfile.fiscalPeriod}
+              </Badge>
+              <h1 className="text-3xl font-semibold leading-tight md:text-4xl">
+                Merchandising command center
+              </h1>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base">
+                Ask any pricing, promotion, assortment, demand, supply chain or space question in
+                plain language. Every answer is grounded in {companyProfile.banner} POS, loyalty,
+                vendor and competitor data — no estimates, no invented numbers.
+              </p>
             </div>
-            <div>
-              <h1 className="text-xl font-bold">Merchandising AI</h1>
-              <p className="text-sm text-muted-foreground">Intelligent Retail Analytics Platform</p>
+            <div className="flex flex-col items-start gap-1 text-xs text-muted-foreground md:items-end md:text-right">
+              <span className="metric-value text-foreground">
+                {companyProfile.dataFreshness.latencyMinutes} min data latency
+              </span>
+              <span>{companyProfile.dataFreshness.sources.length} connected sources</span>
+              <span>{companyProfile.regions.join(' · ')}</span>
             </div>
           </div>
-        </div>
-      </header>
 
-      {/* Hero Section */}
-      <section className="w-full max-w-screen-2xl mx-auto px-4 md:px-6 py-12">
-        <div className="text-center mb-12">
-          <Badge variant="outline" className="mb-4 gap-1">
-            <Sparkles className="h-3 w-3" />
-            AI-Powered Analytics
-          </Badge>
-          <h2 className="text-4xl font-bold mb-4">
-            Transform Your Retail Operations
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Leverage conversational AI to optimize every aspect of your merchandising strategy.
-            Ask questions in natural language and get actionable insights instantly.
-          </p>
+          {/* Live KPI rail */}
+          <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+            {headlineKpis.map((kpi) => {
+              const up = kpi.trend === 'up';
+              return (
+                <div key={kpi.id} className="panel p-4">
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    {kpi.label}
+                  </div>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className="metric-value text-2xl font-semibold">{kpi.value}</span>
+                    <span
+                      className={`flex items-center gap-0.5 text-xs ${
+                        up ? 'text-status-good' : 'text-status-bad'
+                      }`}
+                    >
+                      {up ? (
+                        <ArrowUpRight className="h-3 w-3" />
+                      ) : (
+                        <ArrowDownRight className="h-3 w-3" />
+                      )}
+                      {kpi.delta}
+                    </span>
+                  </div>
+                  <div className="mt-1 truncate text-[11px] text-muted-foreground">{kpi.note}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
+      </section>
 
-        {/* Tabs for Modules, KPIs, and Agents */}
+      <section className="mx-auto w-full max-w-screen-2xl px-4 py-8 md:px-8">
         <Tabs defaultValue="modules" className="w-full">
-          <TabsList className="grid w-full max-w-xl mx-auto grid-cols-3 mb-8">
-            <TabsTrigger value="modules" className="gap-2">
+          <TabsList className="mb-6 h-10 bg-secondary/60">
+            <TabsTrigger value="modules" className="gap-2 text-sm">
               <LayoutGrid className="h-4 w-4" />
               Modules
             </TabsTrigger>
-            <TabsTrigger value="kpis" className="gap-2">
+            <TabsTrigger value="kpis" className="gap-2 text-sm">
               <BarChart3 className="h-4 w-4" />
               KPI Library
             </TabsTrigger>
-            <TabsTrigger value="agents" className="gap-2">
+            <TabsTrigger value="agents" className="gap-2 text-sm">
               <Zap className="h-4 w-4" />
               Agents
             </TabsTrigger>
           </TabsList>
 
-          {/* Modules Tab Content */}
+          {/* Modules */}
           <TabsContent value="modules">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               {modules.map((module) => {
                 const Icon = module.icon;
                 return (
-                  <Card 
+                  <Card
                     key={module.id}
-                    className={`group cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02] bg-gradient-to-br ${module.gradient} border-2 hover:border-primary/30`}
+                    className={`group relative cursor-pointer overflow-hidden border-border/70 bg-card/70 transition-all duration-300 hover:border-primary/40 hover:shadow-glow`}
                     onClick={() => navigate(module.path)}
                   >
-                    <CardHeader>
+                    <div
+                      className={`pointer-events-none absolute inset-0 bg-gradient-to-br opacity-60 transition-opacity duration-300 group-hover:opacity-100 ${module.gradient}`}
+                    />
+                    <CardHeader className="relative">
                       <div className="flex items-start justify-between">
-                        <div className={`p-3 rounded-xl bg-background/80 ${module.color}`}>
-                          <Icon className="h-6 w-6" />
+                        <div className={`rounded-lg border border-border/60 bg-background/60 p-2.5 ${module.color}`}>
+                          <Icon className="h-5 w-5" />
                         </div>
-                        <ArrowRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <ArrowRight className="h-4 w-4 -translate-x-1 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
                       </div>
-                      <CardTitle className="mt-4">{module.name}</CardTitle>
-                      <CardDescription>{module.description}</CardDescription>
+                      <CardTitle className="mt-4 text-lg">{module.name}</CardTitle>
+                      <CardDescription className="text-sm leading-relaxed">
+                        {module.description}
+                      </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <Button 
-                        variant="ghost" 
-                        className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+                    <CardContent className="relative">
+                      <div className="mb-4 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+                        {module.focus}
+                      </div>
+                      <Button
+                        variant="secondary"
+                        className="w-full justify-between bg-secondary/70 transition-colors group-hover:bg-primary group-hover:text-primary-foreground"
                       >
-                        Enter Module
-                        <ArrowRight className="h-4 w-4 ml-2" />
+                        Open workspace
+                        <ArrowRight className="h-4 w-4" />
                       </Button>
                     </CardContent>
                   </Card>
@@ -108,34 +166,37 @@ const Home = () => {
             </div>
           </TabsContent>
 
-          {/* KPIs Tab Content */}
+          {/* KPIs */}
           <TabsContent value="kpis">
-            <div className="space-y-8">
+            <div className="space-y-6">
               {Object.entries(kpisByCategory).map(([category, kpis]) => (
-                <Card key={category} className="overflow-hidden">
-                  <CardHeader className="bg-muted/50 border-b">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5 text-primary" />
+                <Card key={category} className="overflow-hidden border-border/70 bg-card/70">
+                  <CardHeader className="border-b border-border/70 bg-secondary/40">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <BarChart3 className="h-4 w-4 text-primary" />
                       {category}
                     </CardTitle>
                     <CardDescription>{kpis.length} KPIs available</CardDescription>
                   </CardHeader>
                   <CardContent className="p-0">
-                    <div className="divide-y">
+                    <div className="divide-y divide-border/60">
                       {kpis.map((kpi) => (
-                        <div key={kpi.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
+                        <div
+                          key={kpi.id}
+                          className="flex items-center justify-between p-4 transition-colors hover:bg-secondary/30"
+                        >
                           <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                            <div className="rounded-md bg-primary/10 p-2 text-primary">
                               {formatIcon(kpi.format)}
                             </div>
                             <div>
-                              <div className="font-medium">{kpi.name}</div>
-                              <div className="text-sm text-muted-foreground">
+                              <div className="text-sm font-medium">{kpi.name}</div>
+                              <div className="text-xs text-muted-foreground">
                                 Source: {kpi.dataSource}
                               </div>
                             </div>
                           </div>
-                          <Badge variant="outline" className="capitalize">
+                          <Badge variant="outline" className="capitalize text-xs font-normal">
                             {kpi.format}
                           </Badge>
                         </div>
@@ -144,66 +205,85 @@ const Home = () => {
                   </CardContent>
                 </Card>
               ))}
-              
-              {/* Total KPIs Summary */}
-              <Card className="p-6 bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+
+              <Card className="border-primary/25 bg-primary/5 p-6">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-primary mb-2">{kpiLibrary.length}</div>
-                  <div className="text-muted-foreground">Total KPIs Available Across All Categories</div>
+                  <div className="metric-value mb-1 text-3xl font-semibold text-primary">
+                    {kpiLibrary.length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Governed KPIs available across all categories
+                  </div>
                 </div>
               </Card>
             </div>
           </TabsContent>
 
-          {/* Agents Tab Content */}
           <TabsContent value="agents">
             <AgentsHub />
           </TabsContent>
         </Tabs>
       </section>
 
-      {/* Download Section */}
-      <section className="container mx-auto px-6 py-8">
-        <Card className="p-6 bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
-          <div className="flex items-center justify-between flex-wrap gap-4">
+      {/* Scale + data provenance */}
+      <section className="mx-auto w-full max-w-screen-2xl px-4 pb-10 md:px-8">
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Card className="border-border/70 bg-card/70 lg:col-span-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Business under management</CardTitle>
+              <CardDescription>
+                {companyProfile.tenant} · {companyProfile.format}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                {scaleStats.map((stat) => (
+                  <div key={stat.label}>
+                    <div className="metric-value text-2xl font-semibold">{stat.value}</div>
+                    <div className="text-sm">{stat.label}</div>
+                    <div className="text-xs text-muted-foreground">{stat.detail}</div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/70 bg-card/70">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Connected data sources</CardTitle>
+              <CardDescription>{companyProfile.dataFreshness.posThroughDate}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {companyProfile.dataFreshness.sources.map((source) => (
+                <div key={source} className="flex items-center gap-2 text-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-status-good" />
+                  <span className="text-muted-foreground">{source}</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="mt-4 border-border/70 bg-card/70 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h3 className="font-semibold text-lg">Download Question Library</h3>
-              <p className="text-sm text-muted-foreground">Get the top 5 questions for each module as a CSV file</p>
+              <h2 className="font-display text-base font-semibold">Question library</h2>
+              <p className="text-sm text-muted-foreground">
+                Export the top validated questions for every module as CSV
+              </p>
             </div>
-            <Button onClick={downloadModuleQuestions} className="gap-2">
+            <Button onClick={downloadModuleQuestions} variant="secondary" className="gap-2">
               <Download className="h-4 w-4" />
-              Download Excel/CSV
+              Download CSV
             </Button>
           </div>
         </Card>
       </section>
 
-      {/* Stats Section */}
-      <section className="container mx-auto px-6 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <Card className="text-center p-6">
-            <div className="text-3xl font-bold text-primary">$4B+</div>
-            <div className="text-sm text-muted-foreground">Annual Revenue Analyzed</div>
-          </Card>
-          <Card className="text-center p-6">
-            <div className="text-3xl font-bold text-primary">50</div>
-            <div className="text-sm text-muted-foreground">Stores Covered</div>
-          </Card>
-          <Card className="text-center p-6">
-            <div className="text-3xl font-bold text-primary">80+</div>
-            <div className="text-sm text-muted-foreground">Product SKUs</div>
-          </Card>
-          <Card className="text-center p-6">
-            <div className="text-3xl font-bold text-primary">64K+</div>
-            <div className="text-sm text-muted-foreground">Transactions Processed</div>
-          </Card>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t bg-card/30 mt-12">
-        <div className="container mx-auto px-6 py-6 text-center text-sm text-muted-foreground">
-          Merchandising AI Platform • Powered by AI Conversational Intelligence
+      <footer className="border-t border-border/70 bg-surface-sunken/60">
+        <div className="mx-auto w-full max-w-screen-2xl px-4 py-6 text-xs text-muted-foreground md:px-8">
+          Algonomy Maya · Conversational merchandising intelligence · Answers reconciled against
+          source-of-record data
         </div>
       </footer>
     </div>

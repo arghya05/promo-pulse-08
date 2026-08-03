@@ -322,7 +322,7 @@ export const demoPlaybooks: Playbook[] = [
     defaultGuardrails: { inventoryFloor: 2, serviceLevelTarget: 95 },
     approvalPolicy: 'Auto-approve if impact < ₹5L and risk = Low',
     roiMethod: 'Avoided stockout revenue + margin preservation',
-    gradient: 'from-blue-500/10 to-cyan-500/10'
+    gradient: 'from-chart-2/10 to-chart-2/10'
   },
   {
     id: 'pb-002',
@@ -335,7 +335,7 @@ export const demoPlaybooks: Playbook[] = [
     defaultGuardrails: { minMargin: 12 },
     approvalPolicy: 'Requires Marketing approval',
     roiMethod: 'Incremental margin improvement',
-    gradient: 'from-orange-500/10 to-amber-500/10'
+    gradient: 'from-status-warning/10 to-status-warning/10'
   },
   {
     id: 'pb-003',
@@ -348,7 +348,7 @@ export const demoPlaybooks: Playbook[] = [
     defaultGuardrails: { maxPriceChange: 15, minMargin: 12 },
     approvalPolicy: 'Auto-approve if margin > 15%',
     roiMethod: 'Conversion recovery × margin',
-    gradient: 'from-green-500/10 to-emerald-500/10'
+    gradient: 'from-status-good/10 to-status-good/10'
   },
   {
     id: 'pb-004',
@@ -361,7 +361,7 @@ export const demoPlaybooks: Playbook[] = [
     defaultGuardrails: { minMargin: 5 },
     approvalPolicy: 'Auto-approve for clearance items',
     roiMethod: 'Recovery vs aged inventory write-off',
-    gradient: 'from-purple-500/10 to-pink-500/10'
+    gradient: 'from-chart-5/10 to-chart-5/10'
   },
   {
     id: 'pb-005',
@@ -374,7 +374,7 @@ export const demoPlaybooks: Playbook[] = [
     defaultGuardrails: {},
     approvalPolicy: 'Requires Category Manager approval',
     roiMethod: 'New item sales - sourcing cost',
-    gradient: 'from-indigo-500/10 to-violet-500/10'
+    gradient: 'from-chart-1/10 to-chart-5/10'
   }
 ];
 

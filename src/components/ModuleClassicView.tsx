@@ -478,7 +478,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                   <Collapsible open={expandedSections.why} onOpenChange={() => toggleSection('why')}>
                     <CollapsibleTrigger className="flex items-center justify-between w-full">
                       <h3 className="font-semibold flex items-center gap-2">
-                        <Lightbulb className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                        <Lightbulb className="h-4 w-4 text-status-warning flex-shrink-0" />
                         WHY IT HAPPENED
                       </h3>
                       <ChevronDown className={`h-4 w-4 transition-transform flex-shrink-0 ${expandedSections.why ? '' : '-rotate-90'}`} />
@@ -488,7 +488,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                         <ul className="space-y-2">
                           {result.why.map((reason: string, i: number) => (
                             <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                              <span className="text-yellow-500 mt-1 flex-shrink-0">•</span>
+                              <span className="text-status-warning mt-1 flex-shrink-0">•</span>
                               <span>{reason}</span>
                             </li>
                           ))}
@@ -528,7 +528,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                   <Collapsible open={expandedSections.causalDrivers} onOpenChange={() => toggleSection('causalDrivers')}>
                     <CollapsibleTrigger className="flex items-center justify-between w-full">
                       <h3 className="font-semibold flex items-center gap-2">
-                        <Zap className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                        <Zap className="h-4 w-4 text-status-warning flex-shrink-0" />
                         CAUSAL DRIVERS
                       </h3>
                       <ChevronDown className={`h-4 w-4 transition-transform flex-shrink-0 ${expandedSections.causalDrivers ? '' : '-rotate-90'}`} />
@@ -566,15 +566,15 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                   <Collapsible open={expandedSections.mlInsights} onOpenChange={() => toggleSection('mlInsights')}>
                     <CollapsibleTrigger className="flex items-center justify-between w-full">
                       <h3 className="font-semibold flex items-center gap-2">
-                        <Brain className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                        <Brain className="h-4 w-4 text-chart-5 flex-shrink-0" />
                         MACHINE LEARNING INSIGHTS
                       </h3>
                       <ChevronDown className={`h-4 w-4 transition-transform flex-shrink-0 ${expandedSections.mlInsights ? '' : '-rotate-90'}`} />
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="bg-purple-500/10 rounded-lg p-4 mt-3 border border-purple-500/20">
+                      <div className="bg-chart-5/10 rounded-lg p-4 mt-3 border border-chart-5/20">
                         <div className="flex items-start gap-3">
-                          <Brain className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
+                          <Brain className="h-5 w-5 text-chart-5 mt-0.5 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
                               <span className="font-medium text-sm">Pattern Detected</span>
@@ -585,7 +585,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                             <p className="text-sm text-muted-foreground mb-2">
                               {result.mlInsights.patternDetected}
                             </p>
-                            <p className="text-xs text-purple-600 dark:text-purple-400">
+                            <p className="text-xs text-chart-5 dark:text-chart-5">
                               <strong>Business Significance:</strong> {result.mlInsights.businessSignificance}
                             </p>
                           </div>
@@ -600,13 +600,13 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                   <Collapsible open={expandedSections.predictions} onOpenChange={() => toggleSection('predictions')}>
                     <CollapsibleTrigger className="flex items-center justify-between w-full">
                       <h3 className="font-semibold flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                        <TrendingUp className="h-4 w-4 text-chart-2 flex-shrink-0" />
                         FORECASTING & PREDICTIONS
                       </h3>
                       <ChevronDown className={`h-4 w-4 transition-transform flex-shrink-0 ${expandedSections.predictions ? '' : '-rotate-90'}`} />
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="bg-blue-500/10 rounded-lg p-4 mt-3 border border-blue-500/20 max-h-80 overflow-y-auto overflow-x-hidden">
+                      <div className="bg-chart-2/10 rounded-lg p-4 mt-3 border border-chart-2/20 max-h-80 overflow-y-auto overflow-x-hidden">
                         <div className="flex flex-wrap items-center gap-4 mb-3">
                           <div>
                             <span className="text-xs text-muted-foreground">Trend</span>

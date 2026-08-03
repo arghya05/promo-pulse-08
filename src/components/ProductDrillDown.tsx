@@ -239,8 +239,8 @@ export default function ProductDrillDown({ product, onClose }: ProductDrillDownP
   };
 
   const getTrendIcon = (trend: string) => {
-    if (trend === 'up') return <TrendingUp className="h-4 w-4 text-green-500" />;
-    if (trend === 'down') return <TrendingDown className="h-4 w-4 text-red-500" />;
+    if (trend === 'up') return <TrendingUp className="h-4 w-4 text-status-good" />;
+    if (trend === 'down') return <TrendingDown className="h-4 w-4 text-status-bad" />;
     return <span className="h-4 w-4 text-muted-foreground">—</span>;
   };
 
@@ -279,23 +279,23 @@ export default function ProductDrillDown({ product, onClose }: ProductDrillDownP
             </div>
             <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
           </Card>
-          <Card className="p-4 bg-green-500/5">
+          <Card className="p-4 bg-status-good/5">
             <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="h-4 w-4 text-green-500" />
+              <TrendingUp className="h-4 w-4 text-status-good" />
               <span className="text-sm text-muted-foreground">Total Margin</span>
             </div>
             <p className="text-2xl font-bold">{formatCurrency(totalMargin)}</p>
           </Card>
-          <Card className="p-4 bg-blue-500/5">
+          <Card className="p-4 bg-chart-2/5">
             <div className="flex items-center gap-2 mb-1">
-              <Package className="h-4 w-4 text-blue-500" />
+              <Package className="h-4 w-4 text-chart-2" />
               <span className="text-sm text-muted-foreground">Units Sold</span>
             </div>
             <p className="text-2xl font-bold">{formatNumber(totalUnits)}</p>
           </Card>
-          <Card className="p-4 bg-purple-500/5">
+          <Card className="p-4 bg-chart-5/5">
             <div className="flex items-center gap-2 mb-1">
-              <Store className="h-4 w-4 text-purple-500" />
+              <Store className="h-4 w-4 text-chart-5" />
               <span className="text-sm text-muted-foreground">Stores</span>
             </div>
             <p className="text-2xl font-bold">{storeData.length}</p>

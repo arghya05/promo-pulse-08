@@ -237,42 +237,42 @@ export default function DataManagement() {
       </Card>
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-2">
-          <Database className="h-4 w-4 text-emerald-500" />
+          <Database className="h-4 w-4 text-status-good" />
           <span className="text-xs text-muted-foreground uppercase">Products</span>
         </div>
         <div className="text-2xl font-bold">{products.length}</div>
       </Card>
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-2">
-          <Database className="h-4 w-4 text-blue-500" />
+          <Database className="h-4 w-4 text-chart-2" />
           <span className="text-xs text-muted-foreground uppercase">Marketing</span>
         </div>
         <div className="text-2xl font-bold">{marketingChannels.length}</div>
       </Card>
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-2">
-          <Database className="h-4 w-4 text-orange-500" />
+          <Database className="h-4 w-4 text-status-warning" />
           <span className="text-xs text-muted-foreground uppercase">Competitors</span>
         </div>
         <div className="text-2xl font-bold">{competitorData.length}</div>
       </Card>
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-2">
-          <Database className="h-4 w-4 text-purple-500" />
+          <Database className="h-4 w-4 text-chart-5" />
           <span className="text-xs text-muted-foreground uppercase">Performance</span>
         </div>
         <div className="text-2xl font-bold">{storePerformance.length}</div>
       </Card>
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-2">
-          <Database className="h-4 w-4 text-pink-500" />
+          <Database className="h-4 w-4 text-chart-5" />
           <span className="text-xs text-muted-foreground uppercase">Journey</span>
         </div>
         <div className="text-2xl font-bold">{customerJourney.length}</div>
       </Card>
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-2">
-          <Database className="h-4 w-4 text-cyan-500" />
+          <Database className="h-4 w-4 text-chart-2" />
           <span className="text-xs text-muted-foreground uppercase">Inventory</span>
         </div>
         <div className="text-2xl font-bold">{inventoryLevels.length}</div>

@@ -32,11 +32,11 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 const statusConfig: Record<Run['status'], { label: string; icon: React.ElementType; className: string }> = {
-  pending: { label: 'Pending', icon: Clock, className: 'bg-amber-500/10 text-amber-600' },
-  running: { label: 'Running', icon: Loader2, className: 'bg-blue-500/10 text-blue-600' },
-  completed: { label: 'Completed', icon: CheckCircle, className: 'bg-green-500/10 text-green-600' },
-  failed: { label: 'Failed', icon: XCircle, className: 'bg-red-500/10 text-red-600' },
-  rolled_back: { label: 'Rolled Back', icon: RotateCcw, className: 'bg-gray-500/10 text-gray-600' }
+  pending: { label: 'Pending', icon: Clock, className: 'bg-status-warning/10 text-status-warning' },
+  running: { label: 'Running', icon: Loader2, className: 'bg-chart-2/10 text-chart-2' },
+  completed: { label: 'Completed', icon: CheckCircle, className: 'bg-status-good/10 text-status-good' },
+  failed: { label: 'Failed', icon: XCircle, className: 'bg-status-bad/10 text-status-bad' },
+  rolled_back: { label: 'Rolled Back', icon: RotateCcw, className: 'bg-secondary/10 text-muted-foreground' }
 };
 
 interface RunsViewProps {
@@ -127,7 +127,7 @@ export function RunsView({ runs }: RunsViewProps) {
                       </TableCell>
                       <TableCell>
                         {run.result ? (
-                          <span className="text-xs font-medium text-green-600">{run.result}</span>
+                          <span className="text-xs font-medium text-status-good">{run.result}</span>
                         ) : (
                           <span className="text-xs text-muted-foreground">{run.eta}</span>
                         )}
@@ -144,7 +144,7 @@ export function RunsView({ runs }: RunsViewProps) {
                               <div className="space-y-1">
                                 {run.actions.map((action, i) => (
                                   <div key={i} className="flex items-center gap-2 text-xs">
-                                    <CheckCircle className="h-3 w-3 text-green-500" />
+                                    <CheckCircle className="h-3 w-3 text-status-good" />
                                     {action}
                                   </div>
                                 ))}

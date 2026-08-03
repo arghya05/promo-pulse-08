@@ -69,13 +69,13 @@ export function StagePlan({
 
   if (isCompleted) {
     return (
-      <Card className="border-green-500/30 bg-green-500/5">
+      <Card className="border-status-good/30 bg-status-good/5">
         <CardContent className="p-3">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
-              <Check className="h-3.5 w-3.5 text-green-600" />
+            <div className="w-6 h-6 rounded-full bg-status-good/20 flex items-center justify-center">
+              <Check className="h-3.5 w-3.5 text-status-good" />
             </div>
-            <span className="text-xs font-medium text-green-700 dark:text-green-400">
+            <span className="text-xs font-medium text-status-good dark:text-status-good">
               Plan approved: Emergency restocking (+₹14.2L expected)
             </span>
           </div>
@@ -127,9 +127,9 @@ export function StagePlan({
                   variant="outline" 
                   className={cn(
                     "text-[9px]",
-                    plan.risk === 'low' && "text-green-600 border-green-200",
-                    plan.risk === 'med' && "text-amber-600 border-amber-200",
-                    plan.risk === 'high' && "text-red-600 border-red-200"
+                    plan.risk === 'low' && "text-status-good border-status-good/30",
+                    plan.risk === 'med' && "text-status-warning border-status-warning/30",
+                    plan.risk === 'high' && "text-status-bad border-status-bad/30"
                   )}
                 >
                   {plan.risk === 'low' ? 'Low' : plan.risk === 'med' ? 'Medium' : 'High'} risk
@@ -141,7 +141,7 @@ export function StagePlan({
                   {plan.timeToImpact} to impact
                 </Badge>
                 {plan.guardrailStatus === 'fail' && (
-                  <Badge variant="outline" className="text-[9px] text-red-600 border-red-200 gap-0.5">
+                  <Badge variant="outline" className="text-[9px] text-status-bad border-status-bad/30 gap-0.5">
                     <Shield className="h-2 w-2" />
                     Guardrail violation
                   </Badge>
@@ -157,13 +157,13 @@ export function StagePlan({
       </Card>
 
       {/* Human Gate */}
-      <Card className="border-amber-500/30 bg-amber-500/5">
+      <Card className="border-status-warning/30 bg-status-warning/5">
         <CardContent className="p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center">
-              <TrendingUp className="h-3 w-3 text-amber-600" />
+            <div className="w-5 h-5 rounded-full bg-status-warning/20 flex items-center justify-center">
+              <TrendingUp className="h-3 w-3 text-status-warning" />
             </div>
-            <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+            <span className="text-sm font-semibold text-status-warning dark:text-status-warning">
               Choose a plan and constraints
             </span>
           </div>

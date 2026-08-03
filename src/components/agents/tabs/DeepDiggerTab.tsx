@@ -132,8 +132,8 @@ export function DeepDiggerTab({ problem, onSimulateFix, onExport }: DeepDiggerTa
             variant="outline" 
             className={cn(
               "text-[9px]",
-              node.contribution >= 80 ? "text-red-600" :
-              node.contribution >= 50 ? "text-amber-600" : "text-muted-foreground"
+              node.contribution >= 80 ? "text-status-bad" :
+              node.contribution >= 50 ? "text-status-warning" : "text-muted-foreground"
             )}
           >
             {node.contribution}%
@@ -188,14 +188,14 @@ export function DeepDiggerTab({ problem, onSimulateFix, onExport }: DeepDiggerTa
                 <div className="flex items-start gap-3">
                   <div className={cn(
                     "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-                    signal.type === 'anomaly' ? "bg-red-100" :
-                    signal.type === 'alert' ? "bg-amber-100" :
-                    signal.type === 'trend' ? "bg-blue-100" : "bg-purple-100"
+                    signal.type === 'anomaly' ? "bg-status-bad/10" :
+                    signal.type === 'alert' ? "bg-status-warning/10" :
+                    signal.type === 'trend' ? "bg-chart-2/10" : "bg-chart-5/10"
                   )}>
-                    {signal.type === 'anomaly' && <AlertTriangle className="h-4 w-4 text-red-600" />}
-                    {signal.type === 'alert' && <AlertTriangle className="h-4 w-4 text-amber-600" />}
-                    {signal.type === 'trend' && <GitBranch className="h-4 w-4 text-blue-600" />}
-                    {signal.type === 'correlation' && <Database className="h-4 w-4 text-purple-600" />}
+                    {signal.type === 'anomaly' && <AlertTriangle className="h-4 w-4 text-status-bad" />}
+                    {signal.type === 'alert' && <AlertTriangle className="h-4 w-4 text-status-warning" />}
+                    {signal.type === 'trend' && <GitBranch className="h-4 w-4 text-chart-2" />}
+                    {signal.type === 'correlation' && <Database className="h-4 w-4 text-chart-5" />}
                   </div>
                   
                   <div className="flex-1 min-w-0">
@@ -214,7 +214,7 @@ export function DeepDiggerTab({ problem, onSimulateFix, onExport }: DeepDiggerTa
                         {formatRelativeTime(signal.timestamp)}
                       </span>
                       <span className="flex items-center gap-1">
-                        <CheckCircle2 className="h-2.5 w-2.5 text-green-600" />
+                        <CheckCircle2 className="h-2.5 w-2.5 text-status-good" />
                         {signal.confidence}% reliable
                       </span>
                     </div>
@@ -311,8 +311,8 @@ export function DeepDiggerTab({ problem, onSimulateFix, onExport }: DeepDiggerTa
                       <TableCell className="text-xs">{entity.dc}</TableCell>
                       <TableCell className={cn(
                         "text-xs text-right font-medium",
-                        entity.daysToOOS <= 2 ? "text-red-600" : 
-                        entity.daysToOOS <= 5 ? "text-amber-600" : ""
+                        entity.daysToOOS <= 2 ? "text-status-bad" : 
+                        entity.daysToOOS <= 5 ? "text-status-warning" : ""
                       )}>
                         {entity.daysToOOS.toFixed(1)}d
                       </TableCell>

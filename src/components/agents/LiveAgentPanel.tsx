@@ -40,9 +40,9 @@ const statusConfig: Record<AgentState['status'], { icon: typeof Check; color: st
   idle: { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted', label: 'Idle' },
   queued: { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted', label: 'Queued' },
   running: { icon: Loader2, color: 'text-primary', bg: 'bg-primary/10', label: 'Running' },
-  waiting_approval: { icon: Lock, color: 'text-amber-600', bg: 'bg-amber-500/10', label: 'Waiting' },
-  completed: { icon: Check, color: 'text-green-600', bg: 'bg-green-500/10', label: 'Done' },
-  failed: { icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-500/10', label: 'Failed' },
+  waiting_approval: { icon: Lock, color: 'text-status-warning', bg: 'bg-status-warning/10', label: 'Waiting' },
+  completed: { icon: Check, color: 'text-status-good', bg: 'bg-status-good/10', label: 'Done' },
+  failed: { icon: AlertCircle, color: 'text-status-bad', bg: 'bg-status-bad/10', label: 'Failed' },
 };
 
 // Agent output preview summaries
@@ -195,17 +195,17 @@ function TimelineEventRow({ event, isLast }: { event: TimelineEvent; isLast: boo
       case 'agent_complete':
         return <Bot className="h-2.5 w-2.5 text-primary" />;
       case 'agent_fail':
-        return <AlertCircle className="h-2.5 w-2.5 text-red-600" />;
+        return <AlertCircle className="h-2.5 w-2.5 text-status-bad" />;
       case 'artifact':
-        return <FileText className="h-2.5 w-2.5 text-green-600" />;
+        return <FileText className="h-2.5 w-2.5 text-status-good" />;
       case 'approval_request':
-        return <Lock className="h-2.5 w-2.5 text-amber-600" />;
+        return <Lock className="h-2.5 w-2.5 text-status-warning" />;
       case 'approval_granted':
-        return <Check className="h-2.5 w-2.5 text-green-600" />;
+        return <Check className="h-2.5 w-2.5 text-status-good" />;
       case 'approval_denied':
-        return <AlertCircle className="h-2.5 w-2.5 text-red-600" />;
+        return <AlertCircle className="h-2.5 w-2.5 text-status-bad" />;
       case 'tool_call':
-        return <Zap className="h-2.5 w-2.5 text-blue-600" />;
+        return <Zap className="h-2.5 w-2.5 text-chart-2" />;
       case 'user_action':
         return <User className="h-2.5 w-2.5 text-primary" />;
       default:
@@ -219,17 +219,17 @@ function TimelineEventRow({ event, isLast }: { event: TimelineEvent; isLast: boo
       case 'agent_complete':
         return 'bg-primary/10';
       case 'agent_fail':
-        return 'bg-red-500/10';
+        return 'bg-status-bad/10';
       case 'artifact':
-        return 'bg-green-500/10';
+        return 'bg-status-good/10';
       case 'approval_request':
-        return 'bg-amber-500/10';
+        return 'bg-status-warning/10';
       case 'approval_granted':
-        return 'bg-green-500/10';
+        return 'bg-status-good/10';
       case 'approval_denied':
-        return 'bg-red-500/10';
+        return 'bg-status-bad/10';
       case 'tool_call':
-        return 'bg-blue-500/10';
+        return 'bg-chart-2/10';
       case 'user_action':
         return 'bg-primary/10';
       default:
@@ -258,9 +258,9 @@ function TimelineEventRow({ event, isLast }: { event: TimelineEvent; isLast: boo
               variant="outline" 
               className={cn(
                 "text-[8px]",
-                event.payload.status === 'success' ? "text-green-600" :
-                event.payload.status === 'retrying' ? "text-amber-600" :
-                "text-red-600"
+                event.payload.status === 'success' ? "text-status-good" :
+                event.payload.status === 'retrying' ? "text-status-warning" :
+                "text-status-bad"
               )}
             >
               {event.payload.status}

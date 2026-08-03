@@ -129,13 +129,13 @@ export function ExecuteTab({
       case 'proposed':
         return { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted', label: 'Proposed' };
       case 'approved':
-        return { icon: CheckCircle2, color: 'text-amber-600', bg: 'bg-amber-50', label: 'Approved' };
+        return { icon: CheckCircle2, color: 'text-status-warning', bg: 'bg-status-warning/10', label: 'Approved' };
       case 'executing':
-        return { icon: Loader2, color: 'text-blue-600', bg: 'bg-blue-50', label: 'Executing' };
+        return { icon: Loader2, color: 'text-chart-2', bg: 'bg-chart-2/10', label: 'Executing' };
       case 'done':
-        return { icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50', label: 'Done' };
+        return { icon: CheckCircle2, color: 'text-status-good', bg: 'bg-status-good/10', label: 'Done' };
       case 'failed':
-        return { icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50', label: 'Failed' };
+        return { icon: AlertTriangle, color: 'text-status-bad', bg: 'bg-status-bad/10', label: 'Failed' };
       default:
         return { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted', label: 'Pending' };
     }
@@ -152,12 +152,12 @@ export function ExecuteTab({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-[9px] text-green-600">
+          <Badge variant="outline" className="text-[9px] text-status-good">
             <Bot className="h-2.5 w-2.5 mr-0.5" />
             {safeActions.length} autopilot-safe
           </Badge>
           {pendingApproval.length > 0 && (
-            <Badge variant="outline" className="text-[9px] text-amber-600">
+            <Badge variant="outline" className="text-[9px] text-status-warning">
               <Lock className="h-2.5 w-2.5 mr-0.5" />
               {pendingApproval.length} need approval
             </Badge>
@@ -298,7 +298,7 @@ export function ExecuteTab({
 
                                 {/* Rollback */}
                                 {state.status === 'done' && (
-                                  <Badge variant="outline" className="text-[9px] text-green-600">
+                                  <Badge variant="outline" className="text-[9px] text-status-good">
                                     <RotateCcw className="h-2 w-2 mr-0.5" />
                                     Rollback available
                                   </Badge>
@@ -307,7 +307,7 @@ export function ExecuteTab({
 
                               {/* Approval reason */}
                               {action.approvalRequired && action.approvalReason && state.status === 'proposed' && (
-                                <div className="mt-2 p-2 bg-amber-50 rounded text-[10px] text-amber-700">
+                                <div className="mt-2 p-2 bg-status-warning/10 rounded text-[10px] text-status-warning">
                                   <Lock className="h-2.5 w-2.5 inline mr-1" />
                                   {action.approvalReason}
                                 </div>
@@ -315,7 +315,7 @@ export function ExecuteTab({
 
                               {/* Error */}
                               {state.status === 'failed' && state.error && (
-                                <div className="mt-2 p-2 bg-red-50 rounded text-[10px] text-red-700">
+                                <div className="mt-2 p-2 bg-status-bad/10 rounded text-[10px] text-status-bad">
                                   <AlertTriangle className="h-2.5 w-2.5 inline mr-1" />
                                   {state.error}
                                   {state.retryCount !== undefined && state.retryCount > 0 && (
@@ -328,7 +328,7 @@ export function ExecuteTab({
                               <div className="mt-2 p-2 bg-muted/50 rounded text-[9px] font-mono">
                                 <span className="text-primary">{action.toolCall.system}</span>
                                 <span className="text-muted-foreground">.</span>
-                                <span className="text-blue-600">{action.toolCall.method}</span>
+                                <span className="text-chart-2">{action.toolCall.method}</span>
                                 <span className="text-muted-foreground">()</span>
                               </div>
                             </div>

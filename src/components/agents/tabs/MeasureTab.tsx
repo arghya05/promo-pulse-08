@@ -66,13 +66,13 @@ export function MeasureTab({ problem, plan, isExecuted = false, onRerun }: Measu
     return (
       <div className="space-y-4">
         {/* Pre-execution notice */}
-        <Card className="border-l-4 border-l-amber-400 bg-amber-50/50">
+        <Card className="border-l-4 border-l-amber-400 bg-status-warning/10/50">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <Clock className="h-5 w-5 text-amber-600 mt-0.5" />
+              <Clock className="h-5 w-5 text-status-warning mt-0.5" />
               <div>
-                <h4 className="font-medium text-amber-800">Awaiting Execution</h4>
-                <p className="text-sm text-amber-700 mt-1">
+                <h4 className="font-medium text-status-warning">Awaiting Execution</h4>
+                <p className="text-sm text-status-warning mt-1">
                   Measurement data will appear after you approve and execute a plan.
                 </p>
               </div>
@@ -135,13 +135,13 @@ export function MeasureTab({ problem, plan, isExecuted = false, onRerun }: Measu
   return (
     <div className="space-y-4">
       {/* Success banner */}
-      <Card className="border-l-4 border-l-green-500 bg-green-50/50">
+      <Card className="border-l-4 border-l-green-500 bg-status-good/10/50">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
-            <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <CheckCircle2 className="h-5 w-5 text-status-good" />
             <div>
-              <h4 className="font-medium text-green-800">Execution Complete</h4>
-              <p className="text-sm text-green-700">All actions executed successfully. Tracking outcomes.</p>
+              <h4 className="font-medium text-status-good">Execution Complete</h4>
+              <p className="text-sm text-status-good">All actions executed successfully. Tracking outcomes.</p>
             </div>
           </div>
         </CardContent>
@@ -157,7 +157,7 @@ export function MeasureTab({ problem, plan, isExecuted = false, onRerun }: Measu
             <span>Forecast vs Actual</span>
             <Badge variant="outline" className={cn(
               "text-[10px]",
-              data.forecast.confidence >= 80 ? "text-green-600" : "text-amber-600"
+              data.forecast.confidence >= 80 ? "text-status-good" : "text-status-warning"
             )}>
               {data.forecast.confidence}% confidence
             </Badge>
@@ -172,7 +172,7 @@ export function MeasureTab({ problem, plan, isExecuted = false, onRerun }: Measu
             <div>
               <p className={cn(
                 "text-2xl font-bold",
-                roiVariance >= 0 ? "text-green-600" : "text-amber-600"
+                roiVariance >= 0 ? "text-status-good" : "text-status-warning"
               )}>
                 ₹{data.forecast.realizedROI}L
               </p>
@@ -181,7 +181,7 @@ export function MeasureTab({ problem, plan, isExecuted = false, onRerun }: Measu
             <div>
               <p className={cn(
                 "text-2xl font-bold flex items-center justify-center gap-1",
-                roiVariance >= 0 ? "text-green-600" : "text-amber-600"
+                roiVariance >= 0 ? "text-status-good" : "text-status-warning"
               )}>
                 {roiVariance >= 0 ? (
                   <TrendingUp className="h-5 w-5" />
@@ -207,7 +207,7 @@ export function MeasureTab({ problem, plan, isExecuted = false, onRerun }: Measu
           </CardHeader>
           <CardContent className="text-sm">
             <div className="space-y-1">
-              <p><span className="text-muted-foreground">Stockout Risk:</span> <span className="font-medium text-red-600">{data.baselineSnapshot.stockoutRisk} SKUs</span></p>
+              <p><span className="text-muted-foreground">Stockout Risk:</span> <span className="font-medium text-status-bad">{data.baselineSnapshot.stockoutRisk} SKUs</span></p>
               <p><span className="text-muted-foreground">Daily Loss:</span> <span className="font-medium">₹{data.baselineSnapshot.dailyLoss}L</span></p>
               <p><span className="text-muted-foreground">Stores Affected:</span> <span className="font-medium">{data.baselineSnapshot.affectedStores}</span></p>
             </div>
@@ -217,20 +217,20 @@ export function MeasureTab({ problem, plan, isExecuted = false, onRerun }: Measu
           </CardContent>
         </Card>
 
-        <Card className="bg-green-50/50 border-green-200">
+        <Card className="bg-status-good/10/50 border-status-good/30">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-green-700 flex items-center gap-1.5">
+            <CardTitle className="text-xs text-status-good flex items-center gap-1.5">
               <CheckCircle2 className="h-3 w-3" />
               Current State
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm">
             <div className="space-y-1">
-              <p><span className="text-muted-foreground">Stockout Risk:</span> <span className="font-medium text-green-600">{data.currentState.stockoutRisk} SKUs</span></p>
-              <p><span className="text-muted-foreground">Daily Loss:</span> <span className="font-medium text-green-600">₹{data.currentState.dailyLoss}L</span></p>
-              <p><span className="text-muted-foreground">Stores Affected:</span> <span className="font-medium text-green-600">{data.currentState.affectedStores}</span></p>
+              <p><span className="text-muted-foreground">Stockout Risk:</span> <span className="font-medium text-status-good">{data.currentState.stockoutRisk} SKUs</span></p>
+              <p><span className="text-muted-foreground">Daily Loss:</span> <span className="font-medium text-status-good">₹{data.currentState.dailyLoss}L</span></p>
+              <p><span className="text-muted-foreground">Stores Affected:</span> <span className="font-medium text-status-good">{data.currentState.affectedStores}</span></p>
             </div>
-            <p className="text-[10px] text-green-600 mt-2">
+            <p className="text-[10px] text-status-good mt-2">
               ↓ {Math.round(((data.baselineSnapshot.stockoutRisk - data.currentState.stockoutRisk) / data.baselineSnapshot.stockoutRisk) * 100)}% improvement
             </p>
           </CardContent>
@@ -255,7 +255,7 @@ export function MeasureTab({ problem, plan, isExecuted = false, onRerun }: Measu
                   <span className="text-muted-foreground">
                     {indicator.baseline}{indicator.unit} → <span className={cn(
                       "font-medium",
-                      progress >= 80 ? "text-green-600" : progress >= 50 ? "text-amber-600" : "text-red-600"
+                      progress >= 80 ? "text-status-good" : progress >= 50 ? "text-status-warning" : "text-status-bad"
                     )}>{indicator.current}{indicator.unit}</span>
                     <span className="text-muted-foreground"> (target: {indicator.target}{indicator.unit})</span>
                   </span>
@@ -280,11 +280,11 @@ export function MeasureTab({ problem, plan, isExecuted = false, onRerun }: Measu
             <div className="flex-1">
               <div className="flex h-3 rounded-full overflow-hidden">
                 <div 
-                  className="bg-green-500" 
+                  className="bg-status-good" 
                   style={{ width: `${data.attribution.confident}%` }} 
                 />
                 <div 
-                  className="bg-amber-300" 
+                  className="bg-status-warning" 
                   style={{ width: `${data.attribution.uncertain}%` }} 
                 />
               </div>
@@ -294,7 +294,7 @@ export function MeasureTab({ problem, plan, isExecuted = false, onRerun }: Measu
             </span>
           </div>
           <div className="flex items-start gap-2 text-xs text-muted-foreground">
-            <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0 text-amber-600" />
+            <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0 text-status-warning" />
             <p>{data.attribution.notes}</p>
           </div>
         </CardContent>
