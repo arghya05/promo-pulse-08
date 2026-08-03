@@ -64,7 +64,7 @@ const Home = () => {
                 vendor and competitor data — no estimates, no invented numbers.
               </p>
             </div>
-            <div className="flex flex-col gap-1 text-right text-xs text-muted-foreground">
+            <div className="flex flex-col items-start gap-1 text-xs text-muted-foreground md:items-end md:text-right">
               <span className="metric-value text-foreground">
                 {companyProfile.dataFreshness.latencyMinutes} min data latency
               </span>
