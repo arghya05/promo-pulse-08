@@ -24,9 +24,9 @@ function MetricRow({
 }) {
   const Icon = value > 0 ? TrendingUp : value < 0 ? TrendingDown : Minus;
   const colorClass = value > 0 
-    ? 'text-green-600' 
+    ? 'text-status-good' 
     : value < 0 
-      ? 'text-red-600' 
+      ? 'text-status-bad' 
       : 'text-muted-foreground';
 
   return (
@@ -79,10 +79,10 @@ export function ExpectedRoiCard({ roi }: ExpectedRoiCardProps) {
 
 export function RealizedRoiCard({ roi }: RealizedRoiCardProps) {
   return (
-    <Card className="bg-gradient-to-br from-green-500/5 to-green-500/10 border-green-500/20">
+    <Card className="bg-gradient-to-br from-status-good/5 to-status-good/10 border-status-good/20">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <CheckCircle className="h-4 w-4 text-green-600" />
+          <CheckCircle className="h-4 w-4 text-status-good" />
           Realized ROI
         </CardTitle>
       </CardHeader>

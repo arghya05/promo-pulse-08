@@ -219,7 +219,7 @@ export function StepperWorkflow({ problem, onStageChange, onCreateRun }: Stepper
                 </Badge>
                 <Badge variant="outline" className={cn(
                   "text-[10px]",
-                  problem.urgency === 'now' && "bg-red-500/10 text-red-600 border-red-200"
+                  problem.urgency === 'now' && "bg-status-bad/10 text-status-bad border-status-bad/30"
                 )}>
                   {problem.urgency === 'now' ? 'Urgent' : problem.urgency}
                 </Badge>
@@ -393,13 +393,13 @@ export function StepperWorkflow({ problem, onStageChange, onCreateRun }: Stepper
 
               {/* Guardrails summary */}
               <Card className={cn(
-                violations.length > 0 ? "border-amber-500/30" : "border-green-500/30"
+                violations.length > 0 ? "border-status-warning/30" : "border-status-good/30"
               )}>
                 <CardContent className="p-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Shield className={cn(
                       "h-4 w-4",
-                      violations.length > 0 ? "text-amber-600" : "text-green-600"
+                      violations.length > 0 ? "text-status-warning" : "text-status-good"
                     )} />
                     <span className="text-xs font-medium">
                       {violations.length > 0 
@@ -520,9 +520,9 @@ export function StepperWorkflow({ problem, onStageChange, onCreateRun }: Stepper
 
           {currentStage === 'measure' && (
             <div className="space-y-4">
-              <Card className="border-green-500/30 bg-green-500/5">
+              <Card className="border-status-good/30 bg-status-good/5">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-xs font-semibold text-green-700 dark:text-green-400 flex items-center gap-1.5">
+                  <CardTitle className="text-xs font-semibold text-status-good dark:text-status-good flex items-center gap-1.5">
                     <Check className="h-3 w-3" />
                     Results Summary
                     <Badge variant="secondary" className="text-[9px] ml-1">Measurement Agent</Badge>
@@ -536,7 +536,7 @@ export function StepperWorkflow({ problem, onStageChange, onCreateRun }: Stepper
                     </div>
                     <div className="p-3 bg-background rounded-lg">
                       <p className="text-[10px] text-muted-foreground mb-1">Realized</p>
-                      <p className="text-lg font-bold text-green-600">₹{(totalUplift * 0.94).toFixed(1)}L</p>
+                      <p className="text-lg font-bold text-status-good">₹{(totalUplift * 0.94).toFixed(1)}L</p>
                     </div>
                   </div>
                   

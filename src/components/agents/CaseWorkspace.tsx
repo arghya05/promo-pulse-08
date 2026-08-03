@@ -69,7 +69,7 @@ function PhaseStepper({ currentPhase, isRunning }: { currentPhase: CasePhase; is
             <div className={cn(
               "flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium transition-all",
               isActive && "bg-primary text-primary-foreground",
-              isComplete && "bg-green-100 text-green-700",
+              isComplete && "bg-status-good/10 text-status-good",
               isPending && "bg-muted text-muted-foreground"
             )}>
               {isActive && isRunning ? (
@@ -86,7 +86,7 @@ function PhaseStepper({ currentPhase, isRunning }: { currentPhase: CasePhase; is
             {index < steps.length - 1 && (
               <div className={cn(
                 "w-4 h-0.5 mx-0.5",
-                index < currentIndex ? "bg-green-400" : "bg-border"
+                index < currentIndex ? "bg-status-good" : "bg-border"
               )} />
             )}
           </div>
@@ -196,7 +196,7 @@ export function CaseWorkspace({
             </TabsTrigger>
             <TabsTrigger value="measure" className="text-xs gap-1.5">
               <BarChart3 className="h-3 w-3" />Measure
-              {phase === 'measure' && <Badge className="ml-1 h-4 px-1 text-[8px] bg-green-500">✓</Badge>}
+              {phase === 'measure' && <Badge className="ml-1 h-4 px-1 text-[8px] bg-status-good">✓</Badge>}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -206,8 +206,8 @@ export function CaseWorkspace({
             <TabsContent value="summary" className="mt-0 space-y-4">
               <div className={cn(
                 "rounded-lg p-3",
-                phase === 'detect' && "bg-blue-50 border border-blue-200",
-                phase === 'diagnose' && "bg-amber-50 border border-amber-200",
+                phase === 'detect' && "bg-chart-2/10 border border-chart-2/30",
+                phase === 'diagnose' && "bg-status-warning/10 border border-status-warning/30",
               )}>
                 <p className="text-sm font-medium">
                   {phase === 'detect' && "Ready to analyze. Click 'Run Analysis' to start."}

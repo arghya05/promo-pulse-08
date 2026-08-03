@@ -54,13 +54,13 @@ export function StageDiscovery({ problem, isCompleted, onConfirm, onRecheck, onD
 
   if (isCompleted) {
     return (
-      <Card className="border-green-500/30 bg-green-500/5">
+      <Card className="border-status-good/30 bg-status-good/5">
         <CardContent className="p-3">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
-              <Check className="h-3.5 w-3.5 text-green-600" />
+            <div className="w-6 h-6 rounded-full bg-status-good/20 flex items-center justify-center">
+              <Check className="h-3.5 w-3.5 text-status-good" />
             </div>
-            <span className="text-xs font-medium text-green-700 dark:text-green-400">
+            <span className="text-xs font-medium text-status-good dark:text-status-good">
               Discovery confirmed as priority
             </span>
           </div>
@@ -109,19 +109,19 @@ export function StageDiscovery({ problem, isCompleted, onConfirm, onRecheck, onD
             </div>
             <div className="grid grid-cols-4 gap-2 py-1.5">
               <span>Demand spike</span>
-              <span className="font-semibold text-red-600">+34%</span>
+              <span className="font-semibold text-status-bad">+34%</span>
               <span className="text-muted-foreground">Sales</span>
               <span className="text-muted-foreground">2h ago</span>
             </div>
             <div className="grid grid-cols-4 gap-2 py-1.5">
               <span>Lead time</span>
-              <span className="font-semibold text-amber-600">+3 days</span>
+              <span className="font-semibold text-status-warning">+3 days</span>
               <span className="text-muted-foreground">Supplier</span>
               <span className="text-muted-foreground">4h ago</span>
             </div>
             <div className="grid grid-cols-4 gap-2 py-1.5">
               <span>Safety stock</span>
-              <span className="font-semibold text-red-600">Depleted</span>
+              <span className="font-semibold text-status-bad">Depleted</span>
               <span className="text-muted-foreground">DC Inventory</span>
               <span className="text-muted-foreground">1h ago</span>
             </div>
@@ -130,13 +130,13 @@ export function StageDiscovery({ problem, isCompleted, onConfirm, onRecheck, onD
       </Card>
 
       {/* Human Gate */}
-      <Card className="border-amber-500/30 bg-amber-500/5">
+      <Card className="border-status-warning/30 bg-status-warning/5">
         <CardContent className="p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center">
-              <AlertTriangle className="h-3 w-3 text-amber-600" />
+            <div className="w-5 h-5 rounded-full bg-status-warning/20 flex items-center justify-center">
+              <AlertTriangle className="h-3 w-3 text-status-warning" />
             </div>
-            <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+            <span className="text-sm font-semibold text-status-warning dark:text-status-warning">
               Do you agree this is a real priority?
             </span>
           </div>

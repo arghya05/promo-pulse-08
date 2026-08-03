@@ -129,9 +129,9 @@ export function DigDeeperPanel({
                             variant="outline" 
                             className={cn(
                               "text-[9px]",
-                              signal.type === 'anomaly' ? "text-red-600" :
-                              signal.type === 'alert' ? "text-amber-600" :
-                              signal.type === 'trend' ? "text-blue-600" : "text-purple-600"
+                              signal.type === 'anomaly' ? "text-status-bad" :
+                              signal.type === 'alert' ? "text-status-warning" :
+                              signal.type === 'trend' ? "text-chart-2" : "text-chart-5"
                             )}
                           >
                             {signal.type}
@@ -177,9 +177,9 @@ export function DigDeeperPanel({
                   <CardContent className="p-3">
                     <div className="flex items-start gap-3">
                       {a.mitigated ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                        <CheckCircle2 className="h-4 w-4 text-status-good mt-0.5 shrink-0" />
                       ) : (
-                        <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                        <AlertTriangle className="h-4 w-4 text-status-warning mt-0.5 shrink-0" />
                       )}
                       <div className="flex-1">
                         <p className="text-sm">{a.assumption}</p>
@@ -188,8 +188,8 @@ export function DigDeeperPanel({
                             variant="outline" 
                             className={cn(
                               "text-[9px]",
-                              a.risk === 'low' ? "text-green-600" :
-                              a.risk === 'medium' ? "text-amber-600" : "text-red-600"
+                              a.risk === 'low' ? "text-status-good" :
+                              a.risk === 'medium' ? "text-status-warning" : "text-status-bad"
                             )}
                           >
                             {a.risk} risk
@@ -212,7 +212,7 @@ export function DigDeeperPanel({
                   <p className="text-4xl font-bold text-primary">{problem.confidence}%</p>
                   <p className="text-sm text-muted-foreground">Overall Confidence</p>
                   {problem.confidence < 70 && (
-                    <Badge variant="outline" className="mt-2 text-amber-600 border-amber-200">
+                    <Badge variant="outline" className="mt-2 text-status-warning border-status-warning/30">
                       Below 70% threshold — user confirmation required
                     </Badge>
                   )}
@@ -229,9 +229,9 @@ export function DigDeeperPanel({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         {driver.positive ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <CheckCircle2 className="h-4 w-4 text-status-good" />
                         ) : (
-                          <AlertTriangle className="h-4 w-4 text-amber-600" />
+                          <AlertTriangle className="h-4 w-4 text-status-warning" />
                         )}
                         <span className="text-sm font-medium">{driver.factor}</span>
                       </div>

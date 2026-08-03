@@ -24,8 +24,8 @@ const highlightMetrics = (text: string): React.ReactNode[] => {
           key={idx}
           className={cn(
             "font-semibold px-1 py-0.5 rounded mx-0.5",
-            isPositive && "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30",
-            isNegative && "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30",
+            isPositive && "text-status-good dark:text-status-good bg-status-good/10 dark:bg-status-good/20/30",
+            isNegative && "text-status-warning dark:text-status-warning bg-status-warning/10 dark:bg-status-warning/20/30",
             !isPositive && !isNegative && "text-primary bg-primary/10"
           )}
         >
@@ -56,11 +56,11 @@ const InsightIcon: React.FC<{ type: 'positive' | 'negative' | 'neutral' | 'compa
   
   switch (type) {
     case 'positive':
-      return <TrendingUp className={cn(iconClass, "text-emerald-500")} />;
+      return <TrendingUp className={cn(iconClass, "text-status-good")} />;
     case 'negative':
-      return <TrendingDown className={cn(iconClass, "text-amber-500")} />;
+      return <TrendingDown className={cn(iconClass, "text-status-warning")} />;
     case 'comparison':
-      return <ArrowRight className={cn(iconClass, "text-blue-500")} />;
+      return <ArrowRight className={cn(iconClass, "text-chart-2")} />;
     default:
       return <CheckCircle2 className={cn(iconClass, "text-muted-foreground")} />;
   }
@@ -103,12 +103,12 @@ export const FormattedInsight: React.FC<FormattedInsightProps> = ({ content, cla
     <div className={cn("space-y-3 w-full", className)}>
       {insights.map((insight, idx) => {
         const type = getInsightType(insight);
-        const bgColor = type === 'positive' ? "bg-emerald-50/50 dark:bg-emerald-950/20" :
-                        type === 'negative' ? "bg-amber-50/50 dark:bg-amber-950/20" :
-                        type === 'comparison' ? "bg-blue-50/50 dark:bg-blue-950/20" : "bg-muted/30";
-        const borderColor = type === 'positive' ? "border-emerald-200/50 dark:border-emerald-800/30" :
-                           type === 'negative' ? "border-amber-200/50 dark:border-amber-800/30" :
-                           type === 'comparison' ? "border-blue-200/50 dark:border-blue-800/30" : "border-border/50";
+        const bgColor = type === 'positive' ? "bg-status-good/10/50 dark:bg-status-good/20/20" :
+                        type === 'negative' ? "bg-status-warning/10/50 dark:bg-status-warning/20/20" :
+                        type === 'comparison' ? "bg-chart-2/10/50 dark:bg-chart-2/20/20" : "bg-muted/30";
+        const borderColor = type === 'positive' ? "border-status-good/30/50 dark:border-status-good/30" :
+                           type === 'negative' ? "border-status-warning/30/50 dark:border-status-warning/30" :
+                           type === 'comparison' ? "border-chart-2/30/50 dark:border-chart-2/30" : "border-border/50";
         
         return (
           <ScrollableRow key={idx} bgColor={bgColor} borderColor={borderColor}>

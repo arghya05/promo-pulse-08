@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { GlobalSessionProvider } from "@/contexts/GlobalSessionContext";
+import AppShell from "./components/shell/AppShell";
 import Home from "./pages/Home";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -18,22 +19,24 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Navigate to="/" replace />} />
-            <Route path="/home" element={<Navigate to="/" replace />} />
-            <Route path="/executive" element={<Index moduleId="executive" />} />
-            <Route path="/promotion" element={<Index moduleId="promotion" />} />
-            <Route path="/pricing" element={<Index moduleId="pricing" />} />
-            <Route path="/assortment" element={<Index moduleId="assortment" />} />
-            <Route path="/demand" element={<Index moduleId="demand" />} />
-            <Route path="/supply-chain" element={<Index moduleId="supply-chain" />} />
-            <Route path="/space" element={<Index moduleId="space" />} />
-            <Route path="/validation" element={<ValidationDashboard />} />
+          <AppShell>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Navigate to="/" replace />} />
+              <Route path="/home" element={<Navigate to="/" replace />} />
+              <Route path="/executive" element={<Index moduleId="executive" />} />
+              <Route path="/promotion" element={<Index moduleId="promotion" />} />
+              <Route path="/pricing" element={<Index moduleId="pricing" />} />
+              <Route path="/assortment" element={<Index moduleId="assortment" />} />
+              <Route path="/demand" element={<Index moduleId="demand" />} />
+              <Route path="/supply-chain" element={<Index moduleId="supply-chain" />} />
+              <Route path="/space" element={<Index moduleId="space" />} />
+              <Route path="/validation" element={<ValidationDashboard />} />
 
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AppShell>
         </BrowserRouter>
       </TooltipProvider>
     </GlobalSessionProvider>

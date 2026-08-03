@@ -51,10 +51,10 @@ interface AgentConsolePanelProps {
 }
 
 const agentStatusConfig: Record<AgentInfo['status'], { icon: typeof Check; color: string; bg: string; animate?: boolean }> = {
-  completed: { icon: Check, color: 'text-green-600', bg: 'bg-green-500/10' },
+  completed: { icon: Check, color: 'text-status-good', bg: 'bg-status-good/10' },
   running: { icon: Loader2, color: 'text-primary', bg: 'bg-primary/10', animate: true },
   queued: { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted' },
-  blocked: { icon: Lock, color: 'text-amber-600', bg: 'bg-amber-500/10' },
+  blocked: { icon: Lock, color: 'text-status-warning', bg: 'bg-status-warning/10' },
 };
 
 export function AgentConsolePanel({
@@ -136,10 +136,10 @@ export function AgentConsolePanel({
           <>
             <Separator />
             <div className="px-4 py-3">
-              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="p-3 rounded-lg bg-status-warning/10 border border-status-warning/20">
                 <div className="flex items-center gap-2 mb-2">
-                  <Lock className="h-3.5 w-3.5 text-amber-600" />
-                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                  <Lock className="h-3.5 w-3.5 text-status-warning" />
+                  <span className="text-xs font-semibold text-status-warning dark:text-status-warning">
                     Input needed
                   </span>
                 </div>
@@ -193,13 +193,13 @@ export function AgentConsolePanel({
                     <div className={cn(
                       "w-5 h-5 rounded-full flex items-center justify-center",
                       entry.type === 'user' ? "bg-primary/10" : 
-                      entry.type === 'agent' ? "bg-green-500/10" : 
+                      entry.type === 'agent' ? "bg-status-good/10" : 
                       "bg-muted"
                     )}>
                       {entry.type === 'user' ? (
                         <User className="h-2.5 w-2.5 text-primary" />
                       ) : entry.type === 'agent' ? (
-                        <Bot className="h-2.5 w-2.5 text-green-600" />
+                        <Bot className="h-2.5 w-2.5 text-status-good" />
                       ) : (
                         <ChevronRight className="h-2.5 w-2.5 text-muted-foreground" />
                       )}

@@ -31,13 +31,13 @@ export function StageMeasure({
   
   if (isCompleted) {
     return (
-      <Card className="border-green-500/30 bg-green-500/5">
+      <Card className="border-status-good/30 bg-status-good/5">
         <CardContent className="p-3">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
-              <Check className="h-3.5 w-3.5 text-green-600" />
+            <div className="w-6 h-6 rounded-full bg-status-good/20 flex items-center justify-center">
+              <Check className="h-3.5 w-3.5 text-status-good" />
             </div>
-            <span className="text-xs font-medium text-green-700 dark:text-green-400">
+            <span className="text-xs font-medium text-status-good dark:text-status-good">
               Incident closed: +₹14.8L recovered • Saved as playbook
             </span>
           </div>
@@ -69,13 +69,13 @@ export function StageMeasure({
                 <span className="font-semibold text-foreground">{item.after}</span>
                 <div className="flex items-center gap-1">
                   {item.positive ? (
-                    <ArrowUp className="h-3 w-3 text-green-600" />
+                    <ArrowUp className="h-3 w-3 text-status-good" />
                   ) : (
-                    <ArrowDown className="h-3 w-3 text-red-600" />
+                    <ArrowDown className="h-3 w-3 text-status-bad" />
                   )}
                   <span className={cn(
                     "text-[10px] font-medium",
-                    item.positive ? "text-green-600" : "text-red-600"
+                    item.positive ? "text-status-good" : "text-status-bad"
                   )}>
                     {item.change}
                   </span>
@@ -102,7 +102,7 @@ export function StageMeasure({
             <div className="text-right">
               <div className="flex items-center gap-1.5 mb-1">
                 <span className="text-xs text-muted-foreground">vs projected</span>
-                <Badge variant="outline" className="text-[9px] text-green-600 border-green-200">
+                <Badge variant="outline" className="text-[9px] text-status-good border-status-good/30">
                   +4% above
                 </Badge>
               </div>
@@ -120,13 +120,13 @@ export function StageMeasure({
       </Card>
 
       {/* Human Gate */}
-      <Card className="border-amber-500/30 bg-amber-500/5">
+      <Card className="border-status-warning/30 bg-status-warning/5">
         <CardContent className="p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center">
-              <BarChart3 className="h-3 w-3 text-amber-600" />
+            <div className="w-5 h-5 rounded-full bg-status-warning/20 flex items-center justify-center">
+              <BarChart3 className="h-3 w-3 text-status-warning" />
             </div>
-            <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+            <span className="text-sm font-semibold text-status-warning dark:text-status-warning">
               Review results
             </span>
           </div>

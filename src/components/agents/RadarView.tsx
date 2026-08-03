@@ -20,14 +20,14 @@ interface RadarViewProps {
 }
 
 const moduleColors: Record<ModuleType, string> = {
-  inventory: 'bg-blue-500/10 text-blue-600',
-  allocation: 'bg-cyan-500/10 text-cyan-600',
-  promo: 'bg-orange-500/10 text-orange-600',
-  pricing: 'bg-green-500/10 text-green-600',
-  assortment: 'bg-purple-500/10 text-purple-600',
-  space: 'bg-pink-500/10 text-pink-600',
-  demand: 'bg-indigo-500/10 text-indigo-600',
-  supply: 'bg-teal-500/10 text-teal-600',
+  inventory: 'bg-chart-2/10 text-chart-2',
+  allocation: 'bg-chart-2/10 text-chart-2',
+  promo: 'bg-status-warning/10 text-status-warning',
+  pricing: 'bg-status-good/10 text-status-good',
+  assortment: 'bg-chart-5/10 text-chart-5',
+  space: 'bg-chart-5/10 text-chart-5',
+  demand: 'bg-chart-1/10 text-chart-1',
+  supply: 'bg-status-good/10 text-status-good',
 };
 
 export function RadarView({ mode, onCreateRun }: RadarViewProps) {
@@ -124,10 +124,10 @@ export function RadarView({ mode, onCreateRun }: RadarViewProps) {
                       </p>
                       <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                         <Badge className="text-[9px] bg-primary/10 text-primary">₹{problem.impact}L</Badge>
-                        <Badge variant="outline" className={cn("text-[9px]", problem.urgency === 'critical' && "text-red-600 border-red-300")}>
+                        <Badge variant="outline" className={cn("text-[9px]", problem.urgency === 'critical' && "text-status-bad border-status-bad/30")}>
                           {problem.urgency}
                         </Badge>
-                        <Badge variant="outline" className={cn("text-[9px]", problem.confidence >= 70 ? "" : "text-amber-600")}>
+                        <Badge variant="outline" className={cn("text-[9px]", problem.confidence >= 70 ? "" : "text-status-warning")}>
                           {problem.confidence}%
                         </Badge>
                       </div>
@@ -166,7 +166,7 @@ export function RadarView({ mode, onCreateRun }: RadarViewProps) {
           <CardHeader className="py-2 px-3 shrink-0 flex flex-row items-center justify-between">
             <h3 className="text-sm font-semibold">Agent Console</h3>
             {mode === 'autopilot' && (
-              <Badge variant="outline" className="text-[9px] text-green-600">
+              <Badge variant="outline" className="text-[9px] text-status-good">
                 <Shield className="h-2.5 w-2.5 mr-0.5" />
                 Autopilot: 5 policies
               </Badge>

@@ -904,9 +904,9 @@ export default function IntelligentDrillDown({
   };
 
   const getROIColor = (roi: number) => {
-    if (roi >= 1.5) return "text-emerald-400";
-    if (roi >= 1.0) return "text-amber-400";
-    return "text-red-400";
+    if (roi >= 1.5) return "text-status-good";
+    if (roi >= 1.0) return "text-status-warning";
+    return "text-status-bad";
   };
 
   return (
@@ -1033,9 +1033,9 @@ export default function IntelligentDrillDown({
                           {dim.id === "time" && (
                             <TableCell className="text-center">
                               {item.trend === "up" ? (
-                                <TrendingUp className="h-4 w-4 text-emerald-400 inline" />
+                                <TrendingUp className="h-4 w-4 text-status-good inline" />
                               ) : item.trend === "down" ? (
-                                <TrendingDown className="h-4 w-4 text-red-400 inline" />
+                                <TrendingDown className="h-4 w-4 text-status-bad inline" />
                               ) : (
                                 <span className="text-muted-foreground">—</span>
                               )}

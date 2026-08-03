@@ -24,14 +24,14 @@ interface CaseSummaryStripProps {
 }
 
 const moduleColors: Record<ModuleType, string> = {
-  inventory: 'bg-blue-500/10 text-blue-600',
-  allocation: 'bg-cyan-500/10 text-cyan-600',
-  promo: 'bg-orange-500/10 text-orange-600',
-  pricing: 'bg-green-500/10 text-green-600',
-  assortment: 'bg-purple-500/10 text-purple-600',
-  space: 'bg-pink-500/10 text-pink-600',
-  demand: 'bg-indigo-500/10 text-indigo-600',
-  supply: 'bg-teal-500/10 text-teal-600',
+  inventory: 'bg-chart-2/10 text-chart-2',
+  allocation: 'bg-chart-2/10 text-chart-2',
+  promo: 'bg-status-warning/10 text-status-warning',
+  pricing: 'bg-status-good/10 text-status-good',
+  assortment: 'bg-chart-5/10 text-chart-5',
+  space: 'bg-chart-5/10 text-chart-5',
+  demand: 'bg-chart-1/10 text-chart-1',
+  supply: 'bg-status-good/10 text-status-good',
 };
 
 export function CaseSummaryStrip({ problem, onShowAssumptions, onShowEvidence }: CaseSummaryStripProps) {
@@ -46,7 +46,7 @@ export function CaseSummaryStrip({ problem, onShowAssumptions, onShowEvidence }:
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+            <AlertTriangle className="h-4 w-4 text-status-warning shrink-0" />
             <span className="font-semibold text-sm">{problem.title}</span>
           </div>
           <div className="flex gap-1 mt-1.5 flex-wrap">
@@ -98,7 +98,7 @@ export function CaseSummaryStrip({ problem, onShowAssumptions, onShowEvidence }:
                   <Target className="h-3 w-3 text-muted-foreground" />
                   <span className={cn(
                     "text-sm font-bold",
-                    problem.confidence >= 70 ? "text-foreground" : "text-amber-600"
+                    problem.confidence >= 70 ? "text-foreground" : "text-status-warning"
                   )}>
                     {problem.confidence}%
                   </span>

@@ -20,7 +20,7 @@ const formatActionText = (text: string): React.ReactNode[] => {
       return (
         <span
           key={idx}
-          className="font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-1 py-0.5 rounded mx-0.5"
+          className="font-semibold text-status-good dark:text-status-good bg-status-good/10 dark:bg-status-good/20/30 px-1 py-0.5 rounded mx-0.5"
         >
           {part}
         </span>
@@ -49,7 +49,7 @@ export const ActionBullet: React.FC<ActionBulletProps> = ({
         className
       )}
     >
-      <ArrowRight className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
+      <ArrowRight className="h-3.5 w-3.5 text-status-good flex-shrink-0 mt-0.5" />
       <span className="text-sm leading-relaxed flex-1 min-w-0 break-words">
         {formatActionText(text)}
       </span>

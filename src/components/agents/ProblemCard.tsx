@@ -11,32 +11,32 @@ interface ProblemCardProps {
 }
 
 const moduleColors: Record<ModuleTag, string> = {
-  pricing: 'bg-green-500/10 text-green-700 border-green-500/20',
-  promo: 'bg-orange-500/10 text-orange-700 border-orange-500/20',
-  supply: 'bg-blue-500/10 text-blue-700 border-blue-500/20',
-  forecast: 'bg-purple-500/10 text-purple-700 border-purple-500/20',
-  space: 'bg-pink-500/10 text-pink-700 border-pink-500/20',
-  assortment: 'bg-indigo-500/10 text-indigo-700 border-indigo-500/20'
+  pricing: 'bg-status-good/10 text-status-good border-status-good/20',
+  promo: 'bg-status-warning/10 text-status-warning border-status-warning/20',
+  supply: 'bg-chart-2/10 text-chart-2 border-chart-2/20',
+  forecast: 'bg-chart-5/10 text-chart-5 border-chart-5/20',
+  space: 'bg-chart-5/10 text-chart-5 border-chart-5/20',
+  assortment: 'bg-chart-1/10 text-chart-1 border-chart-1/20'
 };
 
 const urgencyConfig: Record<UrgencyLevel, { label: string; className: string }> = {
-  now: { label: 'Now', className: 'bg-red-500 text-white' },
-  '24h': { label: '24h', className: 'bg-amber-500 text-white' },
-  '7d': { label: '7d', className: 'bg-blue-500 text-white' }
+  now: { label: 'Now', className: 'bg-status-bad text-primary-foreground' },
+  '24h': { label: '24h', className: 'bg-status-warning text-primary-foreground' },
+  '7d': { label: '7d', className: 'bg-chart-2 text-primary-foreground' }
 };
 
 const confidenceConfig: Record<ConfidenceLevel, { label: string; className: string }> = {
-  high: { label: 'High', className: 'text-green-600' },
-  med: { label: 'Med', className: 'text-amber-600' },
-  low: { label: 'Low', className: 'text-gray-500' }
+  high: { label: 'High', className: 'text-status-good' },
+  med: { label: 'Med', className: 'text-status-warning' },
+  low: { label: 'Low', className: 'text-muted-foreground' }
 };
 
 const statusConfig: Record<ProblemStatus, { label: string; icon: React.ElementType; className: string }> = {
-  new: { label: 'New', icon: AlertTriangle, className: 'bg-blue-500/10 text-blue-600' },
-  investigating: { label: 'Investigating', icon: Eye, className: 'bg-purple-500/10 text-purple-600' },
-  awaiting_approval: { label: 'Awaiting Approval', icon: Send, className: 'bg-amber-500/10 text-amber-600' },
-  running: { label: 'Running', icon: Loader2, className: 'bg-green-500/10 text-green-600' },
-  completed: { label: 'Completed', icon: CheckCircle, className: 'bg-gray-500/10 text-gray-600' }
+  new: { label: 'New', icon: AlertTriangle, className: 'bg-chart-2/10 text-chart-2' },
+  investigating: { label: 'Investigating', icon: Eye, className: 'bg-chart-5/10 text-chart-5' },
+  awaiting_approval: { label: 'Awaiting Approval', icon: Send, className: 'bg-status-warning/10 text-status-warning' },
+  running: { label: 'Running', icon: Loader2, className: 'bg-status-good/10 text-status-good' },
+  completed: { label: 'Completed', icon: CheckCircle, className: 'bg-secondary/10 text-muted-foreground' }
 };
 
 export function ProblemCard({ problem, isSelected, onClick }: ProblemCardProps) {

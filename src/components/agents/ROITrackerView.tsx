@@ -62,50 +62,50 @@ export function ROITrackerView() {
 
       {/* KPI Tiles */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
+        <Card className="bg-gradient-to-br from-status-good/10 to-status-good/5 border-status-good/20">
           <CardContent className="pt-4">
             <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="h-4 w-4 text-green-600" />
+              <TrendingUp className="h-4 w-4 text-status-good" />
               <span className="text-xs text-muted-foreground">Total ROI</span>
             </div>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-2xl font-bold text-status-good">
               ₹{demoROIStats.totalROI}L
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
+        <Card className="bg-gradient-to-br from-chart-2/10 to-chart-2/5 border-chart-2/20">
           <CardContent className="pt-4">
             <div className="flex items-center gap-2 mb-1">
-              <BarChart3 className="h-4 w-4 text-blue-600" />
+              <BarChart3 className="h-4 w-4 text-chart-2" />
               <span className="text-xs text-muted-foreground">ROI This Week</span>
             </div>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-chart-2">
               ₹{demoROIStats.roiThisWeek}L
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-purple-500/20">
+        <Card className="bg-gradient-to-br from-chart-5/10 to-chart-5/5 border-chart-5/20">
           <CardContent className="pt-4">
             <div className="flex items-center gap-2 mb-1">
-              <Target className="h-4 w-4 text-purple-600" />
+              <Target className="h-4 w-4 text-chart-5" />
               <span className="text-xs text-muted-foreground">Success Rate</span>
             </div>
-            <div className="text-2xl font-bold text-purple-600">
+            <div className="text-2xl font-bold text-chart-5">
               {demoROIStats.successRate}%
             </div>
             <Progress value={demoROIStats.successRate} className="h-1 mt-2" />
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
+        <Card className="bg-gradient-to-br from-status-warning/10 to-status-warning/5 border-status-warning/20">
           <CardContent className="pt-4">
             <div className="flex items-center gap-2 mb-1">
-              <Clock className="h-4 w-4 text-amber-600" />
+              <Clock className="h-4 w-4 text-status-warning" />
               <span className="text-xs text-muted-foreground">Avg Time to Action</span>
             </div>
-            <div className="text-2xl font-bold text-amber-600">
+            <div className="text-2xl font-bold text-status-warning">
               {demoROIStats.avgTimeToAction}
             </div>
           </CardContent>
@@ -154,18 +154,18 @@ export function ROITrackerView() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
+              <CheckCircle className="h-4 w-4 text-status-good" />
               Top Wins
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {demoTopResults.filter(r => r.isWin).map((result) => (
-              <div key={result.id} className="flex items-start gap-3 p-2 rounded-lg bg-green-500/5 border border-green-500/10">
-                <TrendingUp className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+              <div key={result.id} className="flex items-start gap-3 p-2 rounded-lg bg-status-good/5 border border-status-good/10">
+                <TrendingUp className="h-4 w-4 text-status-good mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-0.5">
                     <span className="text-sm font-medium truncate">{result.title}</span>
-                    <span className="text-sm font-bold text-green-600 shrink-0">+₹{result.roi}L</span>
+                    <span className="text-sm font-bold text-status-good shrink-0">+₹{result.roi}L</span>
                   </div>
                   <p className="text-xs text-muted-foreground">{result.learning}</p>
                 </div>
@@ -177,18 +177,18 @@ export function ROITrackerView() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <AlertTriangle className="h-4 w-4 text-status-warning" />
               Top Misses
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {demoTopResults.filter(r => !r.isWin).map((result) => (
-              <div key={result.id} className="flex items-start gap-3 p-2 rounded-lg bg-amber-500/5 border border-amber-500/10">
-                <TrendingDown className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+              <div key={result.id} className="flex items-start gap-3 p-2 rounded-lg bg-status-warning/5 border border-status-warning/10">
+                <TrendingDown className="h-4 w-4 text-status-warning mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-0.5">
                     <span className="text-sm font-medium truncate">{result.title}</span>
-                    <span className="text-sm font-bold text-amber-600 shrink-0">₹{Math.abs(result.roi)}L</span>
+                    <span className="text-sm font-bold text-status-warning shrink-0">₹{Math.abs(result.roi)}L</span>
                   </div>
                   <p className="text-xs text-muted-foreground">{result.learning}</p>
                 </div>
@@ -214,7 +214,7 @@ export function ROITrackerView() {
               <div className="space-y-2">
                 {demoModelUpdates.map((update, i) => (
                   <div key={i} className="flex items-start gap-2 text-xs">
-                    <CheckCircle className="h-3 w-3 text-green-500 mt-0.5 shrink-0" />
+                    <CheckCircle className="h-3 w-3 text-status-good mt-0.5 shrink-0" />
                     <span>{update}</span>
                   </div>
                 ))}

@@ -108,13 +108,13 @@ export function PlaybooksView() {
                   {/* Trigger Conditions */}
                   <div>
                     <h4 className="text-sm font-semibold flex items-center gap-2 mb-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      <AlertTriangle className="h-4 w-4 text-status-warning" />
                       Trigger Conditions
                     </h4>
                     <div className="space-y-1">
                       {selectedPlaybook.triggerConditions.map((condition, i) => (
                         <div key={i} className="flex items-center gap-2 text-sm">
-                          <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-status-warning" />
                           {condition}
                         </div>
                       ))}
@@ -124,13 +124,13 @@ export function PlaybooksView() {
                   {/* Data Required */}
                   <div>
                     <h4 className="text-sm font-semibold flex items-center gap-2 mb-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircle className="h-4 w-4 text-status-good" />
                       Data Required
                     </h4>
                     <div className="flex flex-wrap gap-1">
                       {selectedPlaybook.dataRequired.map((data, i) => (
                         <Badge key={i} variant="outline" className="text-xs gap-1">
-                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          <CheckCircle className="h-3 w-3 text-status-good" />
                           {data}
                         </Badge>
                       ))}
@@ -156,7 +156,7 @@ export function PlaybooksView() {
                   {/* Guardrails */}
                   <div>
                     <h4 className="text-sm font-semibold flex items-center gap-2 mb-2">
-                      <Shield className="h-4 w-4 text-blue-500" />
+                      <Shield className="h-4 w-4 text-chart-2" />
                       Default Guardrails
                     </h4>
                     <div className="flex flex-wrap gap-2">

@@ -36,19 +36,19 @@ export function ApprovalGateCard({
   const showAutoApprove = mode === 'autopilot' && autoApproveEligible && gateDef.autoApproveCondition;
 
   return (
-    <Card className="border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-orange-500/5">
+    <Card className="border-status-warning/30 bg-gradient-to-br from-status-warning/5 to-status-warning/5">
       <CardContent className="p-4 space-y-4">
         {/* Header */}
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
-            <Shield className="h-5 w-5 text-amber-600" />
+          <div className="w-10 h-10 rounded-full bg-status-warning/20 flex items-center justify-center shrink-0">
+            <Shield className="h-5 w-5 text-status-warning" />
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+              <h3 className="text-sm font-semibold text-status-warning dark:text-status-warning">
                 Human Approval Required
               </h3>
-              <Badge variant="outline" className="text-[9px] bg-amber-500/10 text-amber-600 border-amber-500/30">
+              <Badge variant="outline" className="text-[9px] bg-status-warning/10 text-status-warning border-status-warning/30">
                 Gate {APPROVAL_GATES.findIndex(g => g.id === gate) + 1} of 5
               </Badge>
             </div>
@@ -102,7 +102,7 @@ export function ApprovalGateCard({
                   )}>
                     {option.icon === 'approve' && <Check className={cn("h-4 w-4", isPrimary ? "text-primary" : "text-muted-foreground")} />}
                     {option.icon === 'revise' && <RotateCcw className="h-4 w-4 text-muted-foreground" />}
-                    {option.icon === 'escalate' && <AlertTriangle className="h-4 w-4 text-amber-600" />}
+                    {option.icon === 'escalate' && <AlertTriangle className="h-4 w-4 text-status-warning" />}
                     {option.icon === 'skip' && <SkipForward className="h-4 w-4 text-muted-foreground" />}
                   </div>
                   <div className="flex-1">
@@ -152,9 +152,9 @@ export function CompletedGate({ gate, decision, actor = 'You', timestamp = new D
   
   const getDecisionColor = () => {
     switch (decision) {
-      case 'approved': return 'text-green-600 bg-green-500/10 border-green-500/30';
-      case 'revised': return 'text-amber-600 bg-amber-500/10 border-amber-500/30';
-      case 'escalated': return 'text-orange-600 bg-orange-500/10 border-orange-500/30';
+      case 'approved': return 'text-status-good bg-status-good/10 border-status-good/30';
+      case 'revised': return 'text-status-warning bg-status-warning/10 border-status-warning/30';
+      case 'escalated': return 'text-status-warning bg-status-warning/10 border-status-warning/30';
       case 'skipped': return 'text-muted-foreground bg-muted border-border';
     }
   };

@@ -59,9 +59,9 @@ export const InsightBullet: React.FC<InsightBulletProps> = ({
                type === 'negative' ? TrendingDown :
                type === 'comparison' ? ArrowRight : CheckCircle2;
   
-  const iconColor = type === 'positive' ? 'text-emerald-500' :
-                    type === 'negative' ? 'text-amber-500' :
-                    type === 'comparison' ? 'text-blue-500' : 'text-muted-foreground';
+  const iconColor = type === 'positive' ? 'text-status-good' :
+                    type === 'negative' ? 'text-status-warning' :
+                    type === 'comparison' ? 'text-chart-2' : 'text-muted-foreground';
 
   return (
     <div
@@ -78,7 +78,7 @@ export const InsightBullet: React.FC<InsightBulletProps> = ({
       {isTopInsight && (
         <Badge 
           variant="secondary" 
-          className="text-[9px] px-1.5 py-0 h-4 flex-shrink-0 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 animate-fade-in"
+          className="text-[9px] px-1.5 py-0 h-4 flex-shrink-0 bg-status-warning/10 text-status-warning dark:bg-status-warning/20/30 dark:text-status-warning animate-fade-in"
         >
           <Star className="h-2.5 w-2.5 mr-0.5" />
           Key

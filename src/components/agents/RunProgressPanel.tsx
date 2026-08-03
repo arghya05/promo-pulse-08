@@ -85,15 +85,15 @@ export function RunProgressPanel({
   return (
     <Card className={cn(
       "border-2 transition-colors",
-      allCompleted ? "border-green-500/30 bg-green-500/5" : "border-primary/30 bg-primary/5"
+      allCompleted ? "border-status-good/30 bg-status-good/5" : "border-primary/30 bg-primary/5"
     )}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             {allCompleted ? (
               <>
-                <Check className="h-4 w-4 text-green-600" />
-                <span className="text-green-700 dark:text-green-400">Run Complete</span>
+                <Check className="h-4 w-4 text-status-good" />
+                <span className="text-status-good dark:text-status-good">Run Complete</span>
               </>
             ) : (
               <>
@@ -122,7 +122,7 @@ export function RunProgressPanel({
             >
               <div className="shrink-0">
                 {step.status === 'completed' ? (
-                  <Check className="h-3.5 w-3.5 text-green-600" />
+                  <Check className="h-3.5 w-3.5 text-status-good" />
                 ) : step.status === 'running' ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                 ) : (

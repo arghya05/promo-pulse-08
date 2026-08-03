@@ -535,26 +535,31 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
 
   return (
     <div className="min-h-screen bg-background w-full max-w-full overflow-x-hidden">
-      {/* Header */}
-      <header className="border-b border-border bg-card sticky top-0 z-10 w-full max-w-full overflow-x-hidden">
-        <div className="w-full max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between mb-6 gap-4">
-            <div className="flex items-center gap-4 min-w-0">
-              <Button variant="outline" size="sm" onClick={() => navigate('/home')} className="gap-2 flex-shrink-0">
-                <ArrowLeft className="h-4 w-4" />
-                <Home className="h-4 w-4" />
-                <span className="hidden sm:inline">Home</span>
-              </Button>
+      {/* Module header */}
+      <header className="relative border-b border-border/70 bg-gradient-surface w-full max-w-full overflow-x-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-glow opacity-70" />
+        <div className="relative w-full max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 py-5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              {module?.icon && (
+                <div className={`rounded-lg border border-border/60 bg-background/60 p-2.5 flex-shrink-0 ${module.color}`}>
+                  <module.icon className="h-5 w-5" />
+                </div>
+              )}
               <div className="min-w-0">
-                <h1 className="text-xl md:text-2xl font-bold text-foreground mb-1 truncate">
+                <h1 className="text-xl md:text-2xl font-semibold text-foreground truncate">
                   {module?.name || 'Promotion Intelligence'}
                 </h1>
-                <p className="text-sm text-muted-foreground truncate">
-                  {module?.description || 'AI-powered promotion analysis and ROI intelligence'}
+                <p className="text-xs md:text-sm text-muted-foreground truncate">
+                  {module?.focus || module?.description || 'AI-powered promotion analysis and ROI intelligence'}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Badge variant="outline" className="hidden lg:flex gap-1.5 border-border/70 text-[11px] font-normal text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-status-good animate-pulse-dot" />
+                {companyProfile.fiscalYear} · {companyProfile.fiscalPeriod}
+              </Badge>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -568,6 +573,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
           </div>
         </div>
       </header>
+
 
       <div className="w-full max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 py-8 min-w-0 overflow-x-hidden">
         <Tabs defaultValue="chat" className="w-full">
@@ -1098,8 +1104,8 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                     if (!matchedTerm || !query.trim()) return null;
                     
                     return (
-                      <div className="flex items-center gap-2 flex-wrap bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg p-3">
-                        <span className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+                      <div className="flex items-center gap-2 flex-wrap bg-status-warning/10 dark:bg-status-warning/20/30 border border-status-warning/30 dark:border-status-warning/50 rounded-lg p-3">
+                        <span className="text-sm text-status-warning dark:text-status-warning font-medium">
                           "{matchedTerm.label}" could mean:
                         </span>
                         {matchedTerm.options.map((opt, idx) => (
@@ -1107,7 +1113,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                             key={idx}
                             variant="outline"
                             size="sm"
-                            className="h-7 text-xs border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50"
+                            className="h-7 text-xs border-status-warning/30 dark:border-status-warning hover:bg-status-warning/10 dark:hover:bg-status-warning/20/50"
                             onClick={() => {
                               const newQuery = query.replace(matchedTerm.term, opt.replacement);
                               setQuery(newQuery);

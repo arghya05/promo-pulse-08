@@ -68,7 +68,7 @@ export function IssueInboxList({
                 selectedId === p.id 
                   ? "bg-primary text-primary-foreground" 
                   : "bg-muted hover:bg-muted-foreground/20",
-                p.urgency === 'now' && selectedId !== p.id && "ring-2 ring-red-500/50"
+                p.urgency === 'now' && selectedId !== p.id && "ring-2 ring-status-bad/50"
               )}
             >
               {getStageBadge(problemStages[p.id] || 'discovery')}
@@ -160,14 +160,14 @@ interface IssueRowProps {
 
 function IssueRow({ problem, isSelected, stage, onClick }: IssueRowProps) {
   const urgencyColors = {
-    now: 'bg-red-500/10 text-red-600 border-red-200',
-    '24h': 'bg-amber-500/10 text-amber-600 border-amber-200',
-    '7d': 'bg-blue-500/10 text-blue-600 border-blue-200',
+    now: 'bg-status-bad/10 text-status-bad border-status-bad/30',
+    '24h': 'bg-status-warning/10 text-status-warning border-status-warning/30',
+    '7d': 'bg-chart-2/10 text-chart-2 border-chart-2/30',
   };
 
   const confidenceColors = {
-    high: 'text-green-600',
-    med: 'text-amber-600',
+    high: 'text-status-good',
+    med: 'text-status-warning',
     low: 'text-muted-foreground',
   };
 

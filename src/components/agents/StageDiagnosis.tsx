@@ -78,13 +78,13 @@ export function StageDiagnosis({ problem, isCompleted, onSelectCause, onDigDeepe
 
   if (isCompleted) {
     return (
-      <Card className="border-green-500/30 bg-green-500/5">
+      <Card className="border-status-good/30 bg-status-good/5">
         <CardContent className="p-3">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
-              <Check className="h-3.5 w-3.5 text-green-600" />
+            <div className="w-6 h-6 rounded-full bg-status-good/20 flex items-center justify-center">
+              <Check className="h-3.5 w-3.5 text-status-good" />
             </div>
-            <span className="text-xs font-medium text-green-700 dark:text-green-400">
+            <span className="text-xs font-medium text-status-good dark:text-status-good">
               Root cause identified: Supplier delay (92% confidence)
             </span>
           </div>
@@ -124,8 +124,8 @@ export function StageDiagnosis({ problem, isCompleted, onSelectCause, onDigDeepe
                       variant="outline" 
                       className={cn(
                         "text-[10px]",
-                        cause.probability >= 80 ? "text-green-600 border-green-200 bg-green-50" :
-                        cause.probability >= 60 ? "text-amber-600 border-amber-200 bg-amber-50" :
+                        cause.probability >= 80 ? "text-status-good border-status-good/30 bg-status-good/10" :
+                        cause.probability >= 60 ? "text-status-warning border-status-warning/30 bg-status-warning/10" :
                         "text-muted-foreground"
                       )}
                     >
@@ -148,13 +148,13 @@ export function StageDiagnosis({ problem, isCompleted, onSelectCause, onDigDeepe
       </Card>
 
       {/* Human Gate */}
-      <Card className="border-amber-500/30 bg-amber-500/5">
+      <Card className="border-status-warning/30 bg-status-warning/5">
         <CardContent className="p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center">
-              <Lightbulb className="h-3 w-3 text-amber-600" />
+            <div className="w-5 h-5 rounded-full bg-status-warning/20 flex items-center justify-center">
+              <Lightbulb className="h-3 w-3 text-status-warning" />
             </div>
-            <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+            <span className="text-sm font-semibold text-status-warning dark:text-status-warning">
               Which cause should we address first?
             </span>
           </div>

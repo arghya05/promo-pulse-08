@@ -71,13 +71,13 @@ export function HumanGateCard({
   }
 
   return (
-    <Card className="border-amber-500/30 bg-amber-500/5">
+    <Card className="border-status-warning/30 bg-status-warning/5">
       <CardContent className="p-3 space-y-3">
         <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center">
-            <AlertTriangle className="h-3 w-3 text-amber-600" />
+          <div className="w-5 h-5 rounded-full bg-status-warning/20 flex items-center justify-center">
+            <AlertTriangle className="h-3 w-3 text-status-warning" />
           </div>
-          <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+          <span className="text-xs font-semibold text-status-warning dark:text-status-warning">
             {title}
           </span>
         </div>

@@ -102,9 +102,9 @@ export function OptionsTab({
   const options = generateOptions(problem);
 
   const getRiskLabel = (riskScore: number) => {
-    if (riskScore <= 0.25) return { label: 'Low', color: 'text-green-600 bg-green-50' };
-    if (riskScore <= 0.5) return { label: 'Med', color: 'text-amber-600 bg-amber-50' };
-    return { label: 'High', color: 'text-red-600 bg-red-50' };
+    if (riskScore <= 0.25) return { label: 'Low', color: 'text-status-good bg-status-good/10' };
+    if (riskScore <= 0.5) return { label: 'Med', color: 'text-status-warning bg-status-warning/10' };
+    return { label: 'High', color: 'text-status-bad bg-status-bad/10' };
   };
 
   const getEffortLabel = (hours: number) => {
@@ -191,7 +191,7 @@ export function OptionsTab({
                         <TableCell className="text-xs text-right">
                           {getEffortLabel(opt.effortHours)}
                         </TableCell>
-                        <TableCell className="text-xs text-right text-green-600">
+                        <TableCell className="text-xs text-right text-status-good">
                           +{(opt.expectedROI * 0.18).toFixed(1)}%
                         </TableCell>
                         <TableCell className="text-xs text-right">
@@ -238,7 +238,7 @@ export function OptionsTab({
                         </Badge>
                       )}
                       {opt.riskScore > 0.5 && (
-                        <Badge variant="outline" className="text-[9px] text-amber-600 border-amber-300">
+                        <Badge variant="outline" className="text-[9px] text-status-warning border-status-warning/30">
                           <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
                           Guardrails may block
                         </Badge>

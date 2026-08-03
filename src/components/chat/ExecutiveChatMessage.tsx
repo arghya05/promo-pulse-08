@@ -75,14 +75,14 @@ export const ExecutiveChatMessage: React.FC<ExecutiveChatMessageProps> = ({
       )}>
         {isUser ? (
           // User message bubble
-          <div className="bg-blue-500 text-white rounded-2xl px-3 py-2">
+          <div className="bg-chart-2 text-primary-foreground rounded-2xl px-3 py-2">
             <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
               {message.content}
             </p>
           </div>
         ) : message.isLoading ? (
           // Loading state
-          <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl px-3 py-2.5 flex items-center gap-2">
+          <div className="bg-muted dark:bg-secondary rounded-2xl px-3 py-2.5 flex items-center gap-2">
             <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
             <span className="text-xs text-muted-foreground">Analyzing...</span>
           </div>
@@ -95,7 +95,7 @@ export const ExecutiveChatMessage: React.FC<ExecutiveChatMessageProps> = ({
           </div>
         ) : message.clarificationOptions ? (
           // Clarification options
-          <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl px-3 py-2.5 space-y-2">
+          <div className="bg-muted dark:bg-secondary rounded-2xl px-3 py-2.5 space-y-2">
             <p className="text-xs font-medium">{message.content}</p>
             <div className="flex flex-wrap gap-1.5">
               {message.clarificationOptions.map((option, idx) => (
@@ -129,7 +129,7 @@ export const ExecutiveChatMessage: React.FC<ExecutiveChatMessageProps> = ({
           </div>
         ) : (
           // Fallback plain text
-          <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl px-3 py-2.5">
+          <div className="bg-muted dark:bg-secondary rounded-2xl px-3 py-2.5">
             <p className="text-xs leading-relaxed whitespace-pre-wrap break-words">
               {message.content}
             </p>

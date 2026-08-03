@@ -45,17 +45,17 @@ export const ExecutiveBriefCard: React.FC<ExecutiveBriefCardProps> = ({
   const confidence = brief?.confidence || { level: 'Medium', reason: '' };
   
   const confidenceColors = {
-    High: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-    Medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    Low: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+    High: 'bg-status-good/10 text-status-good dark:bg-status-good/20/30 dark:text-status-good',
+    Medium: 'bg-status-warning/10 text-status-warning dark:bg-status-warning/20/30 dark:text-status-warning',
+    Low: 'bg-status-bad/10 text-status-bad dark:bg-status-bad/20/30 dark:text-status-bad'
   };
 
   const trendIcon = keyMetric.trend === 'up' ? TrendingUp :
                     keyMetric.trend === 'down' ? TrendingDown : Minus;
   const TrendIcon = trendIcon;
   
-  const trendColor = keyMetric.trend === 'up' ? 'text-emerald-500' :
-                     keyMetric.trend === 'down' ? 'text-red-500' : 'text-muted-foreground';
+  const trendColor = keyMetric.trend === 'up' ? 'text-status-good' :
+                     keyMetric.trend === 'down' ? 'text-status-bad' : 'text-muted-foreground';
 
   // Copy executive brief to clipboard
   const handleCopy = () => {

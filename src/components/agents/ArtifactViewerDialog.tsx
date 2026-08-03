@@ -18,15 +18,15 @@ interface ArtifactViewerDialogProps {
 
 const typeConfig: Record<AgentArtifact['type'], { icon: typeof FileText; color: string; label: string }> = {
   ranking: { icon: Target, color: 'text-primary', label: 'Priority Ranking' },
-  evidence: { icon: FileText, color: 'text-blue-600', label: 'Evidence Pack' },
-  entity_map: { icon: Zap, color: 'text-cyan-600', label: 'Entity Resolution' },
-  anomalies: { icon: AlertTriangle, color: 'text-amber-600', label: 'Anomaly Report' },
-  guardrails: { icon: CheckCircle, color: 'text-green-600', label: 'Guardrails Check' },
-  hypotheses: { icon: TrendingUp, color: 'text-purple-600', label: 'Root Cause Hypotheses' },
+  evidence: { icon: FileText, color: 'text-chart-2', label: 'Evidence Pack' },
+  entity_map: { icon: Zap, color: 'text-chart-2', label: 'Entity Resolution' },
+  anomalies: { icon: AlertTriangle, color: 'text-status-warning', label: 'Anomaly Report' },
+  guardrails: { icon: CheckCircle, color: 'text-status-good', label: 'Guardrails Check' },
+  hypotheses: { icon: TrendingUp, color: 'text-chart-5', label: 'Root Cause Hypotheses' },
   plan: { icon: Target, color: 'text-primary', label: 'Cross-Module Plan' },
-  risk: { icon: AlertTriangle, color: 'text-orange-600', label: 'Risk Assessment' },
-  execution: { icon: Zap, color: 'text-blue-600', label: 'Execution Log' },
-  roi: { icon: BarChart3, color: 'text-green-600', label: 'ROI Report' },
+  risk: { icon: AlertTriangle, color: 'text-status-warning', label: 'Risk Assessment' },
+  execution: { icon: Zap, color: 'text-chart-2', label: 'Execution Log' },
+  roi: { icon: BarChart3, color: 'text-status-good', label: 'ROI Report' },
 };
 
 export function ArtifactViewerDialog({ artifact, open, onOpenChange }: ArtifactViewerDialogProps) {
@@ -147,9 +147,9 @@ function renderAnomaliesContent(data: any[]) {
   return (
     <div className="space-y-2">
       {data.map((anomaly, idx) => (
-        <div key={idx} className="p-3 border border-amber-200 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-800 rounded-lg">
+        <div key={idx} className="p-3 border border-status-warning/30 bg-status-warning/10/50 dark:bg-status-warning/20/10 dark:border-status-warning rounded-lg">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertTriangle className="h-4 w-4 text-status-warning" />
             <span className="text-sm font-medium">{anomaly.name}</span>
           </div>
           <p className="text-sm mt-1">{anomaly.value}</p>
@@ -164,9 +164,9 @@ function renderGuardrailsContent(data: any) {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-3">
-        <MetricCard label="Passed" value={data.passed} className="border-green-200 bg-green-50/50 dark:bg-green-900/10" />
-        <MetricCard label="Warnings" value={data.warnings} className="border-amber-200 bg-amber-50/50 dark:bg-amber-900/10" />
-        <MetricCard label="Failed" value={data.failed} className="border-red-200 bg-red-50/50 dark:bg-red-900/10" />
+        <MetricCard label="Passed" value={data.passed} className="border-status-good/30 bg-status-good/10/50 dark:bg-status-good/20/10" />
+        <MetricCard label="Warnings" value={data.warnings} className="border-status-warning/30 bg-status-warning/10/50 dark:bg-status-warning/20/10" />
+        <MetricCard label="Failed" value={data.failed} className="border-status-bad/30 bg-status-bad/10/50 dark:bg-status-bad/20/10" />
       </div>
     </div>
   );
@@ -232,7 +232,7 @@ function renderRiskContent(data: any) {
         <MetricCard 
           label="Safe to Auto-Execute" 
           value={data.safeToAutoExecute ? 'Yes' : 'No'} 
-          className={data.safeToAutoExecute ? 'border-green-200 bg-green-50/50 dark:bg-green-900/10' : 'border-amber-200 bg-amber-50/50 dark:bg-amber-900/10'}
+          className={data.safeToAutoExecute ? 'border-status-good/30 bg-status-good/10/50 dark:bg-status-good/20/10' : 'border-status-warning/30 bg-status-warning/10/50 dark:bg-status-warning/20/10'}
         />
       </div>
       {data.reasons?.length > 0 && (
@@ -241,7 +241,7 @@ function renderRiskContent(data: any) {
           <ul className="text-xs space-y-1">
             {data.reasons.map((reason: string, idx: number) => (
               <li key={idx} className="flex items-center gap-2">
-                <CheckCircle className="h-3 w-3 text-green-600" />
+                <CheckCircle className="h-3 w-3 text-status-good" />
                 {reason}
               </li>
             ))}
@@ -257,9 +257,9 @@ function renderExecutionContent(data: any) {
   return (
     <div className="grid grid-cols-2 gap-3">
       <MetricCard label="Executed" value={data.executed} />
-      <MetricCard label="Successful" value={data.successful} className="border-green-200 bg-green-50/50 dark:bg-green-900/10" />
-      <MetricCard label="Retried" value={data.retried} className="border-amber-200 bg-amber-50/50 dark:bg-amber-900/10" />
-      <MetricCard label="Failed" value={data.failed} className="border-red-200 bg-red-50/50 dark:bg-red-900/10" />
+      <MetricCard label="Successful" value={data.successful} className="border-status-good/30 bg-status-good/10/50 dark:bg-status-good/20/10" />
+      <MetricCard label="Retried" value={data.retried} className="border-status-warning/30 bg-status-warning/10/50 dark:bg-status-warning/20/10" />
+      <MetricCard label="Failed" value={data.failed} className="border-status-bad/30 bg-status-bad/10/50 dark:bg-status-bad/20/10" />
     </div>
   );
 }
@@ -270,7 +270,7 @@ function renderROIContent(data: any) {
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <MetricCard label="Expected" value={`₹${data.expected}L`} />
-        <MetricCard label="Realized" value={`₹${data.realized?.toFixed(1)}L`} className="border-green-200 bg-green-50/50 dark:bg-green-900/10" />
+        <MetricCard label="Realized" value={`₹${data.realized?.toFixed(1)}L`} className="border-status-good/30 bg-status-good/10/50 dark:bg-status-good/20/10" />
         <MetricCard label="Confidence" value={`${data.confidence}%`} />
         <MetricCard label="Method" value={data.method} />
       </div>

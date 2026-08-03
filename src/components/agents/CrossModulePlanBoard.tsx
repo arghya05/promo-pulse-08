@@ -35,14 +35,14 @@ interface CrossModulePlanBoardProps {
 }
 
 const moduleConfig: Record<ModuleType, { icon: typeof Package; label: string; color: string; bg: string }> = {
-  inventory: { icon: Package, label: 'Inventory/Replenishment', color: 'text-blue-600', bg: 'bg-blue-500/10 border-blue-500/20' },
-  allocation: { icon: Shuffle, label: 'Allocation/Transfers', color: 'text-cyan-600', bg: 'bg-cyan-500/10 border-cyan-500/20' },
-  promo: { icon: Megaphone, label: 'Promo', color: 'text-orange-600', bg: 'bg-orange-500/10 border-orange-500/20' },
-  pricing: { icon: DollarSign, label: 'Pricing', color: 'text-green-600', bg: 'bg-green-500/10 border-green-500/20' },
-  assortment: { icon: Grid3X3, label: 'Assortment/Substitution', color: 'text-purple-600', bg: 'bg-purple-500/10 border-purple-500/20' },
-  space: { icon: LayoutGrid, label: 'Space/Planogram', color: 'text-pink-600', bg: 'bg-pink-500/10 border-pink-500/20' },
-  demand: { icon: Package, label: 'Demand', color: 'text-indigo-600', bg: 'bg-indigo-500/10 border-indigo-500/20' },
-  supply: { icon: Package, label: 'Supply Chain', color: 'text-teal-600', bg: 'bg-teal-500/10 border-teal-500/20' },
+  inventory: { icon: Package, label: 'Inventory/Replenishment', color: 'text-chart-2', bg: 'bg-chart-2/10 border-chart-2/20' },
+  allocation: { icon: Shuffle, label: 'Allocation/Transfers', color: 'text-chart-2', bg: 'bg-chart-2/10 border-chart-2/20' },
+  promo: { icon: Megaphone, label: 'Promo', color: 'text-status-warning', bg: 'bg-status-warning/10 border-status-warning/20' },
+  pricing: { icon: DollarSign, label: 'Pricing', color: 'text-status-good', bg: 'bg-status-good/10 border-status-good/20' },
+  assortment: { icon: Grid3X3, label: 'Assortment/Substitution', color: 'text-chart-5', bg: 'bg-chart-5/10 border-chart-5/20' },
+  space: { icon: LayoutGrid, label: 'Space/Planogram', color: 'text-chart-5', bg: 'bg-chart-5/10 border-chart-5/20' },
+  demand: { icon: Package, label: 'Demand', color: 'text-chart-1', bg: 'bg-chart-1/10 border-chart-1/20' },
+  supply: { icon: Package, label: 'Supply Chain', color: 'text-status-good', bg: 'bg-status-good/10 border-status-good/20' },
 };
 
 export function CrossModulePlanBoard({
@@ -98,9 +98,9 @@ export function CrossModulePlanBoard({
             variant="outline" 
             className={cn(
               "text-xs",
-              plan.riskScore <= 0.25 ? "bg-green-500/10 text-green-600 border-green-500/30" :
-              plan.riskScore <= 0.5 ? "bg-amber-500/10 text-amber-600 border-amber-500/30" :
-              "bg-red-500/10 text-red-600 border-red-500/30"
+              plan.riskScore <= 0.25 ? "bg-status-good/10 text-status-good border-status-good/30" :
+              plan.riskScore <= 0.5 ? "bg-status-warning/10 text-status-warning border-status-warning/30" :
+              "bg-status-bad/10 text-status-bad border-status-bad/30"
             )}
           >
             Risk: {(plan.riskScore * 100).toFixed(0)}%
@@ -210,9 +210,9 @@ function ActionCard({
               variant="outline" 
               className={cn(
                 "text-[9px]",
-                action.risk === 'low' ? "bg-green-500/10 text-green-600" :
-                action.risk === 'medium' ? "bg-amber-500/10 text-amber-600" :
-                "bg-red-500/10 text-red-600"
+                action.risk === 'low' ? "bg-status-good/10 text-status-good" :
+                action.risk === 'medium' ? "bg-status-warning/10 text-status-warning" :
+                "bg-status-bad/10 text-status-bad"
               )}
             >
               {action.risk} risk
@@ -221,7 +221,7 @@ function ActionCard({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <Badge variant="outline" className="text-[9px] bg-amber-500/10 text-amber-600">
+                    <Badge variant="outline" className="text-[9px] bg-status-warning/10 text-status-warning">
                       <Shield className="h-2 w-2 mr-0.5" />
                       Approval
                     </Badge>
@@ -322,9 +322,9 @@ export function PlanSelector({ plans, selectedPlanId, onSelectPlan }: PlanSelect
               variant="outline" 
               className={cn(
                 "text-[9px]",
-                plan.riskScore <= 0.25 ? "text-green-600" :
-                plan.riskScore <= 0.5 ? "text-amber-600" :
-                "text-red-600"
+                plan.riskScore <= 0.25 ? "text-status-good" :
+                plan.riskScore <= 0.5 ? "text-status-warning" :
+                "text-status-bad"
               )}
             >
               {(plan.riskScore * 100).toFixed(0)}% risk

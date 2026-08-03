@@ -156,24 +156,24 @@ export default function ModuleDataManagement({ moduleId }: ModuleDataManagementP
     const stats: { label: string; count: number; color: string }[] = [];
     
     if (relevantTables.includes('stores')) stats.push({ label: 'Stores', count: stores.length, color: 'text-primary' });
-    if (relevantTables.includes('products')) stats.push({ label: 'Products', count: products.length, color: 'text-emerald-500' });
+    if (relevantTables.includes('products')) stats.push({ label: 'Products', count: products.length, color: 'text-status-good' });
     if (relevantTables.includes('transactions')) stats.push({ label: 'Transactions', count: transactions.length, color: 'text-chart-3' });
     if (relevantTables.includes('promotions')) stats.push({ label: 'Promotions', count: promotions.length, color: 'text-chart-2' });
     if (relevantTables.includes('customers')) stats.push({ label: 'Customers', count: customers.length, color: 'text-chart-4' });
-    if (relevantTables.includes('inventory_levels')) stats.push({ label: 'Inventory', count: inventoryLevels.length, color: 'text-cyan-500' });
-    if (relevantTables.includes('price_change_history')) stats.push({ label: 'Price Changes', count: priceChangeHistory.length, color: 'text-orange-500' });
-    if (relevantTables.includes('competitor_prices')) stats.push({ label: 'Competitor Prices', count: competitorPrices.length, color: 'text-red-500' });
-    if (relevantTables.includes('demand_forecasts')) stats.push({ label: 'Forecasts', count: demandForecasts.length, color: 'text-blue-500' });
-    if (relevantTables.includes('forecast_accuracy_tracking')) stats.push({ label: 'Accuracy Tracking', count: forecastAccuracy.length, color: 'text-purple-500' });
-    if (relevantTables.includes('suppliers')) stats.push({ label: 'Suppliers', count: suppliers.length, color: 'text-amber-500' });
-    if (relevantTables.includes('supplier_orders')) stats.push({ label: 'Orders', count: supplierOrders.length, color: 'text-lime-500' });
-    if (relevantTables.includes('shipping_routes')) stats.push({ label: 'Routes', count: shippingRoutes.length, color: 'text-teal-500' });
-    if (relevantTables.includes('planograms')) stats.push({ label: 'Planograms', count: planograms.length, color: 'text-indigo-500' });
-    if (relevantTables.includes('shelf_allocations')) stats.push({ label: 'Shelf Allocations', count: shelfAllocations.length, color: 'text-pink-500' });
-    if (relevantTables.includes('fixtures')) stats.push({ label: 'Fixtures', count: fixtures.length, color: 'text-rose-500' });
-    if (relevantTables.includes('marketing_channels')) stats.push({ label: 'Marketing', count: marketingChannels.length, color: 'text-blue-500' });
-    if (relevantTables.includes('customer_journey')) stats.push({ label: 'Journey', count: customerJourney.length, color: 'text-pink-500' });
-    if (relevantTables.includes('store_performance')) stats.push({ label: 'Performance', count: storePerformance.length, color: 'text-purple-500' });
+    if (relevantTables.includes('inventory_levels')) stats.push({ label: 'Inventory', count: inventoryLevels.length, color: 'text-chart-2' });
+    if (relevantTables.includes('price_change_history')) stats.push({ label: 'Price Changes', count: priceChangeHistory.length, color: 'text-status-warning' });
+    if (relevantTables.includes('competitor_prices')) stats.push({ label: 'Competitor Prices', count: competitorPrices.length, color: 'text-status-bad' });
+    if (relevantTables.includes('demand_forecasts')) stats.push({ label: 'Forecasts', count: demandForecasts.length, color: 'text-chart-2' });
+    if (relevantTables.includes('forecast_accuracy_tracking')) stats.push({ label: 'Accuracy Tracking', count: forecastAccuracy.length, color: 'text-chart-5' });
+    if (relevantTables.includes('suppliers')) stats.push({ label: 'Suppliers', count: suppliers.length, color: 'text-status-warning' });
+    if (relevantTables.includes('supplier_orders')) stats.push({ label: 'Orders', count: supplierOrders.length, color: 'text-status-good' });
+    if (relevantTables.includes('shipping_routes')) stats.push({ label: 'Routes', count: shippingRoutes.length, color: 'text-status-good' });
+    if (relevantTables.includes('planograms')) stats.push({ label: 'Planograms', count: planograms.length, color: 'text-chart-1' });
+    if (relevantTables.includes('shelf_allocations')) stats.push({ label: 'Shelf Allocations', count: shelfAllocations.length, color: 'text-chart-5' });
+    if (relevantTables.includes('fixtures')) stats.push({ label: 'Fixtures', count: fixtures.length, color: 'text-status-bad' });
+    if (relevantTables.includes('marketing_channels')) stats.push({ label: 'Marketing', count: marketingChannels.length, color: 'text-chart-2' });
+    if (relevantTables.includes('customer_journey')) stats.push({ label: 'Journey', count: customerJourney.length, color: 'text-chart-5' });
+    if (relevantTables.includes('store_performance')) stats.push({ label: 'Performance', count: storePerformance.length, color: 'text-chart-5' });
 
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">

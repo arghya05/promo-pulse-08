@@ -61,20 +61,20 @@ const MustPassSuggestions = ({
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
       case 'critical':
-        return <AlertTriangle className="h-3.5 w-3.5 text-red-500" />;
+        return <AlertTriangle className="h-3.5 w-3.5 text-status-bad" />;
       case 'high':
-        return <Target className="h-3.5 w-3.5 text-yellow-500" />;
+        return <Target className="h-3.5 w-3.5 text-status-warning" />;
       default:
-        return <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />;
+        return <CheckCircle2 className="h-3.5 w-3.5 text-status-good" />;
     }
   };
 
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case 'critical':
-        return <Badge variant="outline" className="text-xs bg-red-500/10 text-red-500 border-red-500/20">Critical</Badge>;
+        return <Badge variant="outline" className="text-xs bg-status-bad/10 text-status-bad border-status-bad/20">Critical</Badge>;
       case 'high':
-        return <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-500 border-yellow-500/20">High</Badge>;
+        return <Badge variant="outline" className="text-xs bg-status-warning/10 text-status-warning border-status-warning/20">High</Badge>;
       default:
         return <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">Medium</Badge>;
     }

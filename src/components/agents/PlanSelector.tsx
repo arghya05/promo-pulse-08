@@ -56,9 +56,9 @@ export function PlanSelector({
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
 
   const getRiskLabel = (riskScore: number) => {
-    if (riskScore <= 0.25) return { label: 'Low Risk', color: 'text-green-600 bg-green-50 border-green-200' };
-    if (riskScore <= 0.5) return { label: 'Medium Risk', color: 'text-amber-600 bg-amber-50 border-amber-200' };
-    return { label: 'High Risk', color: 'text-red-600 bg-red-50 border-red-200' };
+    if (riskScore <= 0.25) return { label: 'Low Risk', color: 'text-status-good bg-status-good/10 border-status-good/30' };
+    if (riskScore <= 0.5) return { label: 'Medium Risk', color: 'text-status-warning bg-status-warning/10 border-status-warning/30' };
+    return { label: 'High Risk', color: 'text-status-bad bg-status-bad/10 border-status-bad/30' };
   };
 
   const getPlanTypeLabel = (plan: CrossModulePlan, index: number) => {
@@ -165,12 +165,12 @@ export function PlanSelector({
                         <p className="text-[10px] text-muted-foreground">
                           <span className="font-medium">vs Best Plan: </span>
                           {plan.expectedROI < bestPlan.expectedROI && (
-                            <span className="text-amber-600">
+                            <span className="text-status-warning">
                               -₹{(bestPlan.expectedROI - plan.expectedROI).toFixed(1)}L ROI
                             </span>
                           )}
                           {plan.riskScore !== bestPlan.riskScore && (
-                            <span className={plan.riskScore < bestPlan.riskScore ? "text-green-600 ml-2" : "text-red-600 ml-2"}>
+                            <span className={plan.riskScore < bestPlan.riskScore ? "text-status-good ml-2" : "text-status-bad ml-2"}>
                               {plan.riskScore < bestPlan.riskScore ? 'Lower' : 'Higher'} risk
                             </span>
                           )}
@@ -236,7 +236,7 @@ export function PlanSelector({
                       </td>
                       <td className="text-right py-1.5 font-medium">₹{plan.expectedROI}L</td>
                       <td className="text-right py-1.5">
-                        <span className={plan.riskScore <= 0.25 ? "text-green-600" : plan.riskScore <= 0.5 ? "text-amber-600" : "text-red-600"}>
+                        <span className={plan.riskScore <= 0.25 ? "text-status-good" : plan.riskScore <= 0.5 ? "text-status-warning" : "text-status-bad"}>
                           {(plan.riskScore * 100).toFixed(0)}%
                         </span>
                       </td>

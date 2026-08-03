@@ -1,8 +1,7 @@
 import { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Brain, Home } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Module } from '@/lib/data/modules';
+import { companyProfile } from '@/lib/data/company-profile';
 
 interface ModuleLayoutProps {
   module: Module;
@@ -10,48 +9,32 @@ interface ModuleLayoutProps {
 }
 
 const ModuleLayout = ({ module, children }: ModuleLayoutProps) => {
-  const navigate = useNavigate();
   const Icon = module.icon;
 
   return (
-    <div className="min-h-screen bg-background w-full max-w-full overflow-x-hidden">
-      {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50 w-full max-w-full overflow-x-hidden">
-        <div className="w-full max-w-screen-2xl mx-auto px-4 md:px-6 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => navigate('/home')}
-                className="gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <Home className="h-4 w-4" />
-              </Button>
-              <div className="h-6 w-px bg-border" />
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg bg-gradient-to-br ${module.gradient}`}>
-                  <Icon className={`h-5 w-5 ${module.color}`} />
-                </div>
-                <div>
-                  <h1 className="text-lg font-semibold">{module.name}</h1>
-                  <p className="text-xs text-muted-foreground">{module.description}</p>
-                </div>
-              </div>
+    <div className="w-full max-w-full overflow-x-hidden">
+      {/* Module header */}
+      <div className="relative border-b border-border/70 bg-gradient-surface">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-glow opacity-70" />
+        <div className="relative mx-auto flex w-full max-w-screen-2xl flex-wrap items-center justify-between gap-4 px-4 py-5 md:px-8">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className={`rounded-lg border border-border/60 bg-background/60 p-2.5 ${module.color}`}>
+              <Icon className="h-5 w-5" />
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Brain className="h-4 w-4" />
-              <span>Merchandising AI</span>
+            <div className="min-w-0">
+              <h1 className="truncate text-xl font-semibold">{module.name}</h1>
+              <p className="truncate text-xs text-muted-foreground">{module.focus}</p>
             </div>
           </div>
+          <Badge variant="outline" className="gap-1.5 border-border/70 text-[11px] font-normal text-muted-foreground">
+            <span className="h-1.5 w-1.5 rounded-full bg-status-good animate-pulse-dot" />
+            {companyProfile.fiscalYear} · {companyProfile.fiscalPeriod}
+          </Badge>
         </div>
-      </header>
+      </div>
 
       {/* Content */}
-      <main className="w-full max-w-full min-w-0 overflow-x-hidden">
-        {children}
-      </main>
+      <main className="min-w-0 max-w-full overflow-x-hidden">{children}</main>
     </div>
   );
 };

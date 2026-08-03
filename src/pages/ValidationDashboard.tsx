@@ -284,9 +284,9 @@ export default function ValidationDashboard() {
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-8 w-8 text-green-500" />
+                  <CheckCircle className="h-8 w-8 text-status-good" />
                   <div>
-                    <p className="text-2xl font-bold text-green-600">{passedTests.length}</p>
+                    <p className="text-2xl font-bold text-status-good">{passedTests.length}</p>
                     <p className="text-sm text-muted-foreground">Passed</p>
                   </div>
                 </div>
@@ -295,9 +295,9 @@ export default function ValidationDashboard() {
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-3">
-                  <XCircle className="h-8 w-8 text-red-500" />
+                  <XCircle className="h-8 w-8 text-status-bad" />
                   <div>
-                    <p className="text-2xl font-bold text-red-600">{failedTests.length}</p>
+                    <p className="text-2xl font-bold text-status-bad">{failedTests.length}</p>
                     <p className="text-sm text-muted-foreground">Failed</p>
                   </div>
                 </div>
@@ -307,18 +307,18 @@ export default function ValidationDashboard() {
               <CardContent className="pt-4">
                 <div className="flex items-center gap-3">
                   <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                    parseFloat(passRate) >= 90 ? 'bg-green-100' :
-                    parseFloat(passRate) >= 70 ? 'bg-yellow-100' : 'bg-red-100'
+                    parseFloat(passRate) >= 90 ? 'bg-status-good/10' :
+                    parseFloat(passRate) >= 70 ? 'bg-status-warning/10' : 'bg-status-bad/10'
                   }`}>
                     <span className={`text-sm font-bold ${
-                      parseFloat(passRate) >= 90 ? 'text-green-700' :
-                      parseFloat(passRate) >= 70 ? 'text-yellow-700' : 'text-red-700'
+                      parseFloat(passRate) >= 90 ? 'text-status-good' :
+                      parseFloat(passRate) >= 70 ? 'text-status-warning' : 'text-status-bad'
                     }`}>%</span>
                   </div>
                   <div>
                     <p className={`text-2xl font-bold ${
-                      parseFloat(passRate) >= 90 ? 'text-green-600' :
-                      parseFloat(passRate) >= 70 ? 'text-yellow-600' : 'text-red-600'
+                      parseFloat(passRate) >= 90 ? 'text-status-good' :
+                      parseFloat(passRate) >= 70 ? 'text-status-warning' : 'text-status-bad'
                     }`}>{passRate}%</p>
                     <p className="text-sm text-muted-foreground">Pass Rate</p>
                   </div>
@@ -339,11 +339,11 @@ export default function ValidationDashboard() {
                 <TabsList>
                   <TabsTrigger value="all">All ({results.length})</TabsTrigger>
                   <TabsTrigger value="failed" className="gap-2">
-                    <XCircle className="h-4 w-4 text-red-500" />
+                    <XCircle className="h-4 w-4 text-status-bad" />
                     Failed ({failedTests.length})
                   </TabsTrigger>
                   <TabsTrigger value="passed" className="gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircle className="h-4 w-4 text-status-good" />
                     Passed ({passedTests.length})
                   </TabsTrigger>
                 </TabsList>
@@ -368,7 +368,7 @@ export default function ValidationDashboard() {
                     <div className="space-y-3 pr-4">
                       {failedTests.length === 0 ? (
                         <div className="text-center py-8 text-muted-foreground">
-                          <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-3" />
+                          <CheckCircle className="h-12 w-12 mx-auto text-status-good mb-3" />
                           <p>All tests passed! 🎉</p>
                         </div>
                       ) : (
@@ -431,13 +431,13 @@ function TestResultCard({
 }) {
   return (
     <Collapsible open={expanded} onOpenChange={onToggle}>
-      <div className={`border rounded-lg p-4 ${test.passed ? 'border-green-200 bg-green-50/50' : 'border-red-200 bg-red-50/50'}`}>
+      <div className={`border rounded-lg p-4 ${test.passed ? 'border-status-good/30 bg-status-good/10/50' : 'border-status-bad/30 bg-status-bad/10/50'}`}>
         <CollapsibleTrigger className="w-full">
           <div className="flex items-start gap-3">
             {test.passed ? (
-              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+              <CheckCircle className="h-5 w-5 text-status-good mt-0.5 flex-shrink-0" />
             ) : (
-              <XCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+              <XCircle className="h-5 w-5 text-status-bad mt-0.5 flex-shrink-0" />
             )}
             <div className="flex-1 text-left">
               <div className="flex items-center gap-2">
@@ -460,10 +460,10 @@ function TestResultCard({
           <div className="mt-4 pt-4 border-t space-y-3">
             {!test.passed && test.failures.length > 0 && (
               <div>
-                <p className="text-sm font-medium text-red-600 mb-2">Failures:</p>
+                <p className="text-sm font-medium text-status-bad mb-2">Failures:</p>
                 <ul className="list-disc list-inside space-y-1">
                   {test.failures.map((f, i) => (
-                    <li key={i} className="text-sm text-red-700">{f}</li>
+                    <li key={i} className="text-sm text-status-bad">{f}</li>
                   ))}
                 </ul>
               </div>
