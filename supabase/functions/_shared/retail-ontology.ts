@@ -111,7 +111,7 @@ export const datasets: Record<string, Dataset> = {
       'measure_date,category,store_id,net_sales,net_sales_ly,gross_margin,margin_ly,units_sold,units_sold_ly,transactions_count,avg_transaction_value,avg_basket_size,discount_rate_pct,return_rate_pct,inventory_turn,sell_through_rate,stock_to_sales_ratio',
     dateField: 'measure_date',
     enrich: ['store'],
-    maxRows: 60000,
+    maxRows: 30000,
     metrics: {
       net_sales: m({ label: 'Net sales', format: 'currency', agg: 'sum', field: 'net_sales', definition: 'Sum of net sales after discounts' }),
       net_sales_ly: m({ label: 'Net sales LY', format: 'currency', agg: 'sum', field: 'net_sales_ly', definition: 'Net sales same period last year' }),
@@ -156,7 +156,7 @@ export const datasets: Record<string, Dataset> = {
       'transaction_date,store_id,product_sku,product_name,promotion_id,quantity,unit_price,discount_amount,total_amount,net_sales,cost_of_goods_sold,margin',
     dateField: 'transaction_date',
     enrich: ['product', 'store', 'promotion'],
-    maxRows: 45000,
+    maxRows: 24000,
     metrics: {
       net_sales: m({ label: 'Net sales', format: 'currency', agg: 'sum', field: 'net_sales', definition: 'Sum of line net sales' }),
       units: m({ label: 'Units', format: 'number', agg: 'sum', field: 'quantity', definition: 'Units sold' }),

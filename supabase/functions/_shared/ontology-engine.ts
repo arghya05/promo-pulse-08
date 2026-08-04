@@ -309,6 +309,16 @@ export async function executeQuery(
   const notes: string[] = [];
 
   const pushdown = Object.entries(spec.filters ?? {}).filter(([k]) => ds.filters[k].column);
+
+  // Guardrail: never full-scan a transaction-grain table. When the planner omits a
+  // window, default to the trailing 120 days so scans stay inside the CPU budget.
+  if (ds.dateField && !spec.dateFrom && ds.grain.includes('line')) {
+    const from = new Date();
+    from.setUTCDate(from.getUTCDate() - 120);
+    spec.dateFrom = from.toISOString().slice(0, 10);
+    notes.push(`Defaulted to the trailing 120 days (from ${spec.dateFrom}) because no period was specified.`);
+  }
+
   const rawRows = await fetchAll(supabase, ds.table, ds.select, ds.maxRows, (q: any) => {
     let query = q;
     if (ds.dateField && spec.dateFrom) query = query.gte(ds.dateField, spec.dateFrom);
