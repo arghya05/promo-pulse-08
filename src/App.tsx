@@ -9,6 +9,7 @@ import Home from "./pages/Home";
 import Index from "./pages/Index";
 import AskMaya from "./pages/AskMaya";
 import OntologyGraph from "./pages/OntologyGraph";
+import DataQuality from "./pages/DataQuality";
 import NotFound from "./pages/NotFound";
 import ValidationDashboard from "./pages/ValidationDashboard";
 
@@ -28,6 +29,7 @@ const App = () => (
               <Route path="/home" element={<Navigate to="/" replace />} />
               <Route path="/ask" element={<AskMaya />} />
               <Route path="/graph" element={<OntologyGraph />} />
+              <Route path="/data-quality" element={<DataQuality />} />
               <Route path="/executive" element={<Index moduleId="executive" />} />
               <Route path="/promotion" element={<Index moduleId="promotion" />} />
               <Route path="/pricing" element={<Index moduleId="pricing" />} />

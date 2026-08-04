@@ -72,6 +72,14 @@ export function AppSidebar() {
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/data-quality')} tooltip="Data quality dashboard & report">
+                  <NavLink to="/data-quality" className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4" />
+                    {!collapsed && <span>Data Quality</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
