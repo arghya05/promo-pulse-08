@@ -92,8 +92,6 @@ export function LineageTrail({
               <div className="mt-2">
                 <LineageDetailDialog entry={e} />
               </div>
-
-              </div>
             </li>
           ))}
         </ul>
