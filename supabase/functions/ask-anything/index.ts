@@ -33,6 +33,7 @@ async function callModel(apiKey: string, messages: unknown[], maxTokens = 1600) 
       model: MODEL,
       messages,
       response_format: { type: 'json_object' },
+      reasoning: { effort: 'low' },
       max_tokens: maxTokens,
     }),
   });
@@ -50,7 +51,16 @@ async function callModel(apiKey: string, messages: unknown[], maxTokens = 1600) 
     return JSON.parse(content);
   } catch {
     const match = String(content).match(/\{[\s\S]*\}/);
-    return match ? JSON.parse(match[0]) : {};
+    if (match) {
+      try {
+        return JSON.parse(match[0]);
+      } catch {
+        console.error('unparseable model json', String(content).slice(0, 800));
+        return {};
+      }
+    }
+    console.error('no json in model output', String(content).slice(0, 400));
+    return {};
   }
 }
 
@@ -241,7 +251,7 @@ Deno.serve(async (req) => {
     const plan = await callModel(apiKey, [
       { role: 'system', content: plannerPrompt() },
       { role: 'user', content: `Persona: ${persona}\nQuestion: ${question}` },
-    ], 4000);
+    ], 8000);
 
     const win = defaultWindow();
     const rawQueries: QuerySpec[] = Array.isArray(plan?.queries) ? plan.queries.slice(0, 3) : [];
@@ -306,7 +316,7 @@ Planner interpretation: ${plan?.interpretation ?? ''}
 FACTS (the only truth you may use):
 ${JSON.stringify(facts)}`,
       },
-    ], 5000);
+    ], 8000);
 
     // ---------- 4. GUARD ----------
     const index = buildFactIndex(factSets);
