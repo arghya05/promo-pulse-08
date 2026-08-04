@@ -41,7 +41,11 @@ async function callModel(apiKey: string, messages: unknown[], maxTokens = 1600) 
     throw new Error(`AI gateway ${res.status}: ${body.slice(0, 400)}`);
   }
   const json = await res.json();
-  const content = json?.choices?.[0]?.message?.content ?? '{}';
+  const content = json?.choices?.[0]?.message?.content ?? '';
+  if (!content || String(content).trim() === '') {
+    console.error('empty model content', JSON.stringify(json?.choices?.[0] ?? {}).slice(0, 600));
+    return {};
+  }
   try {
     return JSON.parse(content);
   } catch {
@@ -237,7 +241,7 @@ Deno.serve(async (req) => {
     const plan = await callModel(apiKey, [
       { role: 'system', content: plannerPrompt() },
       { role: 'user', content: `Persona: ${persona}\nQuestion: ${question}` },
-    ], 900);
+    ], 4000);
 
     const win = defaultWindow();
     const rawQueries: QuerySpec[] = Array.isArray(plan?.queries) ? plan.queries.slice(0, 3) : [];
@@ -302,7 +306,7 @@ Planner interpretation: ${plan?.interpretation ?? ''}
 FACTS (the only truth you may use):
 ${JSON.stringify(facts)}`,
       },
-    ], 1800);
+    ], 5000);
 
     // ---------- 4. GUARD ----------
     const index = buildFactIndex(factSets);
