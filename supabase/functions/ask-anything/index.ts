@@ -201,7 +201,13 @@ function ground(raw: unknown, index: Map<string, string>): GroundedText | null {
     return { text: substituted, refs: used, ok: false, violation: 'wrote a number that is not a database fact' };
   }
 
-  return { text: substituted, refs: used, ok: true };
+  // collapse the "… at 21.6% - 21.6%" pattern the brevity format can produce
+  const tidy = substituted
+    .replace(/\b([^\s]+)\s+[-–]\s+\1\b/g, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  return { text: tidy, refs: Array.from(new Set(used)), ok: true };
 }
 
 function groundList(items: unknown, index: Map<string, string>) {
