@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
+import { IngestionView } from '@/components/graph/IngestionView';
 import { ArrowRight, Database, Loader2, Network, Table2 } from 'lucide-react';
 
 type Catalog = {
@@ -45,6 +46,7 @@ export default function OntologyGraph() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [view, setView] = useState<'graph' | 'ingestion'>('graph');
 
   useEffect(() => {
     let active = true;
@@ -100,6 +102,25 @@ export default function OntologyGraph() {
           </span>
         </Card>
 
+        <div className="inline-flex rounded-lg border border-border/70 bg-card p-1 text-xs">
+          {([
+            { id: 'graph', label: 'Entity map & datasets' },
+            { id: 'ingestion', label: 'Data ingestion & quality' },
+          ] as const).map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setView(t.id)}
+              className={`rounded-md px-3 py-1.5 font-medium transition ${
+                view === t.id ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+
         {error && (
           <Card className="p-4 text-sm text-status-critical">Could not load the ontology: {error}</Card>
         )}
@@ -111,7 +132,7 @@ export default function OntologyGraph() {
           </div>
         )}
 
-        {catalog && (
+        {catalog && view === 'graph' && (
           <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
             <Card className="space-y-3 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -245,7 +266,7 @@ export default function OntologyGraph() {
           </div>
         )}
 
-        {catalog && (
+        {catalog && view === 'graph' && (
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-semibold">
               <Database className="h-4 w-4 text-primary" />
@@ -328,6 +349,8 @@ export default function OntologyGraph() {
             </div>
           </div>
         )}
+
+        {catalog && view === 'ingestion' && <IngestionView datasets={catalog.datasets} />}
 
         {!catalog && !error && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
