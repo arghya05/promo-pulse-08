@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/accordion';
 import { LAYER_STYLES, lineageForTable } from '@/lib/lineage-layers';
 import { FEEDS, INGESTION_STAGES, MESSY_DATA_PLAYBOOK } from '@/lib/ingestion-quality';
+import { QualityScorecard } from '@/components/graph/QualityScorecard';
 import { AlertTriangle, ArrowDown, CheckCircle2, Layers, Radio, ShieldCheck } from 'lucide-react';
 
 type Props = {
@@ -60,6 +61,8 @@ export function IngestionView({ datasets }: Props) {
           answer is never built on half-loaded data.
         </span>
       </Card>
+
+      <QualityScorecard />
 
       {/* Feeds landing into the lakehouse */}
       <Card className="p-4">
