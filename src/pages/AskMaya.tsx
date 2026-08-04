@@ -42,7 +42,8 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { companyProfile } from '@/lib/data/company-profile';
+import { companyProfile, netSalesTrend } from '@/lib/data/company-profile';
+import { Sparkline } from '@/components/shell/Sparkline';
 import { toast } from 'sonner';
 
 
