@@ -144,32 +144,33 @@ const Home = () => {
 
           {/* Modules */}
           <TabsContent value="modules">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {modules.map((module) => {
+            <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {modules.map((module, i) => {
                 const Icon = module.icon;
                 return (
                   <Card
                     key={module.id}
-                    className={`group relative cursor-pointer overflow-hidden border-border/70 bg-card/70 transition-all duration-300 hover:border-primary/40 hover:shadow-glow`}
+                    className="group relative flex h-full animate-fade-up cursor-pointer flex-col overflow-hidden border-border/70 bg-card/70 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-glow"
+                    style={{ animationDelay: `${i * 60}ms` }}
                     onClick={() => navigate(module.path)}
                   >
                     <div
                       className={`pointer-events-none absolute inset-0 bg-gradient-to-br opacity-60 transition-opacity duration-300 group-hover:opacity-100 ${module.gradient}`}
                     />
-                    <CardHeader className="relative">
+                    <CardHeader className="relative pb-3">
                       <div className="flex items-start justify-between">
-                        <div className={`rounded-lg border border-border/60 bg-background/60 p-2.5 ${module.color}`}>
+                        <div className={`rounded-lg border border-border/60 bg-background/60 p-2.5 transition-transform duration-300 group-hover:scale-110 ${module.color}`}>
                           <Icon className="h-5 w-5" />
                         </div>
                         <ArrowRight className="h-4 w-4 -translate-x-1 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
                       </div>
                       <CardTitle className="mt-4 text-lg">{module.name}</CardTitle>
-                      <CardDescription className="text-sm leading-relaxed">
+                      <CardDescription className="min-h-[2.6rem] text-sm leading-relaxed">
                         {module.description}
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="relative">
-                      <div className="mb-4 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+                    <CardContent className="relative mt-auto flex flex-col">
+                      <div className="mb-4 min-h-[2.4rem] border-t border-border/60 pt-3 text-xs leading-snug text-muted-foreground">
                         {module.focus}
                       </div>
                       <Button
@@ -183,6 +184,7 @@ const Home = () => {
                   </Card>
                 );
               })}
+
             </div>
           </TabsContent>
 
