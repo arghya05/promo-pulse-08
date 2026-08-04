@@ -653,6 +653,8 @@ export default function AskMaya() {
   const requestId = useRef(0);
 
   useEffect(() => {
+    const prefill = new URLSearchParams(window.location.search).get('q');
+    if (prefill) setQuestion(prefill);
     inputRef.current?.focus();
   }, []);
 
