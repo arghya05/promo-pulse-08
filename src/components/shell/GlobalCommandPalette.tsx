@@ -10,11 +10,13 @@ import {
   CommandSeparator,
 } from '@/components/ui/command';
 import { modules } from '@/lib/data/modules';
-import { LayoutDashboard, MessagesSquare, ShieldCheck } from 'lucide-react';
+import { Compass, Database, LayoutDashboard, MessagesSquare, ShieldCheck } from 'lucide-react';
 
 const overview = [
   { label: 'Command Center', path: '/', icon: LayoutDashboard },
   { label: 'Ask Maya', path: '/ask', icon: MessagesSquare },
+  { label: 'Data Discovery', path: '/discover', icon: Compass },
+  { label: 'Data Quality', path: '/data-quality', icon: Database },
   { label: 'Answer Validation', path: '/validation', icon: ShieldCheck },
 ];
 
