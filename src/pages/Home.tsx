@@ -64,13 +64,26 @@ const Home = () => {
                 vendor and competitor data — no estimates, no invented numbers.
               </p>
             </div>
-            <div className="flex flex-col items-start gap-1 text-xs text-muted-foreground md:items-end md:text-right">
-              <span className="metric-value text-foreground">
-                {companyProfile.dataFreshness.latencyMinutes} min data latency
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:justify-end">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/70 px-2.5 py-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-status-good" />
+                <span className="metric-value text-foreground">
+                  {companyProfile.dataFreshness.latencyMinutes}m
+                </span>
+                data latency
               </span>
-              <span>{companyProfile.dataFreshness.sources.length} connected sources</span>
-              <span>{companyProfile.regions.join(' · ')}</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/70 px-2.5 py-1">
+                <span className="metric-value text-foreground">
+                  {companyProfile.dataFreshness.sources.length}
+                </span>
+                connected sources
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/70 px-2.5 py-1">
+                <span className="metric-value text-foreground">{companyProfile.regions.length}</span>
+                regions
+              </span>
             </div>
+
           </div>
 
           {/* Live KPI rail */}
