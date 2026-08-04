@@ -14,7 +14,7 @@ export const companyProfile = {
     activeSkus: 118_400,
     weeklyTransactions: 74_200_000,
     netSalesFy: 168_400_000_000,
-    grossMarginPct: 28.3,
+    grossMarginPct: 27.7,
     ecomMixPct: 14.6,
     privateLabelMixPct: 24.1,
   },
