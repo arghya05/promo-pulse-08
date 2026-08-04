@@ -456,23 +456,220 @@ function ScenarioPanel({ scenario }: { scenario: ScenarioSet }) {
   );
 }
 
+const STAGES = [
+  { key: 'plan', label: 'Planning against the retail ontology' },
+  { key: 'execute', label: 'Executing governed queries on POS & inventory' },
+  { key: 'simulate', label: 'Running deterministic simulations' },
+  { key: 'narrate', label: 'Composing the answer' },
+  { key: 'verify', label: 'Verifying every figure against the database' },
+];
 
+function GroundingCard({ question }: { question: string }) {
+  const [stage, setStage] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setStage((s) => Math.min(s + 1, STAGES.length - 1)), 2600);
+    const e = setInterval(() => setElapsed((v) => v + 0.1), 100);
+    return () => {
+      clearInterval(t);
+      clearInterval(e);
+    };
+  }, []);
+
+  return (
+    <Card className="animate-fade-up space-y-4 border-primary/25 p-4 md:p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          Grounding answer
+        </div>
+        <span className="metric-value text-xs text-muted-foreground">{elapsed.toFixed(1)}s</span>
+      </div>
+      <p className="text-sm text-muted-foreground">{question}</p>
+      <ul className="space-y-2">
+        {STAGES.map((s, i) => (
+          <li
+            key={s.key}
+            className={`flex items-center gap-2 text-xs transition-colors ${
+              i < stage ? 'text-muted-foreground' : i === stage ? 'text-foreground' : 'text-muted-foreground/50'
+            }`}
+          >
+            {i < stage ? (
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-status-good" />
+            ) : i === stage ? (
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary animate-pulse-dot" />
+            ) : (
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-border" />
+            )}
+            {s.label}
+          </li>
+        ))}
+      </ul>
+      <div className="space-y-2">
+        <Skeleton className="h-5 w-2/3" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    </Card>
+  );
+}
+
+function AnswerBlock({ answer }: { answer: AskResponse }) {
+  return (
+    <div className="animate-fade-up space-y-5">
+      <Card className="space-y-4 p-4 md:p-5">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+            <span>{answer.persona ?? 'Executive'} view</span>
+            {answer.mode && (
+              <Badge variant="outline" className="gap-1 text-[10px] font-normal uppercase">
+                {answer.mode === 'predictive' ? <FlaskConical className="h-3 w-3" /> : <Database className="h-3 w-3" />}
+                {answer.mode}
+              </Badge>
+            )}
+          </div>
+          <h2 className="font-display text-lg font-semibold leading-snug md:text-xl">
+            {answer.headline ?? 'No grounded answer available'}
+          </h2>
+          {answer.interpretation && (
+            <p className="text-sm text-muted-foreground">{answer.interpretation}</p>
+          )}
+        </div>
+
+        {answer.modulesTouched?.length ? (
+          <div className="flex flex-wrap gap-2">
+            {answer.modulesTouched.map((m) => (
+              <Badge key={m} variant="secondary" className="font-normal">
+                {m}
+              </Badge>
+            ))}
+          </div>
+        ) : null}
+
+        <Separator />
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <ClaimList title="What the data shows" icon={Lightbulb} claims={answer.insights} />
+          <ClaimList title="Why it is happening" icon={TrendingUp} claims={answer.drivers} />
+        </div>
+        <ClaimList title="What the simulation projects" icon={FlaskConical} claims={answer.projection} />
+        <ClaimList title="Recommended actions" icon={Target} claims={answer.actions} />
+
+        {answer.caveats?.length ? (
+          <div className="space-y-1 rounded-lg border border-border/70 bg-surface-sunken p-3 text-xs text-muted-foreground">
+            {answer.caveats.map((c, i) => (
+              <div key={i} className="flex items-start gap-1.5">
+                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-status-warning" />
+                <span>{c}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </Card>
+
+      {answer.guardrail && (
+        <Card className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <ShieldCheck className="h-4 w-4 text-status-good" />
+            Guardrail report
+          </div>
+          <span className="metric-value">{answer.guardrail.verifiedClaims} verified claims</span>
+          <span className="metric-value">{answer.guardrail.rejectedClaims} rejected</span>
+          {answer.elapsedMs ? (
+            <span className="metric-value">{(answer.elapsedMs / 1000).toFixed(1)}s</span>
+          ) : null}
+          <span className="basis-full">{answer.guardrail.rule}</span>
+        </Card>
+      )}
+
+      {answer.ontologyPath?.length ? (
+        <Card className="space-y-3 p-4">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <Network className="h-4 w-4 text-primary" />
+            Ontology path used
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {answer.ontologyPath.map((edge, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-2 rounded-lg border border-border/70 bg-surface-raised px-3 py-1.5 text-xs"
+              >
+                <span className="font-medium">{edge.from}</span>
+                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                <span className="font-medium">{edge.to}</span>
+                <span className="text-muted-foreground">· {edge.label}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
+
+      {answer.scenarios?.map((sc) => <ScenarioPanel key={sc.id} scenario={sc} />)}
+      {answer.facts?.map((fact) => <FactPanel key={fact.id} fact={fact} />)}
+
+      {answer.errors?.length ? (
+        <Card className="space-y-1 p-4 text-xs text-muted-foreground">
+          {answer.errors.map((e, i) => (
+            <div key={i} className="flex items-start gap-1.5">
+              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-status-warning" />
+              <span>{e}</span>
+            </div>
+          ))}
+        </Card>
+      ) : null}
+    </div>
+  );
+}
+
+type Turn =
+  | { id: string; role: 'user'; text: string }
+  | { id: string; role: 'assistant'; answer: AskResponse }
+  | { id: string; role: 'error'; text: string };
 
 export default function AskMaya() {
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
-  const [answer, setAnswer] = useState<AskResponse | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const requestId = useRef(0);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [turns.length, pending]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const recent = useMemo(
+    () => turns.filter((t): t is Extract<Turn, { role: 'user' }> => t.role === 'user').slice(-4).reverse(),
+    [turns],
+  );
+
   const ask = async (raw: string) => {
     const q = raw.trim();
     if (!q || loading) return;
+    const id = ++requestId.current;
+    setQuestion('');
+    setTurns((prev) => [...prev, { id: `u-${id}`, role: 'user', text: q }]);
+    setPending(q);
     setLoading(true);
-    setAnswer(null);
     try {
       const { data, error } = await supabase.functions.invoke('ask-anything', {
         body: { question: q },
@@ -480,213 +677,219 @@ export default function AskMaya() {
       if (error) throw error;
       const payload = data as AskResponse;
       if (payload?.error) throw new Error(payload.error);
-      setAnswer(payload);
+      if (requestId.current !== id) return;
+      setTurns((prev) => [...prev, { id: `a-${id}`, role: 'assistant', answer: payload }]);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to reach the answer engine';
-      toast.error(message.includes('429') ? 'Rate limit reached — try again shortly.' : message);
+      const friendly = message.includes('429')
+        ? 'Rate limit reached — try again shortly.'
+        : message.includes('402')
+          ? 'AI credits exhausted for this workspace.'
+          : message;
+      if (requestId.current === id) {
+        setTurns((prev) => [...prev, { id: `e-${id}`, role: 'error', text: friendly }]);
+      }
+      toast.error(friendly);
     } finally {
-      setLoading(false);
-      inputRef.current?.focus();
+      if (requestId.current === id) {
+        setPending(null);
+        setLoading(false);
+        inputRef.current?.focus();
+      }
     }
   };
 
+  const stop = () => {
+    requestId.current += 1;
+    setPending(null);
+    setLoading(false);
+    inputRef.current?.focus();
+  };
+
+  const reset = () => {
+    requestId.current += 1;
+    setTurns([]);
+    setPending(null);
+    setLoading(false);
+    setQuestion('');
+    inputRef.current?.focus();
+  };
+
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 p-4 md:p-6">
-      <header className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-primary shadow-glow">
-            <Sparkles className="h-5 w-5 text-primary-foreground" />
+    <div className="flex h-[calc(100dvh-3.5rem)] flex-col">
+      {/* Header */}
+      <header className="shrink-0 border-b border-border/70 bg-gradient-surface px-4 py-3 md:px-6">
+        <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-primary shadow-glow">
+              <Network className="h-4 w-4 text-primary-foreground" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="truncate font-display text-lg font-semibold tracking-tight">
+                Ask Maya anything
+              </h1>
+              <p className="truncate text-xs text-muted-foreground">
+                Every figure computed from {companyProfile.banner} data · {companyProfile.fiscalYear} ·{' '}
+                {companyProfile.fiscalPeriod} · {companyProfile.dataFreshness.latencyMinutes}m latency
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <h1 className="font-display text-2xl font-semibold tracking-tight">Ask Maya anything</h1>
-            <p className="text-sm text-muted-foreground">
-              Ontology-grounded answers across every merchandising module — every figure computed from{' '}
-              {companyProfile.banner} data, never written by the model.
-            </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="gap-1 text-xs font-normal">
+              <ShieldCheck className="h-3 w-3 text-status-good" /> Zero-hallucination
+            </Badge>
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setPaletteOpen(true)}>
+              <Command className="h-3.5 w-3.5" />
+              Browse questions
+              <kbd className="ml-1 hidden rounded border border-border/70 bg-surface-sunken px-1.5 text-[10px] md:inline">
+                ⌘K
+              </kbd>
+            </Button>
+            {turns.length > 0 && (
+              <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={reset}>
+                <RotateCcw className="h-3.5 w-3.5" />
+                New
+              </Button>
+            )}
           </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <Badge variant="outline" className="gap-1">
-            <ShieldCheck className="h-3 w-3" /> Zero-hallucination guardrail
-          </Badge>
-          <Badge variant="outline" className="gap-1">
-            <Network className="h-3 w-3" /> Retail ontology graph
-          </Badge>
-          <span>
-            {companyProfile.fiscalYear} · {companyProfile.fiscalPeriod} · {companyProfile.dataFreshness.latencyMinutes}m latency
-          </span>
         </div>
       </header>
 
-      <Card className="space-y-3 p-4">
-        <Textarea
-          ref={inputRef}
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              ask(question);
-            }
-          }}
-          placeholder="e.g. Which stores are losing margin on fresh, and is availability the cause?"
-          className="min-h-[88px] resize-none border-border/70 bg-surface-sunken text-sm"
-        />
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-2">
-            {SUGGESTIONS.slice(0, 3).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => {
-                  setQuestion(s);
-                  ask(s);
-                }}
-                className="rounded-full border border-border/70 bg-surface-raised px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-              >
-                {s.length > 46 ? `${s.slice(0, 45)}…` : s}
-              </button>
-            ))}
-          </div>
-          <Button onClick={() => ask(question)} disabled={loading || !question.trim()} className="gap-2">
-            <Send className="h-4 w-4" />
-            {loading ? 'Grounding…' : 'Ask Maya'}
-          </Button>
-        </div>
-      </Card>
-
-      {loading && (
-        <Card className="space-y-3 p-4">
-          <Skeleton className="h-5 w-2/3" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
-          <Skeleton className="h-40 w-full" />
-          <div className="text-xs text-muted-foreground">
-            Planning against the ontology, executing governed queries, then verifying every number…
-          </div>
-        </Card>
-      )}
-
-      {answer && !loading && (
-        <div className="space-y-6">
-          <Card className="space-y-4 p-5">
-            <div className="space-y-1">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                {answer.persona ?? 'Executive'} view
+      {/* Transcript */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 md:px-6">
+        <div className="mx-auto w-full max-w-5xl space-y-5">
+          {turns.length === 0 && !pending && (
+            <div className="animate-fade-up space-y-4">
+              <div className="rounded-xl border border-border/70 bg-gradient-surface p-5">
+                <h2 className="font-display text-base font-semibold">
+                  Ask about anything across the six modules
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Descriptive, diagnostic, predictive or prescriptive — the planner maps your
+                  question onto the retail ontology, the engine computes every number in code, and a
+                  guardrail rejects any figure the model tried to write itself.
+                </p>
               </div>
-              <h2 className="font-display text-xl font-semibold leading-snug">
-                {answer.headline ?? 'No grounded answer available'}
-              </h2>
-              {answer.interpretation && (
-                <p className="text-sm text-muted-foreground">{answer.interpretation}</p>
-              )}
-            </div>
-
-            {answer.modulesTouched?.length ? (
-              <div className="flex flex-wrap gap-2">
-                {answer.modulesTouched.map((m) => (
-                  <Badge key={m} variant="secondary" className="font-normal">
-                    {m}
-                  </Badge>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {SUGGESTIONS.map((s, i) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => ask(s)}
+                    style={{ animationDelay: `${i * 35}ms` }}
+                    className="group animate-fade-up rounded-lg border border-border/70 bg-surface-raised p-3 text-left text-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-glow"
+                  >
+                    <span className="flex items-start gap-2">
+                      <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+                      {s}
+                    </span>
+                  </button>
                 ))}
               </div>
-            ) : null}
-
-            <Separator />
-
-            <div className="grid gap-6 lg:grid-cols-2">
-              <ClaimList title="What the data shows" icon={Lightbulb} claims={answer.insights} />
-              <ClaimList title="Why it is happening" icon={TrendingUp} claims={answer.drivers} />
             </div>
-            <ClaimList title="What the simulation projects" icon={FlaskConical} claims={answer.projection} />
-            <ClaimList title="Recommended actions" icon={Target} claims={answer.actions} />
-
-            {answer.caveats?.length ? (
-              <div className="space-y-1 rounded-lg border border-border/70 bg-surface-sunken p-3 text-xs text-muted-foreground">
-                {answer.caveats.map((c, i) => (
-                  <div key={i} className="flex items-start gap-1.5">
-                    <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-status-warning" />
-                    <span>{c}</span>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </Card>
-
-          {answer.guardrail && (
-            <Card className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4 text-xs text-muted-foreground">
-              <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <ShieldCheck className="h-4 w-4 text-status-good" />
-                Guardrail report
-              </div>
-              <span className="metric-value">{answer.guardrail.verifiedClaims} verified claims</span>
-              <span className="metric-value">{answer.guardrail.rejectedClaims} rejected</span>
-              {answer.elapsedMs ? (
-                <span className="metric-value">{(answer.elapsedMs / 1000).toFixed(1)}s</span>
-              ) : null}
-              <span className="basis-full">{answer.guardrail.rule}</span>
-            </Card>
           )}
 
-          {answer.ontologyPath?.length ? (
-            <Card className="space-y-3 p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Network className="h-4 w-4 text-primary" />
-                Ontology path used
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {answer.ontologyPath.map((edge, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2 rounded-lg border border-border/70 bg-surface-raised px-3 py-1.5 text-xs"
-                  >
-                    <span className="font-medium">{edge.from}</span>
-                    <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                    <span className="font-medium">{edge.to}</span>
-                    <span className="text-muted-foreground">· {edge.label}</span>
+          {turns.map((turn) => {
+            if (turn.role === 'user') {
+              return (
+                <div key={turn.id} className="flex animate-fade-up justify-end">
+                  <div className="max-w-[85%] rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-sm text-primary-foreground shadow-elegant">
+                    {turn.text}
                   </div>
-                ))}
-              </div>
-            </Card>
-          ) : null}
-
-          {answer.scenarios?.map((sc) => <ScenarioPanel key={sc.id} scenario={sc} />)}
-
-          {answer.facts?.map((fact) => <FactPanel key={fact.id} fact={fact} />)}
-
-          {answer.errors?.length ? (
-            <Card className="space-y-1 p-4 text-xs text-muted-foreground">
-              {answer.errors.map((e, i) => (
-                <div key={i} className="flex items-start gap-1.5">
-                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-status-warning" />
-                  <span>{e}</span>
                 </div>
-              ))}
-            </Card>
-          ) : null}
-        </div>
-      )}
+              );
+            }
+            if (turn.role === 'error') {
+              return (
+                <Card key={turn.id} className="flex animate-fade-up items-start gap-2 border-status-bad/40 p-4 text-sm">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-status-bad" />
+                  <span>{turn.text}</span>
+                </Card>
+              );
+            }
+            return <AnswerBlock key={turn.id} answer={turn.answer} />;
+          })}
 
-      {!answer && !loading && (
-        <Card className="space-y-3 p-4">
-          <div className="text-sm font-semibold">Try a cross-module question</div>
-          <div className="grid gap-2 sm:grid-cols-2">
+          {pending && <GroundingCard question={pending} />}
+          <div ref={bottomRef} />
+        </div>
+      </div>
+
+      {/* Composer */}
+      <div className="shrink-0 border-t border-border/70 bg-card/80 px-4 py-3 backdrop-blur-md md:px-6">
+        <div className="mx-auto w-full max-w-5xl space-y-2">
+          {recent.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {recent.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => ask(t.text)}
+                  className="max-w-full truncate rounded-full border border-border/70 bg-surface-raised px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+                >
+                  {t.text.length > 52 ? `${t.text.slice(0, 51)}…` : t.text}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="flex items-end gap-2 rounded-xl border border-border/70 bg-surface-sunken p-2 transition-colors focus-within:border-primary/50">
+            <Textarea
+              ref={inputRef}
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  ask(question);
+                }
+              }}
+              rows={1}
+              placeholder="Ask anything — e.g. which stores are losing margin on fresh, and is availability the cause?"
+              className="max-h-40 min-h-[40px] resize-none border-0 bg-transparent p-2 text-sm shadow-none focus-visible:ring-0"
+            />
+            {loading ? (
+              <Button variant="secondary" size="icon" onClick={stop} aria-label="Stop">
+                <Square className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                size="icon"
+                onClick={() => ask(question)}
+                disabled={!question.trim()}
+                aria-label="Ask Maya"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Enter to send · Shift+Enter for a new line · ⌘K to browse governed questions
+          </p>
+        </div>
+      </div>
+
+      <CommandDialog open={paletteOpen} onOpenChange={setPaletteOpen}>
+        <CommandInput placeholder="Search governed questions…" />
+        <CommandList>
+          <CommandEmpty>No matching question — type your own in the composer.</CommandEmpty>
+          <CommandGroup heading="Cross-module questions">
             {SUGGESTIONS.map((s) => (
-              <button
+              <CommandItem
                 key={s}
-                type="button"
-                onClick={() => {
-                  setQuestion(s);
+                value={s}
+                onSelect={() => {
+                  setPaletteOpen(false);
                   ask(s);
                 }}
-                className="rounded-lg border border-border/70 bg-surface-raised p-3 text-left text-sm transition-colors hover:border-primary/50"
               >
+                <ArrowRight className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
                 {s}
-              </button>
+              </CommandItem>
             ))}
-          </div>
-        </Card>
-      )}
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
     </div>
   );
 }
+
