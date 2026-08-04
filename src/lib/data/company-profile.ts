@@ -53,7 +53,7 @@ export const headlineKpis = [
   {
     id: 'gross-margin',
     label: 'Gross margin rate',
-    value: '28.3%',
+    value: '27.7%',
     delta: '-24 bps',
     trend: 'down' as const,
     note: 'Fresh shrink & markdown pressure',
