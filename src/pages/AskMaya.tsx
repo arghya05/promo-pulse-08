@@ -51,6 +51,7 @@ import { ClarifyCard, type Clarification } from '@/components/ask/ClarifyCard';
 import { EvaluationPanel, type Evaluation } from '@/components/ask/EvaluationPanel';
 import { LineageTrail, type LineageEntry } from '@/components/ask/LineageTrail';
 import { toast } from 'sonner';
+import { ChartCapture } from '@/components/charts/ChartCapture';
 
 
 type FactValue = {
@@ -225,6 +226,7 @@ function FactChart({ fact }: { fact: FactSet }) {
 
   return (
     <div className="h-56 w-full">
+      <ChartCapture label={`${metricLabel} by ${fact.dimensionLabel ?? fact.dataset}`} className="h-full w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
@@ -249,6 +251,7 @@ function FactChart({ fact }: { fact: FactSet }) {
           <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
+      </ChartCapture>
     </div>
   );
 }
@@ -364,6 +367,7 @@ function ScenarioChart({ scenario }: { scenario: ScenarioSet }) {
 
   return (
     <div className="h-56 w-full">
+      <ChartCapture label={`${scenario.title} — ${metricLabel}`} className="h-full w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
@@ -388,6 +392,7 @@ function ScenarioChart({ scenario }: { scenario: ScenarioSet }) {
           <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
+      </ChartCapture>
     </div>
   );
 }

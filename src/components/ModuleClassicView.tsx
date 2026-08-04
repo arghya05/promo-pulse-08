@@ -53,6 +53,7 @@ import ProductDrillDown from './ProductDrillDown';
 import InsightPanels from './InsightPanels';
 import MustPassSuggestions from './MustPassSuggestions';
 import GlobalFiltersPanel, { GlobalFilters, defaultFilters } from './GlobalFiltersPanel';
+import { ChartCapture } from '@/components/charts/ChartCapture';
 
 interface ModuleClassicViewProps {
   module: Module;
@@ -214,6 +215,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
     switch (chartType) {
       case 'line':
         return (
+          <ChartCapture label={chartLabel} className="w-full">
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -223,9 +225,11 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
               <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
+          </ChartCapture>
         );
       case 'pie':
         return (
+          <ChartCapture label={chartLabel} className="w-full">
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -244,6 +248,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
+          </ChartCapture>
         );
       default: {
         // Dynamically detect data keys for bars - support multi-bar charts
@@ -260,6 +265,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
                           barKeys[0] || 'value';
         
         return (
+          <ChartCapture label={chartLabel} className="w-full">
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data} onClick={(e) => e?.activePayload?.[0] && handleChartClick(e.activePayload[0].payload)}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -270,6 +276,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
               <Bar dataKey={primaryKey} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} className="cursor-pointer" name={primaryKey.charAt(0).toUpperCase() + primaryKey.slice(1)} />
             </BarChart>
           </ResponsiveContainer>
+          </ChartCapture>
         );
       }
     }
