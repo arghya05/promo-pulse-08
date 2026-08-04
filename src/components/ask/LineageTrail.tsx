@@ -111,7 +111,9 @@ export function LineageTrail({
                 <LineageDetailDialog entry={e} />
               </div>
             </li>
-          ))}
+            );
+          })}
+
         </ul>
       )}
     </div>
