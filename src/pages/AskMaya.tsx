@@ -850,7 +850,7 @@ export default function AskMaya() {
                 </div>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
-
+                {SUGGESTIONS.map((s, i) => (
                   <button
                     key={s}
                     type="button"
