@@ -200,9 +200,13 @@ interface GroundedText {
   violation?: string;
 }
 
-function buildFactIndex(factSets: FactSet[]) {
+function buildFactIndex(factSets: FactSet[], scenarios: ScenarioSet[] = []) {
   const index = new Map<string, string>();
-  for (const fs of factSets) {
+  const sets: { total: { ref: string; label: string; values: Record<string, { formatted: string }> }; rows: { ref: string; label: string; values: Record<string, { formatted: string }> }[] }[] = [
+    ...factSets,
+    ...scenarios,
+  ] as any;
+  for (const fs of sets) {
     for (const [k, v] of Object.entries(fs.total.values)) index.set(`${fs.total.ref}.${k}`, v.formatted);
     index.set(`${fs.total.ref}.name`, fs.total.label);
     for (const row of fs.rows) {
