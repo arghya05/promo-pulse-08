@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/sidebar';
 import { modules } from '@/lib/data/modules';
 import { companyProfile } from '@/lib/data/company-profile';
-import { LayoutDashboard, MessagesSquare, Network, ShieldCheck, Sparkles } , ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, MessagesSquare, Network, ShieldCheck, Sparkles } from 'lucide-react';
 
 export function AppSidebar() {
   const { state } = useSidebar();
