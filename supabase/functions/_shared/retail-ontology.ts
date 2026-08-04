@@ -492,3 +492,132 @@ export function metricCatalogText(): string {
   }
   return out.join('\n');
 }
+
+// ---------------------------------------------------------------------------
+// Knowledge-graph projection: which entities each governed dataset resolves to,
+// so any answer can report the exact traversal it walked.
+// ---------------------------------------------------------------------------
+
+export const datasetEntities: Record<string, string[]> = {
+  sales: ['Store', 'Category', 'Calendar'],
+  sku_sales: ['Product', 'Category', 'Store', 'Promotion', 'Calendar'],
+  inventory: ['Product', 'Store'],
+  price_gap: ['Product', 'Competitor'],
+  forecast: ['Product', 'Store', 'Calendar'],
+  promotions: ['Promotion', 'Product', 'Category'],
+  supplier_performance: ['Supplier', 'Product'],
+  space: ['Planogram', 'Product', 'Category'],
+  store_traffic: ['Store', 'Calendar'],
+  markdowns: ['Product', 'Store', 'Category'],
+};
+
+/** Follow-up question suggested when the user clicks an edge in the answer graph. */
+export const edgeQuestions: Record<string, string> = {
+  'Product->Category': 'Which categories are carrying their SKUs and which are dragging?',
+  'Product->Store': 'Which stores are under-performing on the same SKUs?',
+  'Product->Competitor': 'Where are we price-exposed against competitors on these SKUs?',
+  'Product->Supplier': 'Which suppliers are behind the availability issues on these SKUs?',
+  'Product->Planogram': 'Is shelf space aligned to the sales of these SKUs?',
+  'Promotion->Product': 'Which promoted SKUs actually paid back?',
+  'Promotion->Store': 'Which stores executed these promotions best and worst?',
+  'Store->Calendar': 'How has this store group trended week over week?',
+  'Product->Calendar': 'Forecast demand for these SKUs over the next 13 weeks.',
+  'Customer->Promotion': 'Which customer segments responded to these promotions?',
+};
+
+export interface GraphNode {
+  id: string;
+  label: string;
+  modules: string[];
+  keyField: string;
+  datasets: string[];
+  primary: boolean;
+}
+
+export interface GraphEdge extends OntologyEdge {
+  question: string;
+}
+
+/** Entity sub-graph traversed by a set of governed datasets. */
+export function graphForDatasets(datasetIds: string[]): { nodes: GraphNode[]; edges: GraphEdge[] } {
+  const used = datasetIds.filter((id) => datasets[id]);
+  const byEntity = new Map<string, string[]>();
+  for (const id of used) {
+    for (const entity of datasetEntities[id] ?? []) {
+      byEntity.set(entity, [...(byEntity.get(entity) ?? []), id]);
+    }
+  }
+  const nodes: GraphNode[] = [...byEntity.entries()].map(([id, dsIds]) => ({
+    id,
+    label: ontologyEntities[id]?.label ?? id,
+    modules: ontologyEntities[id]?.modules ?? [],
+    keyField: ontologyEntities[id]?.keyField ?? '',
+    datasets: dsIds,
+    primary: dsIds.length > 1,
+  }));
+  const names = new Set(nodes.map((n) => n.id));
+  const edges: GraphEdge[] = ontologyEdges
+    .filter((e) => names.has(e.from) && names.has(e.to))
+    .map((e) => ({ ...e, question: edgeQuestions[`${e.from}->${e.to}`] ?? `How does ${e.from} relate to ${e.to}?` }));
+  return { nodes, edges };
+}
+
+/** Full catalog for the explorable knowledge-graph UI. */
+export function ontologyCatalog() {
+  return {
+    entities: Object.entries(ontologyEntities).map(([id, e]) => ({
+      id,
+      label: e.label,
+      keyField: e.keyField,
+      modules: e.modules,
+      datasets: Object.keys(datasets).filter((d) => (datasetEntities[d] ?? []).includes(id)),
+    })),
+    edges: ontologyEdges.map((e) => ({ ...e, question: edgeQuestions[`${e.from}->${e.to}`] ?? '' })),
+    datasets: Object.values(datasets).map((ds) => ({
+      id: ds.id,
+      module: ds.module,
+      grain: ds.grain,
+      description: ds.description,
+      table: ds.table,
+      timeFiltered: Boolean(ds.dateField),
+      entities: datasetEntities[ds.id] ?? [],
+      metrics: Object.entries(ds.metrics).map(([key, def]) => ({
+        key,
+        label: def.label,
+        format: def.format,
+        agg: def.agg,
+        definition: def.definition,
+      })),
+      dimensions: Object.entries(ds.dimensions).map(([key, d]) => ({ key, label: d.label })),
+      filters: Object.entries(ds.filters).map(([key, f]) => ({ key, label: f.label, pushedDown: Boolean(f.column) })),
+    })),
+  };
+}
+
+/** Human-readable SQL-equivalent of an executed governed query (provenance only). */
+export function sqlEquivalent(spec: {
+  dataset: string;
+  metrics: string[];
+  dimension?: string | null;
+  filters?: Record<string, string>;
+  window?: { from: string | null; to: string | null };
+  limit?: number;
+}): string {
+  const ds = datasets[spec.dataset];
+  if (!ds) return '';
+  const dimField = spec.dimension ? ds.dimensions[spec.dimension]?.field ?? spec.dimension : null;
+  const cols = spec.metrics.map((k) => `${ds.metrics[k]?.agg ?? 'agg'}(${ds.metrics[k]?.field ?? k}) AS ${k}`);
+  const where: string[] = [];
+  if (ds.dateField && spec.window?.from) where.push(`${ds.dateField} >= '${spec.window.from}'`);
+  if (ds.dateField && spec.window?.to) where.push(`${ds.dateField} <= '${spec.window.to}'`);
+  for (const [k, v] of Object.entries(spec.filters ?? {})) {
+    where.push(`${ds.filters[k]?.column ?? ds.filters[k]?.field ?? k} = '${v}'`);
+  }
+  return [
+    `SELECT ${[dimField, ...cols].filter(Boolean).join(', ')}`,
+    `FROM ${ds.table}`,
+    where.length ? `WHERE ${where.join(' AND ')}` : '',
+    dimField ? `GROUP BY ${dimField}` : '',
+    spec.limit ? `LIMIT ${spec.limit}` : '',
+  ].filter(Boolean).join('\n');
+}

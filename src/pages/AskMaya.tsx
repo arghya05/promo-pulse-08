@@ -44,6 +44,10 @@ import {
 } from '@/components/ui/command';
 import { companyProfile, netSalesTrend } from '@/lib/data/company-profile';
 import { Sparkline } from '@/components/shell/Sparkline';
+import { GraphPath, type GraphEdge, type GraphNode } from '@/components/ask/GraphPath';
+import { ReasoningChain, type ReasoningStep } from '@/components/ask/ReasoningChain';
+import { ProvenanceLedger, type Provenance } from '@/components/ask/ProvenanceLedger';
+import { ClarifyCard, type Clarification } from '@/components/ask/ClarifyCard';
 import { toast } from 'sonner';
 
 
@@ -70,6 +74,7 @@ type FactSet = {
   notes: string[];
   total: FactRow;
   rows: FactRow[];
+  provenance?: Provenance;
 };
 
 type Claim = { text: string; refs: string[]; impact?: string };
@@ -118,6 +123,9 @@ type AskResponse = {
   scenarios?: ScenarioSet[];
   mode?: 'predictive' | 'descriptive';
   ontologyPath?: { from: string; to: string; via: string; label: string }[];
+  graph?: { nodes: GraphNode[]; edges: GraphEdge[] };
+  reasoning?: ReasoningStep[];
+  clarification?: Clarification;
   modulesTouched?: string[];
   guardrail?: {
     verifiedClaims: number;
@@ -316,7 +324,18 @@ function FactPanel({ fact }: { fact: FactSet }) {
       )}
 
       <div className="text-xs text-muted-foreground">Source tables: {fact.tables.join(', ')}</div>
+
+      {fact.provenance && (
+        <ProvenanceLedger
+          provenance={fact.provenance}
+          dataset={fact.dataset}
+          recordsAnalysed={fact.recordsAnalysed}
+          filters={fact.filters}
+          window={fact.window}
+        />
+      )}
     </Card>
+
   );
 }
 
@@ -530,7 +549,10 @@ function GroundingCard({ question }: { question: string }) {
   );
 }
 
-function AnswerBlock({ answer }: { answer: AskResponse }) {
+function AnswerBlock({ answer, onAsk }: { answer: AskResponse; onAsk: (q: string) => void }) {
+  if (answer.clarification) {
+    return <ClarifyCard clarification={answer.clarification} onAsk={onAsk} />;
+  }
   return (
     <div className="animate-fade-up space-y-5">
       <Card className="space-y-4 p-4 md:p-5">
@@ -598,27 +620,9 @@ function AnswerBlock({ answer }: { answer: AskResponse }) {
         </Card>
       )}
 
-      {answer.ontologyPath?.length ? (
-        <Card className="space-y-3 p-4">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <Network className="h-4 w-4 text-primary" />
-            Ontology path used
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {answer.ontologyPath.map((edge, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 rounded-lg border border-border/70 bg-surface-raised px-3 py-1.5 text-xs"
-              >
-                <span className="font-medium">{edge.from}</span>
-                <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                <span className="font-medium">{edge.to}</span>
-                <span className="text-muted-foreground">· {edge.label}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      ) : null}
+      {answer.reasoning?.length ? <ReasoningChain steps={answer.reasoning} /> : null}
+
+      {answer.graph?.nodes?.length ? <GraphPath graph={answer.graph} onAsk={onAsk} /> : null}
 
       {answer.scenarios?.map((sc) => <ScenarioPanel key={sc.id} scenario={sc} />)}
       {answer.facts?.map((fact) => <FactPanel key={fact.id} fact={fact} />)}
@@ -841,7 +845,7 @@ export default function AskMaya() {
                 </Card>
               );
             }
-            return <AnswerBlock key={turn.id} answer={turn.answer} />;
+            return <AnswerBlock key={turn.id} answer={turn.answer} onAsk={ask} />;
           })}
 
           {pending && <GroundingCard question={pending} />}

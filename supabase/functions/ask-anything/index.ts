@@ -13,7 +13,13 @@
 // ============================================================================
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { datasets, ontologyEdges, ontologyPromptSpec } from '../_shared/retail-ontology.ts';
+import {
+  datasets,
+  graphForDatasets,
+  ontologyCatalog,
+  ontologyPromptSpec,
+  sqlEquivalent,
+} from '../_shared/retail-ontology.ts';
 import { executeQuery, loadLookups, type FactSet, type QuerySpec } from '../_shared/ontology-engine.ts';
 import { runScenario, scenarioPromptSpec, SCENARIO_KINDS, type ScenarioSet, type ScenarioSpec } from '../_shared/scenario-engine.ts';
 
@@ -104,8 +110,12 @@ Return JSON exactly:
     {"id":"q1","dataset":"sales","metrics":["net_sales","gross_margin_pct"],"dimension":"category","filters":{},"dateFrom":"YYYY-MM-DD","dateTo":"YYYY-MM-DD","sortBy":"net_sales","sortDir":"desc","limit":10}
   ],
   "scenarios": [],
-  "chart": {"query":"q1","metric":"net_sales","type":"bar"}
+  "chart": {"query":"q1","metric":"net_sales","type":"bar"},
+  "clarify": null
 }
+AMBIGUITY — ask back instead of guessing. If the question is materially ambiguous (no entity or scope named where one is required, two or more equally valid readings, an undefined comparison basis, or an unspecified time period where the answer would change a lot), return:
+  "clarify": {"question":"one short clarifying question","options":["concrete option 1","concrete option 2","concrete option 3"],"why":"what is ambiguous"}
+with empty queries and scenarios. Every option must be a fully-formed question the engine can answer as-is. Do NOT ask back for questions that are merely broad — only when a wrong reading would produce a misleading answer.
 If the question cannot be answered from these datasets or scenarios, return "answerable": false with empty queries and scenarios and explain in "interpretation".`;
 }
 
@@ -276,7 +286,17 @@ function groundList(items: unknown, index: Map<string, string>) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  // Ontology catalog for the explorable knowledge-graph UI (no data, vocabulary only).
+  if (req.method === 'GET') {
+    return new Response(JSON.stringify(ontologyCatalog()), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   const started = Date.now();
+  const steps: { id: string; stage: string; label: string; detail: string; ms: number }[] = [];
+  const mark = (id: string, stage: string, label: string, detail: string, from: number) =>
+    steps.push({ id, stage, label, detail, ms: Date.now() - from });
   try {
     const apiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!apiKey) throw new Error('LOVABLE_API_KEY is not configured');
@@ -297,10 +317,38 @@ Deno.serve(async (req) => {
     );
 
     // ---------- 1. PLAN ----------
+    const planStart = Date.now();
     const plan = await callModel(apiKey, [
       { role: 'system', content: plannerPrompt() },
       { role: 'user', content: `Persona: ${persona}\nQuestion: ${question}` },
     ], 8000);
+    mark('plan', 'plan', 'Mapped the question onto the retail ontology',
+      String(plan?.interpretation ?? 'Planner produced a governed query specification'), planStart);
+
+    // ---------- 1b. ASK BACK (disambiguation before any data is touched) ----------
+    const clarify = plan?.clarify;
+    if (clarify && typeof clarify === 'object' && String(clarify.question ?? '').trim().length > 5) {
+      const options = (Array.isArray(clarify.options) ? clarify.options : [])
+        .map((o: unknown) => String(o).trim())
+        .filter(Boolean)
+        .slice(0, 4);
+      if (options.length >= 2) {
+        return new Response(JSON.stringify({
+          question,
+          persona,
+          answerable: false,
+          needsClarification: true,
+          clarification: {
+            question: String(clarify.question).trim(),
+            why: String(clarify.why ?? 'The question has more than one valid reading.'),
+            options,
+          },
+          interpretation: String(plan?.interpretation ?? ''),
+          reasoning: steps,
+          elapsedMs: Date.now() - started,
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+    }
 
     const win = defaultWindow();
     const rawQueries: QuerySpec[] = Array.isArray(plan?.queries) ? plan.queries.slice(0, 3) : [];
@@ -358,21 +406,32 @@ Deno.serve(async (req) => {
     const lookups = await loadLookups(supabase);
     const factSets: FactSet[] = [];
     const executionErrors: string[] = [];
+    const specById = new Map<string, QuerySpec>();
     for (const spec of specs) {
+      const t = Date.now();
+      specById.set(spec.id, spec);
       try {
-        factSets.push(await executeQuery(supabase, spec, lookups));
+        const fs = await executeQuery(supabase, spec, lookups);
+        factSets.push(fs);
+        mark(spec.id, 'execute', `Queried ${spec.dataset} (${fs.module})`,
+          `${fs.rowsScanned.toLocaleString('en-US')} records at ${fs.grain}${spec.dimension ? ` grouped by ${spec.dimension}` : ''}`, t);
       } catch (err) {
         executionErrors.push(`${spec.dataset}: ${err instanceof Error ? err.message : 'query failed'}`);
+        mark(spec.id, 'execute', `Query on ${spec.dataset} failed`, 'Dropped from the answer', t);
       }
     }
 
     // ---------- 2b. SIMULATE (predictive / prescriptive) ----------
     const scenarioSets: ScenarioSet[] = [];
     for (const spec of scenarioSpecs) {
+      const t = Date.now();
       try {
-        scenarioSets.push(await runScenario(supabase, spec, lookups));
+        const sc = await runScenario(supabase, spec, lookups);
+        scenarioSets.push(sc);
+        mark(sc.id, 'simulate', `Simulated ${sc.title}`, `${sc.method} · ${sc.rowsScanned.toLocaleString('en-US')} records`, t);
       } catch (err) {
         executionErrors.push(`${spec.kind} scenario: ${err instanceof Error ? err.message : 'simulation failed'}`);
+        mark(spec.id, 'simulate', `${spec.kind} simulation failed`, 'Dropped from the answer', t);
       }
     }
 
@@ -390,6 +449,7 @@ Deno.serve(async (req) => {
     // ---------- 3. NARRATE ----------
     const facts = compactFacts(factSets);
     const scenarioFacts = compactScenarios(scenarioSets);
+    const narrateStart = Date.now();
     const narration = await callModel(apiKey, [
       { role: 'system', content: narratorPrompt(scenarioSets.length > 0) },
       {
@@ -403,8 +463,11 @@ SCENARIOS (deterministic simulations of the future — the only source of projec
 ${JSON.stringify(scenarioFacts)}`,
       },
     ], 8000);
+    mark('narrate', 'narrate', 'Wrote the narrative with reference placeholders only',
+      'The model may reference computed values but may not author digits', narrateStart);
 
     // ---------- 4. GUARD ----------
+    const guardStart = Date.now();
     const index = buildFactIndex(factSets, scenarioSets);
     const headline = ground(narration?.headline, index);
     const insights = groundList(narration?.insights, index);
@@ -415,6 +478,8 @@ ${JSON.stringify(scenarioFacts)}`,
 
     const rejected = [...insights.rejected, ...drivers.rejected, ...projection.rejected, ...actions.rejected, ...caveats.rejected];
     const verified = insights.kept.length + drivers.kept.length + projection.kept.length + actions.kept.length + (headline?.ok ? 1 : 0);
+    mark('guard', 'guard', 'Substituted every figure from code-computed values',
+      `${verified} claims verified · ${rejected.length} rejected · ${index.size} groundable values`, guardStart);
 
     // Deterministic fallback headline, built from facts only
     const primary = factSets[0] ?? (scenarioSets[0] as unknown as FactSet);
@@ -480,23 +545,49 @@ ${JSON.stringify(scenarioFacts)}`,
           display: r.values[chartMetric]?.formatted ?? 'n/a',
         })),
       },
-      facts: factSets.map((fs) => ({
-        id: fs.id,
-        dataset: fs.dataset,
-        module: fs.module,
-        grain: fs.grain,
-        dimension: fs.dimensionLabel,
-        filters: fs.filters,
-        window: fs.window,
-        recordsAnalysed: fs.rowsScanned,
-        tables: fs.tables,
-        notes: fs.notes,
-        total: fs.total,
-        rows: fs.rows,
-      })),
-      ontologyPath: ontologyEdges
-        .filter((e) => factSets.some((fs) => datasets[fs.dataset]?.module && e.via.includes(datasets[fs.dataset].table.split('_')[0])))
-        .slice(0, 6),
+      facts: factSets.map((fs) => {
+        const spec = specById.get(fs.id);
+        const ds = datasets[fs.dataset];
+        return {
+          id: fs.id,
+          dataset: fs.dataset,
+          module: fs.module,
+          grain: fs.grain,
+          dimension: fs.dimensionLabel,
+          filters: fs.filters,
+          window: fs.window,
+          recordsAnalysed: fs.rowsScanned,
+          tables: fs.tables,
+          notes: fs.notes,
+          total: fs.total,
+          rows: fs.rows,
+          // provenance ledger — how every number in this fact set was produced
+          provenance: {
+            datasetDescription: ds?.description ?? '',
+            table: ds?.table ?? fs.tables[0] ?? '',
+            dateField: ds?.dateField ?? null,
+            entities: (graphForDatasets([fs.dataset]).nodes ?? []).map((n) => n.label),
+            metrics: Object.keys(fs.total.values).map((key) => ({
+              key,
+              label: ds?.metrics[key]?.label ?? key,
+              agg: ds?.metrics[key]?.agg ?? 'sum',
+              formula: ds?.metrics[key]?.definition ?? '',
+            })),
+            sql: spec
+              ? sqlEquivalent({
+                  dataset: fs.dataset,
+                  metrics: spec.metrics,
+                  dimension: spec.dimension,
+                  filters: fs.filters,
+                  window: fs.window,
+                  limit: spec.limit,
+                })
+              : '',
+          },
+        };
+      }),
+      graph: graphForDatasets(factSets.map((fs) => fs.dataset)),
+      reasoning: steps,
       modulesTouched: Array.from(new Set([...factSets.map((fs) => fs.module), ...scenarioSets.map((sc) => sc.module)])),
       guardrail: {
         mode: scenarioSets.length > 0 ? 'placeholder-substitution + coded simulation' : 'placeholder-substitution',
