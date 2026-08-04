@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/sidebar';
 import { modules } from '@/lib/data/modules';
 import { companyProfile } from '@/lib/data/company-profile';
-import { LayoutDashboard, MessagesSquare, Network, ShieldCheck, Sparkles } from 'lucide-react';
+import { Compass, LayoutDashboard, MessagesSquare, Network, ShieldCheck, Sparkles } from 'lucide-react';
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -69,6 +69,14 @@ export function AppSidebar() {
                   <NavLink to="/graph" className="flex items-center gap-2">
                     <Network className="h-4 w-4" />
                     {!collapsed && <span>Knowledge Graph</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/discover')} tooltip="Data discovery & catalog">
+                  <NavLink to="/discover" className="flex items-center gap-2">
+                    <Compass className="h-4 w-4" />
+                    {!collapsed && <span>Data Discovery</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
