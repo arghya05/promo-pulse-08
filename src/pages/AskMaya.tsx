@@ -157,6 +157,17 @@ const SUGGESTIONS = [
   'Will we land the quarter on plan at +3% growth, and where is the gap?',
 ];
 
+/** One governed entry question per merchandising module. */
+const MODULE_ENTRY_QUESTIONS = [
+  { module: 'Executive', question: 'How is net sales and margin tracking vs last year by region?' },
+  { module: 'Promotion', question: 'Which promotion mechanics delivered the best ROI last quarter?' },
+  { module: 'Pricing', question: 'Where are we priced worst vs competitors in beverages?' },
+  { module: 'Assortment', question: 'Which pantry SKUs are unproductive and safe to delist?' },
+  { module: 'Demand', question: 'What is forecast accuracy by category, and where is bias worst?' },
+  { module: 'Supply Chain', question: 'Which suppliers are missing on-time delivery, and by how much?' },
+  { module: 'Space', question: 'Which categories earn the least sales per square foot of shelf?' },
+];
+
 const SCENARIO_LABEL: Record<ScenarioSet['kind'], string> = {
   forecast: 'Forecast simulation',
   price: 'Price elasticity simulation',
