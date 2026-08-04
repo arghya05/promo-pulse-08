@@ -1,4 +1,4 @@
-import { ArrowDown, Database, GitBranch, Layers, ShieldCheck } from 'lucide-react';
+import { ArrowDown, Calculator, Database, GitBranch, Layers, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LAYER_STYLES, lineageForTable } from '@/lib/lineage-layers';
+import { buildCalculationWalk } from '@/lib/calculation-walk';
 import type { LineageEntry } from '@/components/ask/LineageTrail';
 
 /**
@@ -20,6 +21,7 @@ import type { LineageEntry } from '@/components/ask/LineageTrail';
  */
 export function LineageDetailDialog({ entry, sql }: { entry: LineageEntry; sql?: string }) {
   const pipeline = lineageForTable(entry.table);
+  const walk = buildCalculationWalk(entry);
 
   return (
     <Dialog>
@@ -62,6 +64,74 @@ export function LineageDetailDialog({ entry, sql }: { entry: LineageEntry; sql?:
 
         <ScrollArea className="max-h-[65vh]">
           <div className="space-y-4 p-5">
+            {/* Calculation across layers — the arithmetic, layer by layer */}
+            <div className="space-y-2 rounded-lg border border-border bg-surface-sunken/60 p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Calculator className="h-3.5 w-3.5 text-primary" />
+                <span className="text-sm font-semibold text-foreground">Calculation across layers</span>
+                <span className="text-[11px] text-muted-foreground">
+                  what the arithmetic does at each hop, and how many rows carry the value
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[560px] text-left text-[11px]">
+                  <thead>
+                    <tr className="border-b border-border text-[10px] uppercase tracking-wide text-muted-foreground">
+                      <th className="py-1.5 pr-3">Layer</th>
+                      <th className="py-1.5 pr-3">Operation & expression</th>
+                      <th className="py-1.5 pr-3 text-right">Rows</th>
+                      <th className="py-1.5">Value carried</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {walk.map((step) => (
+                      <tr key={`${step.layer}-${step.object}`} className="border-b border-border/50 align-top">
+                        <td className="py-2 pr-3">
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${LAYER_STYLES[step.layer].badge}`}
+                          >
+                            {step.layer}
+                          </span>
+                          <p className="metric-value mt-1 max-w-[150px] break-words text-[10px] text-muted-foreground">
+                            {step.object}
+                          </p>
+                        </td>
+                        <td className="py-2 pr-3">
+                          <p className="text-foreground/90">{step.operation}</p>
+                          <code className="mt-1 block whitespace-pre-wrap break-words rounded bg-card px-1.5 py-1 font-mono text-[10px] text-muted-foreground">
+                            {step.expression}
+                          </code>
+                        </td>
+                        <td className="py-2 pr-3 text-right">
+                          <p className="metric-value font-semibold text-foreground">
+                            {step.rows === null ? '—' : step.rows.toLocaleString('en-US')}
+                          </p>
+                          <span
+                            className={`mt-0.5 inline-block rounded px-1 py-0.5 text-[9px] uppercase ${
+                              step.rowsBasis === 'exact'
+                                ? 'bg-status-good/10 text-status-good'
+                                : 'bg-muted text-muted-foreground'
+                            }`}
+                          >
+                            {step.rowsBasis}
+                          </span>
+                          <p className="mt-1 max-w-[140px] text-[9px] leading-snug text-muted-foreground">
+                            {step.rowsNote}
+                          </p>
+                        </td>
+                        <td className="py-2 text-muted-foreground">{step.carries}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[10px] leading-snug text-muted-foreground">
+                <span className="font-semibold">exact</span> = rows the engine actually read or emitted.{' '}
+                <span className="font-semibold">derived</span> = upstream count implied by the published grain fan-in
+                ratio for this table, not a measured count.
+              </p>
+            </div>
+
             <ol className="space-y-0">
               {pipeline.layers.map((layer, i) => (
                 <li key={`${layer.layer}-${layer.object}`}>

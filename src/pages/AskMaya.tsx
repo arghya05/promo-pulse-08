@@ -157,6 +157,17 @@ const SUGGESTIONS = [
   'Will we land the quarter on plan at +3% growth, and where is the gap?',
 ];
 
+/** One governed entry question per merchandising module. */
+const MODULE_ENTRY_QUESTIONS = [
+  { module: 'Executive', question: 'How is net sales and margin tracking vs last year by region?' },
+  { module: 'Promotion', question: 'Which promotion mechanics delivered the best ROI last quarter?' },
+  { module: 'Pricing', question: 'Where are we priced worst vs competitors in beverages?' },
+  { module: 'Assortment', question: 'Which pantry SKUs are unproductive and safe to delist?' },
+  { module: 'Demand', question: 'What is forecast accuracy by category, and where is bias worst?' },
+  { module: 'Supply Chain', question: 'Which suppliers are missing on-time delivery, and by how much?' },
+  { module: 'Space', question: 'Which categories earn the least sales per square foot of shelf?' },
+];
+
 const SCENARIO_LABEL: Record<ScenarioSet['kind'], string> = {
   forecast: 'Forecast simulation',
   price: 'Price elasticity simulation',
@@ -819,13 +830,35 @@ export default function AskMaya() {
             <div className="animate-fade-up space-y-4">
               <div className="rounded-xl border border-border/70 bg-gradient-surface p-5">
                 <h2 className="font-display text-base font-semibold">
-                  Ask about anything across the six modules
+                  Ask about anything across all seven modules
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Descriptive, diagnostic, predictive or prescriptive — the planner maps your
                   question onto the retail ontology, the engine computes every number in code, and a
                   guardrail rejects any figure the model tried to write itself.
                 </p>
+              </div>
+              {/* Module coverage — one governed entry question per module */}
+              <div className="rounded-xl border border-border/70 bg-card p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Coverage · every merchandising module answers from the same ontology
+                </p>
+                <div className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+                  {MODULE_ENTRY_QUESTIONS.map((m, i) => (
+                    <button
+                      key={m.module}
+                      type="button"
+                      onClick={() => ask(m.question)}
+                      style={{ animationDelay: `${i * 30}ms` }}
+                      className="animate-fade-up rounded-lg border border-border/60 bg-surface-sunken px-2.5 py-2 text-left transition-colors hover:border-primary/50 hover:bg-surface-raised"
+                    >
+                      <span className="block text-[11px] font-semibold text-foreground">{m.module}</span>
+                      <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
+                        {m.question}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
                 {SUGGESTIONS.map((s, i) => (
