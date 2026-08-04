@@ -389,37 +389,52 @@ Deno.serve(async (req) => {
 
     // ---------- 3. NARRATE ----------
     const facts = compactFacts(factSets);
+    const scenarioFacts = compactScenarios(scenarioSets);
     const narration = await callModel(apiKey, [
-      { role: 'system', content: narratorPrompt() },
+      { role: 'system', content: narratorPrompt(scenarioSets.length > 0) },
       {
         role: 'user',
         content: `Persona: ${persona}
 Question: ${question}
 Planner interpretation: ${plan?.interpretation ?? ''}
-FACTS (the only truth you may use):
-${JSON.stringify(facts)}`,
+FACTS (observed database results — the only source of actuals):
+${JSON.stringify(facts)}
+SCENARIOS (deterministic simulations of the future — the only source of projections):
+${JSON.stringify(scenarioFacts)}`,
       },
     ], 8000);
 
     // ---------- 4. GUARD ----------
-    const index = buildFactIndex(factSets);
+    const index = buildFactIndex(factSets, scenarioSets);
     const headline = ground(narration?.headline, index);
     const insights = groundList(narration?.insights, index);
     const drivers = groundList(narration?.drivers, index);
+    const projection = groundList(narration?.projection, index);
     const actions = groundList(narration?.actions, index);
     const caveats = groundList(narration?.caveats, index);
 
-    const rejected = [...insights.rejected, ...drivers.rejected, ...actions.rejected, ...caveats.rejected];
-    const verified = insights.kept.length + drivers.kept.length + actions.kept.length + (headline?.ok ? 1 : 0);
+    const rejected = [...insights.rejected, ...drivers.rejected, ...projection.rejected, ...actions.rejected, ...caveats.rejected];
+    const verified = insights.kept.length + drivers.kept.length + projection.kept.length + actions.kept.length + (headline?.ok ? 1 : 0);
 
     // Deterministic fallback headline, built from facts only
-    const primary = factSets[0];
+    const primary = factSets[0] ?? (scenarioSets[0] as unknown as FactSet);
     const firstMetric = Object.values(primary.total.values)[0];
     const fallbackHeadline = `${firstMetric?.label ?? 'Result'} for the selected scope is ${firstMetric?.formatted ?? 'n/a'} across ${primary.rowsScanned.toLocaleString('en-US')} analysed records.`;
 
-    // chart from facts (never from the model)
-    const chartQuery = factSets.find((fs) => fs.id === String(plan?.chart?.query)) ?? factSets.find((fs) => fs.rows.length > 0) ?? primary;
+    // chart from facts or the scenario (never from the model)
+    const chartSources: { rows: typeof primary.rows; total: typeof primary.total; dimensionLabel: string | null; id: string }[] = [
+      ...factSets.map((fs) => ({ rows: fs.rows, total: fs.total, dimensionLabel: fs.dimensionLabel, id: fs.id })),
+      ...scenarioSets.map((sc) => ({ rows: sc.rows, total: sc.total, dimensionLabel: sc.entityLabel, id: sc.id })),
+    ];
+    const preferScenario = scenarioSets.find((sc) => sc.rows.length > 0);
+    const chartQuery =
+      (preferScenario ? chartSources.find((c) => c.id === preferScenario.id) : null) ??
+      chartSources.find((c) => c.id === String(plan?.chart?.query)) ??
+      chartSources.find((c) => c.rows.length > 0) ??
+      chartSources[0];
+    const scenarioForChart = scenarioSets.find((sc) => sc.id === chartQuery.id);
     const chartMetric =
+      (scenarioForChart && chartQuery.rows[0]?.values[scenarioForChart.chartMetric] ? scenarioForChart.chartMetric : null) ??
       (plan?.chart?.metric && chartQuery.rows[0]?.values[String(plan.chart.metric)] ? String(plan.chart.metric) : null) ??
       Object.keys(chartQuery.rows[0]?.values ?? chartQuery.total.values)[0];
 
@@ -431,9 +446,29 @@ ${JSON.stringify(facts)}`,
       headline: headline?.ok ? headline.text : fallbackHeadline,
       insights: insights.kept,
       drivers: drivers.kept,
+      projection: projection.kept,
       actions: actions.kept,
       caveats: caveats.kept.map((c) => c.text),
       confidence: ['high', 'medium', 'low'].includes(String(narration?.confidence)) ? String(narration.confidence) : 'medium',
+      mode: scenarioSets.length > 0 ? 'predictive' : 'descriptive',
+      scenarios: scenarioSets.map((sc) => ({
+        id: sc.id,
+        kind: sc.kind,
+        module: sc.module,
+        title: sc.title,
+        method: sc.method,
+        entity: sc.entityLabel,
+        scope: sc.scope,
+        levers: sc.levers,
+        assumptions: sc.assumptions,
+        window: sc.window,
+        recordsAnalysed: sc.rowsScanned,
+        tables: sc.tables,
+        notes: sc.notes,
+        total: sc.total,
+        rows: sc.rows,
+        chartMetric: sc.chartMetric,
+      })),
       chart: {
         metric: chartMetric,
         metricLabel: chartQuery.rows[0]?.values[chartMetric]?.label ?? chartQuery.total.values[chartMetric]?.label ?? '',
