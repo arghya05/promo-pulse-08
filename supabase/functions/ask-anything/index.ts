@@ -497,13 +497,13 @@ ${JSON.stringify(scenarioFacts)}`,
       ontologyPath: ontologyEdges
         .filter((e) => factSets.some((fs) => datasets[fs.dataset]?.module && e.via.includes(datasets[fs.dataset].table.split('_')[0])))
         .slice(0, 6),
-      modulesTouched: Array.from(new Set(factSets.map((fs) => fs.module))),
+      modulesTouched: Array.from(new Set([...factSets.map((fs) => fs.module), ...scenarioSets.map((sc) => sc.module)])),
       guardrail: {
-        mode: 'placeholder-substitution',
+        mode: scenarioSets.length > 0 ? 'placeholder-substitution + coded simulation' : 'placeholder-substitution',
         verifiedClaims: verified,
         rejectedClaims: rejected.length,
         rejected,
-        rule: 'Every figure is substituted from a computed database fact; model-authored numbers are rejected.',
+        rule: 'Every figure — observed or projected — is substituted from a value computed in code; model-authored numbers are rejected.',
       },
       errors: executionErrors,
       elapsedMs: Date.now() - started,
