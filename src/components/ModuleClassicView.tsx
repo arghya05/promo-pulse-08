@@ -210,6 +210,7 @@ const ModuleClassicView = ({ module, questions, popularQuestions, kpis }: Module
     if (!result?.chartData) return null;
 
     const chartType = selectedQuestion?.chartType || 'bar';
+    const chartLabel = selectedQuestion?.question || 'Analysis chart';
     const data = result.chartData;
 
     switch (chartType) {
