@@ -69,14 +69,14 @@ export function buildCatalog(datasets: CatalogDataset[]): CatalogEntry[] {
           : 'pass';
       const lineage = lineageForTable(dataset.table);
       const lastVerified =
-        gates.map((g) => g.lastRun).sort().at(-1) ?? '2026-08-04 14:35 UTC';
+        gates.map((g) => g.lastRun).sort().slice(-1)[0] ?? '2026-08-04 14:35 UTC';
       const stewards = [...new Set(feeds.map((f) => f.ownership))];
 
       return {
         dataset,
         feeds,
         stewards: stewards.length ? stewards : ['Merchandising Data Governance'],
-        cadence: feeds[0]?.cadence ?? lineage.layers.at(-2)?.cadence ?? 'daily',
+        cadence: feeds[0]?.cadence ?? lineage.layers[lineage.layers.length - 2]?.cadence ?? 'daily',
         lastVerified,
         gates,
         status,
@@ -112,7 +112,7 @@ export type MetricHit = {
 /** Flattened metric index — the "search a KPI, find its dataset" path. */
 export function metricIndex(entries: CatalogEntry[]): MetricHit[] {
   return entries
-    .flatMap((e) => e.metrics0 ?? e.dataset.metrics.map((metric) => ({ metric, dataset: e.dataset, status: e.status })))
+    .flatMap((e) => e.dataset.metrics.map((metric) => ({ metric, dataset: e.dataset, status: e.status })))
     .sort((a, b) => a.metric.label.localeCompare(b.metric.label));
 }
 
