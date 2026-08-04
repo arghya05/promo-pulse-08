@@ -195,7 +195,7 @@ export default function DataQuality() {
                 <CardTitle className="text-sm">Pass rate by quality dimension</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartCapture filename="dq-dimension-pass-rate">
+                <ChartCapture label="DQ pass rate by dimension">
                   <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={dimChart} layout="vertical" margin={{ left: 24, right: 16 }}>
