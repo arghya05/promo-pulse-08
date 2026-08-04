@@ -18,7 +18,9 @@ import {
 import {
   AlertTriangle,
   ArrowRight,
+  Calculator,
   Database,
+  FlaskConical,
   Info,
   Lightbulb,
   Network,
