@@ -134,7 +134,34 @@ function compactFacts(factSets: FactSet[]) {
   }));
 }
 
-function narratorPrompt(): string {
+function compactScenarios(scenarios: ScenarioSet[]) {
+  return scenarios.map((sc) => ({
+    scenario: sc.id,
+    kind: sc.kind,
+    module: sc.module,
+    title: sc.title,
+    method: sc.method,
+    grain: sc.entityLabel,
+    scope: sc.scope,
+    levers: sc.levers,
+    assumptions: sc.assumptions,
+    baselineWindow: sc.window,
+    recordsAnalysed: sc.rowsScanned,
+    projectedTotal: {
+      ref: sc.total.ref,
+      label: sc.total.label,
+      metrics: Object.fromEntries(Object.entries(sc.total.values).map(([k, v]) => [k, { ref: `${sc.total.ref}.${k}`, label: v.label, display: v.formatted }])),
+    },
+    projectedRows: sc.rows.map((r) => ({
+      ref: r.ref,
+      name: r.label,
+      metrics: Object.fromEntries(Object.entries(r.values).map(([k, v]) => [k, { ref: `${r.ref}.${k}`, label: v.label, display: v.formatted }])),
+    })),
+    notes: sc.notes,
+  }));
+}
+
+function narratorPrompt(hasScenarios: boolean): string {
   return `You are Maya, a senior merchandising analyst for a large US grocery retailer. You are answering an executive.
 
 ABSOLUTE RULES (violations are automatically rejected by a guardrail):
@@ -143,17 +170,25 @@ ABSOLUTE RULES (violations are automatically rejected by a guardrail):
 3. Never state a fact that is not in FACTS. No benchmarks, no outside knowledge, no assumed causes. If FACTS do not support a claim, do not make it.
 4. Causality: only say "correlates with" / "coincides with" unless FACTS include a causal metric. Recommendations must be tied to a placeholder metric.
 5. Brevity: each bullet 15-25 words, format "[Metric or entity]: [insight] - [placeholder]".
+${hasScenarios ? `
+PREDICTIVE / PRESCRIPTIVE MODE — a SCENARIOS block is present. It was simulated deterministically in code.
+6. Label projected numbers as projected/modelled/expected, never as actual results. Actuals come from FACTS queries only.
+7. Use "projection" for the forward view: what the simulation says will happen under the stated levers.
+8. Every action must quantify the modelled outcome with a scenario placeholder (e.g. {{s1.total.margin_delta}}) and name the lever in words.
+9. Put the two most material scenario assumptions into "caveats", worded as limits of the simulation.
+10. Confidence: "high" only when many records were analysed and the scenario has a narrow band; use "medium" or "low" otherwise.` : ''}
 
 Return JSON exactly:
 {
   "headline": "one sentence direct answer, placeholders only for numbers",
   "insights": [{"text":"...", "refs":["q1.total.net_sales"]}],
   "drivers": [{"text":"...", "refs":["q1.2.net_sales"]}],
-  "actions": [{"text":"...", "impact":"...", "refs":["q1.1.net_sales"]}],
-  "caveats": ["what the data does NOT cover, if relevant"],
+  "projection": [{"text":"...", "refs":["s1.total.forecast_sales"]}],
+  "actions": [{"text":"...", "impact":"...", "refs":["s1.1.margin_delta"]}],
+  "caveats": ["what the data or simulation does NOT cover"],
   "confidence": "high" | "medium" | "low"
 }
-3-5 insights, 0-4 drivers, 2-3 actions. Use "low" confidence when few records were analysed.`;
+3-5 insights, 0-4 drivers, ${hasScenarios ? '2-4 projection bullets' : 'empty projection array'}, 2-3 actions. Use "low" confidence when few records were analysed.`;
 }
 
 // ------------------------------ guardrail ----------------------------------
