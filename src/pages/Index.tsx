@@ -1413,7 +1413,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                     <span className="text-base">💡</span>
                     <span>Click on any bar to see detailed breakdown</span>
                   </div>
-                  <ChartCapture label={selectedQuestion?.text || "Analysis chart"} className="h-full w-full">
+                  <ChartCapture label={selectedQuestion || "Analysis chart"} className="h-full w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     {(() => {
                       // Dynamically detect chart data keys
