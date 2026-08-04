@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/sidebar';
 import { modules } from '@/lib/data/modules';
 import { companyProfile } from '@/lib/data/company-profile';
-import { LayoutDashboard, MessagesSquare, ShieldCheck, Sparkles } from 'lucide-react';
+import { LayoutDashboard, MessagesSquare, Network, ShieldCheck, Sparkles } from 'lucide-react';
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -61,6 +61,14 @@ export function AppSidebar() {
                   <NavLink to="/ask" className="flex items-center gap-2">
                     <MessagesSquare className="h-4 w-4 text-primary" />
                     {!collapsed && <span>Ask Maya</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/graph')} tooltip="Retail knowledge graph">
+                  <NavLink to="/graph" className="flex items-center gap-2">
+                    <Network className="h-4 w-4" />
+                    {!collapsed && <span>Knowledge Graph</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
