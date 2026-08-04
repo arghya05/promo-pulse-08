@@ -9,6 +9,7 @@ import Home from "./pages/Home";
 import Index from "./pages/Index";
 import AskMaya from "./pages/AskMaya";
 import OntologyGraph from "./pages/OntologyGraph";
+import DataQuality from "./pages/DataQuality";
 import NotFound from "./pages/NotFound";
 import ValidationDashboard from "./pages/ValidationDashboard";
 
