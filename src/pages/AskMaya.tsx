@@ -48,6 +48,8 @@ import { GraphPath, type GraphEdge, type GraphNode } from '@/components/ask/Grap
 import { ReasoningChain, type ReasoningStep } from '@/components/ask/ReasoningChain';
 import { ProvenanceLedger, type Provenance } from '@/components/ask/ProvenanceLedger';
 import { ClarifyCard, type Clarification } from '@/components/ask/ClarifyCard';
+import { EvaluationPanel, type Evaluation } from '@/components/ask/EvaluationPanel';
+import { LineageTrail, type LineageEntry } from '@/components/ask/LineageTrail';
 import { toast } from 'sonner';
 
 
@@ -125,6 +127,8 @@ type AskResponse = {
   ontologyPath?: { from: string; to: string; via: string; label: string }[];
   graph?: { nodes: GraphNode[]; edges: GraphEdge[] };
   reasoning?: ReasoningStep[];
+  evaluation?: Evaluation;
+  lineage?: Record<string, LineageEntry>;
   clarification?: Clarification;
   modulesTouched?: string[];
   guardrail?: {
@@ -170,10 +174,12 @@ function ClaimList({
   title,
   icon: Icon,
   claims,
+  lineage,
 }: {
   title: string;
   icon: typeof Lightbulb;
   claims?: Claim[];
+  lineage?: Record<string, LineageEntry>;
 }) {
   if (!claims?.length) return null;
   return (
@@ -193,6 +199,7 @@ function ClaimList({
             {claim.impact && (
               <div className="mt-1 text-xs text-muted-foreground">Expected impact: {claim.impact}</div>
             )}
+            <LineageTrail refs={claim.refs} lineage={lineage} />
           </li>
         ))}
       </ul>
@@ -587,11 +594,16 @@ function AnswerBlock({ answer, onAsk }: { answer: AskResponse; onAsk: (q: string
         <Separator />
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <ClaimList title="What the data shows" icon={Lightbulb} claims={answer.insights} />
-          <ClaimList title="Why it is happening" icon={TrendingUp} claims={answer.drivers} />
+          <ClaimList title="What the data shows" icon={Lightbulb} claims={answer.insights} lineage={answer.lineage} />
+          <ClaimList title="Why it is happening" icon={TrendingUp} claims={answer.drivers} lineage={answer.lineage} />
         </div>
-        <ClaimList title="What the simulation projects" icon={FlaskConical} claims={answer.projection} />
-        <ClaimList title="Recommended actions" icon={Target} claims={answer.actions} />
+        <ClaimList
+          title="What the simulation projects"
+          icon={FlaskConical}
+          claims={answer.projection}
+          lineage={answer.lineage}
+        />
+        <ClaimList title="Recommended actions" icon={Target} claims={answer.actions} lineage={answer.lineage} />
 
         {answer.caveats?.length ? (
           <div className="space-y-1 rounded-lg border border-border/70 bg-surface-sunken p-3 text-xs text-muted-foreground">
@@ -619,6 +631,8 @@ function AnswerBlock({ answer, onAsk }: { answer: AskResponse; onAsk: (q: string
           <span className="basis-full">{answer.guardrail.rule}</span>
         </Card>
       )}
+
+      {answer.evaluation ? <EvaluationPanel evaluation={answer.evaluation} /> : null}
 
       {answer.reasoning?.length ? <ReasoningChain steps={answer.reasoning} /> : null}
 
