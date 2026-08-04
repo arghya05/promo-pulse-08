@@ -15,6 +15,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { datasets, ontologyEdges, ontologyPromptSpec } from '../_shared/retail-ontology.ts';
 import { executeQuery, loadLookups, type FactSet, type QuerySpec } from '../_shared/ontology-engine.ts';
+import { runScenario, scenarioPromptSpec, SCENARIO_KINDS, type ScenarioSet, type ScenarioSpec } from '../_shared/scenario-engine.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
