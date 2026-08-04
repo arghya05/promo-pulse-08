@@ -315,6 +315,16 @@ function buildLineageIndex(factSets: FactSet[], scenarios: ScenarioSet[]): Recor
     base: Omit<LineageEntry, 'ref' | 'value' | 'metric' | 'metricLabel' | 'formula' | 'scope'>,
     formulaFor: (metric: string) => string,
   ) => {
+    // entity-name refs are lineage-bearing too: they identify the row itself
+    out[`${rowRef}.name`] = {
+      ...base,
+      ref: `${rowRef}.name`,
+      scope,
+      metric: 'name',
+      metricLabel: 'Entity name',
+      formula: 'Row identifier resolved from the governed dimension lookup',
+      value: scope,
+    };
     for (const [key, v] of Object.entries(values)) {
       out[`${rowRef}.${key}`] = {
         ...base,
