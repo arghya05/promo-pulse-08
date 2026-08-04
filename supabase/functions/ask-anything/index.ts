@@ -281,6 +281,259 @@ function groundList(items: unknown, index: Map<string, string>) {
   return { kept, rejected };
 }
 
+// ------------------------ lineage + evaluation ------------------------------
+
+export interface LineageEntry {
+  ref: string;
+  kind: 'observed' | 'projected';
+  value: string;
+  metric: string;
+  metricLabel: string;
+  formula: string;
+  scope: string;
+  dataset: string;
+  module: string;
+  table: string;
+  grain: string;
+  window: { from: string | null; to: string | null };
+  recordsAnalysed: number;
+  method: string | null;
+}
+
+/**
+ * Resolves every groundable placeholder ref to its full lineage: which row of
+ * which governed dataset, which physical table, which formula, which window.
+ * The UI renders this per claim so a reader can trace any figure end to end.
+ */
+function buildLineageIndex(factSets: FactSet[], scenarios: ScenarioSet[]): Record<string, LineageEntry> {
+  const out: Record<string, LineageEntry> = {};
+
+  const add = (
+    rowRef: string,
+    scope: string,
+    values: Record<string, { metric: string; label: string; formatted: string }>,
+    base: Omit<LineageEntry, 'ref' | 'value' | 'metric' | 'metricLabel' | 'formula' | 'scope'>,
+    formulaFor: (metric: string) => string,
+  ) => {
+    for (const [key, v] of Object.entries(values)) {
+      out[`${rowRef}.${key}`] = {
+        ...base,
+        ref: `${rowRef}.${key}`,
+        scope,
+        metric: key,
+        metricLabel: v.label ?? key,
+        formula: formulaFor(key),
+        value: v.formatted,
+      };
+    }
+  };
+
+  for (const fs of factSets) {
+    const ds = datasets[fs.dataset];
+    const base = {
+      kind: 'observed' as const,
+      dataset: fs.dataset,
+      module: fs.module,
+      table: ds?.table ?? fs.tables[0] ?? '',
+      grain: fs.grain,
+      window: fs.window,
+      recordsAnalysed: fs.rowsScanned,
+      method: null,
+    };
+    const formulaFor = (m: string) => ds?.metrics[m]?.definition ?? `${ds?.metrics[m]?.agg ?? 'sum'}(${m})`;
+    add(fs.total.ref, `${fs.total.label} (all rows in scope)`, fs.total.values as never, base, formulaFor);
+    for (const row of fs.rows) {
+      add(row.ref, `${fs.dimensionLabel ?? 'segment'} = ${row.label}`, row.values as never, base, formulaFor);
+    }
+  }
+
+  for (const sc of scenarios) {
+    const base = {
+      kind: 'projected' as const,
+      dataset: `${sc.kind}_simulation`,
+      module: sc.module,
+      table: sc.tables.join(', '),
+      grain: `simulated at ${sc.entityLabel} level`,
+      window: sc.window,
+      recordsAnalysed: sc.rowsScanned,
+      method: sc.method,
+    };
+    const formulaFor = () => sc.method;
+    add(sc.total.ref, `${sc.title} — modelled total`, sc.total.values as never, base, formulaFor);
+    for (const row of sc.rows) {
+      add(row.ref, `${sc.entityLabel} = ${row.label} (modelled)`, row.values as never, base, formulaFor);
+    }
+  }
+
+  return out;
+}
+
+export interface EvalCheck {
+  id: string;
+  label: string;
+  status: 'pass' | 'warn' | 'fail';
+  detail: string;
+  fix: string | null;
+}
+
+interface GuardPass {
+  headline: GroundedText | null;
+  insights: ReturnType<typeof groundList>;
+  drivers: ReturnType<typeof groundList>;
+  projection: ReturnType<typeof groundList>;
+  actions: ReturnType<typeof groundList>;
+  caveats: ReturnType<typeof groundList>;
+  rejected: { text: string; violation: string }[];
+  verified: number;
+  confidence: string;
+}
+
+/**
+ * Deterministic evaluator. Runs in code — no model judges the answer — so the
+ * verdict is reproducible. Any `fail` triggers one self-correction pass.
+ */
+function evaluateAnswer(
+  pass: GuardPass,
+  factSets: FactSet[],
+  scenarios: ScenarioSet[],
+  lineage: Record<string, LineageEntry>,
+): { checks: EvalCheck[]; score: number; passed: boolean; verdict: string } {
+  const checks: EvalCheck[] = [];
+  const claims = [...pass.insights.kept, ...pass.drivers.kept, ...pass.projection.kept, ...pass.actions.kept];
+  const refs = new Set(claims.flatMap((c) => c.refs ?? []));
+  const records = [...factSets.map((f) => f.rowsScanned), ...scenarios.map((s) => s.rowsScanned)]
+    .reduce((a, b) => a + b, 0);
+
+  const push = (id: string, label: string, ok: boolean, warn: boolean, detail: string, fix: string | null) =>
+    checks.push({ id, label, status: ok ? 'pass' : warn ? 'warn' : 'fail', detail, fix: ok ? null : fix });
+
+  push(
+    'grounding',
+    'Every figure traced to a computed value',
+    pass.rejected.length === 0,
+    false,
+    pass.rejected.length === 0
+      ? `${pass.verified} claims verified, 0 model-authored numbers survived`
+      : `${pass.rejected.length} claim(s) were rejected for ungrounded numbers`,
+    'Rewrite the rejected claims using only {{ref}} placeholders that exist in FACTS/SCENARIOS.',
+  );
+
+  push(
+    'answered',
+    'Question directly answered',
+    Boolean(pass.headline?.ok),
+    false,
+    pass.headline?.ok ? 'Headline is a grounded direct answer' : 'Headline was rejected; a deterministic fallback was used',
+    'Write a one-sentence headline that answers the question, with numbers as placeholders only.',
+  );
+
+  push(
+    'evidence',
+    'Evidence breadth',
+    refs.size >= 3,
+    refs.size >= 1,
+    `${refs.size} distinct computed values cited across ${claims.length} claims`,
+    'Cite at least three distinct placeholder refs, including at least one row-level ref.',
+  );
+
+  const rowRefsUsed = Array.from(refs).some((r) => /\.\d+\./.test(r));
+  push(
+    'granularity',
+    'Row-level detail, not just totals',
+    rowRefsUsed || factSets.every((f) => f.rows.length === 0),
+    true,
+    rowRefsUsed ? 'At least one claim names a specific segment or SKU' : 'All claims cite totals only',
+    'Name the specific top/bottom segments using row refs such as {{q1.1.name}}.',
+  );
+
+  const scenarioRefsUsed = Array.from(refs).some((r) => r.startsWith('s'));
+  if (scenarios.length > 0) {
+    push(
+      'projection',
+      'Simulation results used for the forward view',
+      pass.projection.kept.length >= 1 && scenarioRefsUsed,
+      false,
+      pass.projection.kept.length >= 1
+        ? `${pass.projection.kept.length} projection claim(s) from ${scenarios.length} simulation(s)`
+        : 'Simulations ran but the narrative did not use them',
+      'Add projection bullets that cite scenario refs (s1.*) and label them as modelled, not actual.',
+    );
+  } else {
+    push(
+      'projection',
+      'No projections invented without a simulation',
+      pass.projection.kept.length === 0 && !scenarioRefsUsed,
+      false,
+      pass.projection.kept.length === 0 ? 'Descriptive answer, no forward claims' : 'Forward claims made with no simulation behind them',
+      'Remove the projection bullets — no scenario was simulated for this question.',
+    );
+  }
+
+  push(
+    'actionability',
+    'Actions tied to a metric',
+    pass.actions.kept.length >= 1,
+    false,
+    `${pass.actions.kept.length} recommended action(s)`,
+    'Add 2-3 actions, each quantified with a placeholder metric.',
+  );
+
+  push(
+    'sample',
+    'Sample size supports the confidence stated',
+    records >= 50 || pass.confidence !== 'high',
+    true,
+    `${records.toLocaleString('en-US')} records analysed with "${pass.confidence}" confidence`,
+    'Lower confidence to medium or low — too few records were analysed for a high-confidence answer.',
+  );
+
+  push(
+    'limits',
+    'Limits of the data disclosed',
+    pass.caveats.kept.length >= 1,
+    true,
+    `${pass.caveats.kept.length} caveat(s) stated`,
+    'State at least one caveat about what the data or simulation does not cover.',
+  );
+
+  const unresolvedRefs = Array.from(refs).filter((r) => !lineage[r]);
+  push(
+    'lineage',
+    'Full lineage resolvable for every cited value',
+    unresolvedRefs.length === 0,
+    false,
+    unresolvedRefs.length === 0
+      ? `All ${refs.size} cited values resolve to a dataset, table and formula`
+      : `${unresolvedRefs.length} cited value(s) have no lineage entry`,
+    'Only cite refs that appear in the FACTS/SCENARIOS json.',
+  );
+
+  const weight = (c: EvalCheck) => (c.status === 'pass' ? 1 : c.status === 'warn' ? 0.5 : 0);
+  const score = Math.round((checks.reduce((a, c) => a + weight(c), 0) / checks.length) * 100);
+  const failed = checks.filter((c) => c.status === 'fail');
+  return {
+    checks,
+    score,
+    passed: failed.length === 0,
+    verdict: failed.length === 0
+      ? `Grounded — ${checks.filter((c) => c.status === 'pass').length}/${checks.length} checks passed`
+      : `${failed.length} check(s) failed: ${failed.map((c) => c.label).join('; ')}`,
+  };
+}
+
+/** Turns failing checks into an instruction block for the self-correction pass. */
+function repairBrief(pass: GuardPass, evaluation: { checks: EvalCheck[] }): string {
+  const problems = evaluation.checks.filter((c) => c.status !== 'pass' && c.fix);
+  const lines = problems.map((c, i) => `${i + 1}. ${c.label} — ${c.detail}. Fix: ${c.fix}`);
+  const rejects = pass.rejected.slice(0, 6).map((r) => `- "${r.text}" (${r.violation})`);
+  return `Your previous answer failed automated evaluation. Rewrite it completely, keeping only what was valid.
+
+FINDINGS TO FIX:
+${lines.join('\n')}
+${rejects.length ? `\nCLAIMS THAT WERE THROWN AWAY (do not repeat these mistakes):\n${rejects.join('\n')}` : ''}
+Return the same JSON shape. Remember: you may not write a single digit outside a {{ref}} placeholder.`;
+}
+
 // ------------------------------ handler ------------------------------------
 
 Deno.serve(async (req) => {
