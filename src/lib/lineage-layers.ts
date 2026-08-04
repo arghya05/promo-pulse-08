@@ -69,9 +69,6 @@ const POS_SILVER: LineageLayer = {
     checks: ['Referential integrity to product & store master', 'Returns flagged not deleted', 'Margin ≥ −100% bound'],
 };
 
-/** POS ingest + cost feed + conformed silver, in pipeline order. */
-const POS: LineageLayer[] = [];
-
 const COST_FEED: LineageLayer = {
   layer: 'Source',
   object: 'Vendor cost & trade-funding files',
@@ -82,12 +79,14 @@ const COST_FEED: LineageLayer = {
   checks: ['Effective-date continuity', 'Cost > 0'],
 };
 
+/** POS ingest -> vendor cost feed -> conformed silver, in pipeline order. */
+const POS: LineageLayer[] = [...POS_INGEST, COST_FEED, POS_SILVER];
+
 const TABLE_LINEAGE: Record<string, TableLineage> = {
   kpi_measures: {
     goldLabel: 'Certified daily P&L / KPI fact',
     layers: [
       ...POS,
-      COST_FEED,
       {
         layer: 'Gold',
         object: 'kpi_measures',
@@ -105,7 +104,6 @@ const TABLE_LINEAGE: Record<string, TableLineage> = {
     goldLabel: 'POS line-item fact',
     layers: [
       ...POS,
-      COST_FEED,
       {
         layer: 'Gold',
         object: 'transactions',
@@ -210,7 +208,7 @@ const TABLE_LINEAGE: Record<string, TableLineage> = {
   demand_forecasts: {
     goldLabel: 'Demand forecast fact',
     layers: [
-      ...POS,
+      ...POS_INGEST,
       {
         layer: 'Silver',
         object: 'stg_fcst.demand_features',
