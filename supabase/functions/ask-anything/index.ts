@@ -821,7 +821,7 @@ ${JSON.stringify(scenarioFacts)}`;
       projection: projection.kept,
       actions: actions.kept,
       caveats: caveats.kept.map((c) => c.text),
-      confidence: ['high', 'medium', 'low'].includes(String(narration?.confidence)) ? String(narration.confidence) : 'medium',
+      confidence: pass.confidence,
       mode: scenarioSets.length > 0 ? 'predictive' : 'descriptive',
       scenarios: scenarioSets.map((sc) => ({
         id: sc.id,
@@ -895,6 +895,16 @@ ${JSON.stringify(scenarioFacts)}`;
       }),
       graph: graphForDatasets(factSets.map((fs) => fs.dataset)),
       reasoning: steps,
+      evaluation: {
+        score: evaluation.score,
+        passed: evaluation.passed,
+        verdict: evaluation.verdict,
+        checks: evaluation.checks,
+        attempts,
+        selfCorrected,
+        method: 'Deterministic code evaluator — no model grades the answer. A failing check triggers one self-correction rewrite, and the rewrite is kept only if it scores at least as high.',
+      },
+      lineage,
       modulesTouched: Array.from(new Set([...factSets.map((fs) => fs.module), ...scenarioSets.map((sc) => sc.module)])),
       guardrail: {
         mode: scenarioSets.length > 0 ? 'placeholder-substitution + coded simulation' : 'placeholder-substitution',
