@@ -241,3 +241,14 @@ All colors MUST be HSL.
     background: hsl(var(--primary) / 0.8);
   }
 }
+
+/* ── Density control (⌘ topbar toggle) ─────────────────────────────
+   Tailwind sizing is rem-based, so scaling the root font-size gives a
+   real, uniform compact mode across every surface. */
+html[data-density='compact'] {
+  font-size: 14px;
+}
+
+html[data-density='comfortable'] {
+  font-size: 16px;
+}
