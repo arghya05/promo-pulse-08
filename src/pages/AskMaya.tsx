@@ -827,8 +827,30 @@ export default function AskMaya() {
                   guardrail rejects any figure the model tried to write itself.
                 </p>
               </div>
+              {/* Module coverage — one governed entry question per module */}
+              <div className="rounded-xl border border-border/70 bg-card p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Coverage · every merchandising module answers from the same ontology
+                </p>
+                <div className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+                  {MODULE_ENTRY_QUESTIONS.map((m, i) => (
+                    <button
+                      key={m.module}
+                      type="button"
+                      onClick={() => ask(m.question)}
+                      style={{ animationDelay: `${i * 30}ms` }}
+                      className="animate-fade-up rounded-lg border border-border/60 bg-surface-sunken px-2.5 py-2 text-left transition-colors hover:border-primary/50 hover:bg-surface-raised"
+                    >
+                      <span className="block text-[11px] font-semibold text-foreground">{m.module}</span>
+                      <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
+                        {m.question}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="grid gap-2 sm:grid-cols-2">
-                {SUGGESTIONS.map((s, i) => (
+
                   <button
                     key={s}
                     type="button"
