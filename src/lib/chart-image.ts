@@ -64,7 +64,12 @@ export function chartFileName(label: string): string {
 
 /** Rasterises the first SVG inside `container` and triggers a PNG download. */
 export async function saveChartAsPng(container: HTMLElement, filename: string, scale = 2): Promise<void> {
-  const svg = container.querySelector('svg');
+  // Skip the export button's own icon — pick the chart surface itself.
+  const svg =
+    container.querySelector<SVGSVGElement>('svg.recharts-surface') ??
+    Array.from(container.querySelectorAll<SVGSVGElement>('svg')).find(
+      (el) => !el.closest('[data-chart-export-control]'),
+    );
   if (!svg) throw new Error('No chart found to export');
 
   const rect = svg.getBoundingClientRect();
