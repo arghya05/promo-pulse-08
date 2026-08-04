@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { GitBranch } from 'lucide-react';
+import { LineageDetailDialog } from '@/components/ask/LineageDetailDialog';
+
 
 export type LineageEntry = {
   ref: string;
