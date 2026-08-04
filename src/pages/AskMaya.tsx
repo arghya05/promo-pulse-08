@@ -752,7 +752,7 @@ export default function AskMaya() {
               <ShieldCheck className="h-3 w-3 text-status-good" /> Zero-hallucination
             </Badge>
             <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setPaletteOpen(true)}>
-              <Command className="h-3.5 w-3.5" />
+              <CommandIcon className="h-3.5 w-3.5" />
               Browse questions
               <kbd className="ml-1 hidden rounded border border-border/70 bg-surface-sunken px-1.5 text-[10px] md:inline">
                 ⌘K
