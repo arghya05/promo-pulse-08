@@ -317,7 +317,31 @@ Deno.serve(async (req) => {
       limit: Math.min(Number(q.limit ?? 10) || 10, 15),
     }));
 
-    if (specs.length === 0 || plan?.answerable === false) {
+    const rawScenarios = Array.isArray(plan?.scenarios) ? plan.scenarios.slice(0, 2) : [];
+    const scenarioSpecs: ScenarioSpec[] = rawScenarios
+      .filter((s: any) => SCENARIO_KINDS.includes(String(s?.kind) as any))
+      .map((s: any, i: number) => ({
+        id: s.id && /^s[a-z0-9]*$/i.test(String(s.id)) ? String(s.id) : `s${i + 1}`,
+        kind: String(s.kind) as ScenarioSpec['kind'],
+        entity: ['category', 'subcategory', 'brand', 'product', 'store', 'region'].includes(String(s.entity))
+          ? (String(s.entity) as ScenarioSpec['entity'])
+          : 'category',
+        scope: Object.fromEntries(
+          Object.entries((s.scope ?? {}) as Record<string, unknown>)
+            .filter(([k, v]) => ['category', 'subcategory', 'brand', 'product_sku', 'store', 'region'].includes(k) && String(v ?? '').trim() !== '')
+            .map(([k, v]) => [k, String(v).trim()]),
+        ),
+        levers: Object.fromEntries(
+          Object.entries((s.levers ?? {}) as Record<string, unknown>)
+            .filter(([, v]) => Number.isFinite(Number(v)))
+            .map(([k, v]) => [k, Number(v)]),
+        ),
+        dateFrom: s.dateFrom ? String(s.dateFrom).slice(0, 10) : null,
+        dateTo: s.dateTo ? String(s.dateTo).slice(0, 10) : null,
+        limit: Math.min(Number(s.limit ?? 10) || 10, 15),
+      }));
+
+    if ((specs.length === 0 && scenarioSpecs.length === 0) || plan?.answerable === false) {
       return new Response(JSON.stringify({
         question,
         answerable: false,
@@ -342,7 +366,17 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (factSets.length === 0) {
+    // ---------- 2b. SIMULATE (predictive / prescriptive) ----------
+    const scenarioSets: ScenarioSet[] = [];
+    for (const spec of scenarioSpecs) {
+      try {
+        scenarioSets.push(await runScenario(supabase, spec, lookups));
+      } catch (err) {
+        executionErrors.push(`${spec.kind} scenario: ${err instanceof Error ? err.message : 'simulation failed'}`);
+      }
+    }
+
+    if (factSets.length === 0 && scenarioSets.length === 0) {
       return new Response(JSON.stringify({
         question,
         answerable: false,
