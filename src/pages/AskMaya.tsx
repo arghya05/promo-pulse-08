@@ -62,7 +62,17 @@ type Claim = { text: string; refs: string[]; impact?: string };
 
 type ScenarioSet = {
   id: string;
-  kind: 'forecast' | 'price' | 'promotion' | 'planogram' | 'assortment' | 'replenishment';
+  kind:
+    | 'forecast'
+    | 'price'
+    | 'promotion'
+    | 'planogram'
+    | 'assortment'
+    | 'replenishment'
+    | 'markdown'
+    | 'supplier_risk'
+    | 'stockout_risk'
+    | 'plan';
   module: string;
   title: string;
   method: string;
@@ -114,7 +124,10 @@ const SUGGESTIONS = [
   'Which SKUs should I delist in pantry, and what is the margin impact?',
   'Reset the produce planogram: where should facings move and what is it worth?',
   'What safety stock and reorder points do I need at 97% service in meat?',
-  'Am I priced competitively on beverages versus competitors?',
+  'What markdown depth clears aged bakery stock in 6 weeks at 85% sell-through?',
+  'Which suppliers put my next quarter at risk, and how much buffer should I add?',
+  'How much sales will I lose to stockouts in produce over the next 4 weeks?',
+  'Will we land the quarter on plan at +3% growth, and where is the gap?',
 ];
 
 const SCENARIO_LABEL: Record<ScenarioSet['kind'], string> = {
@@ -124,6 +137,10 @@ const SCENARIO_LABEL: Record<ScenarioSet['kind'], string> = {
   planogram: 'Space / planogram simulation',
   assortment: 'Assortment rationalisation',
   replenishment: 'Replenishment optimisation',
+  markdown: 'Markdown / clearance optimisation',
+  supplier_risk: 'Supplier reliability outlook',
+  stockout_risk: 'Availability & lost-sales risk',
+  plan: 'Plan landing & gap-to-plan',
 };
 
 
