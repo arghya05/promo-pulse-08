@@ -15,6 +15,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { datasets, ontologyEdges, ontologyPromptSpec } from '../_shared/retail-ontology.ts';
 import { executeQuery, loadLookups, type FactSet, type QuerySpec } from '../_shared/ontology-engine.ts';
+import { runScenario, scenarioPromptSpec, SCENARIO_KINDS, type ScenarioSet, type ScenarioSpec } from '../_shared/scenario-engine.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -92,6 +93,8 @@ RULES
 - Time window: use ISO dates. Default to the last 90 days when the question has no period. "This year"/"YTD" -> ${today.slice(0, 4)}-01-01 to ${today}. Snapshot datasets (inventory, space) ignore dates.
 - limit <= 15. sortDir "desc" for best/top, "asc" for worst/lowest.
 
+${scenarioPromptSpec()}
+
 Return JSON exactly:
 {
   "interpretation": "one sentence restating the question in retail terms",
@@ -100,9 +103,10 @@ Return JSON exactly:
   "queries": [
     {"id":"q1","dataset":"sales","metrics":["net_sales","gross_margin_pct"],"dimension":"category","filters":{},"dateFrom":"YYYY-MM-DD","dateTo":"YYYY-MM-DD","sortBy":"net_sales","sortDir":"desc","limit":10}
   ],
+  "scenarios": [],
   "chart": {"query":"q1","metric":"net_sales","type":"bar"}
 }
-If the question cannot be answered from these datasets, return "answerable": false with an empty queries array and explain in "interpretation".`;
+If the question cannot be answered from these datasets or scenarios, return "answerable": false with empty queries and scenarios and explain in "interpretation".`;
 }
 
 // ------------------------------ narrator -----------------------------------
@@ -130,7 +134,34 @@ function compactFacts(factSets: FactSet[]) {
   }));
 }
 
-function narratorPrompt(): string {
+function compactScenarios(scenarios: ScenarioSet[]) {
+  return scenarios.map((sc) => ({
+    scenario: sc.id,
+    kind: sc.kind,
+    module: sc.module,
+    title: sc.title,
+    method: sc.method,
+    grain: sc.entityLabel,
+    scope: sc.scope,
+    levers: sc.levers,
+    assumptions: sc.assumptions,
+    baselineWindow: sc.window,
+    recordsAnalysed: sc.rowsScanned,
+    projectedTotal: {
+      ref: sc.total.ref,
+      label: sc.total.label,
+      metrics: Object.fromEntries(Object.entries(sc.total.values).map(([k, v]) => [k, { ref: `${sc.total.ref}.${k}`, label: v.label, display: v.formatted }])),
+    },
+    projectedRows: sc.rows.map((r) => ({
+      ref: r.ref,
+      name: r.label,
+      metrics: Object.fromEntries(Object.entries(r.values).map(([k, v]) => [k, { ref: `${r.ref}.${k}`, label: v.label, display: v.formatted }])),
+    })),
+    notes: sc.notes,
+  }));
+}
+
+function narratorPrompt(hasScenarios: boolean): string {
   return `You are Maya, a senior merchandising analyst for a large US grocery retailer. You are answering an executive.
 
 ABSOLUTE RULES (violations are automatically rejected by a guardrail):
@@ -139,17 +170,25 @@ ABSOLUTE RULES (violations are automatically rejected by a guardrail):
 3. Never state a fact that is not in FACTS. No benchmarks, no outside knowledge, no assumed causes. If FACTS do not support a claim, do not make it.
 4. Causality: only say "correlates with" / "coincides with" unless FACTS include a causal metric. Recommendations must be tied to a placeholder metric.
 5. Brevity: each bullet 15-25 words, format "[Metric or entity]: [insight] - [placeholder]".
+${hasScenarios ? `
+PREDICTIVE / PRESCRIPTIVE MODE — a SCENARIOS block is present. It was simulated deterministically in code.
+6. Label projected numbers as projected/modelled/expected, never as actual results. Actuals come from FACTS queries only.
+7. Use "projection" for the forward view: what the simulation says will happen under the stated levers.
+8. Every action must quantify the modelled outcome with a scenario placeholder (e.g. {{s1.total.margin_delta}}) and name the lever in words.
+9. Put the two most material scenario assumptions into "caveats", worded as limits of the simulation.
+10. Confidence: "high" only when many records were analysed and the scenario has a narrow band; use "medium" or "low" otherwise.` : ''}
 
 Return JSON exactly:
 {
   "headline": "one sentence direct answer, placeholders only for numbers",
   "insights": [{"text":"...", "refs":["q1.total.net_sales"]}],
   "drivers": [{"text":"...", "refs":["q1.2.net_sales"]}],
-  "actions": [{"text":"...", "impact":"...", "refs":["q1.1.net_sales"]}],
-  "caveats": ["what the data does NOT cover, if relevant"],
+  "projection": [{"text":"...", "refs":["s1.total.forecast_sales"]}],
+  "actions": [{"text":"...", "impact":"...", "refs":["s1.1.margin_delta"]}],
+  "caveats": ["what the data or simulation does NOT cover"],
   "confidence": "high" | "medium" | "low"
 }
-3-5 insights, 0-4 drivers, 2-3 actions. Use "low" confidence when few records were analysed.`;
+3-5 insights, 0-4 drivers, ${hasScenarios ? '2-4 projection bullets' : 'empty projection array'}, 2-3 actions. Use "low" confidence when few records were analysed.`;
 }
 
 // ------------------------------ guardrail ----------------------------------
@@ -161,9 +200,13 @@ interface GroundedText {
   violation?: string;
 }
 
-function buildFactIndex(factSets: FactSet[]) {
+function buildFactIndex(factSets: FactSet[], scenarios: ScenarioSet[] = []) {
   const index = new Map<string, string>();
-  for (const fs of factSets) {
+  const sets: { total: { ref: string; label: string; values: Record<string, { formatted: string }> }; rows: { ref: string; label: string; values: Record<string, { formatted: string }> }[] }[] = [
+    ...factSets,
+    ...scenarios,
+  ] as any;
+  for (const fs of sets) {
     for (const [k, v] of Object.entries(fs.total.values)) index.set(`${fs.total.ref}.${k}`, v.formatted);
     index.set(`${fs.total.ref}.name`, fs.total.label);
     for (const row of fs.rows) {
@@ -274,7 +317,31 @@ Deno.serve(async (req) => {
       limit: Math.min(Number(q.limit ?? 10) || 10, 15),
     }));
 
-    if (specs.length === 0 || plan?.answerable === false) {
+    const rawScenarios = Array.isArray(plan?.scenarios) ? plan.scenarios.slice(0, 2) : [];
+    const scenarioSpecs: ScenarioSpec[] = rawScenarios
+      .filter((s: any) => SCENARIO_KINDS.includes(String(s?.kind) as any))
+      .map((s: any, i: number) => ({
+        id: s.id && /^s[a-z0-9]*$/i.test(String(s.id)) ? String(s.id) : `s${i + 1}`,
+        kind: String(s.kind) as ScenarioSpec['kind'],
+        entity: ['category', 'subcategory', 'brand', 'product', 'store', 'region'].includes(String(s.entity))
+          ? (String(s.entity) as ScenarioSpec['entity'])
+          : 'category',
+        scope: Object.fromEntries(
+          Object.entries((s.scope ?? {}) as Record<string, unknown>)
+            .filter(([k, v]) => ['category', 'subcategory', 'brand', 'product_sku', 'store', 'region'].includes(k) && String(v ?? '').trim() !== '')
+            .map(([k, v]) => [k, String(v).trim()]),
+        ),
+        levers: Object.fromEntries(
+          Object.entries((s.levers ?? {}) as Record<string, unknown>)
+            .filter(([, v]) => Number.isFinite(Number(v)))
+            .map(([k, v]) => [k, Number(v)]),
+        ),
+        dateFrom: s.dateFrom ? String(s.dateFrom).slice(0, 10) : null,
+        dateTo: s.dateTo ? String(s.dateTo).slice(0, 10) : null,
+        limit: Math.min(Number(s.limit ?? 10) || 10, 15),
+      }));
+
+    if ((specs.length === 0 && scenarioSpecs.length === 0) || plan?.answerable === false) {
       return new Response(JSON.stringify({
         question,
         answerable: false,
@@ -299,7 +366,17 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (factSets.length === 0) {
+    // ---------- 2b. SIMULATE (predictive / prescriptive) ----------
+    const scenarioSets: ScenarioSet[] = [];
+    for (const spec of scenarioSpecs) {
+      try {
+        scenarioSets.push(await runScenario(supabase, spec, lookups));
+      } catch (err) {
+        executionErrors.push(`${spec.kind} scenario: ${err instanceof Error ? err.message : 'simulation failed'}`);
+      }
+    }
+
+    if (factSets.length === 0 && scenarioSets.length === 0) {
       return new Response(JSON.stringify({
         question,
         answerable: false,
@@ -312,37 +389,52 @@ Deno.serve(async (req) => {
 
     // ---------- 3. NARRATE ----------
     const facts = compactFacts(factSets);
+    const scenarioFacts = compactScenarios(scenarioSets);
     const narration = await callModel(apiKey, [
-      { role: 'system', content: narratorPrompt() },
+      { role: 'system', content: narratorPrompt(scenarioSets.length > 0) },
       {
         role: 'user',
         content: `Persona: ${persona}
 Question: ${question}
 Planner interpretation: ${plan?.interpretation ?? ''}
-FACTS (the only truth you may use):
-${JSON.stringify(facts)}`,
+FACTS (observed database results — the only source of actuals):
+${JSON.stringify(facts)}
+SCENARIOS (deterministic simulations of the future — the only source of projections):
+${JSON.stringify(scenarioFacts)}`,
       },
     ], 8000);
 
     // ---------- 4. GUARD ----------
-    const index = buildFactIndex(factSets);
+    const index = buildFactIndex(factSets, scenarioSets);
     const headline = ground(narration?.headline, index);
     const insights = groundList(narration?.insights, index);
     const drivers = groundList(narration?.drivers, index);
+    const projection = groundList(narration?.projection, index);
     const actions = groundList(narration?.actions, index);
     const caveats = groundList(narration?.caveats, index);
 
-    const rejected = [...insights.rejected, ...drivers.rejected, ...actions.rejected, ...caveats.rejected];
-    const verified = insights.kept.length + drivers.kept.length + actions.kept.length + (headline?.ok ? 1 : 0);
+    const rejected = [...insights.rejected, ...drivers.rejected, ...projection.rejected, ...actions.rejected, ...caveats.rejected];
+    const verified = insights.kept.length + drivers.kept.length + projection.kept.length + actions.kept.length + (headline?.ok ? 1 : 0);
 
     // Deterministic fallback headline, built from facts only
-    const primary = factSets[0];
+    const primary = factSets[0] ?? (scenarioSets[0] as unknown as FactSet);
     const firstMetric = Object.values(primary.total.values)[0];
     const fallbackHeadline = `${firstMetric?.label ?? 'Result'} for the selected scope is ${firstMetric?.formatted ?? 'n/a'} across ${primary.rowsScanned.toLocaleString('en-US')} analysed records.`;
 
-    // chart from facts (never from the model)
-    const chartQuery = factSets.find((fs) => fs.id === String(plan?.chart?.query)) ?? factSets.find((fs) => fs.rows.length > 0) ?? primary;
+    // chart from facts or the scenario (never from the model)
+    const chartSources: { rows: typeof primary.rows; total: typeof primary.total; dimensionLabel: string | null; id: string }[] = [
+      ...factSets.map((fs) => ({ rows: fs.rows, total: fs.total, dimensionLabel: fs.dimensionLabel, id: fs.id })),
+      ...scenarioSets.map((sc) => ({ rows: sc.rows, total: sc.total, dimensionLabel: sc.entityLabel, id: sc.id })),
+    ];
+    const preferScenario = scenarioSets.find((sc) => sc.rows.length > 0);
+    const chartQuery =
+      (preferScenario ? chartSources.find((c) => c.id === preferScenario.id) : null) ??
+      chartSources.find((c) => c.id === String(plan?.chart?.query)) ??
+      chartSources.find((c) => c.rows.length > 0) ??
+      chartSources[0];
+    const scenarioForChart = scenarioSets.find((sc) => sc.id === chartQuery.id);
     const chartMetric =
+      (scenarioForChart && chartQuery.rows[0]?.values[scenarioForChart.chartMetric] ? scenarioForChart.chartMetric : null) ??
       (plan?.chart?.metric && chartQuery.rows[0]?.values[String(plan.chart.metric)] ? String(plan.chart.metric) : null) ??
       Object.keys(chartQuery.rows[0]?.values ?? chartQuery.total.values)[0];
 
@@ -354,9 +446,29 @@ ${JSON.stringify(facts)}`,
       headline: headline?.ok ? headline.text : fallbackHeadline,
       insights: insights.kept,
       drivers: drivers.kept,
+      projection: projection.kept,
       actions: actions.kept,
       caveats: caveats.kept.map((c) => c.text),
       confidence: ['high', 'medium', 'low'].includes(String(narration?.confidence)) ? String(narration.confidence) : 'medium',
+      mode: scenarioSets.length > 0 ? 'predictive' : 'descriptive',
+      scenarios: scenarioSets.map((sc) => ({
+        id: sc.id,
+        kind: sc.kind,
+        module: sc.module,
+        title: sc.title,
+        method: sc.method,
+        entity: sc.entityLabel,
+        scope: sc.scope,
+        levers: sc.levers,
+        assumptions: sc.assumptions,
+        window: sc.window,
+        recordsAnalysed: sc.rowsScanned,
+        tables: sc.tables,
+        notes: sc.notes,
+        total: sc.total,
+        rows: sc.rows,
+        chartMetric: sc.chartMetric,
+      })),
       chart: {
         metric: chartMetric,
         metricLabel: chartQuery.rows[0]?.values[chartMetric]?.label ?? chartQuery.total.values[chartMetric]?.label ?? '',
@@ -385,13 +497,13 @@ ${JSON.stringify(facts)}`,
       ontologyPath: ontologyEdges
         .filter((e) => factSets.some((fs) => datasets[fs.dataset]?.module && e.via.includes(datasets[fs.dataset].table.split('_')[0])))
         .slice(0, 6),
-      modulesTouched: Array.from(new Set(factSets.map((fs) => fs.module))),
+      modulesTouched: Array.from(new Set([...factSets.map((fs) => fs.module), ...scenarioSets.map((sc) => sc.module)])),
       guardrail: {
-        mode: 'placeholder-substitution',
+        mode: scenarioSets.length > 0 ? 'placeholder-substitution + coded simulation' : 'placeholder-substitution',
         verifiedClaims: verified,
         rejectedClaims: rejected.length,
         rejected,
-        rule: 'Every figure is substituted from a computed database fact; model-authored numbers are rejected.',
+        rule: 'Every figure — observed or projected — is substituted from a value computed in code; model-authored numbers are rejected.',
       },
       errors: executionErrors,
       elapsedMs: Date.now() - started,
