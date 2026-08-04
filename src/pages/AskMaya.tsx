@@ -830,7 +830,7 @@ export default function AskMaya() {
             <div className="animate-fade-up space-y-4">
               <div className="rounded-xl border border-border/70 bg-gradient-surface p-5">
                 <h2 className="font-display text-base font-semibold">
-                  Ask about anything across the six modules
+                  Ask about anything across all seven modules
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Descriptive, diagnostic, predictive or prescriptive — the planner maps your
