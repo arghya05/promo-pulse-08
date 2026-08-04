@@ -60,9 +60,26 @@ export function buildCalculationWalk(entry: LineageEntry): CalcStep[] {
   const verb = aggregationVerb(entry.formula);
 
   const steps: CalcStep[] = [];
+  let seenPrimarySource = false;
 
   for (const layer of pipeline.layers) {
     if (layer.layer === 'Source') {
+      // Secondary source feeds (cost, master data) are joined in, not counted
+      // into the row volume that carries the measure.
+      if (seenPrimarySource) {
+        steps.push({
+          layer: 'Source',
+          object: layer.object,
+          operation: 'Reference feed — joined onto the measure at the silver layer, adds attributes not rows',
+          expression: 'LEFT JOIN on business key + effective date (no fan-out permitted)',
+          rows: null,
+          rowsBasis: 'n/a',
+          rowsNote: 'lookup feed — contributes attributes, not measure rows',
+          carries: 'effective-dated cost / reference attributes used by the formula',
+        });
+        continue;
+      }
+      seenPrimarySource = true;
       steps.push({
         layer: 'Source',
         object: layer.object,
