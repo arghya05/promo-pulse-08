@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/sidebar';
 import { modules } from '@/lib/data/modules';
 import { companyProfile } from '@/lib/data/company-profile';
-import { LayoutDashboard, ShieldCheck, Sparkles } from 'lucide-react';
+import { LayoutDashboard, MessagesSquare, ShieldCheck, Sparkles } from 'lucide-react';
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -53,6 +53,14 @@ export function AppSidebar() {
                   <NavLink to="/" className="flex items-center gap-2">
                     <LayoutDashboard className="h-4 w-4" />
                     {!collapsed && <span>Command Center</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/ask')} tooltip="Ask Maya anything">
+                  <NavLink to="/ask" className="flex items-center gap-2">
+                    <MessagesSquare className="h-4 w-4 text-primary" />
+                    {!collapsed && <span>Ask Maya</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
