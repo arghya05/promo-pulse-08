@@ -37,7 +37,7 @@ const SEMANTIC_LAYER: LineageLayer = {
   checks: ['Metric on dataset allow-list', 'Placeholder guardrail replaced every figure', 'Sample-size floor enforced'],
 };
 
-const POS: LineageLayer[] = [
+const POS_INGEST: LineageLayer[] = [
   {
     layer: 'Source',
     object: 'Store POS registers & self-checkout (1,486 stores)',
@@ -56,7 +56,9 @@ const POS: LineageLayer[] = [
     cadence: 'micro-batch every 5 min',
     checks: ['Schema contract', 'Duplicate file hash rejected', 'Late-arrival watermark'],
   },
-  {
+];
+
+const POS_SILVER: LineageLayer = {
     layer: 'Silver',
     object: 'stg_pos.transaction_line (conformed)',
     system: 'dbt models · lakehouse',
@@ -65,8 +67,10 @@ const POS: LineageLayer[] = [
     grain: 'transaction line × SKU × store',
     cadence: 'hourly',
     checks: ['Referential integrity to product & store master', 'Returns flagged not deleted', 'Margin ≥ −100% bound'],
-  },
-];
+};
+
+/** POS ingest + cost feed + conformed silver, in pipeline order. */
+const POS: LineageLayer[] = [];
 
 const COST_FEED: LineageLayer = {
   layer: 'Source',
