@@ -1221,7 +1221,7 @@ CRITICAL CHART DATA RULES (MANDATORY - NEVER SKIP):
 - STANDARD FORMAT: {"name": "Item Name", "value": number, "margin": number, "roi": number}
 - For comparison questions: include "value" or "margin" as primary metric with actual $ amounts
 - For market share questions: use {"name": "Category", "market_share": number, "competitor_avg_share": number}
-- For trend/forecast questions: use {"name": "Jan 2024", "value": number, "forecast": number}
+- For trend/forecast questions: use {"name": "Jun 2026", "value": number, "forecast": number} (dataset covers Aug 2025 - Aug 2026)
 - ALWAYS scale values to realistic amounts - margins should be $50K-$2M, not $0
 - If user asks "top 5 promotions", return 5 promotions with their ACTUAL names, ROI, and margin values
 - If user asks "optimal discount depth", return discount levels with their ACTUAL performance metrics
