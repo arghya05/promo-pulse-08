@@ -93,6 +93,8 @@ RULES
 - Time window: use ISO dates. Default to the last 90 days when the question has no period. "This year"/"YTD" -> ${today.slice(0, 4)}-01-01 to ${today}. Snapshot datasets (inventory, space) ignore dates.
 - limit <= 15. sortDir "desc" for best/top, "asc" for worst/lowest.
 
+${scenarioPromptSpec()}
+
 Return JSON exactly:
 {
   "interpretation": "one sentence restating the question in retail terms",
@@ -101,9 +103,10 @@ Return JSON exactly:
   "queries": [
     {"id":"q1","dataset":"sales","metrics":["net_sales","gross_margin_pct"],"dimension":"category","filters":{},"dateFrom":"YYYY-MM-DD","dateTo":"YYYY-MM-DD","sortBy":"net_sales","sortDir":"desc","limit":10}
   ],
+  "scenarios": [],
   "chart": {"query":"q1","metric":"net_sales","type":"bar"}
 }
-If the question cannot be answered from these datasets, return "answerable": false with an empty queries array and explain in "interpretation".`;
+If the question cannot be answered from these datasets or scenarios, return "answerable": false with empty queries and scenarios and explain in "interpretation".`;
 }
 
 // ------------------------------ narrator -----------------------------------
