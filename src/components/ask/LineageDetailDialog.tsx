@@ -1,4 +1,4 @@
-import { ArrowDown, Calculator, Database, GitBranch, Layers, ShieldCheck } from 'lucide-react';
+import { ArrowDown, Calculator, Database, GitBranch, Layers, ShieldCheck, ClipboardCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -11,7 +11,9 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LAYER_STYLES, lineageForTable } from '@/lib/lineage-layers';
 import { buildCalculationWalk } from '@/lib/calculation-walk';
+import { AUDIT_STATUS_STYLES, buildCalculationAudit } from '@/lib/calculation-audit';
 import type { LineageEntry } from '@/components/ask/LineageTrail';
+
 
 /**
  * Full raw → gold → value lineage for a single cited number.
