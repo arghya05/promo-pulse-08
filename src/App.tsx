@@ -29,6 +29,7 @@ const App = () => (
               <Route path="/home" element={<Navigate to="/" replace />} />
               <Route path="/ask" element={<AskMaya />} />
               <Route path="/graph" element={<OntologyGraph />} />
+              <Route path="/data-quality" element={<DataQuality />} />
               <Route path="/executive" element={<Index moduleId="executive" />} />
               <Route path="/promotion" element={<Index moduleId="promotion" />} />
               <Route path="/pricing" element={<Index moduleId="pricing" />} />

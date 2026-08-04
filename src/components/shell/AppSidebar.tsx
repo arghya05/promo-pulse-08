@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/sidebar';
 import { modules } from '@/lib/data/modules';
 import { companyProfile } from '@/lib/data/company-profile';
-import { LayoutDashboard, MessagesSquare, Network, ShieldCheck, Sparkles } from 'lucide-react';
+import { LayoutDashboard, MessagesSquare, Network, ShieldCheck, Sparkles } , ShieldCheck } from 'lucide-react';
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -69,6 +69,14 @@ export function AppSidebar() {
                   <NavLink to="/graph" className="flex items-center gap-2">
                     <Network className="h-4 w-4" />
                     {!collapsed && <span>Knowledge Graph</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/data-quality')} tooltip="Data quality dashboard & report">
+                  <NavLink to="/data-quality" className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4" />
+                    {!collapsed && <span>Data Quality</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
