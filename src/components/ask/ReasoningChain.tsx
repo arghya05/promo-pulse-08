@@ -1,9 +1,9 @@
-import { Brain, Database, FlaskConical, Route, ShieldCheck } from 'lucide-react';
+import { Brain, Database, FlaskConical, Route, ScanSearch, ShieldCheck } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
 export type ReasoningStep = {
   id: string;
-  stage: 'plan' | 'execute' | 'simulate' | 'narrate' | 'guard' | string;
+  stage: 'plan' | 'execute' | 'simulate' | 'narrate' | 'guard' | 'evaluate' | string;
   label: string;
   detail: string;
   ms: number;
@@ -15,6 +15,7 @@ const STAGE_ICON: Record<string, typeof Brain> = {
   simulate: FlaskConical,
   narrate: Brain,
   guard: ShieldCheck,
+  evaluate: ScanSearch,
 };
 
 /** The visible chain of steps that produced the answer — not one opaque paragraph. */
