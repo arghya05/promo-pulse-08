@@ -88,14 +88,18 @@ const Home = () => {
 
           {/* Live KPI rail */}
           <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-            {headlineKpis.map((kpi) => {
+            {headlineKpis.map((kpi, i) => {
               const up = kpi.trend === 'up';
               return (
-                <div key={kpi.id} className="panel p-4">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div
+                  key={kpi.id}
+                  className="panel flex animate-fade-up flex-col p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-glow"
+                  style={{ animationDelay: `${i * 50}ms` }}
+                >
+                  <div className="text-[11px] uppercase leading-tight tracking-wide text-muted-foreground">
                     {kpi.label}
                   </div>
-                  <div className="mt-2 flex items-baseline gap-2">
+                  <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                     <span className="metric-value text-2xl font-semibold">{kpi.value}</span>
                     <span
                       className={`flex items-center gap-0.5 text-xs ${
@@ -110,10 +114,13 @@ const Home = () => {
                       {kpi.delta}
                     </span>
                   </div>
-                  <div className="mt-1 truncate text-[11px] text-muted-foreground">{kpi.note}</div>
+                  <div className="mt-auto pt-2 text-[11px] leading-snug text-muted-foreground">
+                    {kpi.note}
+                  </div>
                 </div>
               );
             })}
+
           </div>
         </div>
       </section>
