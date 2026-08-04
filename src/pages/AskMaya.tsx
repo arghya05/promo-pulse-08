@@ -633,6 +633,8 @@ export default function AskMaya() {
             </Card>
           ) : null}
 
+          {answer.scenarios?.map((sc) => <ScenarioPanel key={sc.id} scenario={sc} />)}
+
           {answer.facts?.map((fact) => <FactPanel key={fact.id} fact={fact} />)}
 
           {answer.errors?.length ? (
