@@ -324,7 +324,18 @@ function FactPanel({ fact }: { fact: FactSet }) {
       )}
 
       <div className="text-xs text-muted-foreground">Source tables: {fact.tables.join(', ')}</div>
+
+      {fact.provenance && (
+        <ProvenanceLedger
+          provenance={fact.provenance}
+          dataset={fact.dataset}
+          recordsAnalysed={fact.recordsAnalysed}
+          filters={fact.filters}
+          window={fact.window}
+        />
+      )}
     </Card>
+
   );
 }
 
