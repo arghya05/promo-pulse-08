@@ -89,6 +89,11 @@ export function LineageTrail({
                 )}
                 <div className="metric-value text-muted-foreground/70">{e.ref}</div>
               </div>
+              <div className="mt-2">
+                <LineageDetailDialog entry={e} />
+              </div>
+
+              </div>
             </li>
           ))}
         </ul>
