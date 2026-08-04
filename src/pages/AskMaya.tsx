@@ -42,7 +42,8 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { companyProfile } from '@/lib/data/company-profile';
+import { companyProfile, netSalesTrend } from '@/lib/data/company-profile';
+import { Sparkline } from '@/components/shell/Sparkline';
 import { toast } from 'sonner';
 
 
@@ -652,6 +653,8 @@ export default function AskMaya() {
   const requestId = useRef(0);
 
   useEffect(() => {
+    const prefill = new URLSearchParams(window.location.search).get('q');
+    if (prefill) setQuestion(prefill);
     inputRef.current?.focus();
   }, []);
 
@@ -748,6 +751,24 @@ export default function AskMaya() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <div className="hidden items-center gap-2 rounded-lg border border-border/70 bg-card/70 px-2.5 py-1.5 lg:flex">
+              <Sparkline data={netSalesTrend} className="text-chart-1" />
+              <div className="leading-tight">
+                <div className="font-mono text-xs font-semibold">$3.24B</div>
+                <div className="text-[10px] text-muted-foreground">Net sales · 12-wk</div>
+              </div>
+              <div className="h-6 w-px bg-border" />
+              <div className="leading-tight">
+                <div className="flex items-center gap-1 font-mono text-xs font-semibold">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-good opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-status-good" />
+                  </span>
+                  {companyProfile.dataFreshness.latencyMinutes}m
+                </div>
+                <div className="text-[10px] text-muted-foreground">Feed latency</div>
+              </div>
+            </div>
             <Badge variant="outline" className="gap-1 text-xs font-normal">
               <ShieldCheck className="h-3 w-3 text-status-good" /> Zero-hallucination
             </Badge>

@@ -33,6 +33,11 @@ export const companyProfile = {
 
 } as const;
 
+/** Trailing 12 fiscal weeks of net sales ($B) — used for header sparklines. */
+export const netSalesTrend = [
+  3.02, 3.09, 2.98, 3.14, 3.21, 3.11, 3.18, 3.27, 3.19, 3.23, 3.16, 3.24,
+] as const;
+
 export const headlineKpis = [
   {
     id: 'net-sales',
