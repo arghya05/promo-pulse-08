@@ -58,6 +58,25 @@ type FactSet = {
 
 type Claim = { text: string; refs: string[]; impact?: string };
 
+type ScenarioSet = {
+  id: string;
+  kind: 'forecast' | 'price' | 'promotion' | 'planogram' | 'assortment' | 'replenishment';
+  module: string;
+  title: string;
+  method: string;
+  entity: string;
+  scope: Record<string, string>;
+  levers: Record<string, string>;
+  assumptions: string[];
+  window: { from: string | null; to: string | null };
+  recordsAnalysed: number;
+  tables: string[];
+  notes: string[];
+  total: FactRow;
+  rows: FactRow[];
+  chartMetric: string;
+};
+
 type AskResponse = {
   question: string;
   persona?: string;
@@ -66,9 +85,12 @@ type AskResponse = {
   headline?: string;
   insights?: Claim[];
   drivers?: Claim[];
+  projection?: Claim[];
   actions?: Claim[];
   caveats?: string[];
   facts?: FactSet[];
+  scenarios?: ScenarioSet[];
+  mode?: 'predictive' | 'descriptive';
   ontologyPath?: { from: string; to: string; via: string; label: string }[];
   modulesTouched?: string[];
   guardrail?: {
@@ -84,12 +106,24 @@ type AskResponse = {
 
 const SUGGESTIONS = [
   'Which categories are driving margin down this quarter, and are out-of-stocks involved?',
-  'Which 5 SKUs should I markdown next week and why?',
-  'How are my suppliers performing on on-time delivery, and which categories suffer?',
+  'Forecast dairy demand for the next 13 weeks and tell me what to buy',
+  'What if I cut beverage prices 5% — what happens to sales and margin?',
+  'Should I run 20% off snacks for 2 weeks? Model the ROI',
+  'Which SKUs should I delist in pantry, and what is the margin impact?',
+  'Reset the produce planogram: where should facings move and what is it worth?',
+  'What safety stock and reorder points do I need at 97% service in meat?',
   'Am I priced competitively on beverages versus competitors?',
-  'Where is my forecast least accurate, and what is the cost of that error?',
-  'Which promotions returned the weakest margin on trade spend?',
 ];
+
+const SCENARIO_LABEL: Record<ScenarioSet['kind'], string> = {
+  forecast: 'Forecast simulation',
+  price: 'Price elasticity simulation',
+  promotion: 'Promotion ROI simulation',
+  planogram: 'Space / planogram simulation',
+  assortment: 'Assortment rationalisation',
+  replenishment: 'Replenishment optimisation',
+};
+
 
 function ClaimList({
   title,
