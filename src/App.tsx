@@ -7,6 +7,7 @@ import { GlobalSessionProvider } from "@/contexts/GlobalSessionContext";
 import AppShell from "./components/shell/AppShell";
 import Home from "./pages/Home";
 import Index from "./pages/Index";
+import AskMaya from "./pages/AskMaya";
 import NotFound from "./pages/NotFound";
 import ValidationDashboard from "./pages/ValidationDashboard";
 
@@ -24,6 +25,7 @@ const App = () => (
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Navigate to="/" replace />} />
               <Route path="/home" element={<Navigate to="/" replace />} />
+              <Route path="/ask" element={<AskMaya />} />
               <Route path="/executive" element={<Index moduleId="executive" />} />
               <Route path="/promotion" element={<Index moduleId="promotion" />} />
               <Route path="/pricing" element={<Index moduleId="pricing" />} />

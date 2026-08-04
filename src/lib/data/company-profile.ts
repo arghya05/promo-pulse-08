@@ -69,7 +69,7 @@ export const headlineKpis = [
   {
     id: 'in-stock',
     label: 'On-shelf availability',
-    value: '92.8%',
+    value: '93.4%',
     delta: '-0.9 pts',
     trend: 'down' as const,
     note: 'Fresh & Dairy thin cover',
