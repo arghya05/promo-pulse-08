@@ -699,40 +699,94 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // ---------- 3. NARRATE ----------
+    // ---------- 3-5. NARRATE -> GUARD -> EVALUATE -> SELF-CORRECT ----------
     const facts = compactFacts(factSets);
     const scenarioFacts = compactScenarios(scenarioSets);
-    const narrateStart = Date.now();
-    const narration = await callModel(apiKey, [
-      { role: 'system', content: narratorPrompt(scenarioSets.length > 0) },
-      {
-        role: 'user',
-        content: `Persona: ${persona}
+    const index = buildFactIndex(factSets, scenarioSets);
+    const lineage = buildLineageIndex(factSets, scenarioSets);
+
+    const factBrief = `Persona: ${persona}
 Question: ${question}
 Planner interpretation: ${plan?.interpretation ?? ''}
 FACTS (observed database results — the only source of actuals):
 ${JSON.stringify(facts)}
 SCENARIOS (deterministic simulations of the future — the only source of projections):
-${JSON.stringify(scenarioFacts)}`,
-      },
-    ], 8000);
-    mark('narrate', 'narrate', 'Wrote the narrative with reference placeholders only',
-      'The model may reference computed values but may not author digits', narrateStart);
+${JSON.stringify(scenarioFacts)}`;
 
-    // ---------- 4. GUARD ----------
-    const guardStart = Date.now();
-    const index = buildFactIndex(factSets, scenarioSets);
-    const headline = ground(narration?.headline, index);
-    const insights = groundList(narration?.insights, index);
-    const drivers = groundList(narration?.drivers, index);
-    const projection = groundList(narration?.projection, index);
-    const actions = groundList(narration?.actions, index);
-    const caveats = groundList(narration?.caveats, index);
+    const narrateAndGuard = async (attempt: number, repair: string | null) => {
+      const nStart = Date.now();
+      const narration = await callModel(apiKey, [
+        { role: 'system', content: narratorPrompt(scenarioSets.length > 0) },
+        { role: 'user', content: repair ? `${factBrief}\n\n${repair}` : factBrief },
+      ], 8000);
+      mark(
+        `narrate-${attempt}`,
+        'narrate',
+        attempt === 1 ? 'Wrote the narrative with reference placeholders only' : 'Rewrote the narrative to fix the evaluator findings',
+        attempt === 1
+          ? 'The model may reference computed values but may not author digits'
+          : 'Self-correction pass — the failing checks were fed back as instructions',
+        nStart,
+      );
 
-    const rejected = [...insights.rejected, ...drivers.rejected, ...projection.rejected, ...actions.rejected, ...caveats.rejected];
-    const verified = insights.kept.length + drivers.kept.length + projection.kept.length + actions.kept.length + (headline?.ok ? 1 : 0);
-    mark('guard', 'guard', 'Substituted every figure from code-computed values',
-      `${verified} claims verified · ${rejected.length} rejected · ${index.size} groundable values`, guardStart);
+      const gStart = Date.now();
+      const headline = ground(narration?.headline, index);
+      const insights = groundList(narration?.insights, index);
+      const drivers = groundList(narration?.drivers, index);
+      const projection = groundList(narration?.projection, index);
+      const actions = groundList(narration?.actions, index);
+      const caveats = groundList(narration?.caveats, index);
+      const rejected = [...insights.rejected, ...drivers.rejected, ...projection.rejected, ...actions.rejected, ...caveats.rejected];
+      const verified = insights.kept.length + drivers.kept.length + projection.kept.length + actions.kept.length + (headline?.ok ? 1 : 0);
+      mark(
+        `guard-${attempt}`,
+        'guard',
+        'Substituted every figure from code-computed values',
+        `${verified} claims verified · ${rejected.length} rejected · ${index.size} groundable values`,
+        gStart,
+      );
+
+      return {
+        headline,
+        insights,
+        drivers,
+        projection,
+        actions,
+        caveats,
+        rejected,
+        verified,
+        confidence: ['high', 'medium', 'low'].includes(String(narration?.confidence)) ? String(narration.confidence) : 'medium',
+      };
+    };
+
+    let pass = await narrateAndGuard(1, null);
+    const evalStart1 = Date.now();
+    let evaluation = evaluateAnswer(pass, factSets, scenarioSets, lineage);
+    mark('evaluate-1', 'evaluate', `Evaluated the answer against ${evaluation.checks.length} deterministic checks`,
+      `Score ${evaluation.score}/100 · ${evaluation.verdict}`, evalStart1);
+
+    const attempts = [{ attempt: 1, score: evaluation.score, verdict: evaluation.verdict, rejectedClaims: pass.rejected.length }];
+    let selfCorrected = false;
+
+    if (!evaluation.passed) {
+      const correctStart = Date.now();
+      try {
+        const retryPass = await narrateAndGuard(2, repairBrief(pass, evaluation));
+        const retryEval = evaluateAnswer(retryPass, factSets, scenarioSets, lineage);
+        attempts.push({ attempt: 2, score: retryEval.score, verdict: retryEval.verdict, rejectedClaims: retryPass.rejected.length });
+        if (retryEval.score >= evaluation.score) {
+          pass = retryPass;
+          evaluation = retryEval;
+          selfCorrected = true;
+        }
+        mark('evaluate-2', 'evaluate', selfCorrected ? 'Self-correction accepted' : 'Self-correction rejected — first answer scored higher',
+          `Attempt 1 ${attempts[0].score}/100 → attempt 2 ${attempts[1].score}/100 · ${retryEval.verdict}`, correctStart);
+      } catch (err) {
+        mark('evaluate-2', 'evaluate', 'Self-correction pass failed', err instanceof Error ? err.message : 'retry error', correctStart);
+      }
+    }
+
+    const { headline, insights, drivers, projection, actions, caveats, rejected, verified } = pass;
 
     // Deterministic fallback headline, built from facts only
     const primary = factSets[0] ?? (scenarioSets[0] as unknown as FactSet);
