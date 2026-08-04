@@ -24,6 +24,14 @@ import type { LineageEntry } from '@/components/ask/LineageTrail';
 export function LineageDetailDialog({ entry, sql }: { entry: LineageEntry; sql?: string }) {
   const pipeline = lineageForTable(entry.table);
   const walk = buildCalculationWalk(entry);
+  const audit = buildCalculationAudit(entry);
+  const verdictStyle =
+    audit.verdict === 'audited'
+      ? 'border-status-good/40 bg-status-good/5'
+      : audit.verdict === 'audited-with-exceptions'
+        ? 'border-status-warning/40 bg-status-warning/5'
+        : 'border-destructive/40 bg-destructive/5';
+
 
   return (
     <Dialog>
