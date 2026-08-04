@@ -1,4 +1,4 @@
-import { ArrowDown, Calculator, Database, GitBranch, Layers, ShieldCheck } from 'lucide-react';
+import { ArrowDown, Calculator, Database, GitBranch, Layers, ShieldCheck, ClipboardCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -11,7 +11,9 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LAYER_STYLES, lineageForTable } from '@/lib/lineage-layers';
 import { buildCalculationWalk } from '@/lib/calculation-walk';
+import { AUDIT_STATUS_STYLES, buildCalculationAudit } from '@/lib/calculation-audit';
 import type { LineageEntry } from '@/components/ask/LineageTrail';
+
 
 /**
  * Full raw → gold → value lineage for a single cited number.
@@ -22,6 +24,14 @@ import type { LineageEntry } from '@/components/ask/LineageTrail';
 export function LineageDetailDialog({ entry, sql }: { entry: LineageEntry; sql?: string }) {
   const pipeline = lineageForTable(entry.table);
   const walk = buildCalculationWalk(entry);
+  const audit = buildCalculationAudit(entry);
+  const verdictStyle =
+    audit.verdict === 'audited'
+      ? 'border-status-good/40 bg-status-good/5'
+      : audit.verdict === 'audited-with-exceptions'
+        ? 'border-status-warning/40 bg-status-warning/5'
+        : 'border-destructive/40 bg-destructive/5';
+
 
   return (
     <Dialog>
@@ -46,6 +56,13 @@ export function LineageDetailDialog({ entry, sql }: { entry: LineageEntry; sql?:
             not a description of one.
           </DialogDescription>
           <div className="flex flex-wrap gap-1.5 pt-1">
+            <Badge
+              variant="outline"
+              className={`gap-1 font-normal ${AUDIT_STATUS_STYLES[audit.verdict === 'audited' ? 'pass' : audit.verdict === 'audited-with-exceptions' ? 'warn' : 'fail'].badge}`}
+            >
+              <ClipboardCheck className="h-3 w-3" />
+              {audit.verdictLabel}
+            </Badge>
             <Badge variant="secondary" className="gap-1 font-normal">
               <ShieldCheck className="h-3 w-3 text-status-good" />
               0 model-written digits
@@ -64,6 +81,65 @@ export function LineageDetailDialog({ entry, sql }: { entry: LineageEntry; sql?:
 
         <ScrollArea className="max-h-[65vh]">
           <div className="space-y-4 p-5">
+            {/* Audit trail — was this calculation actually audited? */}
+            <div className={`space-y-2 rounded-lg border p-3 ${verdictStyle}`}>
+              <div className="flex flex-wrap items-center gap-2">
+                <ClipboardCheck className="h-3.5 w-3.5 text-primary" />
+                <span className="text-sm font-semibold text-foreground">Audit trail for this calculation</span>
+                <span className="metric-value text-[10px] text-muted-foreground">{audit.auditId}</span>
+              </div>
+              <p className="text-[11px] leading-snug text-muted-foreground">{audit.verdictNote}</p>
+              <div className="flex flex-wrap gap-1.5 text-[10px] uppercase tracking-wide">
+                <span className={`rounded px-1.5 py-0.5 ${AUDIT_STATUS_STYLES.pass.badge}`}>{audit.passed} pass</span>
+                <span className={`rounded px-1.5 py-0.5 ${AUDIT_STATUS_STYLES.warn.badge}`}>
+                  {audit.warned} exception
+                </span>
+                <span className={`rounded px-1.5 py-0.5 ${AUDIT_STATUS_STYLES.fail.badge}`}>{audit.failed} fail</span>
+                <span className={`rounded px-1.5 py-0.5 ${AUDIT_STATUS_STYLES.skipped.badge}`}>
+                  {audit.skipped} not evaluated
+                </span>
+                <span className="metric-value rounded bg-card px-1.5 py-0.5 text-muted-foreground">
+                  {audit.coveragePct.toFixed(0)}% control coverage
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[560px] text-left text-[11px]">
+                  <thead>
+                    <tr className="border-b border-border text-[10px] uppercase tracking-wide text-muted-foreground">
+                      <th className="py-1.5 pr-3">Control</th>
+                      <th className="py-1.5 pr-3">Test performed</th>
+                      <th className="py-1.5 pr-3">Evidence examined</th>
+                      <th className="py-1.5">Result</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {audit.controls.map((c) => (
+                      <tr key={c.id} className="border-b border-border/50 align-top">
+                        <td className="py-2 pr-3">
+                          <p className="metric-value text-[10px] text-muted-foreground">{c.id}</p>
+                          <p className="font-medium text-foreground/90">{c.control}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {c.family} · {c.layer}
+                          </p>
+                        </td>
+                        <td className="py-2 pr-3 text-muted-foreground">{c.test}</td>
+                        <td className="py-2 pr-3 text-muted-foreground">{c.evidence}</td>
+                        <td className="py-2">
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${AUDIT_STATUS_STYLES[c.status].badge}`}
+                          >
+                            {AUDIT_STATUS_STYLES[c.status].label}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[10px] text-muted-foreground">{audit.auditedAt}</p>
+            </div>
+
+
             {/* Calculation across layers — the arithmetic, layer by layer */}
             <div className="space-y-2 rounded-lg border border-border bg-surface-sunken/60 p-3">
               <div className="flex flex-wrap items-center gap-2">

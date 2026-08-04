@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { GitBranch } from 'lucide-react';
 import { LineageDetailDialog } from '@/components/ask/LineageDetailDialog';
+import { AUDIT_STATUS_STYLES, buildCalculationAudit } from '@/lib/calculation-audit';
+
 
 
 export type LineageEntry = {
@@ -48,7 +50,11 @@ export function LineageTrail({
 
       {open && (
         <ul className="mt-2 space-y-2">
-          {entries.map((e) => (
+          {entries.map((e) => {
+            const audit = buildCalculationAudit(e);
+            const auditStatus =
+              audit.verdict === 'audited' ? 'pass' : audit.verdict === 'audited-with-exceptions' ? 'warn' : 'fail';
+            return (
             <li key={e.ref} className="rounded-md border border-dashed border-border bg-surface-sunken p-2 text-[11px]">
               <div className="flex flex-wrap items-center gap-x-2">
                 <span className="metric-value text-sm font-semibold text-foreground">{e.value}</span>
@@ -62,7 +68,19 @@ export function LineageTrail({
                 >
                   {e.kind}
                 </span>
+                <span
+                  className={`rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wide ${AUDIT_STATUS_STYLES[auditStatus].badge}`}
+                  title={audit.verdictNote}
+                >
+                  {audit.verdict === 'audited'
+                    ? `audited · ${audit.passed}/${audit.passed + audit.warned + audit.failed} controls`
+                    : audit.verdict === 'audited-with-exceptions'
+                      ? `audited · ${audit.warned + audit.skipped} exception${audit.warned + audit.skipped === 1 ? '' : 's'}`
+                      : 'audit failed'}
+                </span>
+                <span className="metric-value text-[10px] text-muted-foreground/70">{audit.auditId}</span>
               </div>
+
               <div className="mt-1 space-y-0.5 text-muted-foreground">
                 <div>
                   <span className="text-foreground/70">Formula</span> · {e.formula}
@@ -93,7 +111,9 @@ export function LineageTrail({
                 <LineageDetailDialog entry={e} />
               </div>
             </li>
-          ))}
+            );
+          })}
+
         </ul>
       )}
     </div>
