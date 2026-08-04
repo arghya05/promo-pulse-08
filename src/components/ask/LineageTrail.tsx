@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { GitBranch } from 'lucide-react';
+import { LineageDetailDialog } from '@/components/ask/LineageDetailDialog';
+
 
 export type LineageEntry = {
   ref: string;
@@ -86,6 +88,9 @@ export function LineageTrail({
                   </div>
                 )}
                 <div className="metric-value text-muted-foreground/70">{e.ref}</div>
+              </div>
+              <div className="mt-2">
+                <LineageDetailDialog entry={e} />
               </div>
             </li>
           ))}
