@@ -281,6 +281,269 @@ function groundList(items: unknown, index: Map<string, string>) {
   return { kept, rejected };
 }
 
+// ------------------------ lineage + evaluation ------------------------------
+
+export interface LineageEntry {
+  ref: string;
+  kind: 'observed' | 'projected';
+  value: string;
+  metric: string;
+  metricLabel: string;
+  formula: string;
+  scope: string;
+  dataset: string;
+  module: string;
+  table: string;
+  grain: string;
+  window: { from: string | null; to: string | null };
+  recordsAnalysed: number;
+  method: string | null;
+}
+
+/**
+ * Resolves every groundable placeholder ref to its full lineage: which row of
+ * which governed dataset, which physical table, which formula, which window.
+ * The UI renders this per claim so a reader can trace any figure end to end.
+ */
+function buildLineageIndex(factSets: FactSet[], scenarios: ScenarioSet[]): Record<string, LineageEntry> {
+  const out: Record<string, LineageEntry> = {};
+
+  const add = (
+    rowRef: string,
+    scope: string,
+    values: Record<string, { metric: string; label: string; formatted: string }>,
+    base: Omit<LineageEntry, 'ref' | 'value' | 'metric' | 'metricLabel' | 'formula' | 'scope'>,
+    formulaFor: (metric: string) => string,
+  ) => {
+    // entity-name refs are lineage-bearing too: they identify the row itself
+    out[`${rowRef}.name`] = {
+      ...base,
+      ref: `${rowRef}.name`,
+      scope,
+      metric: 'name',
+      metricLabel: 'Entity name',
+      formula: 'Row identifier resolved from the governed dimension lookup',
+      value: scope,
+    };
+    for (const [key, v] of Object.entries(values)) {
+      out[`${rowRef}.${key}`] = {
+        ...base,
+        ref: `${rowRef}.${key}`,
+        scope,
+        metric: key,
+        metricLabel: v.label ?? key,
+        formula: formulaFor(key),
+        value: v.formatted,
+      };
+    }
+  };
+
+  for (const fs of factSets) {
+    const ds = datasets[fs.dataset];
+    const base = {
+      kind: 'observed' as const,
+      dataset: fs.dataset,
+      module: fs.module,
+      table: ds?.table ?? fs.tables[0] ?? '',
+      grain: fs.grain,
+      window: fs.window,
+      recordsAnalysed: fs.rowsScanned,
+      method: null,
+    };
+    const formulaFor = (m: string) => ds?.metrics[m]?.definition ?? `${ds?.metrics[m]?.agg ?? 'sum'}(${m})`;
+    add(fs.total.ref, `${fs.total.label} (all rows in scope)`, fs.total.values as never, base, formulaFor);
+    for (const row of fs.rows) {
+      add(row.ref, `${fs.dimensionLabel ?? 'segment'} = ${row.label}`, row.values as never, base, formulaFor);
+    }
+  }
+
+  for (const sc of scenarios) {
+    const base = {
+      kind: 'projected' as const,
+      dataset: `${sc.kind}_simulation`,
+      module: sc.module,
+      table: sc.tables.join(', '),
+      grain: `simulated at ${sc.entityLabel} level`,
+      window: sc.window,
+      recordsAnalysed: sc.rowsScanned,
+      method: sc.method,
+    };
+    const formulaFor = () => sc.method;
+    add(sc.total.ref, `${sc.title} — modelled total`, sc.total.values as never, base, formulaFor);
+    for (const row of sc.rows) {
+      add(row.ref, `${sc.entityLabel} = ${row.label} (modelled)`, row.values as never, base, formulaFor);
+    }
+  }
+
+  return out;
+}
+
+export interface EvalCheck {
+  id: string;
+  label: string;
+  status: 'pass' | 'warn' | 'fail';
+  detail: string;
+  fix: string | null;
+}
+
+interface GuardPass {
+  headline: GroundedText | null;
+  insights: ReturnType<typeof groundList>;
+  drivers: ReturnType<typeof groundList>;
+  projection: ReturnType<typeof groundList>;
+  actions: ReturnType<typeof groundList>;
+  caveats: ReturnType<typeof groundList>;
+  rejected: { text: string; violation: string }[];
+  verified: number;
+  confidence: string;
+}
+
+/**
+ * Deterministic evaluator. Runs in code — no model judges the answer — so the
+ * verdict is reproducible. Any `fail` triggers one self-correction pass.
+ */
+function evaluateAnswer(
+  pass: GuardPass,
+  factSets: FactSet[],
+  scenarios: ScenarioSet[],
+  lineage: Record<string, LineageEntry>,
+): { checks: EvalCheck[]; score: number; passed: boolean; verdict: string } {
+  const checks: EvalCheck[] = [];
+  const claims = [...pass.insights.kept, ...pass.drivers.kept, ...pass.projection.kept, ...pass.actions.kept];
+  const refs = new Set(claims.flatMap((c) => c.refs ?? []));
+  const records = [...factSets.map((f) => f.rowsScanned), ...scenarios.map((s) => s.rowsScanned)]
+    .reduce((a, b) => a + b, 0);
+
+  const push = (id: string, label: string, ok: boolean, warn: boolean, detail: string, fix: string | null) =>
+    checks.push({ id, label, status: ok ? 'pass' : warn ? 'warn' : 'fail', detail, fix: ok ? null : fix });
+
+  push(
+    'grounding',
+    'Every figure traced to a computed value',
+    pass.rejected.length === 0,
+    false,
+    pass.rejected.length === 0
+      ? `${pass.verified} claims verified, 0 model-authored numbers survived`
+      : `${pass.rejected.length} claim(s) were rejected for ungrounded numbers`,
+    'Rewrite the rejected claims using only {{ref}} placeholders that exist in FACTS/SCENARIOS.',
+  );
+
+  push(
+    'answered',
+    'Question directly answered',
+    Boolean(pass.headline?.ok),
+    false,
+    pass.headline?.ok ? 'Headline is a grounded direct answer' : 'Headline was rejected; a deterministic fallback was used',
+    'Write a one-sentence headline that answers the question, with numbers as placeholders only.',
+  );
+
+  push(
+    'evidence',
+    'Evidence breadth',
+    refs.size >= 3,
+    refs.size >= 1,
+    `${refs.size} distinct computed values cited across ${claims.length} claims`,
+    'Cite at least three distinct placeholder refs, including at least one row-level ref.',
+  );
+
+  const rowRefsUsed = Array.from(refs).some((r) => /\.\d+\./.test(r));
+  push(
+    'granularity',
+    'Row-level detail, not just totals',
+    rowRefsUsed || factSets.every((f) => f.rows.length === 0),
+    true,
+    rowRefsUsed ? 'At least one claim names a specific segment or SKU' : 'All claims cite totals only',
+    'Name the specific top/bottom segments using row refs such as {{q1.1.name}}.',
+  );
+
+  const scenarioRefsUsed = Array.from(refs).some((r) => r.startsWith('s'));
+  if (scenarios.length > 0) {
+    push(
+      'projection',
+      'Simulation results used for the forward view',
+      pass.projection.kept.length >= 1 && scenarioRefsUsed,
+      false,
+      pass.projection.kept.length >= 1
+        ? `${pass.projection.kept.length} projection claim(s) from ${scenarios.length} simulation(s)`
+        : 'Simulations ran but the narrative did not use them',
+      'Add projection bullets that cite scenario refs (s1.*) and label them as modelled, not actual.',
+    );
+  } else {
+    push(
+      'projection',
+      'No projections invented without a simulation',
+      pass.projection.kept.length === 0 && !scenarioRefsUsed,
+      false,
+      pass.projection.kept.length === 0 ? 'Descriptive answer, no forward claims' : 'Forward claims made with no simulation behind them',
+      'Remove the projection bullets — no scenario was simulated for this question.',
+    );
+  }
+
+  push(
+    'actionability',
+    'Actions tied to a metric',
+    pass.actions.kept.length >= 1,
+    false,
+    `${pass.actions.kept.length} recommended action(s)`,
+    'Add 2-3 actions, each quantified with a placeholder metric.',
+  );
+
+  push(
+    'sample',
+    'Sample size supports the confidence stated',
+    records >= 50 || pass.confidence !== 'high',
+    true,
+    `${records.toLocaleString('en-US')} records analysed with "${pass.confidence}" confidence`,
+    'Lower confidence to medium or low — too few records were analysed for a high-confidence answer.',
+  );
+
+  push(
+    'limits',
+    'Limits of the data disclosed',
+    pass.caveats.kept.length >= 1,
+    true,
+    `${pass.caveats.kept.length} caveat(s) stated`,
+    'State at least one caveat about what the data or simulation does not cover.',
+  );
+
+  const unresolvedRefs = Array.from(refs).filter((r) => !lineage[r]);
+  push(
+    'lineage',
+    'Full lineage resolvable for every cited value',
+    unresolvedRefs.length === 0,
+    false,
+    unresolvedRefs.length === 0
+      ? `All ${refs.size} cited values resolve to a dataset, table and formula`
+      : `${unresolvedRefs.length} cited value(s) have no lineage entry`,
+    'Only cite refs that appear in the FACTS/SCENARIOS json.',
+  );
+
+  const weight = (c: EvalCheck) => (c.status === 'pass' ? 1 : c.status === 'warn' ? 0.5 : 0);
+  const score = Math.round((checks.reduce((a, c) => a + weight(c), 0) / checks.length) * 100);
+  const failed = checks.filter((c) => c.status === 'fail');
+  return {
+    checks,
+    score,
+    passed: failed.length === 0,
+    verdict: failed.length === 0
+      ? `Grounded — ${checks.filter((c) => c.status === 'pass').length}/${checks.length} checks passed`
+      : `${failed.length} check(s) failed: ${failed.map((c) => c.label).join('; ')}`,
+  };
+}
+
+/** Turns failing checks into an instruction block for the self-correction pass. */
+function repairBrief(pass: GuardPass, evaluation: { checks: EvalCheck[] }): string {
+  const problems = evaluation.checks.filter((c) => c.status !== 'pass' && c.fix);
+  const lines = problems.map((c, i) => `${i + 1}. ${c.label} — ${c.detail}. Fix: ${c.fix}`);
+  const rejects = pass.rejected.slice(0, 6).map((r) => `- "${r.text}" (${r.violation})`);
+  return `Your previous answer failed automated evaluation. Rewrite it completely, keeping only what was valid.
+
+FINDINGS TO FIX:
+${lines.join('\n')}
+${rejects.length ? `\nCLAIMS THAT WERE THROWN AWAY (do not repeat these mistakes):\n${rejects.join('\n')}` : ''}
+Return the same JSON shape. Remember: you may not write a single digit outside a {{ref}} placeholder.`;
+}
+
 // ------------------------------ handler ------------------------------------
 
 Deno.serve(async (req) => {
@@ -446,40 +709,94 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // ---------- 3. NARRATE ----------
+    // ---------- 3-5. NARRATE -> GUARD -> EVALUATE -> SELF-CORRECT ----------
     const facts = compactFacts(factSets);
     const scenarioFacts = compactScenarios(scenarioSets);
-    const narrateStart = Date.now();
-    const narration = await callModel(apiKey, [
-      { role: 'system', content: narratorPrompt(scenarioSets.length > 0) },
-      {
-        role: 'user',
-        content: `Persona: ${persona}
+    const index = buildFactIndex(factSets, scenarioSets);
+    const lineage = buildLineageIndex(factSets, scenarioSets);
+
+    const factBrief = `Persona: ${persona}
 Question: ${question}
 Planner interpretation: ${plan?.interpretation ?? ''}
 FACTS (observed database results — the only source of actuals):
 ${JSON.stringify(facts)}
 SCENARIOS (deterministic simulations of the future — the only source of projections):
-${JSON.stringify(scenarioFacts)}`,
-      },
-    ], 8000);
-    mark('narrate', 'narrate', 'Wrote the narrative with reference placeholders only',
-      'The model may reference computed values but may not author digits', narrateStart);
+${JSON.stringify(scenarioFacts)}`;
 
-    // ---------- 4. GUARD ----------
-    const guardStart = Date.now();
-    const index = buildFactIndex(factSets, scenarioSets);
-    const headline = ground(narration?.headline, index);
-    const insights = groundList(narration?.insights, index);
-    const drivers = groundList(narration?.drivers, index);
-    const projection = groundList(narration?.projection, index);
-    const actions = groundList(narration?.actions, index);
-    const caveats = groundList(narration?.caveats, index);
+    const narrateAndGuard = async (attempt: number, repair: string | null) => {
+      const nStart = Date.now();
+      const narration = await callModel(apiKey, [
+        { role: 'system', content: narratorPrompt(scenarioSets.length > 0) },
+        { role: 'user', content: repair ? `${factBrief}\n\n${repair}` : factBrief },
+      ], 8000);
+      mark(
+        `narrate-${attempt}`,
+        'narrate',
+        attempt === 1 ? 'Wrote the narrative with reference placeholders only' : 'Rewrote the narrative to fix the evaluator findings',
+        attempt === 1
+          ? 'The model may reference computed values but may not author digits'
+          : 'Self-correction pass — the failing checks were fed back as instructions',
+        nStart,
+      );
 
-    const rejected = [...insights.rejected, ...drivers.rejected, ...projection.rejected, ...actions.rejected, ...caveats.rejected];
-    const verified = insights.kept.length + drivers.kept.length + projection.kept.length + actions.kept.length + (headline?.ok ? 1 : 0);
-    mark('guard', 'guard', 'Substituted every figure from code-computed values',
-      `${verified} claims verified · ${rejected.length} rejected · ${index.size} groundable values`, guardStart);
+      const gStart = Date.now();
+      const headline = ground(narration?.headline, index);
+      const insights = groundList(narration?.insights, index);
+      const drivers = groundList(narration?.drivers, index);
+      const projection = groundList(narration?.projection, index);
+      const actions = groundList(narration?.actions, index);
+      const caveats = groundList(narration?.caveats, index);
+      const rejected = [...insights.rejected, ...drivers.rejected, ...projection.rejected, ...actions.rejected, ...caveats.rejected];
+      const verified = insights.kept.length + drivers.kept.length + projection.kept.length + actions.kept.length + (headline?.ok ? 1 : 0);
+      mark(
+        `guard-${attempt}`,
+        'guard',
+        'Substituted every figure from code-computed values',
+        `${verified} claims verified · ${rejected.length} rejected · ${index.size} groundable values`,
+        gStart,
+      );
+
+      return {
+        headline,
+        insights,
+        drivers,
+        projection,
+        actions,
+        caveats,
+        rejected,
+        verified,
+        confidence: ['high', 'medium', 'low'].includes(String(narration?.confidence)) ? String(narration.confidence) : 'medium',
+      };
+    };
+
+    let pass = await narrateAndGuard(1, null);
+    const evalStart1 = Date.now();
+    let evaluation = evaluateAnswer(pass, factSets, scenarioSets, lineage);
+    mark('evaluate-1', 'evaluate', `Evaluated the answer against ${evaluation.checks.length} deterministic checks`,
+      `Score ${evaluation.score}/100 · ${evaluation.verdict}`, evalStart1);
+
+    const attempts = [{ attempt: 1, score: evaluation.score, verdict: evaluation.verdict, rejectedClaims: pass.rejected.length }];
+    let selfCorrected = false;
+
+    if (!evaluation.passed) {
+      const correctStart = Date.now();
+      try {
+        const retryPass = await narrateAndGuard(2, repairBrief(pass, evaluation));
+        const retryEval = evaluateAnswer(retryPass, factSets, scenarioSets, lineage);
+        attempts.push({ attempt: 2, score: retryEval.score, verdict: retryEval.verdict, rejectedClaims: retryPass.rejected.length });
+        if (retryEval.score >= evaluation.score) {
+          pass = retryPass;
+          evaluation = retryEval;
+          selfCorrected = true;
+        }
+        mark('evaluate-2', 'evaluate', selfCorrected ? 'Self-correction accepted' : 'Self-correction rejected — first answer scored higher',
+          `Attempt 1 ${attempts[0].score}/100 → attempt 2 ${attempts[1].score}/100 · ${retryEval.verdict}`, correctStart);
+      } catch (err) {
+        mark('evaluate-2', 'evaluate', 'Self-correction pass failed', err instanceof Error ? err.message : 'retry error', correctStart);
+      }
+    }
+
+    const { headline, insights, drivers, projection, actions, caveats, rejected, verified } = pass;
 
     // Deterministic fallback headline, built from facts only
     const primary = factSets[0] ?? (scenarioSets[0] as unknown as FactSet);
@@ -514,7 +831,7 @@ ${JSON.stringify(scenarioFacts)}`,
       projection: projection.kept,
       actions: actions.kept,
       caveats: caveats.kept.map((c) => c.text),
-      confidence: ['high', 'medium', 'low'].includes(String(narration?.confidence)) ? String(narration.confidence) : 'medium',
+      confidence: pass.confidence,
       mode: scenarioSets.length > 0 ? 'predictive' : 'descriptive',
       scenarios: scenarioSets.map((sc) => ({
         id: sc.id,
@@ -588,6 +905,16 @@ ${JSON.stringify(scenarioFacts)}`,
       }),
       graph: graphForDatasets(factSets.map((fs) => fs.dataset)),
       reasoning: steps,
+      evaluation: {
+        score: evaluation.score,
+        passed: evaluation.passed,
+        verdict: evaluation.verdict,
+        checks: evaluation.checks,
+        attempts,
+        selfCorrected,
+        method: 'Deterministic code evaluator — no model grades the answer. A failing check triggers one self-correction rewrite, and the rewrite is kept only if it scores at least as high.',
+      },
+      lineage,
       modulesTouched: Array.from(new Set([...factSets.map((fs) => fs.module), ...scenarioSets.map((sc) => sc.module)])),
       guardrail: {
         mode: scenarioSets.length > 0 ? 'placeholder-substitution + coded simulation' : 'placeholder-substitution',
