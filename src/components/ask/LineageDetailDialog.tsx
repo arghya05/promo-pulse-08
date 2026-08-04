@@ -1,4 +1,4 @@
-import { ArrowDown, Database, GitBranch, Layers, ShieldCheck } from 'lucide-react';
+import { ArrowDown, Calculator, Database, GitBranch, Layers, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LAYER_STYLES, lineageForTable } from '@/lib/lineage-layers';
+import { buildCalculationWalk } from '@/lib/calculation-walk';
 import type { LineageEntry } from '@/components/ask/LineageTrail';
 
 /**
