@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
+import { ChartCapture } from '@/components/charts/ChartCapture';
 
 interface ProductDrillDownProps {
   product: {
@@ -331,6 +332,7 @@ export default function ProductDrillDown({ product, onClose }: ProductDrillDownP
                 <div className="grid grid-cols-2 gap-6">
                   <Card className="p-4">
                     <h3 className="font-semibold mb-4">Revenue by Store</h3>
+                    <ChartCapture label="Revenue by Store" className="w-full">
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={storeData.slice(0, 8)} layout="vertical">
                         <CartesianGrid strokeDasharray="3 3" />
@@ -340,9 +342,11 @@ export default function ProductDrillDown({ product, onClose }: ProductDrillDownP
                         <Bar dataKey="revenue" fill="#3b82f6" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
+                    </ChartCapture>
                   </Card>
                   <Card className="p-4">
                     <h3 className="font-semibold mb-4">Revenue by Region</h3>
+                    <ChartCapture label="Revenue by Region" className="w-full">
                     <ResponsiveContainer width="100%" height={300}>
                       <PieChart>
                         <Pie
@@ -366,6 +370,7 @@ export default function ProductDrillDown({ product, onClose }: ProductDrillDownP
                         <Tooltip formatter={(v: number) => formatCurrency(v)} />
                       </PieChart>
                     </ResponsiveContainer>
+                    </ChartCapture>
                   </Card>
                 </div>
 
@@ -403,6 +408,7 @@ export default function ProductDrillDown({ product, onClose }: ProductDrillDownP
               <TabsContent value="time" className="space-y-6">
                 <Card className="p-4">
                   <h3 className="font-semibold mb-4">Revenue & Margin Trend</h3>
+                  <ChartCapture label="Revenue and Margin Trend" className="w-full">
                   <ResponsiveContainer width="100%" height={350}>
                     <LineChart data={timeData}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -414,10 +420,12 @@ export default function ProductDrillDown({ product, onClose }: ProductDrillDownP
                       <Line type="monotone" dataKey="margin" stroke="#10b981" strokeWidth={2} name="Margin" dot={{ r: 4 }} />
                     </LineChart>
                   </ResponsiveContainer>
+                  </ChartCapture>
                 </Card>
 
                 <Card className="p-4">
                   <h3 className="font-semibold mb-4">Units Sold Trend</h3>
+                  <ChartCapture label="Units Sold Trend" className="w-full">
                   <ResponsiveContainer width="100%" height={250}>
                     <BarChart data={timeData}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -427,6 +435,7 @@ export default function ProductDrillDown({ product, onClose }: ProductDrillDownP
                       <Bar dataKey="units" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Units" />
                     </BarChart>
                   </ResponsiveContainer>
+                  </ChartCapture>
                 </Card>
 
                 <Table>
@@ -458,6 +467,7 @@ export default function ProductDrillDown({ product, onClose }: ProductDrillDownP
                 <div className="grid grid-cols-2 gap-6">
                   <Card className="p-4">
                     <h3 className="font-semibold mb-4">Revenue by Customer Segment</h3>
+                    <ChartCapture label="Revenue by Customer Segment" className="w-full">
                     <ResponsiveContainer width="100%" height={300}>
                       <PieChart>
                         <Pie
@@ -477,9 +487,11 @@ export default function ProductDrillDown({ product, onClose }: ProductDrillDownP
                         <Tooltip formatter={(v: number) => formatCurrency(v)} />
                       </PieChart>
                     </ResponsiveContainer>
+                    </ChartCapture>
                   </Card>
                   <Card className="p-4">
                     <h3 className="font-semibold mb-4">Units by Customer Segment</h3>
+                    <ChartCapture label="Units by Customer Segment" className="w-full">
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={segmentData}>
                         <CartesianGrid strokeDasharray="3 3" />
@@ -489,6 +501,7 @@ export default function ProductDrillDown({ product, onClose }: ProductDrillDownP
                         <Bar dataKey="units" fill="#10b981" radius={[4, 4, 0, 0]} name="Units" />
                       </BarChart>
                     </ResponsiveContainer>
+                    </ChartCapture>
                   </Card>
                 </div>
 

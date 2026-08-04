@@ -27,6 +27,7 @@ import CausalExplainability from "@/components/CausalExplainability";
 import { supabase } from "@/integrations/supabase/client";
 import { getModuleById, getModulePersonas, getModuleQuestions, getModulePopularIds, getModuleEdgeFunction, Module } from "@/lib/data/module-config";
 import { companyProfile } from "@/lib/data/company-profile";
+import { ChartCapture } from '@/components/charts/ChartCapture';
 type Persona = 'executive' | 'consumables' | 'non_consumables';
 type TimePeriod = 'last_month' | 'last_quarter' | 'last_year' | 'ytd' | 'custom';
 
@@ -858,6 +859,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                       <Card className="p-4">
                         <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Quick View</h3>
                         <div className="h-48">
+                          <ChartCapture label="Quick View" className="h-full w-full">
                           <ResponsiveContainer width="100%" height="100%">
                             {(() => {
                               const chartData = result.chartData.slice(0, 5);
@@ -886,6 +888,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                               );
                             })()}
                           </ResponsiveContainer>
+                          </ChartCapture>
                         </div>
                       </Card>
                     )}
@@ -1410,6 +1413,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                     <span className="text-base">💡</span>
                     <span>Click on any bar to see detailed breakdown</span>
                   </div>
+                  <ChartCapture label={selectedQuestion || "Analysis chart"} className="h-full w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     {(() => {
                       // Dynamically detect chart data keys
@@ -1521,6 +1525,7 @@ export default function Index({ moduleId = 'promotion' }: IndexProps) {
                       );
                     })()}
                   </ResponsiveContainer>
+                  </ChartCapture>
                 </div>
               </Card>
 
