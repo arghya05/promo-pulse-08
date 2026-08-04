@@ -21,6 +21,7 @@ import type { LineageEntry } from '@/components/ask/LineageTrail';
  */
 export function LineageDetailDialog({ entry, sql }: { entry: LineageEntry; sql?: string }) {
   const pipeline = lineageForTable(entry.table);
+  const walk = buildCalculationWalk(entry);
 
   return (
     <Dialog>
