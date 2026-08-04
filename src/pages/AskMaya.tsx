@@ -581,6 +581,7 @@ export default function AskMaya() {
               <ClaimList title="What the data shows" icon={Lightbulb} claims={answer.insights} />
               <ClaimList title="Why it is happening" icon={TrendingUp} claims={answer.drivers} />
             </div>
+            <ClaimList title="What the simulation projects" icon={FlaskConical} claims={answer.projection} />
             <ClaimList title="Recommended actions" icon={Target} claims={answer.actions} />
 
             {answer.caveats?.length ? (
