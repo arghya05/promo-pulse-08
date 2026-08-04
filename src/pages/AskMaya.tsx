@@ -19,19 +19,32 @@ import {
   AlertTriangle,
   ArrowRight,
   Calculator,
+  CheckCircle2,
+  Command as CommandIcon,
   Database,
   FlaskConical,
   Info,
   Lightbulb,
+  Loader2,
   Network,
+  RotateCcw,
   Send,
   ShieldCheck,
-  Sparkles,
+  Square,
   Target,
   TrendingUp,
 } from 'lucide-react';
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { companyProfile } from '@/lib/data/company-profile';
 import { toast } from 'sonner';
+
 
 type FactValue = {
   metric: string;
