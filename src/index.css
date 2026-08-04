@@ -14,69 +14,69 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Midnight Indigo — dark command-center surface */
-    --background: 240 45% 5%;
-    --foreground: 240 20% 96%;
+    /* Daylight Indigo — light command-center surface */
+    --background: 240 30% 99%;
+    --foreground: 240 40% 12%;
 
-    --card: 240 38% 9%;
-    --card-foreground: 240 20% 96%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 40% 12%;
 
-    --surface-raised: 240 34% 12%;
-    --surface-sunken: 240 48% 4%;
+    --surface-raised: 240 30% 97%;
+    --surface-sunken: 240 24% 95%;
 
-    --popover: 240 38% 10%;
-    --popover-foreground: 240 20% 96%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 40% 12%;
 
-    --primary: 243 75% 59%;
+    --primary: 243 75% 56%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 250 88% 72%;
+    --primary-glow: 250 88% 68%;
 
-    --secondary: 240 30% 15%;
-    --secondary-foreground: 240 20% 94%;
+    --secondary: 240 28% 95%;
+    --secondary-foreground: 240 40% 18%;
 
-    --muted: 240 28% 14%;
-    --muted-foreground: 240 12% 66%;
+    --muted: 240 24% 95%;
+    --muted-foreground: 240 10% 42%;
 
-    --accent: 243 60% 20%;
-    --accent-foreground: 250 90% 88%;
+    --accent: 243 70% 95%;
+    --accent-foreground: 243 65% 32%;
 
-    --destructive: 0 72% 55%;
+    --destructive: 0 72% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 26% 18%;
-    --input: 240 26% 18%;
-    --ring: 243 75% 62%;
+    --border: 240 20% 89%;
+    --input: 240 20% 89%;
+    --ring: 243 75% 56%;
 
     --radius: 0.75rem;
 
     /* Status colors for KPIs */
-    --status-good: 158 68% 48%;
-    --status-warning: 38 92% 58%;
-    --status-bad: 0 72% 58%;
+    --status-good: 158 72% 38%;
+    --status-warning: 33 92% 46%;
+    --status-bad: 0 72% 50%;
 
     /* Chart colors */
-    --chart-1: 243 75% 62%;
-    --chart-2: 190 90% 55%;
-    --chart-3: 158 68% 48%;
-    --chart-4: 38 92% 60%;
-    --chart-5: 285 78% 68%;
+    --chart-1: 243 75% 58%;
+    --chart-2: 190 85% 42%;
+    --chart-3: 158 68% 40%;
+    --chart-4: 33 92% 50%;
+    --chart-5: 285 70% 58%;
 
     /* Gradients & shadows */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-surface: linear-gradient(160deg, hsl(240 38% 11%), hsl(240 45% 6%));
-    --gradient-glow: radial-gradient(60% 60% at 50% 0%, hsl(var(--primary) / 0.28), transparent 70%);
-    --shadow-elegant: 0 24px 60px -28px hsl(240 60% 2% / 0.9);
-    --shadow-glow: 0 0 0 1px hsl(var(--primary) / 0.28), 0 18px 50px -24px hsl(var(--primary) / 0.55);
+    --gradient-surface: linear-gradient(160deg, hsl(240 40% 99%), hsl(240 25% 95%));
+    --gradient-glow: radial-gradient(60% 60% at 50% 0%, hsl(var(--primary) / 0.14), transparent 70%);
+    --shadow-elegant: 0 20px 44px -26px hsl(240 40% 30% / 0.24);
+    --shadow-glow: 0 0 0 1px hsl(var(--primary) / 0.18), 0 16px 40px -24px hsl(var(--primary) / 0.35);
 
     /* Sidebar */
-    --sidebar-background: 240 48% 4%;
-    --sidebar-foreground: 240 14% 78%;
-    --sidebar-primary: 243 75% 62%;
+    --sidebar-background: 240 32% 97%;
+    --sidebar-foreground: 240 25% 28%;
+    --sidebar-primary: 243 75% 56%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 243 45% 14%;
-    --sidebar-accent-foreground: 250 90% 92%;
-    --sidebar-border: 240 28% 14%;
-    --sidebar-ring: 243 75% 62%;
+    --sidebar-accent: 243 70% 94%;
+    --sidebar-accent-foreground: 243 65% 30%;
+    --sidebar-border: 240 20% 90%;
+    --sidebar-ring: 243 75% 56%;
   }
 
   .dark {
