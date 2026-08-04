@@ -287,6 +287,158 @@ function FactPanel({ fact }: { fact: FactSet }) {
   );
 }
 
+function ScenarioChart({ scenario }: { scenario: ScenarioSet }) {
+  const metricKey = useMemo(() => {
+    const first = scenario.rows[0];
+    if (!first) return null;
+    if (first.values[scenario.chartMetric]?.value !== null && first.values[scenario.chartMetric]) return scenario.chartMetric;
+    return Object.values(first.values).find((v) => v.value !== null)?.metric ?? null;
+  }, [scenario]);
+
+  if (!metricKey || scenario.rows.length < 2) return null;
+  const metricLabel = scenario.rows[0].values[metricKey]?.label ?? metricKey;
+  const data = scenario.rows.slice(0, 10).map((row) => ({
+    name: row.label.length > 22 ? `${row.label.slice(0, 21)}…` : row.label,
+    value: row.values[metricKey]?.value ?? 0,
+    formatted: row.values[metricKey]?.formatted ?? '',
+  }));
+
+  return (
+    <div className="h-56 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+          <XAxis
+            dataKey="name"
+            tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+            interval={0}
+            angle={-18}
+            textAnchor="end"
+            height={54}
+          />
+          <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} width={64} />
+          <ChartTooltip
+            contentStyle={{
+              background: 'hsl(var(--card))',
+              border: '1px solid hsl(var(--border))',
+              borderRadius: 8,
+              fontSize: 12,
+            }}
+            formatter={(_v: number, _n, entry: any) => [entry?.payload?.formatted ?? '', metricLabel]}
+          />
+          <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function ScenarioPanel({ scenario }: { scenario: ScenarioSet }) {
+  const metrics = Object.values(scenario.total.values);
+  const levers = Object.entries(scenario.levers);
+  const scope = Object.entries(scenario.scope);
+
+  return (
+    <Card className="space-y-4 border-primary/30 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <FlaskConical className="h-4 w-4 text-primary" />
+          {scenario.title}
+          <Badge variant="secondary" className="font-normal">
+            {SCENARIO_LABEL[scenario.kind]}
+          </Badge>
+        </div>
+        <div className="metric-value text-xs text-muted-foreground">
+          {scenario.recordsAnalysed.toLocaleString('en-US')} baseline records · by {scenario.entity}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 text-xs">
+        {levers.map(([k, v]) => (
+          <span key={k} className="rounded-full border border-primary/40 bg-primary/5 px-2.5 py-1">
+            <span className="text-muted-foreground">{k}</span> <span className="metric-value font-medium">{v}</span>
+          </span>
+        ))}
+        {scope.map(([k, v]) => (
+          <span key={k} className="rounded-full border border-border/70 bg-surface-raised px-2.5 py-1 text-muted-foreground">
+            {k}: {v}
+          </span>
+        ))}
+      </div>
+
+      <div className="text-xs text-muted-foreground">
+        Baseline window {scenario.window.from ?? 'earliest'} → {scenario.window.to ?? 'latest'}
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {metrics.map((m) => (
+          <div key={m.metric} className="rounded-lg border border-primary/20 bg-surface-sunken p-3">
+            <div className="text-xs text-muted-foreground">{m.label}</div>
+            <div className="metric-value text-lg font-semibold">{m.formatted}</div>
+          </div>
+        ))}
+      </div>
+
+      <ScenarioChart scenario={scenario} />
+
+      {scenario.rows.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <th className="py-2 pr-3">{scenario.entity}</th>
+                {Object.values(scenario.rows[0].values).map((v) => (
+                  <th key={v.metric} className="py-2 pr-3 text-right">
+                    {v.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {scenario.rows.map((row) => (
+                <tr key={row.ref} className="border-b border-border/50 last:border-0">
+                  <td className="py-2 pr-3">{row.label}</td>
+                  {Object.values(row.values).map((v) => (
+                    <td key={v.metric} className="metric-value py-2 pr-3 text-right">
+                      {v.formatted}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="space-y-2 rounded-lg border border-border/70 bg-surface-sunken p-3 text-xs text-muted-foreground">
+        <div className="flex items-start gap-1.5">
+          <Calculator className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
+          <span>
+            <span className="font-medium text-foreground">Model: </span>
+            {scenario.method}
+          </span>
+        </div>
+        {scenario.assumptions.map((a, i) => (
+          <div key={i} className="flex items-start gap-1.5">
+            <Info className="mt-0.5 h-3 w-3 shrink-0" />
+            <span>{a}</span>
+          </div>
+        ))}
+        {scenario.notes.map((n, i) => (
+          <div key={`n${i}`} className="flex items-start gap-1.5">
+            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-status-warning" />
+            <span>{n}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="text-xs text-muted-foreground">Source tables: {scenario.tables.join(', ')}</div>
+    </Card>
+  );
+}
+
+
+
 export default function AskMaya() {
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
