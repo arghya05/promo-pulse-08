@@ -13,8 +13,8 @@ import {
 const verdictStyle: Record<MessyRow['verdict'], { label: string; cls: string }> = {
   clean: { label: 'clean', cls: 'bg-status-good/10 text-status-good border-status-good/30' },
   repaired: { label: 'repaired', cls: 'bg-primary/10 text-primary border-primary/30' },
-  quarantined: { label: 'quarantined', cls: 'bg-status-critical/10 text-status-critical border-status-critical/30' },
-  flagged: { label: 'flagged', cls: 'bg-status-warn/10 text-status-warn border-status-warn/30' },
+  quarantined: { label: 'quarantined', cls: 'bg-destructive/10 text-destructive border-destructive/30' },
+  flagged: { label: 'flagged', cls: 'bg-status-warning/10 text-status-warning border-status-warning/30' },
 };
 
 function rawPreview(raw: MessyRow['raw']) {

@@ -429,8 +429,8 @@ export function buildOnboarding(source: CandidateSource): OnboardingState {
 }
 
 export const GATE_FAIL_STYLE: Record<SynthGate['onFail'], string> = {
-  'quarantine batch': 'bg-status-critical/10 text-status-critical border-status-critical/30',
-  'block publish': 'bg-status-critical/10 text-status-critical border-status-critical/30',
-  'quarantine rows': 'bg-status-warn/10 text-status-warn border-status-warn/30',
+  'quarantine batch': 'bg-destructive/10 text-destructive border-destructive/30',
+  'block publish': 'bg-destructive/10 text-destructive border-destructive/30',
+  'quarantine rows': 'bg-status-warning/10 text-status-warning border-status-warning/30',
   'flag + continue': 'bg-primary/10 text-primary border-primary/30',
 };
