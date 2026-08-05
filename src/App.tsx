@@ -8,9 +8,7 @@ import AppShell from "./components/shell/AppShell";
 import Home from "./pages/Home";
 import Index from "./pages/Index";
 import AskMaya from "./pages/AskMaya";
-import OntologyGraph from "./pages/OntologyGraph";
-import DataQuality from "./pages/DataQuality";
-import DataDiscovery from "./pages/DataDiscovery";
+import DataEngineering from "./pages/DataEngineering";
 import NotFound from "./pages/NotFound";
 import ValidationDashboard from "./pages/ValidationDashboard";
 
@@ -29,9 +27,10 @@ const App = () => (
               <Route path="/login" element={<Navigate to="/" replace />} />
               <Route path="/home" element={<Navigate to="/" replace />} />
               <Route path="/ask" element={<AskMaya />} />
-              <Route path="/graph" element={<OntologyGraph />} />
-              <Route path="/data-quality" element={<DataQuality />} />
-              <Route path="/discover" element={<DataDiscovery />} />
+              <Route path="/data" element={<DataEngineering />} />
+              <Route path="/graph" element={<Navigate to="/data?tab=graph" replace />} />
+              <Route path="/data-quality" element={<Navigate to="/data?tab=quality" replace />} />
+              <Route path="/discover" element={<Navigate to="/data?tab=discover" replace />} />
               <Route path="/executive" element={<Index moduleId="executive" />} />
               <Route path="/promotion" element={<Index moduleId="promotion" />} />
               <Route path="/pricing" element={<Index moduleId="pricing" />} />
