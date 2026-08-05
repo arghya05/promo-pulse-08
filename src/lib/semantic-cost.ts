@@ -127,7 +127,7 @@ export const METRIC_DEFINITIONS: MetricDefinition[] = [
     id: 'm-forecast-mape',
     name: 'Forecast MAPE',
     version: 'v1.2',
-    expression: 'mean(|actual - forecast| / NULLIF(actual, 0)) over店-sku-weeks with actual > 0',
+    expression: 'mean(|actual - forecast| / NULLIF(actual, 0)) overstore-sku-weeks with actual > 0',
     grain: 'store × sku × week',
     unit: '%',
     owner: 'Demand planning',
@@ -161,7 +161,7 @@ export const METRIC_DEFINITIONS: MetricDefinition[] = [
 
 export type PipelineCost = {
   id: string;
-  pipeline: string
+  pipeline: string;
   layer: 'Bronze' | 'Silver' | 'Gold' | 'Semantic';
   strategy: 'Incremental' | 'CDC merge' | 'SCD2' | 'Full refresh';
   partitioning: string;
