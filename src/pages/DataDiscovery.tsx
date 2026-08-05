@@ -104,12 +104,12 @@ export default function DataDiscovery({ embedded = false }: { embedded?: boolean
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" asChild>
-              <Link to="/data-quality">
+              <Link to="/data?tab=quality">
                 <ShieldCheck className="mr-2 h-4 w-4" /> Data quality
               </Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
-              <Link to="/graph">
+              <Link to="/data?tab=graph">
                 <Layers className="mr-2 h-4 w-4" /> Lineage &amp; ingestion
               </Link>
             </Button>

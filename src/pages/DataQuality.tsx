@@ -159,7 +159,7 @@ export default function DataQuality({ embedded = false }: { embedded?: boolean }
             <Network className="h-3 w-3" /> {feeds.length} feeds
           </span>
           <Link
-            to="/graph"
+            to="/data?tab=graph"
             className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[11px] text-muted-foreground hover:text-primary"
           >
             <Layers className="h-3 w-3" /> Ingestion lineage
