@@ -48,7 +48,7 @@ export default function OntologyGraph() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [view, setView] = useState<'graph' | 'ingestion' | 'forecast'>('graph');
+  const [view, setView] = useState<'graph' | 'ingestion' | 'forecast' | 'messy'>('graph');
 
   useEffect(() => {
     let active = true;
