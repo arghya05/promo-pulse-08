@@ -215,13 +215,13 @@ export const MESSY_CASES: MessyCase[] = [
     question: 'How wide is our price gap to Kroger on tracked Dairy SKUs?',
     metric: 'Average price gap vs Kroger (Dairy, tracked SKUs)',
     unit: 'pct',
-    truth: -2.6,
+    truth: -2.5,
     coverageNote:
       'Gap computed on 3 of 6 tracked SKUs (50.0% coverage). Missing and expired observations are never interpolated.',
     governedAnswer:
-      'We are 2.6% below Kroger on the Dairy SKUs with a valid observation in the last 14 days — 3 of 6 tracked SKUs. The remaining SKUs have no fresh observation and are excluded, not estimated.',
+      'We are 2.5% below Kroger on the Dairy SKUs with a valid observation in the last 14 days — 3 of 6 tracked SKUs. The remaining SKUs have no fresh observation and are excluded, not estimated.',
     naiveAnswer:
-      'We are 0.4% above Kroger — an artefact of interpolating missing crawls, reusing a 5-week-old price and treating a mis-scaled value as a real price.',
+      'We are 18.1% below Kroger — an artefact of averaging in a 5-week-old price and a value scraped in cents (899 read as $899), which alone swings the gap by 16 points.',
     rows: [
       {
         id: 'c-1',
