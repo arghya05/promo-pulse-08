@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { IngestionView } from '@/components/graph/IngestionView';
+import { MessyDataLab } from '@/components/graph/MessyDataLab';
 import { ReliabilityForecastView } from '@/components/graph/ReliabilityForecastView';
 
 import { ArrowRight, Database, Loader2, Network, Table2 } from 'lucide-react';
@@ -48,7 +49,7 @@ export default function OntologyGraph() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [view, setView] = useState<'graph' | 'ingestion' | 'forecast'>('graph');
+  const [view, setView] = useState<'graph' | 'ingestion' | 'forecast' | 'messy'>('graph');
 
   useEffect(() => {
     let active = true;
@@ -109,6 +110,7 @@ export default function OntologyGraph() {
             { id: 'graph', label: 'Entity map & datasets' },
             { id: 'ingestion', label: 'Data ingestion & quality' },
             { id: 'forecast', label: 'Predictive reliability' },
+            { id: 'messy', label: 'Messy-data lab' },
           ] as const).map((t) => (
             <button
               key={t.id}
@@ -357,6 +359,7 @@ export default function OntologyGraph() {
         {catalog && view === 'ingestion' && <IngestionView datasets={catalog.datasets} />}
 
         {view === 'forecast' && <ReliabilityForecastView />}
+        {view === 'messy' && <MessyDataLab />}
 
 
         {!catalog && !error && (
