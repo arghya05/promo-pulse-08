@@ -109,6 +109,7 @@ export default function OntologyGraph() {
             { id: 'graph', label: 'Entity map & datasets' },
             { id: 'ingestion', label: 'Data ingestion & quality' },
             { id: 'forecast', label: 'Predictive reliability' },
+            { id: 'messy', label: 'Messy-data lab' },
           ] as const).map((t) => (
             <button
               key={t.id}
