@@ -354,6 +354,9 @@ export default function OntologyGraph() {
 
         {catalog && view === 'ingestion' && <IngestionView datasets={catalog.datasets} />}
 
+        {view === 'forecast' && <ReliabilityForecastView />}
+
+
         {!catalog && !error && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" /> Loading the semantic layer…
