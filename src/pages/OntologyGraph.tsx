@@ -358,6 +358,7 @@ export default function OntologyGraph() {
         {catalog && view === 'ingestion' && <IngestionView datasets={catalog.datasets} />}
 
         {view === 'forecast' && <ReliabilityForecastView />}
+        {view === 'messy' && <MessyDataLab />}
 
 
         {!catalog && !error && (
