@@ -19,6 +19,10 @@ const overview = [
   { label: 'Data catalog & discovery', path: '/data?tab=discover', icon: Compass },
   { label: 'Data quality gates', path: '/data?tab=quality', icon: Database },
   { label: 'Ingestion & transformation', path: '/data?tab=ingestion', icon: Database },
+  { label: 'Orchestration & pipeline runs', path: '/data?tab=orchestration', icon: Database },
+  { label: 'Contracts & quarantine', path: '/data?tab=contracts', icon: Database },
+  { label: 'Semantic layer & compute cost', path: '/data?tab=semantic', icon: Database },
+  { label: 'Governance & PII controls', path: '/data?tab=governance', icon: Database },
   { label: 'Answer Validation', path: '/validation', icon: ShieldCheck },
 ];
 
