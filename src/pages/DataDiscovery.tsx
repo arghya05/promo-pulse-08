@@ -32,7 +32,7 @@ import {
 import { DQ_STATUS_STYLES, formatRows } from '@/lib/dq-scorecard';
 import { LAYER_STYLES, lineageForTable } from '@/lib/lineage-layers';
 
-export default function DataDiscovery() {
+export default function DataDiscovery({ embedded = false }: { embedded?: boolean } = {}) {
   const navigate = useNavigate();
   const [datasets, setDatasets] = useState<CatalogDataset[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -87,9 +87,9 @@ export default function DataDiscovery() {
   const open = openId ? catalog.find((c) => c.dataset.id === openId) ?? null : null;
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-8">
+    <div className={embedded ? 'w-full space-y-6' : 'mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-8'}>
       <header className="space-y-3">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className={`flex flex-wrap items-end justify-between gap-3${embedded ? ' hidden' : ''}`}>
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               <Database className="h-3.5 w-3.5" /> Data discovery
