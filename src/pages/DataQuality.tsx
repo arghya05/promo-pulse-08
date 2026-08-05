@@ -96,7 +96,7 @@ const DIMENSIONS: DQRuleRun['dimension'][] = [
   'Governance',
 ];
 
-export default function DataQuality() {
+export default function DataQuality({ embedded = false }: { embedded?: boolean } = {}) {
   const summary = useMemo(() => dqSummary(), []);
   const layers = useMemo(() => layerScorecard(), []);
   const dims = useMemo(() => dimensionScores(), []);
@@ -137,7 +137,7 @@ export default function DataQuality() {
   return (
     <div className="space-y-5 animate-fade-up">
       {/* Header */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className={`flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between${embedded ? ' hidden' : ''}`}>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -159,7 +159,7 @@ export default function DataQuality() {
             <Network className="h-3 w-3" /> {feeds.length} feeds
           </span>
           <Link
-            to="/graph"
+            to="/data?tab=graph"
             className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[11px] text-muted-foreground hover:text-primary"
           >
             <Layers className="h-3 w-3" /> Ingestion lineage

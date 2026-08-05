@@ -65,26 +65,14 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/graph')} tooltip="Retail knowledge graph">
-                  <NavLink to="/graph" className="flex items-center gap-2">
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive('/data')}
+                  tooltip="Data engineering: graph, catalog, ingestion & quality"
+                >
+                  <NavLink to="/data" className="flex items-center gap-2">
                     <Network className="h-4 w-4" />
-                    {!collapsed && <span>Knowledge Graph</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/discover')} tooltip="Data discovery & catalog">
-                  <NavLink to="/discover" className="flex items-center gap-2">
-                    <Compass className="h-4 w-4" />
-                    {!collapsed && <span>Data Discovery</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/data-quality')} tooltip="Data quality dashboard & report">
-                  <NavLink to="/data-quality" className="flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4" />
-                    {!collapsed && <span>Data Quality</span>}
+                    {!collapsed && <span>Data Engineering</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>

@@ -15,8 +15,10 @@ import { Compass, Database, LayoutDashboard, MessagesSquare, ShieldCheck } from 
 const overview = [
   { label: 'Command Center', path: '/', icon: LayoutDashboard },
   { label: 'Ask Maya', path: '/ask', icon: MessagesSquare },
-  { label: 'Data Discovery', path: '/discover', icon: Compass },
-  { label: 'Data Quality', path: '/data-quality', icon: Database },
+  { label: 'Data Engineering', path: '/data', icon: Database },
+  { label: 'Data catalog & discovery', path: '/data?tab=discover', icon: Compass },
+  { label: 'Data quality gates', path: '/data?tab=quality', icon: Database },
+  { label: 'Ingestion & transformation', path: '/data?tab=ingestion', icon: Database },
   { label: 'Answer Validation', path: '/validation', icon: ShieldCheck },
 ];
 

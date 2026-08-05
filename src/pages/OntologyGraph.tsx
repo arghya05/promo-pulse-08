@@ -45,12 +45,20 @@ function useLayout(entities: Catalog['entities']) {
   }, [entities]);
 }
 
-export default function OntologyGraph() {
+type GraphView = 'graph' | 'ingestion' | 'onboarding' | 'forecast' | 'messy';
+
+export default function OntologyGraph({
+  embedded = false,
+  view: viewProp,
+  onViewChange,
+}: { embedded?: boolean; view?: GraphView; onViewChange?: (v: GraphView) => void } = {}) {
   const navigate = useNavigate();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [view, setView] = useState<'graph' | 'ingestion' | 'onboarding' | 'forecast' | 'messy'>('graph');
+  const [localView, setLocalView] = useState<GraphView>('graph');
+  const view = viewProp ?? localView;
+  const setView = onViewChange ?? setLocalView;
 
   useEffect(() => {
     let active = true;
@@ -83,8 +91,8 @@ export default function OntologyGraph() {
 
   return (
     <>
-      <div className="space-y-6 p-4 md:p-6">
-        <header className="space-y-1">
+      <div className={embedded ? 'space-y-6' : 'space-y-6 p-4 md:p-6'}>
+        <header className={`space-y-1${embedded ? ' hidden' : ''}`}>
           <h1 className="font-display text-2xl font-semibold tracking-tight">Retail knowledge graph</h1>
           <p className="max-w-3xl text-sm text-muted-foreground">
             The semantic layer every answer is grounded in — entities, typed relationships, governed
@@ -106,7 +114,7 @@ export default function OntologyGraph() {
           </span>
         </Card>
 
-        <div className="inline-flex flex-wrap rounded-lg border border-border/70 bg-card p-1 text-xs">
+        <div className={`inline-flex flex-wrap rounded-lg border border-border/70 bg-card p-1 text-xs${embedded ? ' hidden' : ''}`}>
           {([
             { id: 'graph', label: 'Entity map & datasets' },
             { id: 'ingestion', label: 'Data ingestion & quality' },
