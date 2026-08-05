@@ -2,6 +2,10 @@ import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Activity,
+  BadgeCheck,
+  FileWarning,
+  Lock,
+  Workflow,
   Compass,
   FlaskConical,
   Layers,
@@ -14,6 +18,10 @@ import { Card } from '@/components/ui/card';
 import OntologyGraph from '@/pages/OntologyGraph';
 import DataDiscovery from '@/pages/DataDiscovery';
 import DataQuality from '@/pages/DataQuality';
+import OrchestrationView from '@/components/graph/OrchestrationView';
+import ContractDriftView from '@/components/graph/ContractDriftView';
+import GovernanceView from '@/components/graph/GovernanceView';
+import SemanticLayerView from '@/components/graph/SemanticLayerView';
 
 type TabId =
   | 'graph'
@@ -22,7 +30,11 @@ type TabId =
   | 'ingestion'
   | 'onboarding'
   | 'forecast'
-  | 'messy';
+  | 'messy'
+  | 'orchestration'
+  | 'contracts'
+  | 'governance'
+  | 'semantic';
 
 const TABS: { id: TabId; label: string; hint: string; icon: typeof Network }[] = [
   { id: 'graph', label: 'Knowledge graph', hint: 'Entities, relationships, governed datasets', icon: Network },
@@ -31,6 +43,10 @@ const TABS: { id: TabId; label: string; hint: string; icon: typeof Network }[] =
   { id: 'ingestion', label: 'Ingestion & transformation', hint: 'Feeds, medallion layers, cleaning rules', icon: Layers },
   { id: 'onboarding', label: 'Source onboarding', hint: 'Connector → contract → answerable in 48h', icon: PlugZap },
   { id: 'forecast', label: 'Predictive reliability', hint: 'Forecast breaches and blast radius', icon: TrendingUp },
+  { id: 'orchestration', label: 'Orchestration & runs', hint: 'DAG runs, retries, freshness SLAs, watermarks, backfills', icon: Workflow },
+  { id: 'contracts', label: 'Contracts & quarantine', hint: 'Schema drift enforcement and dead-letter replay', icon: FileWarning },
+  { id: 'semantic', label: 'Semantic layer & cost', hint: 'Certified metric definitions, versions, compute economics', icon: BadgeCheck },
+  { id: 'governance', label: 'Governance & PII', hint: 'Classification, masking, access policy, erasure', icon: Lock },
   { id: 'messy', label: 'Messy-data lab', hint: 'Governed vs ungoverned on dirty batches', icon: FlaskConical },
 ];
 
@@ -102,6 +118,14 @@ export default function DataEngineering() {
         />
       ) : tab === 'discover' ? (
         <DataDiscovery embedded />
+      ) : tab === 'orchestration' ? (
+        <OrchestrationView />
+      ) : tab === 'contracts' ? (
+        <ContractDriftView />
+      ) : tab === 'semantic' ? (
+        <SemanticLayerView />
+      ) : tab === 'governance' ? (
+        <GovernanceView />
       ) : (
         <DataQuality embedded />
       )}
