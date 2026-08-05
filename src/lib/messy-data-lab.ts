@@ -135,11 +135,11 @@ export const MESSY_CASES: MessyCase[] = [
     unit: 'pct',
     truth: 92.4,
     coverageNote:
-      '2 of 8 sampled stores past the 3-hour snapshot tolerance are excluded, so availability is measured on 74.9% position coverage and the answer says so.',
+      '2 of 6 sampled stores are past the 3-hour snapshot tolerance and excluded, so availability is measured on 66.7% store coverage and the answer says so.',
     governedAnswer:
       'Dairy on-shelf availability was 92.4% across reporting stores, excluding 2 stores whose snapshot was stale beyond the 3-hour tolerance. Negative positions kept as a shrink signal, floored only for the availability ratio.',
     naiveAnswer:
-      'Dairy availability was 97.1% — flattered by carrying stale snapshots forward as if stock were unchanged and clipping negative stock to zero.',
+      'Dairy availability was 93.8% — flattered by carrying two stale snapshots forward as if stock were unchanged and clipping negative stock to zero.',
     rows: [
       {
         id: 'i-1',
