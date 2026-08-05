@@ -52,7 +52,7 @@ export type OntologyTarget = {
 
 export const ONTOLOGY_TARGETS: OntologyTarget[] = [
   { key: 'product.sku', entity: 'Product', label: 'Product SKU', expects: ['string'], shapes: ['sku-like', 'code'], aliases: ['sku', 'item', 'upc', 'ean', 'article', 'product'], required: true },
-  { key: 'store.code', entity: 'Store', label: 'Store code', expects: ['string', 'integer'], shapes: ['store-like', 'code'], aliases: ['store', 'site', 'location', 'branch', 'shop'], required: true },
+  { key: 'store.code', entity: 'Store', label: 'Store code', expects: ['string', 'integer'], shapes: ['store-like', 'code'], aliases: ['store', 'site', 'location', 'branch', 'shop', 'club'], required: true },
   { key: 'time.event_ts', entity: 'Time', label: 'Event timestamp', expects: ['timestamp', 'date'], shapes: ['iso-timestamp'], aliases: ['ts', 'time', 'date', 'timestamp', 'datetime', 'posted'], required: true },
   { key: 'sales.units', entity: 'Transaction', label: 'Units', expects: ['integer', 'decimal'], shapes: ['quantity'], aliases: ['qty', 'quantity', 'units', 'pieces', 'eaches'], required: false },
   { key: 'sales.amount', entity: 'Transaction', label: 'Net amount', expects: ['decimal', 'integer'], shapes: ['money'], aliases: ['amount', 'sales', 'value', 'revenue', 'net', 'total'], required: false },
