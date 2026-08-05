@@ -7,6 +7,8 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { IngestionView } from '@/components/graph/IngestionView';
+import { ReliabilityForecastView } from '@/components/graph/ReliabilityForecastView';
+
 import { ArrowRight, Database, Loader2, Network, Table2 } from 'lucide-react';
 
 type Catalog = {
