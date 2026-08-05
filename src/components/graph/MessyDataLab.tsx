@@ -91,7 +91,7 @@ export function MessyDataLab() {
               </div>
               <div
                 className={`text-[11px] ${
-                  shownError <= 0.01 ? 'text-status-good' : 'text-status-critical'
+                  shownError <= 0.01 ? 'text-status-good' : 'text-destructive'
                 }`}
               >
                 {shownError <= 0.01 ? 'matches audited truth' : `${shownError}% off audited truth`}
@@ -121,7 +121,7 @@ export function MessyDataLab() {
                 </>
               ) : (
                 <>
-                  <AlertTriangle className="h-3.5 w-3.5 text-status-critical" /> What an ungoverned SUM says
+                  <AlertTriangle className="h-3.5 w-3.5 text-destructive" /> What an ungoverned SUM says
                 </>
               )}
             </div>

@@ -128,7 +128,7 @@ export default function OntologyGraph() {
 
 
         {error && (
-          <Card className="p-4 text-sm text-status-critical">Could not load the ontology: {error}</Card>
+          <Card className="p-4 text-sm text-destructive">Could not load the ontology: {error}</Card>
         )}
 
         {!catalog && !error && (
