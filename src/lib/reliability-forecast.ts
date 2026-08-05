@@ -243,7 +243,7 @@ export function forecastFeed(feed: Feed): FeedForecast {
     feed,
     gates,
     status,
-    currentFailRate: Number(observed.toFixed(3)),
+    currentFailRate: observedHistory[observedHistory.length - 1].failRate,
     forecastFailRate,
     breachProbability,
     daysToBreach,
