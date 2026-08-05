@@ -40,13 +40,13 @@ export const MESSY_CASES: MessyCase[] = [
     question: 'What were net sales for store 0418 on 4 Aug 2026?',
     metric: 'Net sales (store 0418, 04 Aug 2026)',
     unit: 'usd',
-    truth: usd(41820.44),
+    truth: usd(41919.94),
     coverageNote:
-      '1 line (0.9% of value) held in quarantine pending item master; the answer states the exclusion instead of guessing a hierarchy.',
+      '1 line ($386.10, 0.9% of value) held in quarantine pending item master; the answer states the exclusion instead of guessing a hierarchy.',
     governedAnswer:
-      'Net sales were $41,820.44, excluding 1 quarantined line ($386.10) awaiting an item master record. Replayed drawer file removed; 2 voids netted at signed value.',
+      'Net sales were $41,919.94, excluding 1 quarantined line ($386.10) awaiting an item master record. Replayed drawer file removed, the post-void correction netted at signed value, and the mis-typed amount parsed rather than dropped.',
     naiveAnswer:
-      'Net sales were $50,428.62 — inflated by a duplicated drawer file, voids counted as sales, and a guessed category for an unmapped SKU.',
+      'Net sales were $16,068.80 — wrong in both directions: a replayed drawer file and a void were counted as sales, while the largest line ($38,090.94) was silently dropped because its amount arrived with a thousands separator.',
     rows: [
       {
         id: 'b-1',
