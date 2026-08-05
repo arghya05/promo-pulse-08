@@ -7,6 +7,8 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { IngestionView } from '@/components/graph/IngestionView';
+import { ReliabilityForecastView } from '@/components/graph/ReliabilityForecastView';
+
 import { ArrowRight, Database, Loader2, Network, Table2 } from 'lucide-react';
 
 type Catalog = {
@@ -46,7 +48,7 @@ export default function OntologyGraph() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [view, setView] = useState<'graph' | 'ingestion'>('graph');
+  const [view, setView] = useState<'graph' | 'ingestion' | 'forecast'>('graph');
 
   useEffect(() => {
     let active = true;
@@ -102,10 +104,11 @@ export default function OntologyGraph() {
           </span>
         </Card>
 
-        <div className="inline-flex rounded-lg border border-border/70 bg-card p-1 text-xs">
+        <div className="inline-flex flex-wrap rounded-lg border border-border/70 bg-card p-1 text-xs">
           {([
             { id: 'graph', label: 'Entity map & datasets' },
             { id: 'ingestion', label: 'Data ingestion & quality' },
+            { id: 'forecast', label: 'Predictive reliability' },
           ] as const).map((t) => (
             <button
               key={t.id}
@@ -119,6 +122,7 @@ export default function OntologyGraph() {
             </button>
           ))}
         </div>
+
 
 
         {error && (
@@ -351,6 +355,9 @@ export default function OntologyGraph() {
         )}
 
         {catalog && view === 'ingestion' && <IngestionView datasets={catalog.datasets} />}
+
+        {view === 'forecast' && <ReliabilityForecastView />}
+
 
         {!catalog && !error && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
