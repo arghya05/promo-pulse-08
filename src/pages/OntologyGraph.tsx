@@ -102,10 +102,11 @@ export default function OntologyGraph() {
           </span>
         </Card>
 
-        <div className="inline-flex rounded-lg border border-border/70 bg-card p-1 text-xs">
+        <div className="inline-flex flex-wrap rounded-lg border border-border/70 bg-card p-1 text-xs">
           {([
             { id: 'graph', label: 'Entity map & datasets' },
             { id: 'ingestion', label: 'Data ingestion & quality' },
+            { id: 'forecast', label: 'Predictive reliability' },
           ] as const).map((t) => (
             <button
               key={t.id}
@@ -119,6 +120,7 @@ export default function OntologyGraph() {
             </button>
           ))}
         </div>
+
 
 
         {error && (
