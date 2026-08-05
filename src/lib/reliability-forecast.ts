@@ -318,7 +318,7 @@ export function estateSummary(forecasts: FeedForecast[], risks: AnswerRisk[]): E
   );
   const breaches = forecasts
     .map((f) => f.daysToBreach)
-    .filter((d): d is number => d !== null && d > 0);
+    .filter((d): d is number => d !== null);
   const exposed = risks.filter((r) => r.band === 'at-risk' || r.band === 'breaching');
   return {
     feeds: forecasts.length,
