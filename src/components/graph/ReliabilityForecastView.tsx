@@ -112,8 +112,14 @@ export function ReliabilityForecastView() {
             {
               label: 'Predicted breaches',
               value: `${summary.atRisk + summary.breaching}`,
-              hint: summary.earliestBreach ? `earliest in ${summary.earliestBreach}d` : 'none inside horizon',
+              hint:
+                summary.earliestBreach === null
+                  ? 'none inside horizon'
+                  : summary.earliestBreach === 0
+                    ? 'one breaching now'
+                    : `earliest in ${summary.earliestBreach}d`,
             },
+
             { label: 'Gold tables exposed', value: `${summary.tablesExposed}`, hint: 'inherit the risk' },
             { label: 'Question themes', value: `${summary.themesExposed}`, hint: 'answers pre-degraded' },
           ].map((k) => (
